@@ -1,0 +1,276 @@
+{
+  "source": "DC20 Beta 0.10.5",
+  "maneuverCount": 30,
+  "maneuvers": [
+    {
+      "name": "Heroic Bash",
+      "category": "Attack",
+      "cost": "1 AP + 1 SP",
+      "range": "Weapon or Unarmed Strike",
+      "requirements": "",
+      "description": "The force of your Attack pushes the target away. Make a Melee Martial Attack against the PD of a target within range, and it makes a Might Save against your Save DC. Hit: The target takes the damage of your Weapon or Unarmed Strike. Save Failure: The target is pushed 1 Space away from you. Save Failure (each 5): The target is pushed up to 1 additional Space. Knock Prone: After the result, you can choose to reduce the total distance a target is pushed by 1 Space to knock them Prone instead.\n\nAirborne: When you choose to push them upward into the air, the distance they’re pushed is halved.",
+      "enhancements": "Increased Distance: (X SP) The distance pushed increases by X Spaces. Bowling Ball: (1 SP) If the target collides with another creature as part of this movement, the creature it collides with must make a Might Save against your Save DC. Save Failure: The target is knocked Prone. Save Failure (each 5): The target is also pushed 1 Space away from you."
+    },
+    {
+      "name": "Savage Strike",
+      "category": "Attack",
+      "cost": "1 AP + 1 SP",
+      "range": "Weapon or Unarmed Strike",
+      "requirements": "",
+      "description": "You cause a creature to bleed with the ferocity and precision of your attack. Make a Martial Attack against the PD of a target within range, and it makes a Repeated Physical Save against your Save DC. Hit: The target takes the damage of your Weapon or Unarmed Strike. Save Failure: The target becomes Impaired or begins Bleeding (your choice) for 1 minute.",
+      "enhancements": "Improved Bleed: (X SP) On a failed Save, the target gains Bleeding X for the duration. Improved Impaired: (X SP) On a failed Save, the target gains Impaired X for the duration. Weakened: (2 SP) On a failed Save, the target is Weakened for the duration."
+    },
+    {
+      "name": "Sunder Strike",
+      "category": "Attack",
+      "cost": "1 AP + 2 SP",
+      "range": "Weapon or Unarmed Strike",
+      "requirements": "",
+      "description": "You make a target vulnerable to Physical damage. Make a Martial Attack against the PD of a target within range, and it makes a Physical Save against your Save DC. Hit: The target takes the damage of your Weapon or Unarmed Strike. Save Failure: The target gains Physical Vulnerability (1) for 1 Round.",
+      "enhancements": "Improved Vulnerability: (2 SP, Repeatable) Vulnerability increases by 1.\n\nThe\n\nBreak DR: (1 SP) On a failed Save, the target doesn’t benefit from PDR for the duration. Break Resistance: (2 SP) On a failed Save, the target doesn’t benefit from Physical Resistance for the duration."
+    },
+    {
+      "name": "Swift Strike",
+      "category": "Attack",
+      "cost": "1 AP + 1 SP",
+      "range": "Weapon or Unarmed Strike",
+      "requirements": "",
+      "description": "You move around the area, attacking 1 creature you pass along the way. You move a number of Spaces up to your Speed and make a Melee Martial Attack against the PD of 1 target within your Melee Range at any point during this movement. Hit: The target takes the damage of your Weapon or Unarmed Strike.",
+      "enhancements": "Disengage: (1 SP) This movement doesn’t provoke Opportunity Attacks. Subsequent Strike: (1 AP + 1 SP, Repeatable) You gain additional movement equal to half your Speed and you can target an additional creature using the same Attack Check."
+    },
+    {
+      "name": "Meteor Strike",
+      "category": "Attack",
+      "cost": "1 AP + 1 SP",
+      "range": "Weapon or Unarmed Strike",
+      "requirements": "",
+      "description": "A mid-air strike.\n\nYour Jump Distance increases by 2, you Jump up to your Jump Distance without spending movement (provided you can move), and make a Melee Martial Attack against a target within range at any point during your jump or where you land. Reaction: You can spend an additional 1 SP to perform this Maneuver as a Reaction to a creature entering a Space within your Jump Distance that’s at least 1 Space above the ground. DC Tip: Remember, your Long Jump Distance equals your Jump Distance in Spaces, and your High Jump distance equals your Jump Distance in feet.",
+      "enhancements": "Falling Strike: (1 SP) The creature makes a Physical Save against your Save DC. Save Failure: The creature falls Prone. Slam Down: (1 SP, Requires Falling Strike) On a failed Save, the target doesn’t benefit from any ability that prevents it from falling as a result of being knocked Prone in midair until the end of the turn. Impact Crater: (1 AP + 1 SP) All creatures within a 1 Space aura of where you land must make a Physical Save against your Save DC. Save Failure: The creature falls Prone. Larger Crater: (2 SP, Repeatable, Requires Impact Crater) The size of the Aura increases by 1."
+    },
+    {
+      "name": "Cleave",
+      "category": "Attack",
+      "cost": "2 AP",
+      "range": "2 Space Arc (Self)",
+      "requirements": "",
+      "description": "You swing wide to attack targets around you. Make an Area Martial Attack against the AD of every target within range. Hit: The target takes the damage of your Weapon or Unarmed Strike. Reach Weapon: If you have a Reach Weapon, you can extend the Point of Origin 1 Space away from you. The Arc must still be facing away from you.",
+      "enhancements": "Damage: (2 SP, Repeatable) The damage increases by 1. Area: (2 SP, Repeatable) The Arc increases by 1 Space. Careful Cleave: (X SP) You can choose X targets in the area to avoid with the Attack. Sweep: (2 SP) Each target makes an Agility Save. Save Failure: The target is knocked Prone."
+    },
+    {
+      "name": "Whirlwind",
+      "category": "Attack",
+      "cost": "2 AP",
+      "range": "1 Space Aura",
+      "requirements": "",
+      "description": "You attack in a circle around you, attacking everyone within range. Make an Area Martial Attack using a Melee Weapon or Unarmed Strike against the AD of every target within range. Hit: The target takes the damage of your Weapon or Unarmed Strike. Reach Weapon: If you have a Reach Weapon, you can choose to increase the Aura by 1 Space. When you do, you can’t Attack targets within 1 Space of you.",
+      "enhancements": "Damage: (2 SP, Repeatable) The damage increases by 1. Area: (2 SP, Repeatable) The Aura increases by 1 Space. Vortex: (2 SP, Repeatable) Each target makes a Might Save. Save Failure: The target is pushed up to 1 Space horizontally in a direction of your choice. The target is moved 1 additional Space each time you use this Enhancement."
+    },
+    {
+      "name": "Pathcarver",
+      "category": "Attack",
+      "cost": "2 AP",
+      "range": "4 Space Line (Self)",
+      "requirements": "",
+      "description": "You attack every creature in a line. Make an Area Martial Attack with a Melee Weapon or Unarmed Strike against the AD of every target in a 4 Space Line. Hit: The target takes the damage of your Weapon or Unarmed Strike. After Attacking, you can move to any Space within 1 Space of the area without provoking Opportunity Attacks from the targets and without spending your movement. Reach Weapon: If you have a Reach Weapon, you can extend the Point of Origin 1 Space away from you. When you do, the Line must extend in a direction away from you.",
+      "enhancements": "Damage: (2 SP, Repeatable) The damage increases by 1. Increase Length: (1 SP, Repeatable) The length of the Line increases by 2 Spaces. Carved Path: (2 SP, Repeatable) Each target makes a Might Save. Save Failure: The target is pushed 1 Space horizontallyout of the area in a direction of your choice. The target is moved 1 additional Space each time you use this Enhancement."
+    },
+    {
+      "name": "Piercing Shot",
+      "category": "Attack",
+      "cost": "2 AP",
+      "range": "Ranged Weapon or Weapon with the Toss or Thrown Property",
+      "requirements": "",
+      "description": "You fire a powerful shot that pierces through creatures in a line. Make an Area Martial Attack against the AD of every target within a 8 Space Line that’s Point of Origin is within Range. The Line must extend away from you. Hit: The target takes the damage of your Weapon. Close Quarters Penalty: You have DisADV on the Attack if you’re within the Melee Range of at least 1 enemy, unless that enemy is Incapacitated. DC Tip: Remember, you have DisADV on any Attack beyond your Weapon’s Normal Range.",
+      "enhancements": "Damage: (2 SP, Repeatable) The damage increases by 1. Area: (1 SP, Repeatable) The length of the Line increases by 4 Spaces. Penetrating Shot: (1 SP) The Attack ignores Cover but is blocked by 6 inches (15 cm) of wood or soft earth (dirt, mud, or sand), or 1 inch (25 mm) of metal or rock."
+    },
+    {
+      "name": "Scattershot",
+      "category": "Attack",
+      "cost": "2 AP",
+      "range": "Self",
+      "requirements": "Ranged Weapon",
+      "description": "You unleash a cone of projectiles. Make an Area Martial Attack against the AD of every target within a 3 Space Cone. Hit: The target takes the damage of your Weapon.",
+      "enhancements": "Damage: (2 SP, Repeatable) The damage increases by 1. Area: (2 SP, Repeatable) The length of the Cone increases by 1 Space. Stagger: (1 SP) Each creature makes a Might Save. Save Failure: The target is unable to take Reactions for 1 Round."
+    },
+    {
+      "name": "Volley",
+      "category": "Attack",
+      "cost": "2 AP",
+      "range": "Ranged Weapon",
+      "requirements": "",
+      "description": "You bombard an area with a series of projectiles. Make an Area Martial Attack against the AD of every target within a 3 Space Diameter Sphere that’s Point of Origin is within Range. Hit: The target takes the damage of your Weapon. Close Quarters Penalty: You have DisADV on the Attack if you’re within the Melee Range of at least 1 enemy, unless that enemy is Incapacitated. DC Tip: Remember you have DisADV on any Attack beyond your Normal Range and you can’t attack beyond your Long Range.",
+      "enhancements": "Damage: (2 SP, Repeatable) The damage increases by 1. Area: (2 SP, Repeatable) The diameter of the Sphere increases by 1 Space. Rain of Fire: (1 SP) Targets within the area don’t gain the benefits of 1/2 Cover against this Attack. Suppressive Fire: (2 SP) Each creature makes a Charisma Save. Save Failure: The creature becomes Hindered for 1 Round"
+    },
+    {
+      "name": "Parry",
+      "category": "Defense",
+      "cost": "1 AP",
+      "range": "Self (or 1 Space if wielding a Melee Weapon or Shield)",
+      "requirements": "",
+      "description": "You deflect an attack. Trigger: A target you can see within range (including yourself) is targeted by an Attack against its PD. Reaction: You grant the target a +5 bonus to its PD against this Attack.",
+      "enhancements": "Alert: (1 SP) The Attacker’s next Attack this turn against the target has DisADV. Disarm: (1 SP) If the Attacker is within 1 Space of you or the target, they make a Physical Save. Save Failure: The target drops the Weapon used for the Attack to the ground once the Attack is resolved. Save Failure (5): You gain possession of the Weapon, provided you have a free hand to hold it."
+    },
+    {
+      "name": "Brace",
+      "category": "Defense",
+      "cost": "1 AP",
+      "range": "Self (or 1 Space if wielding a Shield)",
+      "requirements": "",
+      "description": "You stand firm against an attack. Trigger: A target you can see within range (including yourself) is targeted by an Attack against its AD. Reaction: You grant the target a +5 bonus to its AD against this Attack.",
+      "enhancements": "Targets: (1 AP, Repeatable) You can target 1 additional creature within range that’s also targeted by the same Attack. Grapple: (1 SP) If the Attacker is within 1 Space of you, they make a Physical Save. Save Failure: The Attacker becomes Grappled by you once the Attack is resolved."
+    },
+    {
+      "name": "Side Step",
+      "category": "Defense",
+      "cost": "1 AP",
+      "range": "Self",
+      "requirements": "",
+      "description": "You avoid an enemy attack by quick repositioning. Trigger: You’re targeted by an Attack. Reaction: You impose DisADV on the Attack against you. You can move 1 Space after the Attack, provided you stay within range of the Attack.",
+      "enhancements": "Evasion: (1 SP) You gain ADV on any Saves imposed by the Attack. Disengage: (1 SP) Movement made as part of this Maneuver doesn’t provoke Opportunity Attacks. Slip Away: (1 SP) You can move up to your Speed instead of 1 Space and you no longer need to stay in range of the Attack."
+    },
+    {
+      "name": "Protect",
+      "category": "Defense",
+      "cost": "1 AP",
+      "range": "1 Space",
+      "requirements": "",
+      "description": "You take damage for a nearby ally. Trigger: A target you can see within range is Hit by an Attack. Reaction: The damage of the Attack is shared between you and the target. The damage you take bypasses any Damage Reduction you have.",
+      "enhancements": "Targets: (1 AP, Repeatable) You can target 1 additional creature within range that’s also targeted by the same Attack. Taunt: (1 SP) The attacker makes a Charisma Save. Save Failure: They’re Taunted by you for 1 Round. Heroic Protect: (2 SP) The Attack made against your target is made against you instead. You take all of the damage and effects instead of them, and if the Attack is accompanied by a Save (as with a Dynamic Attack Save), you make the Save instead of the target. If you were also originally a target of the Attack, you resolve both separately. Resistance: (1 SP) You gain Resistance (Half) to any damage you take from using this Maneuver. The cost of this Enhancement increases by 1 SP if you use the Heroic Protect Enhancement."
+    },
+    {
+      "name": "Endure",
+      "category": "Defense",
+      "cost": "1 AP + 1 SP",
+      "range": "Self (or 1 Space if wielding a Shield)",
+      "requirements": "",
+      "description": "You push through an attack. Trigger: A target you can see within range (including yourself) is Hit by an Attack. Reaction: The target takes 1 less damage from the Attack.",
+      "enhancements": "Heroic Endure: (X SP) The target takes X less damage from the Attack. Steadfast: (1 SP) The target isn’t Vulnerable to damage from the Attack. Repel: (X SP) After the Attack, if the Attacker is within 1 Space of you or the target, they make a Might Save against your Save DC. Save Failure: They are pushed X Spaces away. Save Failure (each 5): +1 Space pushed."
+    },
+    {
+      "name": "Resolve",
+      "category": "Defense",
+      "cost": "1 AP + 1 SP",
+      "range": "Self",
+      "requirements": "",
+      "description": "You take a moment to catch your breath and refocus. Make a DC 15 Martial Check. Failure: You gain 2 Temp HP for 1 Round. Success: You gain 3 Temp HP for 1 Round. Success (each 5): +1 Temp HP.",
+      "enhancements": "Increased Temp HP: (1 SP, Repeatable) You gain +2 Temp HP. Physical Resolve: (1 SP) You gain ADV on Physical Saves for the duration. Mental Resolve: (1 SP) You gain ADV on Mental Saves for the duration."
+    },
+    {
+      "name": "Swap",
+      "category": "Defense",
+      "cost": "1 AP",
+      "range": "1 Space",
+      "requirements": "",
+      "description": "You swap places with a nearby creature. You swap Spaces with a willing creature within range. If you or the target creature provoke Opportunity Attacks as a result of swapping Spaces, those Attacks are all made against you. Reaction: You can spend an additional 1 SP to perform this Maneuver as a Reaction in response to a creature within 1 Space being Attacked. When you do, you also impose DisADV on the Attack against them.",
+      "enhancements": "Escape: (1 SP) The target can immediately move up to its Speed after swapping Spaces. Seamless Swap:(1 SP) Swapping Spaces doesn’t provoke any Opportunity Attacks. Hostile Swap: (1 SP) You can target an unwilling creature. When you do, make a Martial Check against the target’s Physical Save. Check Success: You swap Spaces with them."
+    },
+    {
+      "name": "Slam",
+      "category": "Grapple",
+      "cost": "1 AP",
+      "range": "Melee",
+      "requirements": "",
+      "description": "You slam a Grappled creature. Make a Melee Martial Attack against the target’s AD. Hit: The target takes 1 Bludgeoning damage.",
+      "enhancements": "Finishing Slam: (1 SP) You deal 2 additional damage. The Grapple ends. Stunned: (2 SP, Repeatable) The target makes a Physical Save. Save Failure: They are Stunned 1 for 1 Round. You can use this Enhancement a maximum of two times. Wall Rake: (X SP) You slam 1 Grappled creature into a wall within 1 Space and move up to X Spaces along the wall, ending your movement within 1 Space of the wall. The target makes a Repeated Might Save against your Save DC. Save Failure: They gain Bleeding X per Space moved."
+    },
+    {
+      "name": "Restrain",
+      "category": "Grapple",
+      "cost": "1 AP + 1 SP",
+      "range": "Melee",
+      "requirements": "",
+      "description": "You restrain a grappled target. You make a Martial Check against the target’s Repeated Physical Save. Contest Success: The target is Restrained until the Grapple ends. DC Tip: A creature can spend 1 AP to attempt to break a Grapple (see “Grapple” on page 43 for more information).",
+      "enhancements": "Prone: (1 SP) The target also falls Prone (you don’t fall Prone unless you choose to do so). Chokehold: (2 SP) The target also can’t speak or breathe until they are no longer Restrained by you. DC Tip: A creature that can’t breathe begins holding their breath. In Combat, a creature’s Breath Duration is equal to its Might (minimum of 1) in Rounds."
+    },
+    {
+      "name": "Body Block",
+      "category": "Grapple",
+      "cost": "1 AP + 1 SP",
+      "range": "Melee",
+      "requirements": "",
+      "description": "You reposition a grappled creature to shield yourself from damage. Trigger: A creature that’s not Grappled by you Hits you with an Attack. Reaction: Make a Martial Check against the Grappled target’s Might Save. Check Success: The damage from the Attack is shared by you and the Grappled creature, and you can move the Grappled creature to any Space adjacent to you immediately afterwards. DC Tip: If the triggering Attack involved a Save (as with a Dynamic Attack Save) that moves you or your Grapple target out of your reach, you can still perform this Maneuver to resolve the damage (as if it the Hit happens moments before the forced movement).",
+      "enhancements": "Switch: (1 SP) After you complete the Reaction, you switch places with the Grappled target. This movement doesn’t provoke Opportunity Attacks against either you or the target. Partial Block: (1 SP) Your portion of the shared damage is reduced to 0. Full Block: (2 SP) The Attack made against you is made against the Grappled creature instead. They take all of the damage and effects instead of you, and if the Attack is accompanied by a Save (as with a Dynamic Attack Save), they make the Save instead of the you. If they were also originally a target of the Attack, they resolve both separately."
+    },
+    {
+      "name": "Throw Creature",
+      "category": "Grapple",
+      "cost": "Throw (1 AP)",
+      "range": "Melee",
+      "requirements": "",
+      "description": "When you throw a creature using the Throwing rules, you can add the following Maneuver Enhancements. When you do, you’re considered to be performing a Maneuver. See “Throwing” on page 161 for more information. DC Tip: Remember, throwing a creature ends the Grapple.",
+      "enhancements": "Increased Throw: (X SP) The target is thrown X Spaces further. Skyward: (2 SP) Your throw distance isn’t halved for vertical throws. Prone: (1 SP) The target also falls Prone."
+    },
+    {
+      "name": "Recover",
+      "category": "Utility",
+      "cost": "1 AP",
+      "range": "Self",
+      "requirements": "",
+      "description": "You take a moment to catch your breath and refocus. You attempt to spend Rest Points to regain HP equal to the Rest Points spent. Make a DC 15 Martial Check. Failure: You can spend 2 Rest Points. Success: You can spend up to 3 Rest Points. Success (each 5): You can spend 1 additional Rest Point.",
+      "enhancements": "Increased Healing: (1 AP or 1 SP, Repeatable) You can spend 1 additional Rest Point. Repeat Save: (1 AP or 1 SP) You can repeat a Save against an effect you’re subjected to."
+    },
+    {
+      "name": "Heroic Pass Through",
+      "category": "Utility",
+      "cost": "",
+      "range": "",
+      "requirements": "",
+      "description": "When you take the Pass Through Action, you can add the following Maneuver Enhancements. When you add a Maneuver Enhancement (or perform the Action using SP), you’re considered to be performing a Maneuver. Stamina Action: You can spend SP instead of AP to perform the Pass Through Action.",
+      "enhancements": "Brush Past: (1 SP) The creature’s Space isn’t considered Difficult Terrain for this movement and you don’t provoke an Opportunity Attack from them if you leave their reach as part of the same movement. Let’s Go: (1 SP) On a Success, you can pull a willing creature within 1 Space of you to an unoccupied Space within 1 Space of the creature you pass."
+    },
+    {
+      "name": "Line Run",
+      "category": "Utility",
+      "cost": "2 AP + 1 SP",
+      "range": "Self",
+      "requirements": "",
+      "description": "You run through a line of enemies. You move in a Line up to your Speed and make a Martial Check. Each creature within the Line must make a Physical Save against your Martial Check when you attempt to move through its Space. Contest Failure: You’re unable to move through the creature’s Space, preventing you from moving any further. Contest Success: You can move through the creature’s Space and they are knocked Prone. Example: You make a Martial Check with a result of 15. If your Speed is 5, you can move up to 5 Spaces in a straight Line. If there are 3 creatures in that Line, your Martial Check of 15 would be compared to a Martial Check each creature makes as you attempt to pass through their Space, one by one. If the first creature in your path gets a 15 or higher, you can’t pass through their Space and stop moving.",
+      "enhancements": "Distance: (1 SP, Repeatable) You can move up to an additional half your Speed. Brush Past: (1 SP) The Space of every creature who fails the contest isn’t considered Difficult Terrain for this movement and you don’t provoke an Opportunity Attack from them."
+    },
+    {
+      "name": "Reposition",
+      "category": "Utility",
+      "cost": "1 AP + 1 SP",
+      "range": "Self",
+      "requirements": "",
+      "description": "Sprint across the battlefield\n\nTrigger: A creature ends their turn. Reaction: You immediately move up to your Speed.",
+      "enhancements": "Agile: (1 SP) You ignore Difficult Terrain during this movement. Disengage: (1 AP) You gain the benefits of the Disengage Action for the Movement. When you use this Enhancement, you can spend 1 additional SP to gain the benefits of the Full Disengage Action instead. Coordinated Movement: (2 SP, Repeatable) A willing creature of your choice within 1 Space of your original position can move without spending its own movement, provided they’re able to move and they end their movement within 1 Space of your destination."
+    },
+    {
+      "name": "Heroic Taunt",
+      "category": "Utility",
+      "cost": "Taunt Action (1 AP)",
+      "range": "Taunt Action (10 Spaces)",
+      "requirements": "",
+      "description": "You perform a powerful taunt. When you take the Taunt Action, you can add the following Maneuver Enhancements. When you add a Maneuver Enhancement, you’re considered to be performing a Maneuver.",
+      "enhancements": "Sustained: (1 SP, Sustained) The duration increases to 1 minute but each creature makes a Repeated Save. Increased Range: (1 SP) The range increases by 5 Spaces. Legendary Taunt: (1 SP) Creatures other than you have Resistance (Half) to damage dealt by the Taunted targets, provided the target isn’t also Taunted by those creatures. Mass Taunt: (1 AP + 1 SP) You instead target each creature of your choice within 5 Spaces that can see or hear you. When you choose this Enhancement, the cost of all other Enhancements (except Sustained) is doubled."
+    },
+    {
+      "name": "Heroic Intimidate",
+      "category": "Utility",
+      "cost": "Intimidate Action (1 AP)",
+      "range": "Intimidate Action (10 Spaces)",
+      "requirements": "",
+      "description": "You perform a powerful intimidate. When you take the Intimidate Action, you can add the following Maneuver Enhancements. When you add a Maneuver Enhancement, you’re considered to be performing a Maneuver.",
+      "enhancements": "Sustained: (1 SP, Sustained) The duration increases to 1 minute but each creature makes a Repeated Save. Increased Range: (1 SP) The range increases by 5 Spaces. Frightened: (1 SP) Targets are Frightened instead. Mass Intimidate: (1 AP + 1 SP) You instead target each creature of your choice within 5 Spaces that can see or hear you. When you choose this Enhancement, the cost of all other Enhancements (except Sustained) is doubled."
+    },
+    {
+      "name": "Heroic Shove",
+      "category": "Utility",
+      "cost": "Shove Action (1 AP)",
+      "range": "Shove Action (1 Space)",
+      "requirements": "",
+      "description": "You perform a powerful shove. When you take the Shove Action, you can add the following Maneuver Enhancements. When you add a Maneuver Enhancement, you are considered to be performing a Maneuver.",
+      "enhancements": "Increased Push: (X SP) The distance pushed increases by X Spaces. Stand Up: (1 SP) If you’re Prone, you can stand up before or after making the Check without spending movement. Mass Shove: (1 AP + 1 SP) You instead target each creature of your choice within a 1 Space Aura. When you choose this Enhancement, the cost of all other Enhancements (except Stand Up) is doubled."
+    },
+    {
+      "name": "Heroic Extend Jump",
+      "category": "Utility",
+      "cost": "Extend Jump Action (1 AP)",
+      "range": "Self",
+      "requirements": "",
+      "description": "You perform a powerful jump. When you take the Extend Jump Action, you can add the following Maneuver Enhancements. When you add a Maneuver Enhancement (or perform the Action using SP), you’re considered to be performing a Maneuver. Stamina Action: You can spend SP instead of AP to perform the Extend Jump Action.",
+      "enhancements": "Instant Jump: (1 SP) If performing a Standing Jump, your Jump Distances isn’t halved. Increased Jump: (1 SP, Repeatable) Your Jump Distance is increased by 2 for the Jump. Heroic Landing: (1 SP, Repeatable) You reduce any damage from falling by 2 for the Jump."
+    }
+  ]
+}
