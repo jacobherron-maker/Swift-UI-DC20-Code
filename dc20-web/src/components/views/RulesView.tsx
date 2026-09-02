@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { CampaignRecord } from '../../types/models';
 
 type ClassFeature = {
   id?: string;

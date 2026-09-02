@@ -7,6 +7,7 @@ import type {
   HubState,
   CampaignRecord,
   SavedCombat,
+  Monster,
 } from '../types/models';
 
 const defaultCampaignData: CampaignData = {
