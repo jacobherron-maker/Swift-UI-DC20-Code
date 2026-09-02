@@ -9,11 +9,65 @@ html, body, #root {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(180deg, #0b0f12 0%, #0f1720 100%);
+  color: #e6eef8;
+}
+
+/* Modern card */
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015));
+  border: 1px solid rgba(255,255,255,0.04);
+  box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+  border-radius: 12px;
+}
+
+/* Primary button */
+.btn-primary {
+  background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(124,58,237,0.18);
+}
+
+/* Sidebar modern */
+.sidebar {
+  background: linear-gradient(180deg, rgba(15,23,42,0.9), rgba(8,10,14,0.9));
+  border-right: 1px solid rgba(255,255,255,0.03);
+  padding: 20px;
+}
+
+.header-modern {
+  background: linear-gradient(90deg, rgba(0,0,0,0.35), rgba(255,255,255,0.02));
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+/* subtle utility */
+.text-muted { color: rgba(230,238,248,0.6); }
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg,#6b21a8,#7e22ce);
+  border-radius: 8px;
+  border: 2px solid rgba(0,0,0,0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  filter: brightness(1.05);
 }
 
 /* Scrollbar styling */

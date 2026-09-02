@@ -9,35 +9,34 @@ const Sidebar: React.FC = () => {
   const sections = Object.values(HubSectionValues);
 
   return (
-    <div className="w-64 bg-gray-950 border-r border-gray-700 flex flex-col overflow-hidden">
-      <div className="p-6 border-b border-gray-700">
-        <h1 className="text-2xl font-bold text-purple-400">DC20 Hub</h1>
-        <p className="text-sm text-gray-400 mt-1">TTRPG Assistant</p>
+    <div className="w-72 sidebar flex flex-col overflow-hidden">
+      <div className="mb-4">
+        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300">DC20 Hub</h1>
+        <p className="text-sm text-muted mt-1">TTRPG Assistant</p>
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+      <nav className="flex-1 overflow-y-auto space-y-2">
         {sections.map((section) => (
           <button
             key={section}
             onClick={() => setCurrentSection(section as HubSection)}
-            className={`w-full text-left px-4 py-3 rounded-lg transition-all font-medium ${
+            className={`w-full text-left px-4 py-3 rounded-lg transition-all font-medium flex items-center gap-3 ${
               currentSection === section
-                ? 'bg-purple-600 text-white shadow-lg'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg'
                 : 'text-gray-300 hover:bg-gray-800 hover:text-white'
             }`}
           >
-            {section}
+            <span className="grow">{section}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" className="opacity-30">
+              <path fill="currentColor" d="M10 17l5-5-5-5v10z" />
+            </svg>
           </button>
         ))}
       </nav>
 
-      <div className="p-4 border-t border-gray-700 space-y-2">
-        <button className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm transition-colors">
-          ⚙️ Settings
-        </button>
-        <button className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm transition-colors">
-          💾 Export Data
-        </button>
+      <div className="mt-4 space-y-2">
+        <button className="w-full btn-primary text-sm">⚙️ Settings</button>
+        <button className="w-full bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm py-2">💾 Export Data</button>
       </div>
     </div>
   );
