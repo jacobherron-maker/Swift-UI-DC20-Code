@@ -8,7 +8,7 @@ const DiceRollerView: React.FC = () => {
   const [selectedDice, setSelectedDice] = useState<DiceKind>(DiceKindValues.D20);
   const [results, setResults] = useState<number[]>([]);
   const [d20Adjustment, setD20Adjustment] = useState(0);
-  const [d20Result, setD20Result] = useState<any>(null);
+  const [d20Result, setD20Result] = useState<ReturnType<typeof rollD20WithAdjustment> | null>(null);
 
   const rollStandard = () => {
     const result = rollDice(selectedDice, diceCount);
@@ -21,10 +21,10 @@ const DiceRollerView: React.FC = () => {
   };
 
   return (
-    <div className="p-8">
-      <h1 className="text-4xl font-bold text-purple-400 mb-8">🎲 Dice Roller</h1>
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
+      <h1 className="mb-6 text-4xl font-black text-purple-400">🎲 Dice Roller</h1>
 
-      <div className="grid grid-cols-2 gap-8">
+      <div className="grid gap-5 md:grid-cols-2">
         {/* Standard Roller */}
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <h2 className="text-2xl font-bold text-purple-300 mb-6">Standard Roll</h2>

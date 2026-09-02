@@ -54,8 +54,9 @@ export interface CampaignRecord {
 }
 
 export const CombatantTeamValues = {
-  HEROES: "heroes",
-  ENEMIES: "enemies",
+  HEROES: "Heroes",
+  ENEMIES: "Enemies",
+  NEUTRAL: "Neutral",
 } as const;
 
 export type CombatantTeam = (typeof CombatantTeamValues)[keyof typeof CombatantTeamValues];
@@ -63,11 +64,23 @@ export type CombatantTeam = (typeof CombatantTeamValues)[keyof typeof CombatantT
 export interface Combatant {
   id: string;
   name: string;
-  initiative: number;
-  stamina: number;
-  maxStamina: number;
-  status: string;
   team: CombatantTeam;
+  maxHP: number;
+  hp: number;
+  maxAP: number;
+  ap: number;
+  reactionPoints: number;
+  currentReactionPoints: number;
+  conditions: string[];
+  hasActed: boolean;
+  physicalDefense?: number;
+  arcaneDefense?: number;
+  attackBonus?: number;
+  saveDC?: number;
+  speed?: number;
+  sourceMonsterID?: string;
+  sourceCharacterID?: string;
+  monsterAbilities?: MonsterAbility[];
 }
 
 export interface SavedCombat {
@@ -76,6 +89,8 @@ export interface SavedCombat {
   combatants: Combatant[];
   round: number;
   firstTeam: CombatantTeam;
+  notes: string;
+  sourceEncounterID?: string;
 }
 
 export interface CampaignData {
@@ -84,6 +99,7 @@ export interface CampaignData {
   combats: SavedCombat[];
   campaigns: CampaignRecord[];
   customMonsters: Monster[];
+  encounters: Encounter[];
 }
 
 // ============================================
@@ -107,50 +123,36 @@ export const MasteryLevels = {
   ADEPT: "Adept",
   EXPERT: "Expert",
   MASTER: "Master",
+  GRANDMASTER: "Grandmaster",
 } as const;
 
 export type MasteryLevel = (typeof MasteryLevels)[keyof typeof MasteryLevels];
 
-// 18 Skills in DC20
+// Beta 0.10.5 skills. Knowledge disciplines are Trades in DC20, not Skills.
 export const DC20Skills = {
-  ACROBATICS: "Acrobatics",
-  ANIMAL_HANDLING: "Animal Handling",
-  ARCANA: "Arcana",
   ATHLETICS: "Athletics",
-  DECEPTION: "Deception",
-  HISTORY: "History",
-  INSIGHT: "Insight",
   INTIMIDATION: "Intimidation",
+  ACROBATICS: "Acrobatics",
+  TRICKERY: "Trickery",
+  STEALTH: "Stealth",
+  ANIMAL: "Animal",
+  INSIGHT: "Insight",
+  INFLUENCE: "Influence",
   INVESTIGATION: "Investigation",
   MEDICINE: "Medicine",
-  NATURE: "Nature",
-  PERCEPTION: "Perception",
-  PERFORMANCE: "Performance",
-  PERSUASION: "Persuasion",
-  RELIGION: "Religion",
-  SLEIGHT_OF_HAND: "Sleight of Hand",
-  STEALTH: "Stealth",
   SURVIVAL: "Survival",
+  AWARENESS: "Awareness",
 } as const;
 
 export type DC20Skill = (typeof DC20Skills)[keyof typeof DC20Skills];
 
-// 5 Trades in DC20
-export const DC20Trades = {
-  ARTISTRY: "Artistry",
-  CRAFTING: "Crafting",
-  KNOWLEDGE: "Knowledge",
-  SERVICES: "Services",
-  SUBTERFUGE: "Subterfuge",
-} as const;
-
-export type DC20Trade = (typeof DC20Trades)[keyof typeof DC20Trades];
+export type DC20Trade = string;
 
 // Attribute selection method for character creation (Step 1)
 export const AttributeSelectionMethods = {
   STANDARD_ARRAY: "Standard Array",
   POINT_BUY: "Point Buy",
-  DICE_ROLLER: "Dice Roller",
+  ROLLED: "Rolled",
 } as const;
 
 export type AttributeSelectionMethod = (typeof AttributeSelectionMethods)[keyof typeof AttributeSelectionMethods];
@@ -165,9 +167,11 @@ export const DC20Classes = {
   DRUID: "Druid",
   HUNTER: "Hunter",
   MONK: "Monk",
+  PSION: "Psion",
   ROGUE: "Rogue",
   SORCERER: "Sorcerer",
   SPELLBLADE: "Spellblade",
+  SUMMONER: "Summoner",
   WARLOCK: "Warlock",
   WIZARD: "Wizard",
 } as const;
@@ -187,6 +191,8 @@ export const DC20Ancestries = {
   ANGELBORN: "Angelborn",
   FIENDBORN: "Fiendborn",
   BEASTBORN: "Beastborn",
+  PSYBORN: "Psyborn",
+  CUSTOM: "Custom",
 } as const;
 
 export type DC20Ancestry = (typeof DC20Ancestries)[keyof typeof DC20Ancestries];
@@ -194,25 +200,59 @@ export type DC20Ancestry = (typeof DC20Ancestries)[keyof typeof DC20Ancestries];
 // Ancestry trait information
 export interface AncestryTrait {
   id: string;
+  ancestry: string;
+  category: string;
   name: string;
-  costInPoints: number;
+  cost: number;
   description: string;
-  effects: string[];
+  isRepeatable: boolean;
+  countsAsZeroPointTrait: boolean;
+  prerequisite?: string;
 }
 
 // Character model with proper DC20 attributes (4, not 6)
 export interface Attribute {
   name: DC20Attribute;
+  /** In DC20, the attribute value is also the check/save modifier. */
   score: number;
   modifier: number;
+}
+
+export type CharacterPathChoice = 'Martial' | 'Spellcaster';
+
+export interface CharacterBuildData {
+  attributeMethod: AttributeSelectionMethod;
+  rolledAttributeResults: number[];
+  backgroundName: string;
+  backgroundStory: string;
+  skillPointsConvertedToTrades: number;
+  tradePointsConvertedToLanguages: number;
+  languageMasteries: Record<string, MasteryLevel>;
+  ancestrySecondary: string;
+  selectedAncestryTraitIDs: string[];
+  ancestryTraitChoices: Record<string, string[]>;
+  selectedTalents: string[];
+  pathProgressionChoices: Record<string, CharacterPathChoice>;
+  classFeatureSelections: Record<string, string[]>;
+  selectedSpellSource: string;
+  selectedSpells: string[];
+  selectedCantrips: string[];
+  selectedManeuvers: string[];
+  currentStamina: number;
+  currentMana: number;
+  temporaryHP: number;
+  sheetConditionLevels: Record<string, number>;
+  characterNotes: CampaignNote[];
+  rollAdjustment: number;
+  isFinalized: boolean;
 }
 
 export interface Character {
   id: string;
   name: string;
   level: number;
-  ancestry: DC20Ancestry;
-  class: DC20Class;
+  ancestry: DC20Ancestry | string;
+  class: DC20Class | string;
   subclass?: string;
   background: string;
   alignment: string;
@@ -220,8 +260,8 @@ export interface Character {
   attributes: Record<DC20Attribute, Attribute>;
   primeModifier: number; // Derived from highest attribute
   // Mastery system
-  skillMasteries: Record<DC20Skill, MasteryLevel>;
-  tradeMasteries: Record<DC20Trade, MasteryLevel>;
+  skillMasteries: Record<string, MasteryLevel>;
+  tradeMasteries: Record<string, MasteryLevel>;
   languages: string[];
   // Combat stats
   healthPoints: number;
@@ -230,14 +270,22 @@ export interface Character {
   maxStamina: number;
   manaPoints: number;
   maxManaPoints: number;
+  currentAP: number;
+  maxAP: number;
+  physicalDefense: number;
+  arcaneDefense: number;
+  combatMastery: number;
+  speed: number;
   defense: number;
   // Character details
   injuries: Injury[];
   skills: Skill[];
   equipment: Equipment[];
+  inventoryItems?: CharacterInventoryItem[];
   spells: Spell[];
   maneuvers: Maneuver[];
   notes: string;
+  build?: CharacterBuildData;
 }
 
 export interface Skill {
@@ -262,49 +310,272 @@ export interface Equipment {
   effects: string[];
 }
 
+export const EquipmentCategoryValues = {
+  WEAPONS: 'Weapons',
+  SPELL_FOCUSES: 'Spell Focuses',
+  ARMOR: 'Armor',
+  SHIELDS: 'Shields',
+  ADVENTURING_SUPPLIES: 'Adventuring Supplies',
+  TRADE_TOOLS: 'Trade Tools',
+} as const;
+
+export type EquipmentCategory =
+  (typeof EquipmentCategoryValues)[keyof typeof EquipmentCategoryValues];
+
+export const EquipmentSlotValues = {
+  CARRIED: 'Carried',
+  ONE_HAND: 'One Hand',
+  TWO_HANDS: 'Two Hands',
+  ARMOR: 'Armor',
+  WORN: 'Worn',
+} as const;
+
+export type EquipmentSlot = (typeof EquipmentSlotValues)[keyof typeof EquipmentSlotValues];
+
+export interface EquipmentCatalogItem {
+  id: string;
+  name: string;
+  category: EquipmentCategory;
+  subtype: string;
+  summary: string;
+  mechanics: string;
+  properties: string[];
+  slot: EquipmentSlot;
+  sourcePage: string;
+}
+
+export interface CharacterInventoryItem {
+  id: string;
+  equipmentID: string;
+  quantity: number;
+  isEquipped: boolean;
+  source: 'startingEquipment' | 'added';
+}
+
 export interface Spell {
   id: string;
   name: string;
-  level: number;
+  level?: number;
+  source?: string;
   school: string;
-  castingTime: string;
+  tags?: string;
+  cost?: string;
+  castingTime?: string;
   range: string;
-  components: string[];
+  components?: string[];
   duration: string;
   description: string;
+  enhancements?: string;
 }
 
 export interface Maneuver {
   id: string;
   name: string;
-  type: string;
+  type?: string;
+  category?: string;
+  cost?: string;
   range: string;
+  requirements?: string;
   description: string;
+  enhancements?: string;
+}
+
+export interface MasteryReference {
+  name: string;
+  group: string;
+  attribute?: string;
+  tool?: string;
+  typicalSpeakers?: string;
+  description: string;
+}
+
+export interface ClassFeatureReference {
+  name: string;
+  description: string;
+}
+
+export interface ClassLevelReference {
+  level: number;
+  features: ClassFeatureReference[];
+}
+
+export interface ClassTableRowReference {
+  level: number;
+  features: string;
+  health?: number;
+  attribute?: number;
+  skill?: number;
+  trade?: number;
+  stamina?: number;
+  maneuvers?: number;
+  mana?: number;
+  cantrips?: number;
+  spells?: number;
+}
+
+export interface ClassChoiceOptionReference {
+  name: string;
+  description: string;
+  isRepeatable: boolean;
+  pointCost: number;
+  maximumCount?: number;
+}
+
+export interface ClassChoiceGroupReference {
+  id: string;
+  level: number;
+  feature: string;
+  title: string;
+  prompt: string;
+  limit: number;
+  options: ClassChoiceOptionReference[];
+  requiredSubclass?: string;
+}
+
+export interface ClassReference {
+  name: string;
+  path: string;
+  summary: string;
+  description: string;
+  baseHP: number;
+  levelOneResource: string;
+  fixedSpellSource?: string;
+  schoolChoiceCount: number;
+  spellsKnownAtLevel1: number;
+  maneuversKnownAtLevel1: number;
+  pathTitle: string;
+  pathDetails: string;
+  startingEquipment: {
+    arsenal: string[];
+    arsenalCount: number;
+    armor: string[];
+    tradeTools: string[];
+    tradeToolCount: number;
+    description: string;
+  };
+  tableSource: string;
+  tableColumns: string[];
+  tableRows: ClassTableRowReference[];
+  features: ClassLevelReference[];
+  subclasses: string[];
+  subclassFeatures: Record<string, ClassFeatureReference[]>;
+  talents: Array<{ name: string; description: string; minimumLevel: number; isRepeatable: boolean }>;
+  choiceGroups: ClassChoiceGroupReference[];
+}
+
+export interface CharacterReferenceData {
+  source: string;
+  ancestries: string[];
+  ancestryTraits: AncestryTrait[];
+  generalAncestryTraits: AncestryTrait[];
+  skills: MasteryReference[];
+  trades: MasteryReference[];
+  languages: MasteryReference[];
+  skillGroups: Array<{ name: string; options: string[] }>;
+  tradeGroups: Array<{ name: string; options: string[] }>;
+  languageGroups: Array<{ name: string; options: string[] }>;
+  classes: ClassReference[];
+}
+
+export interface RuleReferenceEntry {
+  id: string;
+  title: string;
+  section: string;
+  subsection: string;
+  summary: string;
+  text: string;
+  page: string;
+  kind: 'Overview' | 'Rule' | 'Skill' | 'Trade' | 'Language' | 'Maneuver' | 'Spell' | 'Condition' | 'Equipment' | 'Talent' | 'Ancestry' | 'Class' | 'Subclass';
+  keywords: string;
+  characterClass?: string;
+  subclassName?: string;
+}
+
+export interface RulesReferenceData {
+  source: string;
+  sections: Array<{ name: string; pageRange: string }>;
+  entries: RuleReferenceEntry[];
+}
+
+export const MonsterTypeValues = {
+  MINION: "Minion",
+  STANDARD: "Standard",
+  EPIC: "Epic",
+  LEGENDARY: "Legendary",
+} as const;
+
+export type MonsterType = (typeof MonsterTypeValues)[keyof typeof MonsterTypeValues];
+
+export const MonsterRoleValues = {
+  BRUTE: "Brute",
+  DEFENDER: "Defender",
+  LEADER: "Leader",
+  SOLDIER: "Soldier",
+  STRIKER: "Striker",
+  TACTICIAN: "Tactician",
+} as const;
+
+export type MonsterRole = (typeof MonsterRoleValues)[keyof typeof MonsterRoleValues];
+
+export const MonsterAbilityKindValues = {
+  TRAIT: "Traits",
+  FEATURE: "Features",
+  ACTION: "Actions",
+  REACTION: "Reactions",
+  ROUND_ACTION: "Round Actions",
+} as const;
+
+export type MonsterAbilityKind =
+  (typeof MonsterAbilityKindValues)[keyof typeof MonsterAbilityKindValues];
+
+export interface MonsterAbility {
+  id: string;
+  kind: MonsterAbilityKind;
+  name: string;
+  cost: string;
+  details: string;
+  traitValue?: number;
 }
 
 export interface Monster {
   id: string;
   name: string;
-  type: string;
-  alignment: string;
-  ac: number;
-  stamina: number;
-  speed: Record<string, string>;
-  abilities: Attribute[];
-  skills: Record<string, number>;
-  languages: string[];
-  traits: MonsterTrait[];
-  actions: MonsterAction[];
-}
-
-export interface MonsterTrait {
-  name: string;
-  description: string;
-}
-
-export interface MonsterAction {
-  name: string;
-  description: string;
+  level: number;
+  type: MonsterType;
+  role: MonsterRole;
+  hp: number;
+  physicalDefense: number;
+  arcaneDefense: number;
+  attackBonus: number;
+  saveDC: number;
+  damage: number;
+  notes: string;
+  sourceBook?: string;
+  sourcePage?: number;
+  publishedRole?: string;
+  size: string;
+  creatureType: string;
+  descriptionText: string;
+  tactics: string;
+  lore: string;
+  actionPoints?: number;
+  reactionPoints?: number;
+  speed: number;
+  primeModifier: number;
+  combatMastery: number;
+  might: number;
+  agility: number;
+  charisma: number;
+  intelligence: number;
+  skills: string;
+  senses: string;
+  languages: string;
+  otherSpeeds: string;
+  reductions: string;
+  resistances: string;
+  vulnerabilities: string;
+  immunities: string;
+  abilities: MonsterAbility[];
 }
 
 export interface Rule {
@@ -318,10 +589,15 @@ export interface Rule {
 export interface Encounter {
   id: string;
   name: string;
-  location: string;
-  monsters: Monster[];
-  difficulty: "easy" | "medium" | "hard" | "deadly";
+  partyLevels: number[];
+  entries: EncounterEntry[];
   notes: string;
+}
+
+export interface EncounterEntry {
+  id: string;
+  monster: Monster;
+  count: number;
 }
 
 export interface HubState {
@@ -329,5 +605,10 @@ export interface HubState {
   campaignData: CampaignData;
   characters: Character[];
   selectedCharacterId: string | null;
+  selectedMonsterId: string | null;
+  selectedEncounterId: string | null;
+  selectedCombatId: string | null;
+  selectedCampaignId: string | null;
   isDarkMode: boolean;
+  selectedPaletteID: string;
 }

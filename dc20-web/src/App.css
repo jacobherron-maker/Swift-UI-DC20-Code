@@ -18,6 +18,42 @@ body {
   color: #e6eef8;
 }
 
+.dc20-theme {
+  --theme-accent: #8c4cf2;
+  --theme-highlight: #c8a5ff;
+  --theme-bg: #0e0917;
+  --theme-bg-secondary: #241036;
+  background: var(--theme-bg);
+  color-scheme: dark;
+}
+
+.app-main {
+  background:
+    radial-gradient(circle at 15% -10%, color-mix(in srgb, var(--theme-accent) 22%, transparent), transparent 38%),
+    linear-gradient(145deg, var(--theme-bg-secondary), var(--theme-bg) 46%, #020617);
+}
+
+.hub-logo {
+  color: transparent;
+  background: linear-gradient(90deg, var(--theme-highlight), var(--theme-accent));
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.theme-accent-text {
+  color: var(--theme-highlight);
+}
+
+.nav-item-active {
+  background: linear-gradient(90deg, var(--theme-accent), color-mix(in srgb, var(--theme-accent) 68%, #312e81));
+}
+
+.theme-selected-card {
+  border-color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 13%, #020617);
+  box-shadow: 0 16px 35px color-mix(in srgb, var(--theme-accent) 18%, transparent);
+}
+
 /* Modern card */
 .card {
   background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015));
@@ -28,22 +64,24 @@ body {
 
 /* Primary button */
 .btn-primary {
-  background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+  background: linear-gradient(90deg, var(--theme-accent), color-mix(in srgb, var(--theme-accent) 70%, #312e81));
   color: white;
   padding: 8px 12px;
   border-radius: 10px;
-  box-shadow: 0 6px 18px rgba(124,58,237,0.18);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--theme-accent) 22%, transparent);
 }
+
+.btn-primary:hover { filter: brightness(1.1); }
 
 /* Sidebar modern */
 .sidebar {
-  background: linear-gradient(180deg, rgba(15,23,42,0.9), rgba(8,10,14,0.9));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--theme-bg-secondary) 78%, #0f172a), color-mix(in srgb, var(--theme-bg) 88%, #020617));
   border-right: 1px solid rgba(255,255,255,0.03);
   padding: 20px;
 }
 
 .header-modern {
-  background: linear-gradient(90deg, rgba(0,0,0,0.35), rgba(255,255,255,0.02));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-bg) 78%, #000), color-mix(in srgb, var(--theme-accent) 6%, #0f172a));
   border-bottom: 1px solid rgba(255,255,255,0.03);
 }
 
@@ -61,7 +99,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg,#6b21a8,#7e22ce);
+  background: linear-gradient(180deg, var(--theme-accent, #6b21a8), color-mix(in srgb, var(--theme-accent, #7e22ce) 70%, #111827));
   border-radius: 8px;
   border: 2px solid rgba(0,0,0,0.2);
 }
@@ -70,21 +108,20 @@ body {
   filter: brightness(1.05);
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+
+/* Palette the shared violet/purple navigation accents while preserving semantic colors. */
+.dc20-theme :is(.text-violet-100, .text-violet-200, .text-violet-300, .text-violet-400, .text-purple-300, .text-purple-400) {
+  color: var(--theme-highlight) !important;
 }
 
-::-webkit-scrollbar-track {
-  background: #1f2937;
+.dc20-theme :is(.bg-violet-600, .bg-purple-600, .bg-purple-700) {
+  background-color: var(--theme-accent) !important;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #6b21a8;
-  border-radius: 4px;
+.dc20-theme :is(.border-violet-400, .border-violet-500, .border-purple-500) {
+  border-color: var(--theme-accent) !important;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #7e22ce;
+@media (max-width: 640px) {
+  .sidebar { width: 4.5rem; padding: 0.75rem 0.55rem; }
 }

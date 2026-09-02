@@ -1,223 +1,73 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { usePowerCatalog } from '../../hooks/usePowerCatalog';
+import type { ManeuverReference, SpellReference } from '../../hooks/usePowerCatalog';
 
-type ReferenceItem = {
-  id: string;
-  name: string;
-  description: string;
-  enhancements?: string;
-  eyebrow?: string;
-  metadata?: Array<[string, string]>;
-};
+type PowerDocument =
+  | { id: string; kind: 'Spell'; name: string; group: string; spell: SpellReference }
+  | { id: string; kind: 'Maneuver'; name: string; group: string; maneuver: ManeuverReference };
 
-type ClassFeatureDocument = {
-  classes?: Record<string, {
-    levels?: Record<string, Array<{ name?: string; description?: string }>>;
-    subclasses?: Record<string, string>;
-  }>;
-};
+function DetailText({ children }: { children: string }) {
+  return <div className="space-y-4">{children.split(/\n\n+/).filter(Boolean).map((paragraph, index) => <p key={index} className="whitespace-pre-wrap leading-7 text-slate-300">{paragraph}</p>)}</div>;
+}
 
-const normalizeClassFeatures = (document: ClassFeatureDocument): ReferenceItem[] =>
-  Object.entries(document.classes ?? {}).flatMap(([className, classDocument]) => {
-    const features = Object.entries(classDocument.levels ?? {}).flatMap(([level, levelFeatures]) =>
-      levelFeatures.map((feature, index) => ({
-        id: `${className}-level-${level}-${feature.name ?? index}`,
-        name: feature.name || `Level ${level} Feature`,
-        description: feature.description || '',
-        eyebrow: `${className} • Level ${level}`,
-        metadata: [['Class', className], ['Level', level]] as Array<[string, string]>,
-      }))
-    );
+function PowerDetail({ item }: { item: PowerDocument }) {
+  const isSpell = item.kind === 'Spell';
+  const details = isSpell ? item.spell : item.maneuver;
+  const metadata = isSpell
+    ? [['Source', item.spell.source], ['School', item.spell.school], ['Cost', item.spell.cost], ['Range', item.spell.range], ['Duration', item.spell.duration], ['Tags', item.spell.tags]]
+    : [['Category', item.maneuver.category], ['Cost', item.maneuver.cost], ['Range', item.maneuver.range], ['Requirements', item.maneuver.requirements]];
 
-    const subclasses = Object.entries(classDocument.subclasses ?? {}).map(([name, description]) => ({
-      id: `${className}-subclass-${name}`,
-      name,
-      description,
-      eyebrow: `${className} • Subclass`,
-      metadata: [['Class', className], ['Type', 'Subclass']] as Array<[string, string]>,
-    }));
-
-    return [...features, ...subclasses];
-  });
-
-const metadataEntries = (values: Array<[string, unknown]>): Array<[string, string]> =>
-  values.filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0);
+  return <article className="mx-auto max-w-4xl">
+    <div className="mb-7 border-b border-white/10 pb-6"><p className="theme-accent-text text-xs font-black uppercase tracking-[0.2em]">{item.kind} reference</p><h1 className="mt-2 text-4xl font-black text-white">{item.name}</h1><p className="mt-2 text-slate-400">{item.group}</p></div>
+    <dl className="mb-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{metadata.filter(([, value]) => value).map(([label, value]) => <div key={label} className="rounded-xl border border-white/8 bg-slate-950/50 p-3"><dt className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">{label}</dt><dd className="mt-1 text-sm font-bold text-slate-200">{value}</dd></div>)}</dl>
+    <section><h2 className="mb-3 text-xl font-black text-white">Description</h2><DetailText>{details.description}</DetailText></section>
+    {details.enhancements && <section className="mt-8 rounded-2xl border border-white/10 bg-slate-950/45 p-5"><h2 className="mb-3 text-xl font-black text-white">Enhancements</h2><DetailText>{details.enhancements}</DetailText></section>}
+  </article>;
+}
 
 const PowersView: React.FC = () => {
-  const [filterType, setFilterType] = useState<'spells' | 'maneuvers' | 'class-features'>('spells');
-  const [spells, setSpells] = useState<ReferenceItem[]>([]);
-  const [maneuvers, setManeuvers] = useState<ReferenceItem[]>([]);
-  const [classFeatures, setClassFeatures] = useState<ReferenceItem[]>([]);
+  const { spells, maneuvers, isLoading, error } = usePowerCatalog();
+  const [kind, setKind] = useState<'Spell' | 'Maneuver'>('Spell');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<ReferenceItem | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [group, setGroup] = useState('All');
+  const [selectedID, setSelectedID] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const documents = useMemo<PowerDocument[]>(() => kind === 'Spell'
+    ? spells.map((spell, index) => ({ id: `spell-${index}-${spell.name}`, kind: 'Spell', name: spell.name, group: `${spell.source} • ${spell.school}`, spell }))
+    : maneuvers.map((maneuver, index) => ({ id: `maneuver-${index}-${maneuver.name}`, kind: 'Maneuver', name: maneuver.name, group: maneuver.category, maneuver })), [kind, maneuvers, spells]);
+  const groups = useMemo(() => Array.from(new Set(documents.map((item) => item.group))).sort(), [documents]);
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return documents.filter((item) => {
+      const details = item.kind === 'Spell' ? item.spell : item.maneuver;
+      return (group === 'All' || item.group === group)
+        && (!query || [item.name, item.group, details.description, details.enhancements].some((value) => value?.toLowerCase().includes(query)));
+    });
+  }, [documents, group, search]);
+  const selected = filtered.find(({ id }) => id === selectedID) ?? filtered[0] ?? null;
 
-    const loadReferences = async () => {
-      try {
-        const [spellResponse, maneuverResponse, featureResponse] = await Promise.all([
-          fetch('/data/BetaSpells.json'),
-          fetch('/data/BetaManeuvers.json'),
-          fetch('/data/BetaClassFeatures.json'),
-        ]);
-
-        if (!spellResponse.ok || !maneuverResponse.ok || !featureResponse.ok) {
-          throw new Error('One or more reference files could not be loaded.');
-        }
-
-        const [spellDocument, maneuverDocument, featureDocument] = await Promise.all([
-          spellResponse.json(),
-          maneuverResponse.json(),
-          featureResponse.json(),
-        ]);
-
-        if (cancelled) return;
-
-        setSpells(
-          (Array.isArray(spellDocument.spells) ? spellDocument.spells : []).map((spell: Record<string, unknown>, index: number) => ({
-            id: `spell-${String(spell.name ?? index)}`,
-            name: String(spell.name ?? `Spell ${index + 1}`),
-            description: String(spell.description ?? ''),
-            enhancements: String(spell.enhancements ?? ''),
-            eyebrow: [spell.source, spell.school].filter(Boolean).map(String).join(' • '),
-            metadata: metadataEntries([
-              ['Cost', spell.cost],
-              ['Range', spell.range],
-              ['Duration', spell.duration],
-              ['Tags', spell.tags],
-            ]),
-          }))
-        );
-
-        setManeuvers(
-          (Array.isArray(maneuverDocument.maneuvers) ? maneuverDocument.maneuvers : []).map((maneuver: Record<string, unknown>, index: number) => ({
-            id: `maneuver-${String(maneuver.name ?? index)}`,
-            name: String(maneuver.name ?? `Maneuver ${index + 1}`),
-            description: String(maneuver.description ?? ''),
-            enhancements: String(maneuver.enhancements ?? ''),
-            eyebrow: String(maneuver.category ?? 'Maneuver'),
-            metadata: metadataEntries([
-              ['Cost', maneuver.cost],
-              ['Range', maneuver.range],
-              ['Requirements', maneuver.requirements],
-            ]),
-          }))
-        );
-
-        setClassFeatures(normalizeClassFeatures(featureDocument));
-        setLoadError(null);
-      } catch (error) {
-        if (!cancelled) {
-          setLoadError(error instanceof Error ? error.message : 'Reference data could not be loaded.');
-        }
-      }
-    };
-
-    void loadReferences();
-    return () => { cancelled = true; };
-  }, []);
-
-  const items = useMemo(() => {
-    const list = filterType === 'spells' ? spells : filterType === 'maneuvers' ? maneuvers : classFeatures;
-    if (!search) return list;
-    const query = search.toLowerCase();
-    return list.filter((item) =>
-      [item.name, item.description, item.eyebrow, ...(item.metadata?.flat() ?? [])]
-        .some((value) => value?.toLowerCase().includes(query))
-    );
-  }, [filterType, spells, maneuvers, classFeatures, search]);
-
-  const selectCategory = (category: typeof filterType) => {
-    setFilterType(category);
-    setSelected(null);
+  const chooseKind = (nextKind: typeof kind) => {
+    setKind(nextKind);
+    setGroup('All');
+    setSelectedID(null);
   };
 
-  return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <h1 className="text-4xl font-bold text-purple-400 mb-6">Spells & Maneuvers</h1>
+  if (isLoading) return <div className="p-10 text-slate-300">Loading the audited spell and maneuver library…</div>;
 
-      <div className="flex flex-wrap gap-3 mb-6">
-        {([
-          ['spells', `✨ Spells (${spells.length})`],
-          ['maneuvers', `⚔️ Maneuvers (${maneuvers.length})`],
-          ['class-features', `🧭 Class Features (${classFeatures.length})`],
-        ] as const).map(([category, label]) => (
-          <button
-            key={category}
-            onClick={() => selectCategory(category)}
-            className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-              filterType === category ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+  return <div className="min-h-full p-4 lg:p-7"><div className="mx-auto max-w-[1500px]">
+    <header className="mb-6"><p className="theme-accent-text text-xs font-black uppercase tracking-[0.28em]">Beta 0.10.5 reference library</p><h1 className="mt-1 text-4xl font-black text-white">Spells & Maneuvers</h1><p className="mt-2 max-w-3xl text-slate-400">Search complete rules text, costs, ranges, requirements, tags, durations, and enhancements without leaving the table.</p></header>
+    {error && <div role="alert" className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">{error}</div>}
 
-        <div className="flex-1" />
-        <input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search references..."
-          aria-label="Search spells, maneuvers, and class features"
-          className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-200 w-full sm:w-72"
-        />
-      </div>
-
-      {loadError && (
-        <div role="alert" className="mb-4 rounded-lg border border-red-700 bg-red-950/40 p-4 text-red-200">
-          {loadError}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 h-[60vh] overflow-auto">
-          {items.length === 0 ? (
-            <p className="text-gray-400">No references found.</p>
-          ) : (
-            items.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setSelected(item)}
-                className={`w-full text-left px-3 py-2 rounded-md mb-1 ${selected?.id === item.id ? 'bg-purple-700 text-white' : 'hover:bg-gray-700 text-gray-200'}`}
-              >
-                <span className="block font-semibold">{item.name}</span>
-                {item.eyebrow && <span className="block text-xs text-gray-400 mt-1">{item.eyebrow}</span>}
-              </button>
-            ))
-          )}
-        </div>
-
-        <div className="lg:col-span-2 bg-gray-800 rounded-lg p-6 border border-gray-700 h-[60vh] overflow-auto">
-          {selected ? (
-            <article>
-              {selected.eyebrow && <p className="text-sm font-semibold uppercase tracking-wide text-purple-400 mb-2">{selected.eyebrow}</p>}
-              <h2 className="text-2xl font-bold text-purple-300 mb-4">{selected.name}</h2>
-              {selected.metadata && selected.metadata.length > 0 && (
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-                  {selected.metadata.map(([label, value]) => (
-                    <div key={label} className="rounded bg-gray-900/70 p-3">
-                      <dt className="text-xs uppercase tracking-wide text-gray-500">{label}</dt>
-                      <dd className="text-gray-200 mt-1">{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-              <p className="text-gray-300 mb-5 whitespace-pre-wrap leading-relaxed">{selected.description}</p>
-              {selected.enhancements && (
-                <section>
-                  <h3 className="text-lg font-semibold text-gray-100 mb-2">Enhancements</h3>
-                  <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">{selected.enhancements}</p>
-                </section>
-              )}
-            </article>
-          ) : (
-            <div className="text-gray-400">Select a reference to view its complete details.</div>
-          )}
-        </div>
-      </div>
+    <div className="mb-4 grid gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 md:grid-cols-[auto_auto_1fr_280px]">
+      <button type="button" onClick={() => chooseKind('Spell')} className={`rounded-xl px-5 py-3 font-black ${kind === 'Spell' ? 'btn-primary' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}>✨ Spells ({spells.length})</button>
+      <button type="button" onClick={() => chooseKind('Maneuver')} className={`rounded-xl px-5 py-3 font-black ${kind === 'Maneuver' ? 'btn-primary' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}>⚔ Maneuvers ({maneuvers.length})</button>
+      <input value={search} onChange={(event) => { setSearch(event.target.value); setSelectedID(null); }} placeholder={`Search ${kind.toLowerCase()}s…`} aria-label="Search spells and maneuvers" className="min-w-0 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none focus:border-violet-400" />
+      <select value={group} onChange={(event) => { setGroup(event.target.value); setSelectedID(null); }} aria-label="Filter spells or maneuvers" className="min-w-0 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-200"><option>All</option>{groups.map((value) => <option key={value}>{value}</option>)}</select>
     </div>
-  );
+
+    <div className="grid gap-4 lg:grid-cols-[350px_1fr]"><aside className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 lg:h-[calc(100vh-245px)] lg:min-h-[620px] lg:overflow-auto"><div className="mb-2 flex items-center justify-between px-2 py-1"><h2 className="theme-accent-text font-black">{kind}s</h2><span className="rounded-full bg-slate-800 px-2 py-1 text-xs text-slate-400">{filtered.length}</span></div>{filtered.length === 0 ? <p className="p-5 text-sm text-slate-500">No references match these filters.</p> : filtered.map((item) => <button type="button" key={item.id} onClick={() => setSelectedID(item.id)} className={`mb-1 w-full rounded-xl p-3 text-left ${selected?.id === item.id ? 'theme-selected-card' : 'hover:bg-white/5'}`}><span className="block font-bold text-slate-100">{item.name}</span><span className="mt-1 block text-xs text-slate-500">{item.group}</span></button>)}</aside>
+      <main className="rounded-2xl border border-white/10 bg-slate-900/75 p-6 lg:h-[calc(100vh-245px)] lg:min-h-[620px] lg:overflow-auto lg:p-9">{selected ? <PowerDetail item={selected} /> : <div className="grid h-full place-items-center text-slate-500">Select a reference.</div>}</main></div>
+  </div></div>;
 };
 
 export default PowersView;

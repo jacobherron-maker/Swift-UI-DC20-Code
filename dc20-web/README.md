@@ -1,281 +1,89 @@
-# DC20 Hub - Web Version
+# DC20 Hub — Web App
 
-A web-based TTRPG companion tool for running DC20 campaigns, built with React, TypeScript, and Vite. Designed to replace the macOS Swift UI version with a cross-platform web application.
+DC20 Hub is a cross-platform React and TypeScript companion for building characters, preparing encounters, running combat, and organizing DC20 campaigns. It is the browser-based counterpart to the native macOS SwiftUI app and is configured for Netlify.
 
-## 🎮 Features
+## Current feature set
 
-- **Campaign Management**: Create and manage multiple campaigns with custom notes
-- **Character Sheets**: Build and track player characters with abilities, skills, and equipment
-- **Dice Roller**: Roll standard and D20 rolls with advantage/disadvantage support
-- **Combat Tracker**: Manage combat encounters with initiative tracking and round management
-- **Rules & References**: Access DC20 game rules, spells, maneuvers, and equipment
-- **Monster Reference**: Browse and create custom monsters for encounters
-- **Local Data Persistence**: All data saved to browser localStorage automatically
-- **Dark Mode**: Eye-friendly dark theme optimized for tabletop gaming
+- Comprehensive Rules library with Core, Combat, General, Character Creation, and Classes sections
+- 475 searchable reference documents, including conditions, class tables, and standalone subclasses
+- 160 spells and 30 maneuvers with complete metadata, descriptions, and enhancements
+- Six-step DC20 character builder with calculated summary and interactive character sheet
+- All 15 supported classes, including Psion and Summoner, plus Psyborn ancestry support
+- Correct skill, trade, language, mastery-cap, ancestry-trait, talent, path, equipment, and resource logic
+- 98-item equipment catalog with character inventory and equipped-state support
+- 31 read-only sourcebook monsters plus a full custom monster builder
+- Persistent encounter builder and combat tracker synchronized with characters and custom monsters
+- Multiple campaigns with multiple named notes nested inside each campaign
+- Standard dice roller and stacked advantage/disadvantage
+- Sixteen curated class-themed palettes carried over from the macOS app
+- Versioned local persistence with JSON backup export and restore
+- Installable web app manifest and offline reference caching
 
-## 🚀 Getting Started
+## Run locally
 
-### Prerequisites
-
-- Node.js 20.19 or higher (Node 22 is used by Netlify)
-- npm 9.0 or higher
-
-### Installation
+Requirements: Node.js 20.19 or newer. Netlify uses Node 22.
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development server
+npm ci
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+Open `http://localhost:5173`.
 
-### Building for Production
+## Verify a change
 
 ```bash
-# Build for production
 npm run build
-
-# Preview production build
-npm run preview
+npm run lint
+npm test
 ```
 
-## 📁 Project Structure
+The test suite covers character calculations and progression, equipment behavior, monster/encounter/combat rules, persistence migration, and backup restoration.
 
+## Saved data and backups
+
+DC20 Hub saves automatically in the current browser using local storage. This keeps the Netlify deployment simple and private, but browser data does not automatically follow a user to another device.
+
+Use **Export Data** in the sidebar to download a complete versioned JSON backup. Use **Customize → Import Backup** to restore it in another supported browser or operating system.
+
+## Install on another operating system
+
+Once deployed to HTTPS, supported browsers can install DC20 Hub as an app:
+
+- Windows and Linux: use the browser’s **Install app** option.
+- macOS: use Safari’s **Add to Dock** or a Chromium browser’s install option.
+- iPhone and iPad: use **Share → Add to Home Screen**.
+- Android: use **Install app** or **Add to Home screen**.
+
+The service worker caches the app shell and local reference catalogs for use after an initial online visit. User-created data remains in the browser and can be moved with backups.
+
+## Netlify deployment
+
+The repository root and `dc20-web` directory each contain a compatible Netlify configuration. From the repository root, Netlify runs:
+
+```text
+npm --prefix dc20-web ci
+npm --prefix dc20-web run build
 ```
+
+and publishes `dc20-web/dist`.
+
+No environment variables are needed for the local-only version.
+
+## Project layout
+
+```text
 dc20-web/
-├── src/
-│   ├── components/
-│   │   ├── layout/           # Header, Sidebar, Layout components
-│   │   ├── views/            # Page views for each section
-│   │   └── ui/               # Reusable UI components
-│   ├── store/                # Zustand state management
-│   ├── types/                # TypeScript interfaces and types
-│   ├── utils/                # Utility functions (dice rolling, calculations)
-│   ├── App.tsx               # Root app component
-│   ├── App.css               # Global styles with Tailwind
-│   ├── index.css             # Tailwind directives
-│   └── main.tsx              # Entry point
-├── public/
-│   └── data/                 # JSON data files (spells, maneuvers, etc.)
-├── tailwind.config.js        # Tailwind CSS configuration
-├── postcss.config.js         # PostCSS configuration
-├── vite.config.ts            # Vite configuration
-├── netlify.toml              # Netlify deployment configuration
-├── tsconfig.json             # TypeScript configuration
-└── package.json              # Project dependencies and scripts
+├── public/data/        # Curated runtime catalogs; no sourcebook PDFs
+├── scripts/            # Reproducible Swift-to-JSON source exporters
+├── src/components/     # Layout, builder, sheet, and module views
+├── src/data/           # Curated UI data such as class palettes
+├── src/hooks/          # Validated catalog loaders
+├── src/store/          # Versioned Zustand persistence and migrations
+├── src/types/          # DC20 domain models
+└── src/utils/          # Rules calculations and synchronization logic
 ```
 
-## 🏗️ Architecture
+## Distribution note
 
-### State Management (Zustand)
-
-The app uses Zustand for centralized state management with localStorage persistence:
-
-```typescript
-const { 
-  currentSection, 
-  campaignData, 
-  characters, 
-  addCharacter, 
-  saveCampaign 
-} = useCampaignStore();
-```
-
-### Data Models
-
-All TypeScript interfaces are defined in `src/types/models.ts`, ported from the original Swift models:
-
-- `CampaignData`: Campaign metadata and references
-- `Character`: Player character with abilities, skills, equipment
-- `Combatant`: Combat participant tracking
-- `Monster`: NPC/Monster statistics
-- `Spell`, `Maneuver`, `Equipment`: Game objects
-
-> Migration status: this is currently a partial web conversion. See `WEB_CONVERSION_AUDIT.md` at the repository root for verified feature coverage and the recommended implementation order.
-
-### Utility Functions
-
-Game mechanics in `src/utils/gameUtils.ts`:
-
-- Dice rolling with advantage/disadvantage
-- Ability modifier calculations
-- Rarity and difficulty color coding
-
-## 🎨 Styling
-
-- **Tailwind CSS**: Utility-first styling framework
-- **Dark Theme**: Custom color palette with purple accents
-- **Responsive Design**: Mobile-friendly layout
-- **Custom Components**: Reusable component utilities (buttons, cards, etc.)
-
-## 📱 Views
-
-Each view is a full-screen section accessible via the sidebar:
-
-1. **Dashboard**: Campaign overview and quick stats
-2. **Rules**: DC20 rule reference (extensible)
-3. **Spells & Maneuvers**: Power library
-4. **Dice Roller**: Interactive dice rolling with D&D mechanics
-5. **Characters**: Create and manage player characters
-6. **Equipment**: Item reference and catalog
-7. **Monsters**: Monster reference and builder
-8. **Combat**: Real-time combat tracker
-9. **Campaign**: Campaign notes and settings
-
-## 💾 Data Persistence
-
-Data is automatically persisted to browser localStorage:
-
-- Auto-saves every 30 seconds during gameplay
-- Manual save button in header
-- All data stored in `campaign-store` key
-- Survives browser restarts and tab refreshes
-
-### Exporting Data
-
-```typescript
-// Export campaign data
-const state = useCampaignStore.getState();
-const jsonData = JSON.stringify(state.campaignData);
-```
-
-## 🌐 Netlify Deployment
-
-This project is configured for automatic deployment to Netlify:
-
-### Prerequisites
-
-1. Connect your GitHub repository to Netlify
-2. Configure build settings in `netlify.toml`
-
-### Deployment Steps
-
-1. Push code to GitHub
-2. Netlify automatically builds and deploys
-3. Production site available at your custom domain
-
-### Environment Variables
-
-No environment variables required for basic functionality. To set them:
-
-1. Go to Netlify Dashboard → Site Settings → Environment
-2. Add variables as needed
-
-### Build Configuration
-
-The `netlify.toml` file specifies:
-
-- Build command: `npm run build`
-- Publish directory: `dist/`
-- SPA redirect: All routes redirect to `index.html`
-- Cache headers for data files
-
-## 🔧 Development
-
-### Adding New Features
-
-1. **Create a new view**: Add component in `src/components/views/`
-2. **Update state**: Modify `src/store/campaignStore.ts`
-3. **Add types**: Define interfaces in `src/types/models.ts`
-4. **Style with Tailwind**: Use utility classes in JSX
-
-### Example: Adding a New View
-
-```typescript
-// 1. Create the component
-// src/components/views/MyNewView.tsx
-export const MyNewView = () => {
-  const { data } = useCampaignStore();
-  return <div>My new view</div>;
-};
-
-// 2. Update HubSection enum
-// src/types/models.ts
-export enum HubSection {
-  MY_NEW_VIEW = "My New View",
-  // ...
-}
-
-// 3. Add navigation in App.tsx
-case HubSection.MY_NEW_VIEW:
-  return <MyNewView />;
-```
-
-### Debugging
-
-- **React DevTools**: Browser extension for React component inspection
-- **Zustand DevTools**: Redux DevTools support for state debugging
-- **Console**: Standard browser console for logging
-
-## 📦 Dependencies
-
-### Runtime
-
-- **react**: UI framework
-- **react-dom**: DOM rendering
-- **zustand**: State management library
-
-### Development
-
-- **typescript**: Type safety
-- **vite**: Fast build tool and dev server
-- **tailwindcss**: Utility CSS framework
-- **postcss**: CSS processing
-- **autoprefixer**: CSS vendor prefixing
-- **@types/react**: TypeScript definitions
-
-## 🐛 Known Limitations
-
-- localStorage has ~5-10MB limit per domain
-- No built-in server backend (uses localStorage only)
-- No real-time multiplayer (local only)
-- No offline-first service workers yet
-
-## 🚀 Future Enhancements
-
-- [ ] Backend API integration for cloud sync
-- [ ] Real-time collaboration features
-- [ ] Advanced character sheet builder
-- [ ] Full spell/maneuver database integration
-- [ ] Mobile app version with PWA
-- [ ] PDF export for character sheets
-- [ ] Custom theme support
-- [ ] Image upload for character portraits
-
-## 📄 License
-
-This project is a web conversion of the DC20 TTRPG Hub. All DC20 TTRPG content is owned by Level Up Publishing.
-
-## 🤝 Contributing
-
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📞 Support
-
-For issues, questions, or feature requests:
-
-1. Check existing GitHub issues
-2. Create a new issue with detailed description
-3. Include browser/OS information and steps to reproduce
-
-## 🎓 Resources
-
-- [React Documentation](https://react.dev)
-- [Vite Documentation](https://vitejs.dev)
-- [Tailwind CSS Documentation](https://tailwindcss.com)
-- [Zustand Documentation](https://github.com/pmndrs/zustand)
-- [TypeScript Documentation](https://www.typescriptlang.org)
-- [DC20 TTRPG](https://www.levelupgaming.org)
-
----
-
-Built with ❤️ for TTRPG enthusiasts by Copilot CLI
+The deployable tree intentionally contains no sourcebook PDFs, ZIP archives, or raw PDF/OCR text. The structured reference catalogs still contain rules-facing material. Confirm the publisher’s licensing terms before making a full-reference deployment public or distributing the repository history.

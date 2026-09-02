@@ -3,10 +3,14 @@ import { useCampaignStore } from '../../store/campaignStore';
 import CharacterBuilderView from './CharacterBuilderView';
 import CharacterSheet from './CharacterSheet';
 
-const CharactersView: React.FC = () => {
-  const { characters, deleteCharacter, selectCharacter, selectedCharacterId } = useCampaignStore();
+const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
+  const { characters, deleteCharacter, selectCharacter, selectedCharacterId, updateCharacter } = useCampaignStore();
   const [mode, setMode] = useState<'list' | 'builder' | 'sheet'>('list');
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = (nextMode: 'list' | 'builder' | 'sheet') => {
+    setMode(nextMode);
+    requestAnimationFrame(() => onNavigate?.());
+  };
 
   const selectedCharacter = useMemo(
     () => characters.find((c) => c.id === selectedCharacterId) || null,
@@ -26,7 +30,8 @@ const CharactersView: React.FC = () => {
   if (mode === 'builder') {
     return (
       <CharacterBuilderView
-        onCharacterCreated={() => setMode('sheet')}
+        character={selectedCharacter}
+        onCompleted={() => navigate('sheet')}
       />
     );
   }
@@ -35,7 +40,9 @@ const CharactersView: React.FC = () => {
     return (
       <CharacterSheet
         character={selectedCharacter}
-        onClose={() => setMode('list')}
+        onClose={() => navigate('list')}
+        onEdit={() => navigate('builder')}
+        onCharacterChange={updateCharacter}
       />
     );
   }
@@ -48,7 +55,10 @@ const CharactersView: React.FC = () => {
           Characters
         </h1>
         <button
-          onClick={() => setMode('builder')}
+          onClick={() => {
+            selectCharacter(null);
+            navigate('builder');
+          }}
           className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition"
         >
           + New Character
@@ -76,7 +86,10 @@ const CharactersView: React.FC = () => {
           </p>
           {characters.length === 0 && (
             <button
-              onClick={() => setMode('builder')}
+              onClick={() => {
+                selectCharacter(null);
+                navigate('builder');
+              }}
               className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition"
             >
               Create First Character
@@ -95,7 +108,7 @@ const CharactersView: React.FC = () => {
               }`}
               onClick={() => {
                 selectCharacter(character.id);
-                setMode('sheet');
+                navigate('sheet');
               }}
             >
               <div className="mb-4">
@@ -117,27 +130,21 @@ const CharactersView: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Defense:</span>
-                  <span className="text-blue-400 font-semibold">{character.defense}</span>
+                  <span className="text-slate-400">Defenses:</span>
+                  <span className="text-blue-400 font-semibold">PD {character.physicalDefense} • AD {character.arcaneDefense}</span>
                 </div>
               </div>
 
               {/* Attributes Summary */}
               <div className="bg-slate-700/50 rounded p-3 mb-4">
                 <div className="text-xs text-slate-400 mb-2 font-semibold">Attributes</div>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="bg-slate-600 rounded p-2 text-center">
-                    <div className="text-slate-400">STR</div>
-                    <div className="font-bold text-purple-300">{character.attributes.Might.score}</div>
-                  </div>
-                  <div className="bg-slate-600 rounded p-2 text-center">
-                    <div className="text-slate-400">INT</div>
-                    <div className="font-bold text-purple-300">{character.attributes.Intelligence.score}</div>
-                  </div>
-                  <div className="bg-slate-600 rounded p-2 text-center">
-                    <div className="text-slate-400">DEX</div>
-                    <div className="font-bold text-purple-300">{character.attributes.Agility.score}</div>
-                  </div>
+                <div className="grid grid-cols-4 gap-2 text-xs">
+                  {(['Might', 'Agility', 'Charisma', 'Intelligence'] as const).map((attribute) => (
+                    <div key={attribute} className="bg-slate-600 rounded p-2 text-center">
+                      <div className="text-slate-400">{attribute.slice(0, 3).toUpperCase()}</div>
+                      <div className="font-bold text-purple-300">{character.attributes[attribute].modifier >= 0 ? '+' : ''}{character.attributes[attribute].modifier}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -146,7 +153,7 @@ const CharactersView: React.FC = () => {
                   onClick={(e) => {
                     e.stopPropagation();
                     selectCharacter(character.id);
-                    setMode('sheet');
+                    navigate('sheet');
                   }}
                   className="flex-1 px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition text-sm font-semibold"
                 >

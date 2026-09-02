@@ -1,182 +1,118 @@
-import React, { useState } from 'react';
-import type { Character } from '../../types/models';
+import React, { useMemo, useState } from 'react';
+import { useCharacterReference } from '../../hooks/useCharacterReference';
+import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
+import type { CampaignNote, Character, DC20Attribute, MasteryLevel } from '../../types/models';
+import { ATTRIBUTE_NAMES, masteryBonus, masteryRank, masteryTitle } from '../../utils/characterRules';
+import { isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped } from '../../utils/equipmentRules';
+import { generateUUID } from '../../utils/gameUtils';
 
 interface CharacterSheetProps {
   character: Character;
   onClose?: () => void;
   onEdit?: () => void;
+  onCharacterChange?: (character: Character) => void;
 }
 
-const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit }) => {
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'attributes' | 'skills' | 'equipment'>('overview');
+type SheetTab = 'overview' | 'checks' | 'powers' | 'features' | 'equipment' | 'notes';
+const tabs: Array<{ id: SheetTab; label: string }> = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'checks', label: 'Checks & Saves' },
+  { id: 'powers', label: 'Spells & Maneuvers' },
+  { id: 'features', label: 'Features' },
+  { id: 'equipment', label: 'Equipment' },
+  { id: 'notes', label: 'Notes' },
+];
+const conditions = ['Bleeding', 'Blinded', 'Burning', 'Charmed', 'Dazed', 'Deafened', 'Disoriented', 'Doomed', 'Exhaustion', 'Exposed', 'Frightened', 'Hindered', 'Impaired', 'Immobilized', 'Intimidated', 'Invisible', 'Paralyzed', 'Petrified', 'Poisoned', 'Prone', 'Restrained', 'Slowed', 'Stunned', 'Taunted', 'Terrified', 'Unconscious', 'Weakened'];
+const panelClass = 'rounded-2xl border border-white/10 bg-slate-900/70 p-5';
+const fieldClass = 'w-full rounded-lg border border-slate-600 bg-slate-950/70 px-3 py-2 text-slate-100 outline-none focus:border-violet-400';
 
-  const tabs = ['overview', 'attributes', 'skills', 'equipment'] as const;
+function ResourceControl({ label, value, maximum, tone, onChange }: { label: string; value: number; maximum: number; tone: string; onChange: (value: number) => void }) {
+  return <div className="rounded-xl border border-white/10 bg-slate-950/55 p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{label}</div><div className="mt-2 flex items-center justify-between gap-2"><button type="button" onClick={() => onChange(Math.max(0, value - 1))} className="h-8 w-8 rounded-lg bg-slate-800 text-slate-200">−</button><div className={`text-xl font-black ${tone}`}>{value} / {maximum}</div><button type="button" onClick={() => onChange(Math.min(maximum, value + 1))} className="h-8 w-8 rounded-lg bg-slate-800 text-slate-200">+</button></div></div>;
+}
+
+function Details({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return <details className="group rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-start justify-between gap-3"><span><span className="font-black text-slate-200">{title}</span>{subtitle && <span className="mt-1 block text-xs text-slate-500">{subtitle}</span>}</span><span className="text-xs font-bold text-violet-300 group-open:hidden">More</span><span className="hidden text-xs font-bold text-violet-300 group-open:inline">Less</span></summary><div className="mt-4 whitespace-pre-wrap border-t border-white/5 pt-4 text-sm leading-6 text-slate-400">{children}</div></details>;
+}
+
+const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit, onCharacterChange }) => {
+  const [selectedTab, setSelectedTab] = useState<SheetTab>('overview');
+  const [lastRoll, setLastRoll] = useState<{ label: string; dice: number[]; chosen: number; modifier: number; total: number } | null>(null);
+  const [conditionToAdd, setConditionToAdd] = useState('Bleeding');
+  const [expandedSkills, setExpandedSkills] = useState(true);
+  const [expandedTrades, setExpandedTrades] = useState(false);
+  const { equipment: equipmentCatalog } = useEquipmentCatalog();
+  const { reference } = useCharacterReference();
+  const classReference = reference?.classes.find(({ name }) => name === character.class);
+  const build = character.build;
+  const rollAdjustment = build?.rollAdjustment ?? 0;
+  const conditionLevels = build?.sheetConditionLevels ?? {};
+  const notes = build?.characterNotes ?? [];
+
+  const update = (values: Partial<Character>) => onCharacterChange?.({ ...character, ...values });
+  const updateBuild = (values: Partial<NonNullable<Character['build']>>) => {
+    if (!build) return;
+    update({ build: { ...build, ...values } });
+  };
+
+  const roll = (label: string, modifier: number) => {
+    const dice = Array.from({ length: 1 + Math.abs(rollAdjustment) }, () => Math.floor(Math.random() * 20) + 1);
+    const chosen = rollAdjustment > 0 ? Math.max(...dice) : rollAdjustment < 0 ? Math.min(...dice) : dice[0];
+    setLastRoll({ label, dice, chosen, modifier, total: chosen + modifier });
+  };
+
+  const setCondition = (name: string, level: number) => {
+    const updated = { ...conditionLevels };
+    if (level <= 0) delete updated[name]; else updated[name] = Math.min(10, level);
+    updateBuild({ sheetConditionLevels: updated });
+  };
+
+  const classFeatures = useMemo(() => classReference?.features.filter(({ level }) => level <= character.level) ?? [], [classReference, character.level]);
+  const ancestryTraits = useMemo(() => reference?.ancestryTraits.filter(({ id }) => new Set(build?.selectedAncestryTraitIDs ?? []).has(id)) ?? [], [reference, build?.selectedAncestryTraitIDs]);
+  const skillGroups = reference?.skillGroups ?? [];
+  const tradeGroups = reference?.tradeGroups ?? [];
+
+  const skillModifier = (name: string, mastery: MasteryLevel): number => {
+    const skill = reference?.skills.find(({ name: candidate }) => candidate === name);
+    const attribute = skill?.attribute === 'Prime' ? character.primeModifier : character.attributes[skill?.attribute as DC20Attribute]?.modifier ?? 0;
+    const expertise = ancestryTraits.filter((trait) => trait.name === 'Skill Expertise' && build?.ancestryTraitChoices[trait.id]?.[0] === name).length;
+    return attribute + masteryBonus(masteryTitle(masteryRank(mastery) + expertise));
+  };
+
+  const tradeModifier = (name: string, mastery: MasteryLevel): number => {
+    const trade = reference?.trades.find(({ name: candidate }) => candidate === name);
+    const availableAttributes = (trade?.attribute ?? '').split(/, | or /).filter((attribute) => ATTRIBUTE_NAMES.includes(attribute as DC20Attribute));
+    const attribute = Math.max(0, ...availableAttributes.map((name) => character.attributes[name as DC20Attribute]?.modifier ?? 0));
+    const expertise = ancestryTraits.filter((trait) => trait.name === 'Trade Expertise' && build?.ancestryTraitChoices[trait.id]?.[0] === name).length;
+    return attribute + masteryBonus(masteryTitle(masteryRank(mastery) + expertise));
+  };
+
+  const updateNote = (note: CampaignNote) => updateBuild({ characterNotes: notes.map((entry) => entry.id === note.id ? note : entry) });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 border-b border-purple-500 pb-6">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-2">
-                {character.name}
-              </h1>
-              <div className="flex gap-4 text-slate-400">
-                <span className="font-semibold">{character.class}</span>
-                <span>•</span>
-                <span>{character.ancestry}</span>
-                <span>•</span>
-                <span>Level {character.level}</span>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              {onEdit && (
-                <button
-                  onClick={onEdit}
-                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
-                >
-                  Edit
-                </button>
-              )}
-              {onClose && (
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition"
-                >
-                  Close
-                </button>
-              )}
-            </div>
-          </div>
+    <div className="min-h-full bg-[radial-gradient(circle_at_top,#4c1d95_0%,#111827_42%,#020617_100%)] p-4 lg:p-7">
+      <div className="mx-auto max-w-[1500px]">
+        <header className="mb-5 rounded-2xl border border-violet-400/20 bg-slate-950/65 p-5 shadow-2xl shadow-black/20">
+          <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.25em] text-violet-300">Interactive Character Sheet</p><h1 className="mt-1 text-4xl font-black text-white">{character.name}</h1><p className="mt-2 text-slate-400">Level {character.level} {character.ancestry} {character.class}{character.subclass ? ` • ${character.subclass}` : ''}</p></div><div className="flex gap-2">{onEdit && <button type="button" onClick={onEdit} className="rounded-xl bg-violet-600 px-4 py-2 font-bold text-white hover:bg-violet-500">Return to Builder</button>}{onClose && <button type="button" onClick={onClose} className="rounded-xl bg-slate-800 px-4 py-2 font-bold text-slate-200 hover:bg-slate-700">Characters</button>}</div></div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><ResourceControl label="Health" value={character.healthPoints} maximum={character.maxHealthPoints} tone="text-red-300" onChange={(healthPoints) => update({ healthPoints })} /><ResourceControl label="Action Points" value={character.currentAP} maximum={character.maxAP} tone="text-violet-300" onChange={(currentAP) => update({ currentAP })} /><ResourceControl label="Stamina" value={character.stamina} maximum={character.maxStamina} tone="text-sky-300" onChange={(stamina) => update({ stamina })} /><ResourceControl label="Mana" value={character.manaPoints} maximum={character.maxManaPoints} tone="text-fuchsia-300" onChange={(manaPoints) => update({ manaPoints })} /><div className="rounded-xl border border-white/10 bg-slate-950/55 p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Temporary HP</div><div className="mt-2 flex items-center justify-between"><button type="button" onClick={() => updateBuild({ temporaryHP: Math.max(0, (build?.temporaryHP ?? 0) - 1) })} className="h-8 w-8 rounded-lg bg-slate-800">−</button><span className="text-xl font-black text-emerald-300">{build?.temporaryHP ?? 0}</span><button type="button" onClick={() => updateBuild({ temporaryHP: (build?.temporaryHP ?? 0) + 1 })} className="h-8 w-8 rounded-lg bg-slate-800">+</button></div></div></div>
+        </header>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-slate-800 rounded p-3 border border-slate-700">
-              <div className="text-xs text-slate-400 font-semibold mb-1">HEALTH</div>
-              <div className="text-2xl font-bold text-red-400">{character.healthPoints} / {character.maxHealthPoints}</div>
-            </div>
-            <div className="bg-slate-800 rounded p-3 border border-slate-700">
-              <div className="text-xs text-slate-400 font-semibold mb-1">STAMINA</div>
-              <div className="text-2xl font-bold text-blue-400">{character.stamina} / {character.maxStamina}</div>
-            </div>
-            <div className="bg-slate-800 rounded p-3 border border-slate-700">
-              <div className="text-xs text-slate-400 font-semibold mb-1">DEFENSE</div>
-              <div className="text-2xl font-bold text-yellow-400">{character.defense}</div>
-            </div>
-            <div className="bg-slate-800 rounded p-3 border border-slate-700">
-              <div className="text-xs text-slate-400 font-semibold mb-1">PRIME MOD</div>
-              <div className="text-2xl font-bold text-purple-400">{character.primeModifier >= 0 ? '+' : ''}{character.primeModifier}</div>
-            </div>
-          </div>
-        </div>
+        <div className="mb-5 grid gap-4 xl:grid-cols-[1fr_330px]"><nav className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/60 p-2 sm:grid-cols-3 lg:grid-cols-6">{tabs.map((tab) => <button type="button" key={tab.id} onClick={() => setSelectedTab(tab.id)} className={`rounded-xl px-3 py-3 text-sm font-bold ${selectedTab === tab.id ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}>{tab.label}</button>)}</nav><div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/60 p-3"><button type="button" onClick={() => updateBuild({ rollAdjustment: Math.max(-5, rollAdjustment - 1) })} className="h-9 w-9 rounded-lg bg-slate-800 text-lg">−</button><div className="text-center"><div className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Roll Mode</div><div className="font-black text-violet-200">{rollAdjustment > 0 ? `${rollAdjustment}× Advantage` : rollAdjustment < 0 ? `${Math.abs(rollAdjustment)}× Disadvantage` : 'Normal'}</div></div><button type="button" onClick={() => updateBuild({ rollAdjustment: Math.min(5, rollAdjustment + 1) })} className="h-9 w-9 rounded-lg bg-violet-600 text-lg">+</button></div></div>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 mb-8 border-b border-slate-700">
-          {tabs.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setSelectedTab(tab)}
-              className={`px-6 py-3 capitalize font-semibold transition ${
-                selectedTab === tab
-                  ? 'text-purple-400 border-b-2 border-purple-500'
-                  : 'text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+        {lastRoll && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-400/30 bg-violet-500/10 p-4"><div><span className="font-black text-violet-200">{lastRoll.label}</span><span className="ml-3 text-sm text-slate-400">Dice: {lastRoll.dice.join(', ')} • chosen {lastRoll.chosen} {lastRoll.modifier >= 0 ? '+' : '−'} {Math.abs(lastRoll.modifier)}</span></div><div className="text-3xl font-black text-white">{lastRoll.total}</div></div>}
 
-        {/* Tab Content */}
-        <div className="bg-slate-800 rounded-lg p-8 border border-slate-700">
-          {selectedTab === 'overview' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-bold text-purple-300 mb-3">Character Info</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
-                  <div>
-                    <span className="font-semibold text-slate-400">Class:</span> {character.class}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-400">Ancestry:</span> {character.ancestry}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-400">Background:</span> {character.background || 'None specified'}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-400">Alignment:</span> {character.alignment}
-                  </div>
-                </div>
-              </div>
-              {character.notes && (
-                <div>
-                  <h3 className="text-lg font-bold text-purple-300 mb-3">Notes</h3>
-                  <p className="text-slate-300 whitespace-pre-wrap">{character.notes}</p>
-                </div>
-              )}
-            </div>
-          )}
+        <main className={`${panelClass} min-h-[560px]`}>
+          {selectedTab === 'overview' && <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3"><section className={panelClass}><h2 className="font-black text-violet-200">Combat</h2><div className="mt-4 grid grid-cols-2 gap-3">{[['Physical Defense', character.physicalDefense], ['Arcane Defense', character.arcaneDefense], ['Combat Mastery', `+${character.combatMastery}`], ['Speed', character.speed], ['Martial Check', `+${character.primeModifier + character.combatMastery}`], ['Spell Check', `+${character.primeModifier + character.combatMastery}`], ['Class Save DC', 10 + character.primeModifier + character.combatMastery], ['Death Threshold', -4]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-950/55 p-3"><div className="text-xs text-slate-500">{label}</div><div className="text-xl font-black text-slate-100">{value}</div></div>)}</div></section><section className={panelClass}><h2 className="font-black text-violet-200">Attributes</h2><div className="mt-4 grid grid-cols-2 gap-3">{ATTRIBUTE_NAMES.map((attribute) => <button type="button" key={attribute} onClick={() => roll(`${attribute} Check`, character.attributes[attribute].modifier)} className="rounded-lg bg-slate-950/55 p-3 text-left hover:bg-violet-500/10"><div className="text-xs text-slate-500">{attribute}</div><div className="text-xl font-black text-slate-100">{character.attributes[attribute].modifier >= 0 ? '+' : ''}{character.attributes[attribute].modifier}</div><div className="text-xs text-violet-300">Roll check</div></button>)}</div></section><section className={panelClass}><div className="flex items-center justify-between"><h2 className="font-black text-violet-200">Active Conditions</h2><div className="flex gap-2"><select value={conditionToAdd} onChange={(event) => setConditionToAdd(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs">{conditions.map((condition) => <option key={condition}>{condition}</option>)}</select><button type="button" onClick={() => setCondition(conditionToAdd, conditionLevels[conditionToAdd] ?? 1)} className="rounded-lg bg-violet-600 px-2 py-1 text-xs font-bold">Add</button></div></div><div className="mt-4 space-y-2">{Object.entries(conditionLevels).length === 0 ? <p className="text-sm text-slate-500">No active conditions.</p> : Object.entries(conditionLevels).sort().map(([condition, value]) => <div key={condition} className="flex items-center justify-between rounded-lg bg-slate-950/55 p-3"><span className="font-bold text-slate-200">{condition}</span><div className="flex items-center gap-2"><button type="button" onClick={() => setCondition(condition, value - 1)} className="h-7 w-7 rounded bg-slate-800">−</button><span className="min-w-6 text-center font-black text-violet-200">{value}</span><button type="button" onClick={() => setCondition(condition, value + 1)} className="h-7 w-7 rounded bg-slate-800">+</button><button type="button" onClick={() => setCondition(condition, 0)} className="ml-1 text-xs font-bold text-red-300">×</button></div></div>)}</div></section><section className={`${panelClass} lg:col-span-2 xl:col-span-3`}><h2 className="font-black text-violet-200">Background</h2><h3 className="mt-3 text-lg font-black text-slate-200">{build?.backgroundName || character.background || 'Unnamed Background'}</h3><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-400">{build?.backgroundStory || 'No background story has been written yet.'}</p></section></div>}
 
-          {selectedTab === 'attributes' && (
-            <div>
-              <h3 className="text-lg font-bold text-purple-300 mb-6">Attributes</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(character.attributes).map(([attrKey, attr]) => (
-                  <div key={attrKey} className="bg-slate-700 rounded-lg p-6 border border-slate-600">
-                    <div className="flex justify-between items-start mb-3">
-                      <h4 className="text-lg font-bold text-purple-300">{attr.name}</h4>
-                      <span className="text-2xl font-bold text-purple-400">{attr.score}</span>
-                    </div>
-                    <div className="text-sm text-slate-400">
-                      Modifier: <span className={attr.modifier >= 0 ? 'text-green-400' : 'text-red-400'}>
-                        {attr.modifier >= 0 ? '+' : ''}{attr.modifier}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {selectedTab === 'checks' && <div className="space-y-5"><section><h2 className="mb-3 font-black text-violet-200">Attribute Saves</h2><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{ATTRIBUTE_NAMES.map((attribute) => { const modifier = character.attributes[attribute].modifier + character.combatMastery; return <button type="button" key={attribute} onClick={() => roll(`${attribute} Save`, modifier)} className="rounded-xl border border-white/10 bg-slate-950/45 p-4 text-left hover:border-violet-400/40"><div className="text-xs text-slate-500">{attribute} Save</div><div className="text-2xl font-black text-violet-200">+{modifier}</div></button>; })}</div></section><section><button type="button" onClick={() => setExpandedSkills((value) => !value)} className="mb-3 flex w-full items-center justify-between rounded-xl bg-slate-950/55 p-4 font-black text-violet-200"><span>Skills</span><span>{expandedSkills ? 'Collapse' : 'Expand'}</span></button>{expandedSkills && <div className="space-y-5">{skillGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">{group.name}</h3><div className="grid gap-2 md:grid-cols-2">{group.options.map((name) => { const mastery = character.skillMasteries[name] ?? 'Untrained'; const modifier = skillModifier(name, mastery); return <button type="button" key={name} onClick={() => roll(`${name} Check`, modifier)} className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-950/45 p-3 text-left hover:border-violet-400/40"><span><span className="font-bold text-slate-200">{name}</span><span className="ml-2 text-xs text-slate-500">{mastery}</span></span><span className="font-black text-violet-200">{modifier >= 0 ? '+' : ''}{modifier}</span></button>; })}</div></div>)}</div>}</section><section><button type="button" onClick={() => setExpandedTrades((value) => !value)} className="mb-3 flex w-full items-center justify-between rounded-xl bg-slate-950/55 p-4 font-black text-fuchsia-200"><span>Trades</span><span>{expandedTrades ? 'Collapse' : 'Expand'}</span></button>{expandedTrades && <div className="space-y-5">{tradeGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">{group.name}</h3><div className="grid gap-2 md:grid-cols-2">{group.options.map((name) => { const mastery = character.tradeMasteries[name] ?? 'Untrained'; const modifier = tradeModifier(name, mastery); return <button type="button" key={name} onClick={() => roll(`${name} Trade Check`, modifier)} className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-950/45 p-3 text-left hover:border-fuchsia-400/40"><span><span className="font-bold text-slate-200">{name}</span><span className="ml-2 text-xs text-slate-500">{mastery}</span></span><span className="font-black text-fuchsia-200">{modifier >= 0 ? '+' : ''}{modifier}</span></button>; })}</div></div>)}</div>}</section></div>}
 
-          {selectedTab === 'skills' && (
-            <div>
-              <h3 className="text-lg font-bold text-purple-300 mb-6">Skills & Masteries</h3>
-              {Object.keys(character.skillMasteries || {}).length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(character.skillMasteries || {}).map(([skill, mastery]) => (
-                    <div key={skill} className="bg-slate-700 rounded p-3 border border-slate-600">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-slate-300">{skill}</span>
-                        <span className="text-purple-300 font-bold">{mastery}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-slate-400">No skills selected</p>
-              )}
-            </div>
-          )}
+          {selectedTab === 'powers' && <div><div className="mb-5 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Martial Check</div><div className="text-2xl font-black text-violet-200">+{character.primeModifier + character.combatMastery}</div></div><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Spell Check</div><div className="text-2xl font-black text-fuchsia-200">+{character.primeModifier + character.combatMastery}</div></div><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Class Save DC</div><div className="text-2xl font-black text-sky-200">{10 + character.primeModifier + character.combatMastery}</div></div></div><div className="grid gap-5 lg:grid-cols-2"><section><h2 className="mb-3 font-black text-fuchsia-200">Spells</h2><div className="space-y-2">{character.spells.length === 0 ? <p className="text-slate-500">No spells known.</p> : character.spells.map((spell) => <Details key={spell.id} title={spell.name} subtitle={[spell.source, spell.school, spell.cost, spell.range].filter(Boolean).join(' • ')}>{spell.description}{spell.enhancements && <><h4 className="mt-4 font-black text-slate-300">Enhancements</h4><p>{spell.enhancements}</p></>}</Details>)}</div></section><section><h2 className="mb-3 font-black text-violet-200">Maneuvers</h2><div className="space-y-2">{character.maneuvers.length === 0 ? <p className="text-slate-500">No maneuvers known.</p> : character.maneuvers.map((maneuver) => <Details key={maneuver.id} title={maneuver.name} subtitle={[maneuver.category ?? maneuver.type, maneuver.cost, maneuver.range].filter(Boolean).join(' • ')}>{maneuver.description}{maneuver.enhancements && <><h4 className="mt-4 font-black text-slate-300">Enhancements</h4><p>{maneuver.enhancements}</p></>}</Details>)}</div></section></div></div>}
 
-          {selectedTab === 'equipment' && (
-            <div>
-              <h3 className="text-lg font-bold text-purple-300 mb-6">Equipment</h3>
-              {character.equipment.length > 0 ? (
-                <div className="space-y-2">
-                  {character.equipment.map(item => (
-                    <div key={item.id} className="bg-slate-700 rounded p-3 border border-slate-600 flex justify-between">
-                      <span className="text-slate-300">{item.name}</span>
-                      <span className="text-slate-400">x{item.quantity}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-slate-400">No equipment</p>
-              )}
-            </div>
-          )}
-        </div>
+          {selectedTab === 'features' && <div className="grid gap-5 lg:grid-cols-3"><section><h2 className="mb-3 font-black text-violet-200">Class Features</h2><div className="space-y-3">{classFeatures.map((entry) => <div key={entry.level}><h3 className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Level {entry.level}</h3><div className="space-y-2">{entry.features.map((feature) => <Details key={`${entry.level}-${feature.name}`} title={feature.name}>{feature.description}</Details>)}</div></div>)}{character.subclass && (classReference?.subclassFeatures[character.subclass] ?? []).map((feature) => <Details key={`subclass-${feature.name}`} title={feature.name} subtitle={character.subclass}>{feature.description}</Details>)}</div></section><section><h2 className="mb-3 font-black text-fuchsia-200">Talents</h2><div className="space-y-2">{(build?.selectedTalents ?? []).length === 0 ? <p className="text-slate-500">No talents selected.</p> : (build?.selectedTalents ?? []).map((name) => { const talent = classReference?.talents.find(({ name: candidate }) => candidate === name); return <Details key={name} title={name}>{talent?.description ?? 'Talent details are unavailable.'}</Details>; })}</div></section><section><h2 className="mb-3 font-black text-emerald-200">Ancestry Traits</h2><div className="space-y-2">{ancestryTraits.length === 0 ? <p className="text-slate-500">No ancestry traits selected.</p> : ancestryTraits.map((trait) => <Details key={trait.id} title={trait.name} subtitle={`${trait.ancestry} • ${trait.cost > 0 ? '+' : ''}${trait.cost} AP`}>{trait.description}{build?.ancestryTraitChoices[trait.id]?.length ? `\n\nChoice: ${build.ancestryTraitChoices[trait.id].join(', ')}` : ''}</Details>)}</div></section></div>}
+
+          {selectedTab === 'equipment' && <div><div className="mb-6"><h2 className="font-black text-violet-200">Inventory & Equipped Gear</h2><p className="mt-1 text-sm text-slate-500">Add equipment from the main Equipment tab. Armor and hand limits are enforced when equipping.</p></div>{(character.inventoryItems?.length ?? 0) + character.equipment.length > 0 ? <div className="space-y-2">{(character.inventoryItems ?? []).map((inventory) => { const item = equipmentCatalog.find(({ id }) => id === inventory.equipmentID); if (!item) return <div key={inventory.id} className="rounded-lg border border-amber-400/20 bg-amber-500/5 p-3 text-amber-200">Missing catalog item: {inventory.equipmentID}</div>; return <Details key={inventory.id} title={item.name} subtitle={`${item.category} • ${item.subtype} • ${item.slot}${inventory.isEquipped ? ' • Equipped' : ''}`}><p className="font-semibold text-violet-200">{item.summary}</p><p className="mt-3">{item.mechanics}</p><div className="mt-4 flex flex-wrap items-center gap-2"><button type="button" onClick={() => update({ inventoryItems: setInventoryQuantity(character.inventoryItems ?? [], inventory.id, inventory.quantity - 1) })} className="h-8 w-8 rounded bg-slate-800">−</button><span className="font-black text-slate-200">Quantity {inventory.quantity}</span><button type="button" onClick={() => update({ inventoryItems: setInventoryQuantity(character.inventoryItems ?? [], inventory.id, inventory.quantity + 1) })} className="h-8 w-8 rounded bg-slate-800">+</button>{isEquipmentEquippable(item) && <button type="button" onClick={() => update({ inventoryItems: toggleInventoryEquipped(character.inventoryItems ?? [], inventory.id, equipmentCatalog) })} className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white">{inventory.isEquipped ? 'Stow' : 'Equip'}</button>}<button type="button" onClick={() => update({ inventoryItems: (character.inventoryItems ?? []).filter(({ id }) => id !== inventory.id) })} className="rounded-lg px-3 py-2 text-xs font-bold text-red-300">Remove</button></div></Details>; })}{character.equipment.map((item) => <div key={item.id} className="rounded-lg bg-slate-950/45 p-3 text-slate-300">{item.name} ×{item.quantity} <span className="text-xs text-slate-500">legacy item</span></div>)}</div> : <p className="text-slate-500">No equipment in inventory.</p>}</div>}
+
+          {selectedTab === 'notes' && <div className="grid gap-5 lg:grid-cols-[280px_1fr]"><aside><button type="button" onClick={() => updateBuild({ characterNotes: [...notes, { id: generateUUID(), title: 'New Note', body: '' }] })} className="mb-3 w-full rounded-xl bg-violet-600 px-4 py-3 font-black text-white">+ New Note</button><div className="space-y-2">{notes.map((note) => <div key={note.id} className="rounded-xl border border-white/10 bg-slate-950/45 p-3"><input value={note.title} onChange={(event) => updateNote({ ...note, title: event.target.value })} className={`${fieldClass} font-bold`} /><button type="button" onClick={() => updateBuild({ characterNotes: notes.filter(({ id }) => id !== note.id) })} className="mt-2 text-xs font-bold text-red-300">Delete note</button></div>)}</div></aside><section className="space-y-3">{notes.length === 0 ? <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center text-slate-500">Create named notes for session details, goals, NPCs, or reminders.</div> : notes.map((note) => <div key={note.id} className={panelClass}><h2 className="font-black text-violet-200">{note.title || 'Untitled Note'}</h2><textarea value={note.body} onChange={(event) => updateNote({ ...note, body: event.target.value })} rows={10} className={`${fieldClass} mt-3`} placeholder="Write your note…" /></div>)}</section></div>}
+        </main>
       </div>
     </div>
   );

@@ -2,132 +2,105 @@
 
 Audit date: 2026-09-02  
 Branch: `jacobherron-maker-swift-to-web-conversion`  
-Pre-rewrite baseline commit: `b3c8342`
+Pre-migration baseline: `82a3a99`
 
 ## Executive summary
 
-The React/Vite application has a valid Netlify build and a useful visual shell, but it is not yet a functional port of the native DC20 Hub. It should be treated as a prototype. Several navigation items lead to placeholders or the wrong page, the character and monster models use D&D-style statistics that do not match DC20, and most cross-module workflows have not been implemented.
+The web conversion is now a functional, migration-safe DC20 Hub rather than the earlier visual prototype. Its primary modules run against DC20-specific models and source-exported catalogs, the character and monster workflows carry through encounters and combat, and browser data can be backed up and restored.
 
-The highest-risk issue was the public asset bundle. Complete sourcebooks, extracted sourcebook text, and uncurated OCR guesses were being copied into every Netlify deployment. Those assets have been removed from the deployable tree. The curated JSON reference files remain.
+The app builds as a Netlify-ready React/Vite production bundle and can be installed on supported desktop and mobile operating systems. The deployable tree does not contain sourcebook PDFs, PDF archives, or raw extracted/OCR text.
 
-## Verified baseline
+## Verified release baseline
 
-- `npm ci`: passes with no reported dependency vulnerabilities.
-- `npm run build`: passes with TypeScript 6 and Vite 8.
-- `npm run lint`: passes after removing the one unused catch variable.
-- Browser smoke test: the app loads and primary navigation renders.
-- Netlify output after remediation: approximately 760 KB, with no PDF, ZIP, or extracted-text files.
-- Runtime reference test: 160 curated spells, 30 curated maneuvers, and 195 curated class feature/subclass entries load successfully.
+- `npm ci`: successful; package lock updated for the test runner and current build tooling.
+- `npm run build`: successful with TypeScript 6 and Vite 8.
+- `npm run lint`: successful with no warnings.
+- `npm test`: 4 files and 24 tests passing.
+- Production preview: Dashboard and customization load from the built bundle with no browser warnings or errors.
+- Full navigation smoke test: all 10 primary sections open their intended screens.
+- Reference smoke tests: complete Arcane Bolt and Heroic Bash text, including enhancements, renders in the powers library.
+- Class smoke tests: complete Barbarian features, levels 1–10 table, subclasses, and standalone Elemental Fury document render in Rules.
+- Responsive check: compact sidebar and content reflow verified at a 900 × 720 viewport.
+- Production manifest and service worker: both return HTTP 200 from the built bundle.
 
-## Changes made during the audit
+## Migrated modules
 
-1. Removed the ten sourcebook PDFs, twelve extracted/OCR text files, the duplicate PDF ZIP archive, and five uncurated OCR-derived JSON files from the current Git tree.
-2. Added ignore rules to prevent these materials from being accidentally returned to Vite's `public` folder.
-3. Repaired the Rules and Spells & Maneuvers loaders. The curated JSON files are documents containing `spells`, `maneuvers`, and `classes`; the previous UI incorrectly expected top-level arrays.
-4. Removed runtime merging of uncurated OCR guesses. Those files contained false results such as prose fragments labeled as monsters or maneuvers.
-5. Added complete spell and maneuver metadata to their detail display.
-6. Corrected stacked advantage/disadvantage so the stack controls how many d20s are rolled and which is selected without adding the advantage count as a numeric bonus.
-7. Pinned Node 22 for Netlify, declared the minimum supported Node version, changed deployment installation to `npm ci`, and added basic response security headers.
-8. Updated the browser title and project documentation.
-
-## Feature parity audit
-
-| Module | Current web state | Main gap |
+| Module | Current state | Verified coverage |
 | --- | --- | --- |
-| Dashboard | Partial | Counts only a subset of persisted objects and has no working quick actions. |
-| Rules | Partial | Curated class references now load, but Core, Combat, General, Character Creation, Conditions, full class tables, and standalone subclass documents are absent. |
-| Spells & Maneuvers | Partial | The curated libraries now load and search correctly. They are not connected to class progression, character choices, or character sheets. |
-| Dice Roller | Mostly functional | Standard dice and stacked advantage work. Roll history, check/save integration, and contextual character rolls remain absent. |
-| Encounters | Missing | The sidebar selection silently renders Dashboard because `App.tsx` has no Encounters route or view. Encounter data is not stored. |
-| Monsters | Prototype with incorrect data model | Shows five D&D-style sample monsters using AC and ability scores. There is no DC20 level/type/role builder, published bestiary separation, editing, or encounter/combat synchronization. |
-| Characters | Early prototype | Creation saves a record, but most builder steps are shells and the calculations are not DC20 calculations. |
-| Equipment | Missing | Search/filter controls render above a “coming soon” message. There is no catalog, inventory, or equipped-state logic. |
-| Combat | Missing | Static hero/enemy columns and a local round counter only. Add Combatant has no action and saved combats are unused. |
-| Campaign | Early prototype | Edits one global title and one global note. It does not create/select multiple campaigns or nested named notes. |
-| Customization | Missing | Settings button has no action and light mode does not restyle the hard-coded dark content surfaces. |
-| Import/Export | Missing | Export Data has no action. Monster JSON import has no schema validation. |
+| Dashboard | Functional | Counts every persisted directory and provides working quick actions. |
+| Rules | Functional | Five requested sections, 475 searchable documents, conditions, class tables, and standalone subclasses. |
+| Spells & Maneuvers | Functional | 160 spells and 30 maneuvers with searchable full descriptions, costs, ranges, requirements, tags, durations, and enhancements. |
+| Dice Roller | Functional | D2, D4, D6, D8, D10, D12, D20, D100, plus stacked advantage/disadvantage. |
+| Characters | Functional | Six-step DC20 builder, complete source-backed choices, calculations, interactive sheet, features, powers, equipment, rolls, resources, conditions, and named notes. |
+| Equipment | Functional | 98 categorized items, mechanics, character inventory, starting selections, and equipped-state calculations. |
+| Monsters | Functional | 31 non-deletable sourcebook monsters, editable custom directory, DC20 builder defaults, traits/features/actions/reactions, and detailed display. |
+| Encounters | Functional | Persistent party composition, monster entries, difficulty calculations, and combat launch. |
+| Combat | Functional | Multiple saved combats, characters and monster directories, HP/AP/RP, teams, rounds, conditions, source details, and edit synchronization. |
+| Campaign | Functional | Multiple selectable campaigns with multiple named editable notes nested in each. |
+| Customization | Functional | Sixteen curated native-app palettes with immediate persisted selection. |
+| Import/Export | Functional | Versioned full-state JSON backups with schema migration and safe default normalization. |
 
-## Critical correctness findings
+## Runtime catalog inventory
 
-### Domain models do not match DC20
+| Catalog | Records |
+| --- | ---: |
+| Rules documents | 475 |
+| Spells | 160 |
+| Maneuvers | 30 |
+| Equipment | 98 |
+| Sourcebook monsters | 31 |
+| Classes | 15 |
+| Class feature records | 283 |
+| Ancestry traits | 195 |
+| Skills | 12 |
+| Trades | 28 |
+| Languages | 15 |
 
-- Character attributes use D&D-style scores such as 15 and the `(score - 10) / 2` modifier formula. The native DC20 builder uses direct attribute values, an attribute cap by character level, and DC20-specific generation methods.
-- The displayed “Standard Array” is `15, 14, 13, 12`, not the DC20 array and point allocation.
-- The attribute-method buttons use constant keys that do not match the handler's expected values, so changing methods does not reliably apply the selected method.
-- The character card displays STR, INT, and DEX, omits Charisma, and uses terminology outside the four DC20 attributes.
-- `DC20Trades` contains the five trade categories rather than the full trade list.
-- The web class catalog omits Psion and Summoner; the ancestry catalog omits Psyborn.
-- Skills, trades, languages, ancestry traits, class features, subclasses, talents, path progression, powers, equipment, and derived summary statistics are not mechanically connected.
-- Character HP, Stamina, Mana, and Defense are hard-coded during creation.
+The class catalog includes Psion and Summoner. The ancestry choices include Psyborn. Where Monster Collection guidance differs from the earlier Starter Pack, the newer collection is treated as the preferred monster-building source.
 
-### Monster and encounter foundations must be replaced
+## Important behavior verified during migration
 
-- The web `Monster` interface uses `ac`, D&D-style ability scores, and `stamina` as HP. It lacks DC20 Level, dynamic type, role, HP, PD, AD, attack modifier, Save DC, damage, AP, RP, Prime Modifier, Combat Mastery, mitigation, movement, senses, and structured feature/action/reaction records.
-- `Monsters.json` contains five generic sample creatures rather than the audited Monster Collection and Starter Pack library.
-- The page combines published and custom monsters and only supports deletion/import; it does not provide the required non-deletable sourcebook and editable custom sections.
-- No Encounter view or persistent encounter collection exists.
-- Combatants have no stable link back to characters or monsters, so later edits cannot synchronize into encounters or combats.
+- Character records from the D&D-shaped prototype are converted to direct DC20 attribute values.
+- Mastery caps scale through Novice, Adept, Expert, Master, and Grandmaster.
+- Ancestry Attribute Increase and Skill/Trade Expertise affect calculated builder values and caps.
+- Bard Remarkable Repertoire grants the intended skill points and Magical Secrets capacity.
+- Martial characters can choose Spellcaster Path and receive the applicable mana and spell capacity.
+- Character updates synchronize into linked combatants without healing existing damage or restoring spent AP.
+- Custom monster updates synchronize through saved encounters and combatants while preserving live combat damage.
+- Published monsters cannot be edited or deleted; custom monsters can.
+- User text fields are controlled inputs and remain editable across builder and sheet navigation.
+- Character deletion no longer relies on an unstable selected-array index.
 
-### Persistence is not migration-safe
+## Persistence and portability
 
-- Zustand persistence writes the whole store to `campaign-store`, while the manual save/load functions also maintain a separate `dc20-campaign` key.
-- There is no schema version, migration function, validation, backup import/export, or recovery path for malformed local data.
-- Campaigns, characters, and combats are not scoped consistently. A future model replacement could invalidate existing browser saves without a migration layer.
-- Browser local storage is device- and browser-specific. Netlify deployment alone does not provide accounts or cloud synchronization.
+Zustand persistence now has an explicit schema version and migration layer. Legacy monster, combat, encounter, and character shapes are normalized when read. The manual save button updates save status while normal edits persist immediately through the single canonical store.
 
-### Reference coverage is incomplete
+Backups use a versioned `dc20hub-web-backup` document containing campaigns, characters, custom monsters, encounters, combats, selections, and theme preference. Import runs through the same migration and normalization layer as browser persistence.
 
-- The curated spell and maneuver documents are usable, but they must be compared against the native catalogs before declaring parity.
-- The class document contains 13 classes and only partial level coverage; it excludes Psion and Summoner and does not reproduce the complete native class-table system.
-- The ancestry file contains short placeholder summaries and mechanically inaccurate D&D-like options. It must not be treated as authoritative source data.
-- The remaining five-monster file is not sourcebook-accurate and must be replaced before the Monster tab is presented as a reference library.
+Browser local storage remains device- and browser-specific. Netlify deployment alone does not provide accounts, cloud sync, or shared campaigns.
 
-## Sourcebook and licensing remediation
+## Sourcebook and licensing audit
 
-The current checkout no longer includes sourcebook PDFs, raw extracted text, or uncurated OCR datasets in deployable paths. They are recoverable from earlier Git commits and remain available in the separate local reference project.
+The deployed `public` and production `dist` trees contain no `.pdf`, `.zip`, or raw `.txt` sourcebook assets. Obsolete placeholder catalogs were removed, including the five-monster D&D-shaped file, summarized ancestry file, and incomplete 13-class feature file.
 
-Important: deleting files in a new commit does not remove them from Git history. Before making the repository public, transferring it, or distributing its history, remove the licensed binary/text blobs from history with a deliberate history-rewrite procedure. That operation changes commit IDs and requires coordination with every clone, so it should be handled separately with explicit approval.
+The JSON catalogs are generated from audited native data through reproducible scripts. Source PDFs remain outside the deployable repository tree as read-only project references.
 
-Structured rules text and stat blocks may also be subject to the publisher's license even when PDFs are not distributed. Confirm distribution rights before making a full-reference deployment public.
+Deleting sourcebooks in a newer Git commit does not remove them from older repository history. Before making the repository public, transferring it, or distributing a complete clone, perform a coordinated history rewrite to remove licensed binaries and raw extracted text from earlier commits.
 
-## Netlify assessment
+Structured rules text and stat blocks may still be subject to publisher licensing even when PDFs are not bundled. Confirm public-distribution rights before launching the full-reference site.
 
-- The root `netlify.toml` correctly builds from the repository root and publishes `dc20-web/dist`.
-- The nested `dc20-web/netlify.toml` supports deployments whose Netlify base directory is set to `dc20-web`.
-- Node 22 is now pinned because Vite 8 requires Node 20.19 or newer; the previous README incorrectly allowed Node 18.
-- SPA redirects are configured correctly.
-- The app has no backend, authentication, server-side secrets, or cloud database.
-- A production launch still needs a content-license decision, an application-data migration strategy, and meaningful automated tests.
+## Remaining release work
 
-## Recommended implementation order
+The migrated app is usable locally and deployable, but these are separate product enhancements rather than parity blockers:
 
-### Phase 1 — Canonical DC20 core
-
-1. Port the native Swift domain models into strict TypeScript models without D&D compatibility fields.
-2. Port tested calculations for attributes, mastery caps, talents, ancestry effects, class/path progression, resources, health, defenses, attacks, saves, and equipment.
-3. Introduce a versioned persisted state with validation, migrations, export, and import.
-4. Add a unit-test runner and fixture tests shared by every UI module.
-
-### Phase 2 — Monster → Encounter → Combat vertical slice
-
-1. Port the audited Monster Collection/Starter Pack source library and builder defaults.
-2. Implement separate read-only Sourcebook Monsters and editable Custom Monsters sections.
-3. Build persistent encounters using stable monster references plus intentional snapshots.
-4. Build saved combats from characters and encounters, preserving current HP/resources while synchronizing updated directory statistics.
-5. Test create, edit, duplicate, delete, encounter conversion, combat launch, save, reload, and stale-reference recovery.
-
-### Phase 3 — Character builder and sheet
-
-Port the native builder in its actual step order, including every choice dependency and calculated summary. Then connect the interactive sheet, rolls, resources, conditions, inventory, powers, features, and multiple notes.
-
-### Phase 4 — Reference and campaign modules
-
-Port the full Rules hierarchy, equipment library, class tables, subclasses, conditions, campaigns, nested notes, and customization palettes.
-
-### Phase 5 — Cross-platform release quality
-
-Add responsive navigation, keyboard/accessibility review, PWA/offline behavior, error boundaries, backup/restore UX, end-to-end smoke tests, and deployment previews.
+- Optional accounts and encrypted cloud synchronization
+- Real-time multi-user campaign collaboration
+- Automated browser-level end-to-end tests in CI
+- Character-sheet PDF/print layout
+- Portrait and custom image storage
+- More specialized small-phone layouts for dense builders and combat boards
+- A deliberate public-content license and repository-history decision
 
 ## Recommended next milestone
 
-Begin with Phase 1 and immediately follow it with the Monster → Encounter → Combat vertical slice. Building those three screens on the current models would create throwaway work; replacing the shared core first gives every later module a stable foundation.
+Create a Netlify deploy preview from this branch and perform a short table-use acceptance pass on the hosted URL. After that, decide whether the first public release remains local-only or adds account-based cloud sync. Do not publish the complete repository history until the licensed-source history decision is resolved.

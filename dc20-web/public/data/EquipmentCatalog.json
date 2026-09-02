@@ -1,0 +1,1385 @@
+[
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Sickle \/ Hand Axe \/ Throwing Star",
+    "mechanics" : "Axe • 1 Slashing damage • Concealable, Toss • Range 5\/10\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Axe: Bleed — the target makes a Repeated Physical Save; on a failure, it begins Bleeding.\n\nMechanical Properties:\n• Concealable: Drawing it doesn’t provoke Opportunity Attacks. When drawn as part of an Attack, gain ADV on that Attack once per creature per Combat.\n• Toss: You can throw it as a Ranged Martial Attack at 5\/10; beyond that range it is an Improvised Weapon.",
+    "name" : "Sickle \/ Hand Axe \/ Throwing Star",
+    "properties" : [
+      "Concealable",
+      "Toss"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Axe",
+    "summary" : "1 Slashing damage • Concealable, Toss • Range 5\/10"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Brass Knuckles",
+    "mechanics" : "Fist • 1 Bludgeoning damage • Concealable, Impact • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Fist: Grapple — the target makes a Physical Save; on a failure, it becomes Grappled by you. Fist Weapons also count as a free hand for Grappling.\n\nMechanical Properties:\n• Concealable: Drawing it doesn’t provoke Opportunity Attacks. When drawn as part of an Attack, gain ADV on that Attack once per creature per Combat.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Brass Knuckles",
+    "properties" : [
+      "Concealable",
+      "Impact"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Fist",
+    "summary" : "1 Bludgeoning damage • Concealable, Impact • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Club",
+    "mechanics" : "Hammer • 1 Bludgeoning damage • Concealable, Toss • Range 5\/10\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Hammer: Knockback — the target makes a Might Save; on a failure, push it 1 Space away, plus 1 additional Space each time you add this Enhancement.\n\nMechanical Properties:\n• Concealable: Drawing it doesn’t provoke Opportunity Attacks. When drawn as part of an Attack, gain ADV on that Attack once per creature per Combat.\n• Toss: You can throw it as a Ranged Martial Attack at 5\/10; beyond that range it is an Improvised Weapon.",
+    "name" : "Club",
+    "properties" : [
+      "Concealable",
+      "Toss"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Hammer",
+    "summary" : "1 Bludgeoning damage • Concealable, Toss • Range 5\/10"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Light Hammer",
+    "mechanics" : "Hammer • 1 Bludgeoning damage • Impact, Toss • Range 5\/10\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Hammer: Knockback — the target makes a Might Save; on a failure, push it 1 Space away, plus 1 additional Space each time you add this Enhancement.\n\nMechanical Properties:\n• Impact: It deals +1 damage on Heavy Hits.\n• Toss: You can throw it as a Ranged Martial Attack at 5\/10; beyond that range it is an Improvised Weapon.",
+    "name" : "Light Hammer",
+    "properties" : [
+      "Impact",
+      "Toss"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Hammer",
+    "summary" : "1 Bludgeoning damage • Impact, Toss • Range 5\/10"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Boomerang",
+    "mechanics" : "Hammer • 1 Bludgeoning damage • Toss, Returning • Range 5\/10\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Hammer: Knockback — the target makes a Might Save; on a failure, push it 1 Space away, plus 1 additional Space each time you add this Enhancement.\n\nMechanical Properties:\n• Toss: You can throw it as a Ranged Martial Attack at 5\/10; beyond that range it is an Improvised Weapon.\n• Returning: Requires Toss or Thrown. When you miss a Ranged Attack with it, it returns to your hand.",
+    "name" : "Boomerang",
+    "properties" : [
+      "Toss",
+      "Returning"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Hammer",
+    "summary" : "1 Bludgeoning damage • Toss, Returning • Range 5\/10"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Mining Pick",
+    "mechanics" : "Pick • 1 Piercing damage • Impact, Toss • Range 5\/10\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Pick: Hinder — the target makes an Agility Save; on a failure, it becomes Hindered until the end of its next turn.\n\nMechanical Properties:\n• Impact: It deals +1 damage on Heavy Hits.\n• Toss: You can throw it as a Ranged Martial Attack at 5\/10; beyond that range it is an Improvised Weapon.",
+    "name" : "Mining Pick",
+    "properties" : [
+      "Impact",
+      "Toss"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Pick",
+    "summary" : "1 Piercing damage • Impact, Toss • Range 5\/10"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Dart",
+    "mechanics" : "Spear • 1 Piercing damage • Concealable, Toss • Range 5\/10\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Spear: Slow — the target makes an Agility Save; on a failure, it becomes Slowed until the end of its next turn.\n\nMechanical Properties:\n• Concealable: Drawing it doesn’t provoke Opportunity Attacks. When drawn as part of an Attack, gain ADV on that Attack once per creature per Combat.\n• Toss: You can throw it as a Ranged Martial Attack at 5\/10; beyond that range it is an Improvised Weapon.",
+    "name" : "Dart",
+    "properties" : [
+      "Concealable",
+      "Toss"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Spear",
+    "summary" : "1 Piercing damage • Concealable, Toss • Range 5\/10"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Javelin",
+    "mechanics" : "Spear • 1 Piercing damage • Thrown • Range 10\/20\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Spear: Slow — the target makes an Agility Save; on a failure, it becomes Slowed until the end of its next turn.\n\nMechanical Properties:\n• Thrown: You can throw it as a Ranged Martial Attack at 10\/20; beyond that range it is an Improvised Weapon.",
+    "name" : "Javelin",
+    "properties" : [
+      "Thrown"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Spear",
+    "summary" : "1 Piercing damage • Thrown • Range 10\/20"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Throwing Dagger",
+    "mechanics" : "Sword • 1 Slashing damage • Concealable, Toss • Range 5\/10\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Sword: Accuracy — add a d4 to your Attack Check.\n\nMechanical Properties:\n• Concealable: Drawing it doesn’t provoke Opportunity Attacks. When drawn as part of an Attack, gain ADV on that Attack once per creature per Combat.\n• Toss: You can throw it as a Ranged Martial Attack at 5\/10; beyond that range it is an Improvised Weapon.",
+    "name" : "Throwing Dagger",
+    "properties" : [
+      "Concealable",
+      "Toss"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Sword",
+    "summary" : "1 Slashing damage • Concealable, Toss • Range 5\/10"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Short Sword",
+    "mechanics" : "Sword • 1 Slashing damage • Guard, Impact • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Sword: Accuracy — add a d4 to your Attack Check.\n\nMechanical Properties:\n• Guard: Gain +1 PD while wielding it.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Short Sword",
+    "properties" : [
+      "Guard",
+      "Impact"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Sword",
+    "summary" : "1 Slashing damage • Guard, Impact • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Rapier",
+    "mechanics" : "Sword\/Spear • 1 Slashing or Piercing damage • Guard, Multi-Faceted • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Sword: Accuracy — add a d4 to your Attack Check.\n• Spear: Slow — the target makes an Agility Save; on a failure, it becomes Slowed until the end of its next turn.\n\nMechanical Properties:\n• Guard: Gain +1 PD while wielding it.\n• Multi-Faceted: It has a second Weapon Style; choose either listed damage type and use either or both Weapon Enhancements.",
+    "name" : "Rapier",
+    "properties" : [
+      "Guard",
+      "Multi-Faceted"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Sword\/Spear",
+    "summary" : "1 Slashing or Piercing damage • Guard, Multi-Faceted • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Chain Whip",
+    "mechanics" : "Whip • 1 Slashing damage • Reach, Impact • Range 2\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Whip: Pull — the target makes a Might Save; on a failure, move it horizontally 1 Space toward you or to either side, plus 1 additional Space each time you add this Enhancement.\n\nMechanical Properties:\n• Reach: Add 1 Space to your Melee Range when you Attack with it.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Chain Whip",
+    "properties" : [
+      "Reach",
+      "Impact"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Whip",
+    "summary" : "1 Slashing damage • Reach, Impact • Range 2"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Battleaxe",
+    "mechanics" : "Axe • 1 Slashing damage • Versatile, Impact • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Axe: Bleed — the target makes a Repeated Physical Save; on a failure, it begins Bleeding.\n\nMechanical Properties:\n• Versatile: Wield it with 1 or 2 hands; while using 2 hands, gain +2 to Hit.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Battleaxe",
+    "properties" : [
+      "Versatile",
+      "Impact"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Axe",
+    "summary" : "1 Slashing damage • Versatile, Impact • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Flail",
+    "mechanics" : "Hammer\/Whip • 1 Bludgeoning or Slashing damage • Versatile, Multi-Faceted • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Hammer: Knockback — the target makes a Might Save; on a failure, push it 1 Space away, plus 1 additional Space each time you add this Enhancement.\n• Whip: Pull — the target makes a Might Save; on a failure, move it horizontally 1 Space toward you or to either side, plus 1 additional Space each time you add this Enhancement.\n\nMechanical Properties:\n• Versatile: Wield it with 1 or 2 hands; while using 2 hands, gain +2 to Hit.\n• Multi-Faceted: It has a second Weapon Style; choose either listed damage type and use either or both Weapon Enhancements.",
+    "name" : "Flail",
+    "properties" : [
+      "Versatile",
+      "Multi-Faceted"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Hammer\/Whip",
+    "summary" : "1 Bludgeoning or Slashing damage • Versatile, Multi-Faceted • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Morningstar \/ Warhammer",
+    "mechanics" : "Hammer\/Pick • 1 Bludgeoning or Piercing damage • Versatile, Multi-Faceted • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Hammer: Knockback — the target makes a Might Save; on a failure, push it 1 Space away, plus 1 additional Space each time you add this Enhancement.\n• Pick: Hinder — the target makes an Agility Save; on a failure, it becomes Hindered until the end of its next turn.\n\nMechanical Properties:\n• Versatile: Wield it with 1 or 2 hands; while using 2 hands, gain +2 to Hit.\n• Multi-Faceted: It has a second Weapon Style; choose either listed damage type and use either or both Weapon Enhancements.",
+    "name" : "Morningstar \/ Warhammer",
+    "properties" : [
+      "Versatile",
+      "Multi-Faceted"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Hammer\/Pick",
+    "summary" : "1 Bludgeoning or Piercing damage • Versatile, Multi-Faceted • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Pickaxe",
+    "mechanics" : "Pick • 1 Piercing damage • Versatile, Impact • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Pick: Hinder — the target makes an Agility Save; on a failure, it becomes Hindered until the end of its next turn.\n\nMechanical Properties:\n• Versatile: Wield it with 1 or 2 hands; while using 2 hands, gain +2 to Hit.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Pickaxe",
+    "properties" : [
+      "Versatile",
+      "Impact"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Pick",
+    "summary" : "1 Piercing damage • Versatile, Impact • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Spear",
+    "mechanics" : "Spear • 1 Piercing damage • Versatile, Toss • Range 5\/10\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Spear: Slow — the target makes an Agility Save; on a failure, it becomes Slowed until the end of its next turn.\n\nMechanical Properties:\n• Versatile: Wield it with 1 or 2 hands; while using 2 hands, gain +2 to Hit.\n• Toss: You can throw it as a Ranged Martial Attack at 5\/10; beyond that range it is an Improvised Weapon.",
+    "name" : "Spear",
+    "properties" : [
+      "Versatile",
+      "Toss"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Spear",
+    "summary" : "1 Piercing damage • Versatile, Toss • Range 5\/10"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Long Spear",
+    "mechanics" : "Spear • 1 Piercing damage • Versatile, Reach • Range 2\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Spear: Slow — the target makes an Agility Save; on a failure, it becomes Slowed until the end of its next turn.\n\nMechanical Properties:\n• Versatile: Wield it with 1 or 2 hands; while using 2 hands, gain +2 to Hit.\n• Reach: Add 1 Space to your Melee Range when you Attack with it.",
+    "name" : "Long Spear",
+    "properties" : [
+      "Versatile",
+      "Reach"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Spear",
+    "summary" : "1 Piercing damage • Versatile, Reach • Range 2"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Bo Staff",
+    "mechanics" : "Staff • 1 Bludgeoning damage • Versatile, Guard • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Staff: Trip — the target makes a Physical Save; on a failure, it falls Prone.\n\nMechanical Properties:\n• Versatile: Wield it with 1 or 2 hands; while using 2 hands, gain +2 to Hit.\n• Guard: Gain +1 PD while wielding it.",
+    "name" : "Bo Staff",
+    "properties" : [
+      "Versatile",
+      "Guard"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Staff",
+    "summary" : "1 Bludgeoning damage • Versatile, Guard • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Longsword",
+    "mechanics" : "Sword • 1 Slashing damage • Versatile, Guard • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Sword: Accuracy — add a d4 to your Attack Check.\n\nMechanical Properties:\n• Versatile: Wield it with 1 or 2 hands; while using 2 hands, gain +2 to Hit.\n• Guard: Gain +1 PD while wielding it.",
+    "name" : "Longsword",
+    "properties" : [
+      "Versatile",
+      "Guard"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Sword",
+    "summary" : "1 Slashing damage • Versatile, Guard • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Bastard Sword",
+    "mechanics" : "Sword • 1 Slashing damage • Versatile, Impact • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Sword: Accuracy — add a d4 to your Attack Check.\n\nMechanical Properties:\n• Versatile: Wield it with 1 or 2 hands; while using 2 hands, gain +2 to Hit.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Bastard Sword",
+    "properties" : [
+      "Versatile",
+      "Impact"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Sword",
+    "summary" : "1 Slashing damage • Versatile, Impact • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Bull Whip",
+    "mechanics" : "Whip • 1 Slashing damage • Versatile, Reach, Unwieldy, Impact • Range 2\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Whip: Pull — the target makes a Might Save; on a failure, move it horizontally 1 Space toward you or to either side, plus 1 additional Space each time you add this Enhancement.\n\nMechanical Properties:\n• Versatile: Wield it with 1 or 2 hands; while using 2 hands, gain +2 to Hit.\n• Reach: Add 1 Space to your Melee Range when you Attack with it.\n• Unwieldy: Attacks with it have DisADV against targets within 1 Space of you.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Bull Whip",
+    "properties" : [
+      "Versatile",
+      "Reach",
+      "Unwieldy",
+      "Impact"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Whip",
+    "summary" : "1 Slashing damage • Versatile, Reach, Unwieldy, Impact • Range 2"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Scythe",
+    "mechanics" : "Axe • 2 Slashing damage • Two-Handed, Heavy, Reach • Range 2\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Axe: Bleed — the target makes a Repeated Physical Save; on a failure, it begins Bleeding.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Heavy: Its damage increases by 1.\n• Reach: Add 1 Space to your Melee Range when you Attack with it.",
+    "name" : "Scythe",
+    "properties" : [
+      "Two-Handed",
+      "Heavy",
+      "Reach"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Axe",
+    "summary" : "2 Slashing damage • Two-Handed, Heavy, Reach • Range 2"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Greataxe",
+    "mechanics" : "Axe • 2 Slashing damage • Two-Handed, Heavy, Impact • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Axe: Bleed — the target makes a Repeated Physical Save; on a failure, it begins Bleeding.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Heavy: Its damage increases by 1.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Greataxe",
+    "properties" : [
+      "Two-Handed",
+      "Heavy",
+      "Impact"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Axe",
+    "summary" : "2 Slashing damage • Two-Handed, Heavy, Impact • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Halberd",
+    "mechanics" : "Axe\/Pick • 1 Slashing or Piercing damage • Two-Handed, Multi-Faceted, Reach, Impact • Range 2\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Axe: Bleed — the target makes a Repeated Physical Save; on a failure, it begins Bleeding.\n• Pick: Hinder — the target makes an Agility Save; on a failure, it becomes Hindered until the end of its next turn.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Multi-Faceted: It has a second Weapon Style; choose either listed damage type and use either or both Weapon Enhancements.\n• Reach: Add 1 Space to your Melee Range when you Attack with it.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Halberd",
+    "properties" : [
+      "Two-Handed",
+      "Multi-Faceted",
+      "Reach",
+      "Impact"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Axe\/Pick",
+    "summary" : "1 Slashing or Piercing damage • Two-Handed, Multi-Faceted, Reach, Impact • Range 2"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|War Flail",
+    "mechanics" : "Hammer\/Whip • 2 Bludgeoning or Slashing damage • Two-Handed, Heavy, Multi-Faceted • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Hammer: Knockback — the target makes a Might Save; on a failure, push it 1 Space away, plus 1 additional Space each time you add this Enhancement.\n• Whip: Pull — the target makes a Might Save; on a failure, move it horizontally 1 Space toward you or to either side, plus 1 additional Space each time you add this Enhancement.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Heavy: Its damage increases by 1.\n• Multi-Faceted: It has a second Weapon Style; choose either listed damage type and use either or both Weapon Enhancements.",
+    "name" : "War Flail",
+    "properties" : [
+      "Two-Handed",
+      "Heavy",
+      "Multi-Faceted"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Hammer\/Whip",
+    "summary" : "2 Bludgeoning or Slashing damage • Two-Handed, Heavy, Multi-Faceted • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Meteor Hammer",
+    "mechanics" : "Hammer\/Whip • 2 Bludgeoning or Slashing damage • Two-Handed, Heavy, Multi-Faceted, Reach, Unwieldy • Range 2\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Hammer: Knockback — the target makes a Might Save; on a failure, push it 1 Space away, plus 1 additional Space each time you add this Enhancement.\n• Whip: Pull — the target makes a Might Save; on a failure, move it horizontally 1 Space toward you or to either side, plus 1 additional Space each time you add this Enhancement.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Heavy: Its damage increases by 1.\n• Multi-Faceted: It has a second Weapon Style; choose either listed damage type and use either or both Weapon Enhancements.\n• Reach: Add 1 Space to your Melee Range when you Attack with it.\n• Unwieldy: Attacks with it have DisADV against targets within 1 Space of you.",
+    "name" : "Meteor Hammer",
+    "properties" : [
+      "Two-Handed",
+      "Heavy",
+      "Multi-Faceted",
+      "Reach",
+      "Unwieldy"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Hammer\/Whip",
+    "summary" : "2 Bludgeoning or Slashing damage • Two-Handed, Heavy, Multi-Faceted, Reach, Unwieldy • Range 2"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Greatmaul",
+    "mechanics" : "Hammer • 2 Bludgeoning damage • Two-Handed, Heavy, Impact • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Hammer: Knockback — the target makes a Might Save; on a failure, push it 1 Space away, plus 1 additional Space each time you add this Enhancement.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Heavy: Its damage increases by 1.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Greatmaul",
+    "properties" : [
+      "Two-Handed",
+      "Heavy",
+      "Impact"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Hammer",
+    "summary" : "2 Bludgeoning damage • Two-Handed, Heavy, Impact • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Pike",
+    "mechanics" : "Spear • 2 Piercing damage • Two-Handed, Heavy, Reach, Impact, Unwieldy • Range 2\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Spear: Slow — the target makes an Agility Save; on a failure, it becomes Slowed until the end of its next turn.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Heavy: Its damage increases by 1.\n• Reach: Add 1 Space to your Melee Range when you Attack with it.\n• Impact: It deals +1 damage on Heavy Hits.\n• Unwieldy: Attacks with it have DisADV against targets within 1 Space of you.",
+    "name" : "Pike",
+    "properties" : [
+      "Two-Handed",
+      "Heavy",
+      "Reach",
+      "Impact",
+      "Unwieldy"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Spear",
+    "summary" : "2 Piercing damage • Two-Handed, Heavy, Reach, Impact, Unwieldy • Range 2"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Quarterstaff",
+    "mechanics" : "Staff • 1 Bludgeoning damage • Two-Handed, Guard, Reach, Impact • Range 2\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Staff: Trip — the target makes a Physical Save; on a failure, it falls Prone.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Guard: Gain +1 PD while wielding it.\n• Reach: Add 1 Space to your Melee Range when you Attack with it.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Quarterstaff",
+    "properties" : [
+      "Two-Handed",
+      "Guard",
+      "Reach",
+      "Impact"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Staff",
+    "summary" : "1 Bludgeoning damage • Two-Handed, Guard, Reach, Impact • Range 2"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Glaive",
+    "mechanics" : "Sword • 2 Slashing damage • Two-Handed, Heavy, Reach • Range 2\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Sword: Accuracy — add a d4 to your Attack Check.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Heavy: Its damage increases by 1.\n• Reach: Add 1 Space to your Melee Range when you Attack with it.",
+    "name" : "Glaive",
+    "properties" : [
+      "Two-Handed",
+      "Heavy",
+      "Reach"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Sword",
+    "summary" : "2 Slashing damage • Two-Handed, Heavy, Reach • Range 2"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Greatsword",
+    "mechanics" : "Sword • 2 Slashing damage • Two-Handed, Heavy, Impact • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Sword: Accuracy — add a d4 to your Attack Check.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Heavy: Its damage increases by 1.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Greatsword",
+    "properties" : [
+      "Two-Handed",
+      "Heavy",
+      "Impact"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Sword",
+    "summary" : "2 Slashing damage • Two-Handed, Heavy, Impact • Range 1"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Great Whip",
+    "mechanics" : "Whip • 2 Slashing damage • Two-Handed, Heavy, Reach, Impact, Unwieldy • Range 2\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Whip: Pull — the target makes a Might Save; on a failure, move it horizontally 1 Space toward you or to either side, plus 1 additional Space each time you add this Enhancement.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Heavy: Its damage increases by 1.\n• Reach: Add 1 Space to your Melee Range when you Attack with it.\n• Impact: It deals +1 damage on Heavy Hits.\n• Unwieldy: Attacks with it have DisADV against targets within 1 Space of you.",
+    "name" : "Great Whip",
+    "properties" : [
+      "Two-Handed",
+      "Heavy",
+      "Reach",
+      "Impact",
+      "Unwieldy"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Whip",
+    "summary" : "2 Slashing damage • Two-Handed, Heavy, Reach, Impact, Unwieldy • Range 2"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Sling",
+    "mechanics" : "Sling • 1 Bludgeoning damage • Ammo, Impact • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Sling: Hinder — the target makes an Agility Save; on a failure, it becomes Hindered until the end of its next turn.\n\nMechanical Properties:\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Sling",
+    "properties" : [
+      "Ammo",
+      "Impact"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Sling",
+    "summary" : "1 Bludgeoning damage • Ammo, Impact • Range 15\/45"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Hand Crossbow",
+    "mechanics" : "Crossbow • 2 Piercing damage • Ammo, Reload, Deft, Impact • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Crossbow: Accuracy — add a d4 to your Attack Check.\n\nMechanical Properties:\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Reload: Its damage increases by 1, but you must spend 1 AP or 1 SP and use a free hand to reload it; it must be loaded again if it stops being held.\n• Deft: Ranged Attacks with it don’t have DisADV from being Prone.\n• Impact: It deals +1 damage on Heavy Hits.",
+    "name" : "Hand Crossbow",
+    "properties" : [
+      "Ammo",
+      "Reload",
+      "Deft",
+      "Impact"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Crossbow",
+    "summary" : "2 Piercing damage • Ammo, Reload, Deft, Impact • Range 15\/45"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Hand Stonebow",
+    "mechanics" : "Crossbow\/Sling • 2 Bludgeoning or Piercing damage • Ammo, Reload, Deft, Multi-Faceted • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Crossbow: Accuracy — add a d4 to your Attack Check.\n• Sling: Hinder — the target makes an Agility Save; on a failure, it becomes Hindered until the end of its next turn.\n\nMechanical Properties:\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Reload: Its damage increases by 1, but you must spend 1 AP or 1 SP and use a free hand to reload it; it must be loaded again if it stops being held.\n• Deft: Ranged Attacks with it don’t have DisADV from being Prone.\n• Multi-Faceted: It has a second Weapon Style; choose either listed damage type and use either or both Weapon Enhancements.",
+    "name" : "Hand Stonebow",
+    "properties" : [
+      "Ammo",
+      "Reload",
+      "Deft",
+      "Multi-Faceted"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Crossbow\/Sling",
+    "summary" : "2 Bludgeoning or Piercing damage • Ammo, Reload, Deft, Multi-Faceted • Range 15\/45"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Shortbow",
+    "mechanics" : "Bow • 1 Piercing damage • Two-Handed, Ammo, Impact, Silent • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Bow: Slow — the target makes an Agility Save; on a failure, it is Slowed until the end of its next turn.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Impact: It deals +1 damage on Heavy Hits.\n• Silent: When making a Ranged Attack with it while Hidden, you remain Unheard by creatures you’re Hidden from.",
+    "name" : "Shortbow",
+    "properties" : [
+      "Two-Handed",
+      "Ammo",
+      "Impact",
+      "Silent"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Bow",
+    "summary" : "1 Piercing damage • Two-Handed, Ammo, Impact, Silent • Range 15\/45"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Longbow",
+    "mechanics" : "Bow • 1 Piercing damage • Two-Handed, Ammo, Impact, Long-Ranged • Range 30\/90\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Bow: Slow — the target makes an Agility Save; on a failure, it is Slowed until the end of its next turn.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Impact: It deals +1 damage on Heavy Hits.\n• Long-Ranged: Its Range increases to 30\/90.",
+    "name" : "Longbow",
+    "properties" : [
+      "Two-Handed",
+      "Ammo",
+      "Impact",
+      "Long-Ranged"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Bow",
+    "summary" : "1 Piercing damage • Two-Handed, Ammo, Impact, Long-Ranged • Range 30\/90"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Greatbow",
+    "mechanics" : "Bow • 2 Piercing damage • Two-Handed, Ammo, Impact, Heavy, Cumbersome • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Bow: Slow — the target makes an Agility Save; on a failure, it is Slowed until the end of its next turn.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Impact: It deals +1 damage on Heavy Hits.\n• Heavy: Its damage increases by 1.\n• Cumbersome: It takes 1 AP to draw, stow, or pick up this Weapon.",
+    "name" : "Greatbow",
+    "properties" : [
+      "Two-Handed",
+      "Ammo",
+      "Impact",
+      "Heavy",
+      "Cumbersome"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Bow",
+    "summary" : "2 Piercing damage • Two-Handed, Ammo, Impact, Heavy, Cumbersome • Range 15\/45"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Blowgun",
+    "mechanics" : "Crossbow • 1 Piercing damage • Two-Handed, Ammo, Deft, Silent • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Crossbow: Accuracy — add a d4 to your Attack Check.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Deft: Ranged Attacks with it don’t have DisADV from being Prone.\n• Silent: When making a Ranged Attack with it while Hidden, you remain Unheard by creatures you’re Hidden from.",
+    "name" : "Blowgun",
+    "properties" : [
+      "Two-Handed",
+      "Ammo",
+      "Deft",
+      "Silent"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Crossbow",
+    "summary" : "1 Piercing damage • Two-Handed, Ammo, Deft, Silent • Range 15\/45"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Light Crossbow",
+    "mechanics" : "Crossbow • 3 Piercing damage • Two-Handed, Ammo, Reload, Deft, Heavy • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Crossbow: Accuracy — add a d4 to your Attack Check.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Reload: Its damage increases by 1, but you must spend 1 AP or 1 SP and use a free hand to reload it; it must be loaded again if it stops being held.\n• Deft: Ranged Attacks with it don’t have DisADV from being Prone.\n• Heavy: Its damage increases by 1.",
+    "name" : "Light Crossbow",
+    "properties" : [
+      "Two-Handed",
+      "Ammo",
+      "Reload",
+      "Deft",
+      "Heavy"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Crossbow",
+    "summary" : "3 Piercing damage • Two-Handed, Ammo, Reload, Deft, Heavy • Range 15\/45"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Heavy Crossbow",
+    "mechanics" : "Crossbow • 3 Piercing damage • Two-Handed, Ammo, Reload, Deft, Impact, Heavy, Cumbersome • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Crossbow: Accuracy — add a d4 to your Attack Check.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Reload: Its damage increases by 1, but you must spend 1 AP or 1 SP and use a free hand to reload it; it must be loaded again if it stops being held.\n• Deft: Ranged Attacks with it don’t have DisADV from being Prone.\n• Impact: It deals +1 damage on Heavy Hits.\n• Heavy: Its damage increases by 1.\n• Cumbersome: It takes 1 AP to draw, stow, or pick up this Weapon.",
+    "name" : "Heavy Crossbow",
+    "properties" : [
+      "Two-Handed",
+      "Ammo",
+      "Reload",
+      "Deft",
+      "Impact",
+      "Heavy",
+      "Cumbersome"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Crossbow",
+    "summary" : "3 Piercing damage • Two-Handed, Ammo, Reload, Deft, Impact, Heavy, Cumbersome • Range 15\/45"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Stonebow",
+    "mechanics" : "Crossbow\/Sling • 3 Bludgeoning or Piercing damage • Two-Handed, Ammo, Reload, Deft, Multi-Faceted, Heavy, Cumbersome • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Crossbow: Accuracy — add a d4 to your Attack Check.\n• Sling: Hinder — the target makes an Agility Save; on a failure, it becomes Hindered until the end of its next turn.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Reload: Its damage increases by 1, but you must spend 1 AP or 1 SP and use a free hand to reload it; it must be loaded again if it stops being held.\n• Deft: Ranged Attacks with it don’t have DisADV from being Prone.\n• Multi-Faceted: It has a second Weapon Style; choose either listed damage type and use either or both Weapon Enhancements.\n• Heavy: Its damage increases by 1.\n• Cumbersome: It takes 1 AP to draw, stow, or pick up this Weapon.",
+    "name" : "Stonebow",
+    "properties" : [
+      "Two-Handed",
+      "Ammo",
+      "Reload",
+      "Deft",
+      "Multi-Faceted",
+      "Heavy",
+      "Cumbersome"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Crossbow\/Sling",
+    "summary" : "3 Bludgeoning or Piercing damage • Two-Handed, Ammo, Reload, Deft, Multi-Faceted, Heavy, Cumbersome • Range 15\/45"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|Slingshot",
+    "mechanics" : "Sling • 1 Bludgeoning damage • Two-Handed, Ammo, Impact, Silent • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Sling: Hinder — the target makes an Agility Save; on a failure, it becomes Hindered until the end of its next turn.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Impact: It deals +1 damage on Heavy Hits.\n• Silent: When making a Ranged Attack with it while Hidden, you remain Unheard by creatures you’re Hidden from.",
+    "name" : "Slingshot",
+    "properties" : [
+      "Two-Handed",
+      "Ammo",
+      "Impact",
+      "Silent"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Sling",
+    "summary" : "1 Bludgeoning damage • Two-Handed, Ammo, Impact, Silent • Range 15\/45"
+  },
+  {
+    "category" : "Weapons",
+    "id" : "Weapons|War Sling",
+    "mechanics" : "Sling • 2 Bludgeoning damage • Two-Handed, Ammo, Heavy • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Sling: Hinder — the target makes an Agility Save; on a failure, it becomes Hindered until the end of its next turn.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Heavy: Its damage increases by 1.",
+    "name" : "War Sling",
+    "properties" : [
+      "Two-Handed",
+      "Ammo",
+      "Heavy"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.166",
+    "subtype" : "Two-Handed Sling",
+    "summary" : "2 Bludgeoning damage • Two-Handed, Ammo, Heavy • Range 15\/45"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Orb",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Channeling: You gain a +1 bonus to Spell Checks.",
+    "name" : "Orb",
+    "properties" : [
+      "Channeling"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "One-Handed Focus",
+    "summary" : "Channeling"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Ceremonial Dagger",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Close Quarters: Your Ranged Spell Attacks don’t have DisADV if you’re within the Melee Range of enemies.",
+    "name" : "Ceremonial Dagger",
+    "properties" : [
+      "Close Quarters"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "One-Handed Focus",
+    "summary" : "Close Quarters"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Crystal",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Vicious: You gain a +1 bonus to hit with Spell Attacks.",
+    "name" : "Crystal",
+    "properties" : [
+      "Vicious"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "One-Handed Focus",
+    "summary" : "Vicious"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Totem",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Protective: Your AD increases by 1.",
+    "name" : "Totem",
+    "properties" : [
+      "Protective"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "One-Handed Focus",
+    "summary" : "Protective"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Holy Medallion \/ Relic",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Warded: You have MDR.",
+    "name" : "Holy Medallion \/ Relic",
+    "properties" : [
+      "Warded"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "One-Handed Focus",
+    "summary" : "Warded"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Wand",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Long-Ranged: Spells you cast with a Range greater than 1 have their range increase by 5 Spaces.",
+    "name" : "Wand",
+    "properties" : [
+      "Long-Ranged"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "One-Handed Focus",
+    "summary" : "Long-Ranged"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Rod",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Reach: Spells you cast with a Range of 1 have their range increase by 1 Space.",
+    "name" : "Rod",
+    "properties" : [
+      "Reach"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "One-Handed Focus",
+    "summary" : "Reach"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Poppet",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Muffled: Your Verbal Components can only be heard within 5 Spaces of you.",
+    "name" : "Poppet",
+    "properties" : [
+      "Muffled"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "One-Handed Focus",
+    "summary" : "Muffled"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Ritual Bell",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Reactive: When you are the Challenger or a Participant helping the Challenger in a Spell Duel, they gain ADV on their Check to stop the Spell.",
+    "name" : "Ritual Bell",
+    "properties" : [
+      "Reactive"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "One-Handed Focus",
+    "summary" : "Reactive"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Mage Staff \/ Twin Crystals",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Powerful: Your Spell Attacks deal +1 damage to all targets.\n• Two-Handed: The Spell Focus requires 2 hands to benefit from its properties.",
+    "name" : "Mage Staff \/ Twin Crystals",
+    "properties" : [
+      "Powerful",
+      "Two-Handed"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "Two-Handed Focus",
+    "summary" : "Powerful, Two-Handed"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Grimoire \/ Tarot Deck",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Channeling: You gain a +1 bonus to Spell Checks.\n• Vicious: You gain a +1 bonus to hit with Spell Attacks.\n• Two-Handed: The Spell Focus requires 2 hands to benefit from its properties.",
+    "name" : "Grimoire \/ Tarot Deck",
+    "properties" : [
+      "Channeling",
+      "Vicious",
+      "Two-Handed"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "Two-Handed Focus",
+    "summary" : "Channeling, Vicious, Two-Handed"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Censer",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Protective: Your AD increases by 1.\n• Warded: You have MDR.\n• Two-Handed: The Spell Focus requires 2 hands to benefit from its properties.",
+    "name" : "Censer",
+    "properties" : [
+      "Protective",
+      "Warded",
+      "Two-Handed"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "Two-Handed Focus",
+    "summary" : "Protective, Warded, Two-Handed"
+  },
+  {
+    "category" : "Spell Focuses",
+    "id" : "Spell Focuses|Magical Instrument",
+    "mechanics" : "You must hold a Spell Focus in a hand to benefit from its Properties. Holding it satisfies Somatic Components but is still noticeably casting a Spell. Without Spell Focus Training, you don’t benefit from its Properties.\n\n• Long-Ranged: Spells you cast with a Range greater than 1 have their range increase by 5 Spaces.\n• Reactive: When you are the Challenger or a Participant helping the Challenger in a Spell Duel, they gain ADV on their Check to stop the Spell.\n• Two-Handed: The Spell Focus requires 2 hands to benefit from its properties.",
+    "name" : "Magical Instrument",
+    "properties" : [
+      "Long-Ranged",
+      "Reactive",
+      "Two-Handed"
+    ],
+    "slot" : "Two Hands",
+    "sourcePage" : "Beta 0.10.5 p.169",
+    "subtype" : "Two-Handed Focus",
+    "summary" : "Long-Ranged, Reactive, Two-Handed"
+  },
+  {
+    "category" : "Armor",
+    "id" : "Armor|Defensive Light Armor",
+    "mechanics" : "+1 PD and +1 AD.\n\nIt takes 1 minute to don or doff this Armor. You gain its benefits while wearing it. While wearing Armor you lack Training in, you have DisADV on Attack Checks and Spell Checks. Light Armor is normally Non-Metal Armor.",
+    "name" : "Defensive Light Armor",
+    "properties" : [
+      "Light Armor"
+    ],
+    "slot" : "Armor",
+    "sourcePage" : "Beta 0.10.5 p.170",
+    "subtype" : "Light Armor",
+    "summary" : "+1 PD and +1 AD."
+  },
+  {
+    "category" : "Armor",
+    "id" : "Armor|Deflecting Light Armor",
+    "mechanics" : "+2 PD.\n\nIt takes 1 minute to don or doff this Armor. You gain its benefits while wearing it. While wearing Armor you lack Training in, you have DisADV on Attack Checks and Spell Checks. Light Armor is normally Non-Metal Armor.",
+    "name" : "Deflecting Light Armor",
+    "properties" : [
+      "Light Armor"
+    ],
+    "slot" : "Armor",
+    "sourcePage" : "Beta 0.10.5 p.170",
+    "subtype" : "Light Armor",
+    "summary" : "+2 PD."
+  },
+  {
+    "category" : "Armor",
+    "id" : "Armor|Fortified Light Armor",
+    "mechanics" : "+2 AD.\n\nIt takes 1 minute to don or doff this Armor. You gain its benefits while wearing it. While wearing Armor you lack Training in, you have DisADV on Attack Checks and Spell Checks. Light Armor is normally Non-Metal Armor.",
+    "name" : "Fortified Light Armor",
+    "properties" : [
+      "Light Armor"
+    ],
+    "slot" : "Armor",
+    "sourcePage" : "Beta 0.10.5 p.170",
+    "subtype" : "Light Armor",
+    "summary" : "+2 AD."
+  },
+  {
+    "category" : "Armor",
+    "id" : "Armor|Defensive Heavy Armor",
+    "mechanics" : "+1 PD, +1 AD, PDR (Half), Speed -1, and DisADV on Agility Checks.\n\nIt takes 10 minutes to don or doff this Armor. You gain its benefits while wearing it. While wearing Armor you lack Training in, you have DisADV on Attack Checks and Spell Checks. Heavy Armor is Metal Armor and your Unarmed Strikes deal +1 damage on Heavy Hits while wearing it.",
+    "name" : "Defensive Heavy Armor",
+    "properties" : [
+      "Heavy Armor"
+    ],
+    "slot" : "Armor",
+    "sourcePage" : "Beta 0.10.5 p.170",
+    "subtype" : "Heavy Armor",
+    "summary" : "+1 PD, +1 AD, PDR (Half), Speed -1, and DisADV on Agility Checks."
+  },
+  {
+    "category" : "Armor",
+    "id" : "Armor|Deflecting Heavy Armor",
+    "mechanics" : "+2 PD, PDR (Half), Speed -1, and DisADV on Agility Checks.\n\nIt takes 10 minutes to don or doff this Armor. You gain its benefits while wearing it. While wearing Armor you lack Training in, you have DisADV on Attack Checks and Spell Checks. Heavy Armor is Metal Armor and your Unarmed Strikes deal +1 damage on Heavy Hits while wearing it.",
+    "name" : "Deflecting Heavy Armor",
+    "properties" : [
+      "Heavy Armor"
+    ],
+    "slot" : "Armor",
+    "sourcePage" : "Beta 0.10.5 p.170",
+    "subtype" : "Heavy Armor",
+    "summary" : "+2 PD, PDR (Half), Speed -1, and DisADV on Agility Checks."
+  },
+  {
+    "category" : "Armor",
+    "id" : "Armor|Fortified Heavy Armor",
+    "mechanics" : "+2 AD, PDR (Half), Speed -1, and DisADV on Agility Checks.\n\nIt takes 10 minutes to don or doff this Armor. You gain its benefits while wearing it. While wearing Armor you lack Training in, you have DisADV on Attack Checks and Spell Checks. Heavy Armor is Metal Armor and your Unarmed Strikes deal +1 damage on Heavy Hits while wearing it.",
+    "name" : "Fortified Heavy Armor",
+    "properties" : [
+      "Heavy Armor"
+    ],
+    "slot" : "Armor",
+    "sourcePage" : "Beta 0.10.5 p.170",
+    "subtype" : "Heavy Armor",
+    "summary" : "+2 AD, PDR (Half), Speed -1, and DisADV on Agility Checks."
+  },
+  {
+    "category" : "Armor",
+    "id" : "Armor|Highly Defensive Heavy Armor",
+    "mechanics" : "+2 PD and +2 AD, Speed -1, and DisADV on Agility Checks.\n\nIt takes 10 minutes to don or doff this Armor. You gain its benefits while wearing it. While wearing Armor you lack Training in, you have DisADV on Attack Checks and Spell Checks. Heavy Armor is Metal Armor and your Unarmed Strikes deal +1 damage on Heavy Hits while wearing it.",
+    "name" : "Highly Defensive Heavy Armor",
+    "properties" : [
+      "Heavy Armor"
+    ],
+    "slot" : "Armor",
+    "sourcePage" : "Beta 0.10.5 p.170",
+    "subtype" : "Heavy Armor",
+    "summary" : "+2 PD and +2 AD, Speed -1, and DisADV on Agility Checks."
+  },
+  {
+    "category" : "Shields",
+    "id" : "Shields|Buckler",
+    "mechanics" : "+1 PD. You can spend 1 AP to equip or stow a Shield. It occupies the wielding hand. You can make a Melee Martial Attack with a Shield you have Training in, dealing 1 Bludgeoning damage on a Hit. Without Shield Training, you have DisADV on Attack Checks and Spell Checks.\n\n• Grasp: The Shield is considered to be a free hand when Grappling, Reloading a Weapon, or Attacking with a Versatile Weapon.",
+    "name" : "Buckler",
+    "properties" : [
+      "Grasp"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.171",
+    "subtype" : "Light Shield",
+    "summary" : "+1 PD"
+  },
+  {
+    "category" : "Shields",
+    "id" : "Shields|Round Shield",
+    "mechanics" : "+1 AD. You can spend 1 AP to equip or stow a Shield. It occupies the wielding hand. You can make a Melee Martial Attack with a Shield you have Training in, dealing 1 Bludgeoning damage on a Hit. Without Shield Training, you have DisADV on Attack Checks and Spell Checks.\n\n• Toss: You can throw the Shield to make a Ranged Martial Attack (5\/10). Beyond that range it is an Improvised Weapon.",
+    "name" : "Round Shield",
+    "properties" : [
+      "Toss"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.171",
+    "subtype" : "Light Shield",
+    "summary" : "+1 AD"
+  },
+  {
+    "category" : "Shields",
+    "id" : "Shields|Heater Shield",
+    "mechanics" : "+1 PD, +1 AD. You can spend 1 AP to equip or stow a Shield. It occupies the wielding hand. You can make a Melee Martial Attack with a Shield you have Training in, dealing 1 Bludgeoning damage on a Hit. Without Shield Training, you have DisADV on Attack Checks and Spell Checks.",
+    "name" : "Heater Shield",
+    "properties" : [
+
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.171",
+    "subtype" : "Light Shield",
+    "summary" : "+1 PD, +1 AD"
+  },
+  {
+    "category" : "Shields",
+    "id" : "Shields|Kite Shield",
+    "mechanics" : "+1 PD, +2 AD, Speed -1, DisADV on Agility Checks. You can spend 1 AP to equip or stow a Shield. It occupies the wielding hand. You can make a Melee Martial Attack with a Shield you have Training in, dealing 1 Bludgeoning damage on a Hit. Without Shield Training, you have DisADV on Attack Checks and Spell Checks.\n\n• Mounted: The Shield’s PD and AD bonuses also apply to your Mount’s Defenses.",
+    "name" : "Kite Shield",
+    "properties" : [
+      "Mounted"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.171",
+    "subtype" : "Heavy Shield",
+    "summary" : "+1 PD, +2 AD, Speed -1, DisADV on Agility Checks"
+  },
+  {
+    "category" : "Shields",
+    "id" : "Shields|Tower Shield",
+    "mechanics" : "+2 PD, +2 AD, Speed -1, DisADV on Agility Checks. You can spend 1 AP to equip or stow a Shield. It occupies the wielding hand. You can make a Melee Martial Attack with a Shield you have Training in, dealing 1 Bludgeoning damage on a Hit. Without Shield Training, you have DisADV on Attack Checks and Spell Checks.",
+    "name" : "Tower Shield",
+    "properties" : [
+
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.171",
+    "subtype" : "Heavy Shield",
+    "summary" : "+2 PD, +2 AD, Speed -1, DisADV on Agility Checks"
+  },
+  {
+    "category" : "Adventuring Supplies",
+    "id" : "Adventuring Supplies|Gauntlet",
+    "mechanics" : "Wearing a Gauntlet gives your Unarmed Strikes with that hand the Impact Weapon Property: +1 damage on Heavy Hits. Gauntlets come automatically with Heavy Armor. The Beta suggests 5 gold as a temporary price.",
+    "name" : "Gauntlet",
+    "properties" : [
+      "Impact"
+    ],
+    "slot" : "Worn",
+    "sourcePage" : "Beta 0.10.5 p.172",
+    "subtype" : "Worn Supply",
+    "summary" : "Impact for Unarmed Strikes made with that hand"
+  },
+  {
+    "category" : "Adventuring Supplies",
+    "id" : "Adventuring Supplies|Healing Potion (1st Level)",
+    "mechanics" : "When consumed, this potion restores 2 HP. Healing equals twice the potion’s level.",
+    "name" : "Healing Potion (1st Level)",
+    "properties" : [
+      "Healing",
+      "Consumable"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 p.172",
+    "subtype" : "Consumable",
+    "summary" : "Restores 2 HP • Price 10"
+  },
+  {
+    "category" : "Adventuring Supplies",
+    "id" : "Adventuring Supplies|Healing Potion (2nd Level)",
+    "mechanics" : "When consumed, this potion restores 4 HP. Healing equals twice the potion’s level.",
+    "name" : "Healing Potion (2nd Level)",
+    "properties" : [
+      "Healing",
+      "Consumable"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 p.172",
+    "subtype" : "Consumable",
+    "summary" : "Restores 4 HP • Price 25"
+  },
+  {
+    "category" : "Adventuring Supplies",
+    "id" : "Adventuring Supplies|Healing Potion (3rd Level)",
+    "mechanics" : "When consumed, this potion restores 6 HP. Healing equals twice the potion’s level.",
+    "name" : "Healing Potion (3rd Level)",
+    "properties" : [
+      "Healing",
+      "Consumable"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 p.172",
+    "subtype" : "Consumable",
+    "summary" : "Restores 6 HP • Price 40"
+  },
+  {
+    "category" : "Adventuring Supplies",
+    "id" : "Adventuring Supplies|Healing Potion (4th Level)",
+    "mechanics" : "When consumed, this potion restores 8 HP. Healing equals twice the potion’s level.",
+    "name" : "Healing Potion (4th Level)",
+    "properties" : [
+      "Healing",
+      "Consumable"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 p.172",
+    "subtype" : "Consumable",
+    "summary" : "Restores 8 HP • Price 60"
+  },
+  {
+    "category" : "Adventuring Supplies",
+    "id" : "Adventuring Supplies|Healing Potion (5th Level)",
+    "mechanics" : "When consumed, this potion restores 10 HP. Healing equals twice the potion’s level.",
+    "name" : "Healing Potion (5th Level)",
+    "properties" : [
+      "Healing",
+      "Consumable"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 p.172",
+    "subtype" : "Consumable",
+    "summary" : "Restores 10 HP • Price 100"
+  },
+  {
+    "category" : "Adventuring Supplies",
+    "id" : "Adventuring Supplies|Medicine Kit",
+    "mechanics" : "A fully stocked kit contains 5 uses. Take the Object Action and spend 1 use to treat a creature within 1 Space. Wound: Make a DC 10 Medicine Check; Success restores 1 HP and Success (each 5) restores +1 HP, but the kit can’t restore HP above Bloodied. Poison or Disease: Make a Medicine Check against the effect’s DC; Success cures one Basic Poison or Disease and Success (each 5) restores +1 HP. An Advanced Poison requires its unique additive. One use costs 5 gold, or scavenge with a DC 15 Survival Check to regain 1 use plus 1 use per Success (each 5).",
+    "name" : "Medicine Kit",
+    "properties" : [
+      "Five Uses",
+      "Healing",
+      "Cleansing"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 p.172",
+    "subtype" : "Five-Use Kit",
+    "summary" : "Treat wounds, Basic Poisons, and Basic Diseases • 5 uses"
+  },
+  {
+    "category" : "Adventuring Supplies",
+    "id" : "Adventuring Supplies|Net",
+    "mechanics" : "Throw the Net and make a Martial Check contested by the target’s Physical Save. It has no effect on formless creatures or creatures smaller than Small or larger than Large. Save Failure: Immobilized until freed. Save Failure (5): also Restrained until freed. Forced movement doesn’t free the target, but teleportation does. A creature can spend 1 AP to make a DC 10 Athletics or Acrobatics Check to free itself or another creature within reach. A Medium creature throws it up to twice its Might in Spaces; Small creatures throw it half as far, and vertical distance is halved.",
+    "name" : "Net",
+    "properties" : [
+      "Immobilized",
+      "Restrained"
+    ],
+    "slot" : "One Hand",
+    "sourcePage" : "Beta 0.10.5 p.172",
+    "subtype" : "Thrown Supply",
+    "summary" : "Contest Physical Save to Immobilize; Heavy Success also Restrains"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Calligrapher's Supplies",
+    "mechanics" : "You must have access to this tool to perform Illustration activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility\n\nIllustration is the ability to put ink or paint to paper to create beautiful art in drawings, paintings, and calligraphy.\n\nDrawing: Creating images by making marks and lines with a pen on paper.\n\nCalligraphy: Creating visually ornate handwritten lettering.\n\nPainting: Creating images by putting paint on a surface, usually with a brush.",
+    "name" : "Calligrapher's Supplies",
+    "properties" : [
+      "Illustration"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Illustration Tool",
+    "summary" : "Required to perform Illustration activities • Agility"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Musical Instrument",
+    "mechanics" : "You must have access to this tool to perform Musician activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility or Charisma\n\nMusicians are skilled in the use of a variety of instruments, which they can use to make impressive performances of sound.\n\nBagpipe: A bag set with pipes that creates musical sounds when squeezed, as wind escapes through the pipes.\n\nDrum: An instrument that's sounded by being struck with hands or sticks.\n\nFlute: An instrument made from a tube with holes in it, played by blowing into the tube and covering different holes to create musical notes.\n\nHarp: A stringed instrument with a somewhat triangular frame, played by plucking its strings by hand.\n\nHorn: A tube-like instrument, played by using one's mouth to blow air through the instrument.\n\nLute: A stringed instrument with a long neck, played by putting fingers on frets and plucking strings to create musical notes.\n\nPiano: An instrument with a large frame that encases a board of metal strings that creates sound when keys are pressed, as hammers strike the strings.",
+    "name" : "Musical Instrument",
+    "properties" : [
+      "Musician"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Musician Tool",
+    "summary" : "Required to perform Musician activities • Agility or Charisma"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Alchemist's Supplies",
+    "mechanics" : "You must have access to this tool to perform Alchemy activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Intelligence or Agility\n\nAlchemy is the practice of creating something by combining or changing other things, such as creating magical potions or changing one element into another.\n\nMagic Potions: Alchemical potions can have all manner of magical effects with extreme versatility.\n\nTransmuting Elements: It's possible to transform lead into gold, water into wine, or blood into acid using alchemy.",
+    "name" : "Alchemist's Supplies",
+    "properties" : [
+      "Alchemy"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Alchemy Tool",
+    "summary" : "Required to perform Alchemy activities • Intelligence or Agility"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Blacksmith's Tools",
+    "mechanics" : "You must have access to this tool to perform Blacksmithing activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Might\n\nBlacksmithing is the practice of melting and shaping metal into objects, such as nails, horse shoes, or armor and weapons.\n\nMetal Armor: Armor made from metal, such as chain, splint, and plate mail.\n\nMetal Weapons: Weapons made from metal, such as axes, daggers, and swords.",
+    "name" : "Blacksmith's Tools",
+    "properties" : [
+      "Blacksmithing"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Blacksmithing Tool",
+    "summary" : "Required to perform Blacksmithing activities • Might"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Glassblower's Tools",
+    "mechanics" : "You must have access to this tool to perform Glassblowing activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility or Might\n\nGlassblowing is the practice of blowing molten sand into glass objects, such as cups, bowls, vases, ornaments, lenses, window panes, and other objects.",
+    "name" : "Glassblower's Tools",
+    "properties" : [
+      "Glassblowing"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Glassblowing Tool",
+    "summary" : "Required to perform Glassblowing activities • Agility or Might"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Herbalist's Supplies",
+    "mechanics" : "You must have access to this tool to perform Herbalism activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Intelligence\n\nHerbalism is the practice of combining various mundane plants to create concoctions that can be used to treat afflictions, heal wounds, or poison enemies.\n\nBrews: Teas, tonics, and tinctures are types of brews you can drink.\n\nOintments: Infusions, balms, and salves are types of ointments you can apply to your skin.\n\nBandages: A poultice is a type of bandage that you apply over a wound with a wrapping.\n\nMedicine & Poison: Herbalism is normally used to create medicines; however, any medicine delivered with a very high dosage can be poisonous. The reverse is also true: many poisons are used as medicines in very small dosages.",
+    "name" : "Herbalist's Supplies",
+    "properties" : [
+      "Herbalism"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Herbalism Tool",
+    "summary" : "Required to perform Herbalism activities • Intelligence"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Jeweler's Tools",
+    "mechanics" : "You must have access to this tool to perform Jeweler activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility\n\nJewelers can beautify, identify, and even price various gems, stones, and jewelry, and can identify magical gems or the magical uses of mundane gems.",
+    "name" : "Jeweler's Tools",
+    "properties" : [
+      "Jeweler"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Jeweler Tool",
+    "summary" : "Required to perform Jeweler activities • Agility"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Leatherworker's Tools",
+    "mechanics" : "You must have access to this tool to perform Leatherworking activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility\n\nLeatherworking is the practice of making leather from animal skins or making leather into usable items, such as clothing, armor, weapon sheaths, and other objects.",
+    "name" : "Leatherworker's Tools",
+    "properties" : [
+      "Leatherworking"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Leatherworking Tool",
+    "summary" : "Required to perform Leatherworking activities • Agility"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Sculptor's Tools",
+    "mechanics" : "You must have access to this tool to perform Sculpting activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility\n\nSculpting is the practice of shaping bone, clay, glass, stone, or wood into figures, tools, idols, or simple weapons.\n\nContainers: Cups, bowls, plates, and vases.\n\nFigures: Statues of creatures or objects, such as mortals, deities, animals, and buildings.\n\nWeapons: Simple weapons, such as knives, clubs, and arrows.\n\nTrinkets: Small idols, animals, and symbols.",
+    "name" : "Sculptor's Tools",
+    "properties" : [
+      "Sculpting"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Sculpting Tool",
+    "summary" : "Required to perform Sculpting activities • Agility"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Tinkerer's Tools",
+    "mechanics" : "You must have access to this tool to perform Tinkering activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility or Intelligence\n\nTinkering is the practice of making, repairing, or operating mechanisms, such as traps and clockwork devices.\n\nTraps: Setting up and disarming traps requires the use of specialized tools, such as Tinkerer's Tools, to manipulate its arming mechanisms.\n\nClockwork Devices: Clockwork devices operate using a series of intricate mechanisms, such as gears, springs, and levers. The devices can be tuned, modified, or repaired using Tinkerer's Tools.",
+    "name" : "Tinkerer's Tools",
+    "properties" : [
+      "Tinkering"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Tinkering Tool",
+    "summary" : "Required to perform Tinkering activities • Agility or Intelligence"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Weaver's Tools",
+    "mechanics" : "You must have access to this tool to perform Weaving activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility\n\nWeaving is the practice of creating material for clothing or using such material to create clothes, curtains, tapestries, and other woven objects.",
+    "name" : "Weaver's Tools",
+    "properties" : [
+      "Weaving"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Weaving Tool",
+    "summary" : "Required to perform Weaving activities • Agility"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Brewer's Supplies",
+    "mechanics" : "You must have access to this tool to perform Brewing activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility, Intelligence, or Charisma\n\nBrewing is the practice of producing alcohol, especially beer, mead, and wine.",
+    "name" : "Brewer's Supplies",
+    "properties" : [
+      "Brewing"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Brewing Tool",
+    "summary" : "Required to perform Brewing activities • Agility, Intelligence, or Charisma"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Carpenter's Tools",
+    "mechanics" : "You must have access to this tool to perform Carpentry activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility or Might\n\nCarpentry is the practice of measuring, cutting, and installing pieces of wood to create structures that form buildings, bridges, ships, and other large structures.",
+    "name" : "Carpenter's Tools",
+    "properties" : [
+      "Carpentry"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Carpentry Tool",
+    "summary" : "Required to perform Carpentry activities • Agility or Might"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Cartographer's Tools",
+    "mechanics" : "You must have access to this tool to perform Cartography activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Intelligence or Agility\n\nCartography is the practice of drawing and understanding maps.",
+    "name" : "Cartographer's Tools",
+    "properties" : [
+      "Cartography"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Cartography Tool",
+    "summary" : "Required to perform Cartography activities • Intelligence or Agility"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Cooking Utensils",
+    "mechanics" : "You must have access to this tool to perform Cooking activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility, Intelligence, or Charisma\n\nCooking is the practice of preparing, mixing, and heating edible ingredients to create meals.",
+    "name" : "Cooking Utensils",
+    "properties" : [
+      "Cooking"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Cooking Tool",
+    "summary" : "Required to perform Cooking activities • Agility, Intelligence, or Charisma"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Mason's Tools",
+    "mechanics" : "You must have access to this tool to perform Masonry activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Might\n\nMasonry is the practice of working and installing stone into structures that form buildings, bridges, furnaces, and other large structures.",
+    "name" : "Mason's Tools",
+    "properties" : [
+      "Masonry"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Masonry Tool",
+    "summary" : "Required to perform Masonry activities • Might"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Cryptographer's Tools",
+    "mechanics" : "You must have access to this tool to perform Cryptography activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Intelligence\n\nCryptography is the process of converting messages into secret or disguised words to protect them from being understood. The message must be deciphered to discern its true meaning.",
+    "name" : "Cryptographer's Tools",
+    "properties" : [
+      "Cryptography"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Cryptography Tool",
+    "summary" : "Required to perform Cryptography activities • Intelligence"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Disguise Kit",
+    "mechanics" : "You must have access to this tool to perform Disguise activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility or Charisma\n\nThe art of disguise is the ability to alter one's appearance to conceal identity or appear as someone else.",
+    "name" : "Disguise Kit",
+    "properties" : [
+      "Disguise"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Disguise Tool",
+    "summary" : "Required to perform Disguise activities • Agility or Charisma"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Gaming Set",
+    "mechanics" : "You must have access to this tool to perform Gaming activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Intelligence or Charisma\n\nGaming is the practice of playing games skillfully, for money or for entertainment.\n\nDice: Cubes with pips on each side to denote a number, rolled to randomly get one such number in games of chance.\n\nPlaying Cards: Small pieces of paper that each have an image that denotes a value, shuffled and given randomly in games of chance.\n\nGambling: Playing games of chance to earn money.",
+    "name" : "Gaming Set",
+    "properties" : [
+      "Gaming"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Gaming Tool",
+    "summary" : "Required to perform Gaming activities • Intelligence or Charisma"
+  },
+  {
+    "category" : "Trade Tools",
+    "id" : "Trade Tools|Lockpicking Tools",
+    "mechanics" : "You must have access to this tool to perform Lockpicking activities, though recalling information doesn’t require it. Using tools not designed for the task gives DisADV on the Trade Check.\n\nAssociated Attribute: Agility or Intelligence\n\nLockpicking is the practice of opening devices secured by interworking mechanisms, such as locks and traps.\n\nLocks: Lockpicking is the ability to open a lock without the proper key, usually using thin instruments to force a lock open from within by rotating tumblers and listening for the proper sounds. A lock's key can also be copied using specialized tools while studying the lock.\n\nTraps: Setting up and disarming traps requires specialized tools, such as Tinkerer's Tools, to manipulate its arming mechanisms.",
+    "name" : "Lockpicking Tools",
+    "properties" : [
+      "Lockpicking"
+    ],
+    "slot" : "Carried",
+    "sourcePage" : "Beta 0.10.5 pp.15–26",
+    "subtype" : "Lockpicking Tool",
+    "summary" : "Required to perform Lockpicking activities • Agility or Intelligence"
+  }
+]

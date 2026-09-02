@@ -1,18 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCampaignStore } from '../../store/campaignStore';
 import { HubSectionValues } from '../../types/models';
 import type { HubSection } from '../../types/models';
+import CustomizeDialog from './CustomizeDialog';
+import { downloadHubBackup } from '../../utils/dataBackup';
+
+const sectionSymbols: Record<HubSection, string> = {
+  Dashboard: '✦', Rules: '📚', 'Spells & Maneuvers': '✨', 'Dice Roller': '🎲', Encounters: '◈', Monsters: '🐾', Characters: '🧙', Equipment: '🎒', Combat: '⚡', Campaign: '🗺',
+};
 
 const Sidebar: React.FC = () => {
-  const { currentSection, setCurrentSection } = useCampaignStore();
+  const { currentSection, setCurrentSection, exportData } = useCampaignStore();
+  const [showCustomize, setShowCustomize] = useState(false);
 
   const sections = Object.values(HubSectionValues);
 
   return (
-    <div className="w-72 sidebar flex flex-col overflow-hidden">
+    <aside className="sidebar flex w-72 shrink-0 flex-col overflow-hidden max-lg:w-20 max-lg:px-3">
       <div className="mb-4">
-        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300">DC20 Hub</h1>
-        <p className="text-sm text-muted mt-1">TTRPG Assistant</p>
+        <h1 className="hub-logo text-2xl font-extrabold max-lg:text-center max-lg:text-xl"><span className="lg:hidden">D20</span><span className="max-lg:hidden">DC20 Hub</span></h1>
+        <p className="text-muted mt-1 text-sm max-lg:hidden">TTRPG Assistant</p>
       </div>
 
       <nav className="flex-1 overflow-y-auto space-y-2">
@@ -22,12 +29,14 @@ const Sidebar: React.FC = () => {
             onClick={() => setCurrentSection(section as HubSection)}
             className={`w-full text-left px-4 py-3 rounded-lg transition-all font-medium flex items-center gap-3 ${
               currentSection === section
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg'
+                ? 'nav-item-active text-white shadow-lg'
                 : 'text-gray-300 hover:bg-gray-800 hover:text-white'
             }`}
+            title={section}
           >
-            <span className="grow">{section}</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" className="opacity-30">
+            <span aria-hidden="true" className="w-5 text-center">{sectionSymbols[section as HubSection]}</span>
+            <span className="grow max-lg:hidden">{section}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" className="opacity-30 max-lg:hidden">
               <path fill="currentColor" d="M10 17l5-5-5-5v10z" />
             </svg>
           </button>
@@ -35,10 +44,11 @@ const Sidebar: React.FC = () => {
       </nav>
 
       <div className="mt-4 space-y-2">
-        <button className="w-full btn-primary text-sm">⚙️ Settings</button>
-        <button className="w-full bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm py-2">💾 Export Data</button>
+        <button type="button" onClick={() => setShowCustomize(true)} className="btn-primary w-full text-sm" title="Customize">🎨 <span className="max-lg:hidden">Customize</span></button>
+        <button type="button" onClick={() => downloadHubBackup(exportData())} className="w-full rounded-lg bg-gray-800 py-2 text-sm text-gray-200 hover:bg-gray-700" title="Export Data">💾 <span className="max-lg:hidden">Export Data</span></button>
       </div>
-    </div>
+      {showCustomize && <CustomizeDialog onClose={() => setShowCustomize(false)} />}
+    </aside>
   );
 };
 

@@ -1,0 +1,18 @@
+{
+  "name": "DC20 Hub",
+  "short_name": "DC20 Hub",
+  "description": "A cross-platform campaign, character, encounter, and combat companion for DC20.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0E0917",
+  "theme_color": "#8C4CF2",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
