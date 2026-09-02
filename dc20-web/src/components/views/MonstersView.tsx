@@ -58,7 +58,7 @@ const MonstersView: React.FC = () => {
         } else {
           alert('Uploaded file is not an array of monsters');
         }
-      } catch (err) {
+      } catch {
         alert('Failed to parse JSON file');
       }
     };

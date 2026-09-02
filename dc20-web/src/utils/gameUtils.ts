@@ -29,7 +29,7 @@ export function rollD20WithAdjustment(adjustment: number = 0): {
   return {
     rolls,
     chosen,
-    total: chosen + Math.max(0, adjustment),
+    total: chosen,
   };
 }
 

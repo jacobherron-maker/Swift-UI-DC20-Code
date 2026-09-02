@@ -1,178 +1,218 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-type Spell = {
-  id?: string;
+type ReferenceItem = {
+  id: string;
   name: string;
-  description?: string;
+  description: string;
   enhancements?: string;
+  eyebrow?: string;
+  metadata?: Array<[string, string]>;
 };
+
+type ClassFeatureDocument = {
+  classes?: Record<string, {
+    levels?: Record<string, Array<{ name?: string; description?: string }>>;
+    subclasses?: Record<string, string>;
+  }>;
+};
+
+const normalizeClassFeatures = (document: ClassFeatureDocument): ReferenceItem[] =>
+  Object.entries(document.classes ?? {}).flatMap(([className, classDocument]) => {
+    const features = Object.entries(classDocument.levels ?? {}).flatMap(([level, levelFeatures]) =>
+      levelFeatures.map((feature, index) => ({
+        id: `${className}-level-${level}-${feature.name ?? index}`,
+        name: feature.name || `Level ${level} Feature`,
+        description: feature.description || '',
+        eyebrow: `${className} • Level ${level}`,
+        metadata: [['Class', className], ['Level', level]] as Array<[string, string]>,
+      }))
+    );
+
+    const subclasses = Object.entries(classDocument.subclasses ?? {}).map(([name, description]) => ({
+      id: `${className}-subclass-${name}`,
+      name,
+      description,
+      eyebrow: `${className} • Subclass`,
+      metadata: [['Class', className], ['Type', 'Subclass']] as Array<[string, string]>,
+    }));
+
+    return [...features, ...subclasses];
+  });
+
+const metadataEntries = (values: Array<[string, unknown]>): Array<[string, string]> =>
+  values.filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0);
 
 const PowersView: React.FC = () => {
   const [filterType, setFilterType] = useState<'spells' | 'maneuvers' | 'class-features'>('spells');
-  const [spells, setSpells] = useState<Spell[]>([]);
-  const [maneuvers, setManeuvers] = useState<Spell[]>([]);
-  const [classFeatures, setClassFeatures] = useState<Spell[]>([]);
+  const [spells, setSpells] = useState<ReferenceItem[]>([]);
+  const [maneuvers, setManeuvers] = useState<ReferenceItem[]>([]);
+  const [classFeatures, setClassFeatures] = useState<ReferenceItem[]>([]);
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<Spell | null>(null);
+  const [selected, setSelected] = useState<ReferenceItem | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    // load spells
-    fetch('/data/BetaSpells.json')
-      .then((r) => r.json())
-      .then((data) => {
+    let cancelled = false;
+
+    const loadReferences = async () => {
+      try {
+        const [spellResponse, maneuverResponse, featureResponse] = await Promise.all([
+          fetch('/data/BetaSpells.json'),
+          fetch('/data/BetaManeuvers.json'),
+          fetch('/data/BetaClassFeatures.json'),
+        ]);
+
+        if (!spellResponse.ok || !maneuverResponse.ok || !featureResponse.ok) {
+          throw new Error('One or more reference files could not be loaded.');
+        }
+
+        const [spellDocument, maneuverDocument, featureDocument] = await Promise.all([
+          spellResponse.json(),
+          maneuverResponse.json(),
+          featureResponse.json(),
+        ]);
+
+        if (cancelled) return;
+
         setSpells(
-          Array.isArray(data)
-            ? data.map((s: any, i: number) => ({ id: s.name || String(i), name: s.name || s.title || `Spell ${i + 1}`, description: s.description, enhancements: s.enhancements }))
-            : []
+          (Array.isArray(spellDocument.spells) ? spellDocument.spells : []).map((spell: Record<string, unknown>, index: number) => ({
+            id: `spell-${String(spell.name ?? index)}`,
+            name: String(spell.name ?? `Spell ${index + 1}`),
+            description: String(spell.description ?? ''),
+            enhancements: String(spell.enhancements ?? ''),
+            eyebrow: [spell.source, spell.school].filter(Boolean).map(String).join(' • '),
+            metadata: metadataEntries([
+              ['Cost', spell.cost],
+              ['Range', spell.range],
+              ['Duration', spell.duration],
+              ['Tags', spell.tags],
+            ]),
+          }))
         );
-      })
-      .catch(() => setSpells([]));
 
-    fetch('/data/BetaManeuvers.json')
-      .then((r) => r.json())
-      .then((data) => {
         setManeuvers(
-          Array.isArray(data)
-            ? data.map((m: any, i: number) => ({ id: m.name || String(i), name: m.name || `Maneuver ${i + 1}`, description: m.description, enhancements: m.enhancements }))
-            : []
+          (Array.isArray(maneuverDocument.maneuvers) ? maneuverDocument.maneuvers : []).map((maneuver: Record<string, unknown>, index: number) => ({
+            id: `maneuver-${String(maneuver.name ?? index)}`,
+            name: String(maneuver.name ?? `Maneuver ${index + 1}`),
+            description: String(maneuver.description ?? ''),
+            enhancements: String(maneuver.enhancements ?? ''),
+            eyebrow: String(maneuver.category ?? 'Maneuver'),
+            metadata: metadataEntries([
+              ['Cost', maneuver.cost],
+              ['Range', maneuver.range],
+              ['Requirements', maneuver.requirements],
+            ]),
+          }))
         );
-      })
-      .catch(() => setManeuvers([]));
 
-    fetch('/data/BetaClassFeatures.json')
-      .then((r) => r.json())
-      .then((data) => {
-        setClassFeatures(
-          Array.isArray(data)
-            ? data.map((c: any, i: number) => ({ id: c.name || String(i), name: c.name || `Feature ${i + 1}`, description: c.description }))
-            : []
-        );
-      })
-      .catch(() => setClassFeatures([]));
+        setClassFeatures(normalizeClassFeatures(featureDocument));
+        setLoadError(null);
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(error instanceof Error ? error.message : 'Reference data could not be loaded.');
+        }
+      }
+    };
 
-    // load parsed entries from PDFs (if present) and merge, avoiding duplicates by name
-    fetch('/data/parsed_from_pdfs/parsed_spells.json')
-      .then((r) => {
-        if (!r.ok) throw new Error('no parsed spells');
-        return r.json();
-      })
-      .then((parsed) => {
-        setSpells((prev) => {
-          const names = new Set(prev.map((p) => p.name));
-          const merged = prev.concat(parsed.filter((p: any) => !names.has(p.name)));
-          return merged;
-        });
-      })
-      .catch(() => {});
-
-    fetch('/data/parsed_from_pdfs/parsed_maneuvers.json')
-      .then((r) => {
-        if (!r.ok) throw new Error('no parsed maneuvers');
-        return r.json();
-      })
-      .then((parsed) => {
-        setManeuvers((prev) => {
-          const names = new Set(prev.map((p) => p.name));
-          const merged = prev.concat(parsed.filter((p: any) => !names.has(p.name)));
-          return merged;
-        });
-      })
-      .catch(() => {});
-
-    fetch('/data/parsed_from_pdfs/parsed_class_features.json')
-      .then((r) => {
-        if (!r.ok) throw new Error('no parsed features');
-        return r.json();
-      })
-      .then((parsed) => {
-        setClassFeatures((prev) => {
-          const names = new Set(prev.map((p) => p.name));
-          const merged = prev.concat(parsed.filter((p: any) => !names.has(p.name)));
-          return merged;
-        });
-      })
-      .catch(() => {});
+    void loadReferences();
+    return () => { cancelled = true; };
   }, []);
 
   const items = useMemo(() => {
     const list = filterType === 'spells' ? spells : filterType === 'maneuvers' ? maneuvers : classFeatures;
     if (!search) return list;
-    const q = search.toLowerCase();
-    return list.filter((it) => (it.name || '').toLowerCase().includes(q) || (it.description || '').toLowerCase().includes(q));
+    const query = search.toLowerCase();
+    return list.filter((item) =>
+      [item.name, item.description, item.eyebrow, ...(item.metadata?.flat() ?? [])]
+        .some((value) => value?.toLowerCase().includes(query))
+    );
   }, [filterType, spells, maneuvers, classFeatures, search]);
+
+  const selectCategory = (category: typeof filterType) => {
+    setFilterType(category);
+    setSelected(null);
+  };
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-4xl font-bold text-purple-400 mb-6">Spells & Maneuvers</h1>
 
-      <div className="flex gap-3 mb-6">
-        <button
-          onClick={() => setFilterType('spells')}
-          className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-            filterType === 'spells' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-          }`}
-        >
-          ✨ Spells ({spells.length})
-        </button>
-        <button
-          onClick={() => setFilterType('maneuvers')}
-          className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-            filterType === 'maneuvers' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-          }`}
-        >
-          ⚔️ Maneuvers ({maneuvers.length})
-        </button>
-        <button
-          onClick={() => setFilterType('class-features')}
-          className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-            filterType === 'class-features' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-          }`}
-        >
-          🧭 Class Features ({classFeatures.length})
-        </button>
+      <div className="flex flex-wrap gap-3 mb-6">
+        {([
+          ['spells', `✨ Spells (${spells.length})`],
+          ['maneuvers', `⚔️ Maneuvers (${maneuvers.length})`],
+          ['class-features', `🧭 Class Features (${classFeatures.length})`],
+        ] as const).map(([category, label]) => (
+          <button
+            key={category}
+            onClick={() => selectCategory(category)}
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+              filterType === category ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
 
         <div className="flex-1" />
-
         <input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name or description..."
-          className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-200 w-64"
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search references..."
+          aria-label="Search spells, maneuvers, and class features"
+          className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-200 w-full sm:w-72"
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-1 bg-gray-800 rounded-lg p-4 border border-gray-700 h-[60vh] overflow-auto">
+      {loadError && (
+        <div role="alert" className="mb-4 rounded-lg border border-red-700 bg-red-950/40 p-4 text-red-200">
+          {loadError}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 h-[60vh] overflow-auto">
           {items.length === 0 ? (
-            <p className="text-gray-400">No items to show.</p>
+            <p className="text-gray-400">No references found.</p>
           ) : (
-            items.map((it) => (
-              <div key={it.id} className="mb-2">
-                <button
-                  onClick={() => setSelected(it)}
-                  className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-700 text-gray-200"
-                >
-                  {it.name}
-                </button>
-              </div>
+            items.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setSelected(item)}
+                className={`w-full text-left px-3 py-2 rounded-md mb-1 ${selected?.id === item.id ? 'bg-purple-700 text-white' : 'hover:bg-gray-700 text-gray-200'}`}
+              >
+                <span className="block font-semibold">{item.name}</span>
+                {item.eyebrow && <span className="block text-xs text-gray-400 mt-1">{item.eyebrow}</span>}
+              </button>
             ))
           )}
         </div>
 
-        <div className="col-span-2 bg-gray-800 rounded-lg p-6 border border-gray-700 h-[60vh] overflow-auto">
+        <div className="lg:col-span-2 bg-gray-800 rounded-lg p-6 border border-gray-700 h-[60vh] overflow-auto">
           {selected ? (
-            <div>
-              <h2 className="text-2xl font-bold text-purple-300 mb-2">{selected.name}</h2>
-              {selected.description && <p className="text-gray-300 mb-4 whitespace-pre-wrap">{selected.description}</p>}
-              {selected.enhancements && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-200 mb-2">Enhancements</h3>
-                  <p className="text-gray-300 whitespace-pre-wrap">{selected.enhancements}</p>
-                </div>
+            <article>
+              {selected.eyebrow && <p className="text-sm font-semibold uppercase tracking-wide text-purple-400 mb-2">{selected.eyebrow}</p>}
+              <h2 className="text-2xl font-bold text-purple-300 mb-4">{selected.name}</h2>
+              {selected.metadata && selected.metadata.length > 0 && (
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+                  {selected.metadata.map(([label, value]) => (
+                    <div key={label} className="rounded bg-gray-900/70 p-3">
+                      <dt className="text-xs uppercase tracking-wide text-gray-500">{label}</dt>
+                      <dd className="text-gray-200 mt-1">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
               )}
-            </div>
+              <p className="text-gray-300 mb-5 whitespace-pre-wrap leading-relaxed">{selected.description}</p>
+              {selected.enhancements && (
+                <section>
+                  <h3 className="text-lg font-semibold text-gray-100 mb-2">Enhancements</h3>
+                  <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">{selected.enhancements}</p>
+                </section>
+              )}
+            </article>
           ) : (
-            <div className="text-gray-400">Select an item to view details.</div>
+            <div className="text-gray-400">Select a reference to view its complete details.</div>
           )}
         </div>
       </div>

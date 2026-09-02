@@ -1,12 +1,15 @@
 [build]
-  command = "npm --prefix dc20-web install && npm --prefix dc20-web run build"
+  command = "npm --prefix dc20-web ci && npm --prefix dc20-web run build"
   publish = "dc20-web/dist"
 
+[build.environment]
+  NODE_VERSION = "22"
+
 [context.production]
-  command = "npm --prefix dc20-web install && npm --prefix dc20-web run build"
+  command = "npm --prefix dc20-web ci && npm --prefix dc20-web run build"
 
 [context.deploy-preview]
-  command = "npm --prefix dc20-web install && npm --prefix dc20-web run build"
+  command = "npm --prefix dc20-web ci && npm --prefix dc20-web run build"
 
 [[redirects]]
   from = "/*"
@@ -17,3 +20,11 @@
   for = "/data/*"
   [headers.values]
     Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

@@ -17,7 +17,7 @@ A web-based TTRPG companion tool for running DC20 campaigns, built with React, T
 
 ### Prerequisites
 
-- Node.js 18.0 or higher
+- Node.js 20.19 or higher (Node 22 is used by Netlify)
 - npm 9.0 or higher
 
 ### Installation
@@ -93,6 +93,8 @@ All TypeScript interfaces are defined in `src/types/models.ts`, ported from the 
 - `Combatant`: Combat participant tracking
 - `Monster`: NPC/Monster statistics
 - `Spell`, `Maneuver`, `Equipment`: Game objects
+
+> Migration status: this is currently a partial web conversion. See `WEB_CONVERSION_AUDIT.md` at the repository root for verified feature coverage and the recommended implementation order.
 
 ### Utility Functions
 

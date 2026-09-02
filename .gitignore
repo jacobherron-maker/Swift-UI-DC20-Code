@@ -1,0 +1,6 @@
+# Licensed source material is kept outside the web repository.
+# Files under Vite's public directory are copied directly into Netlify builds.
+DC20-*.zip
+dc20-web/public/sourcebooks/
+dc20-web/public/data/parsed_from_pdfs/
+dc20-web/private-sourcebooks/
