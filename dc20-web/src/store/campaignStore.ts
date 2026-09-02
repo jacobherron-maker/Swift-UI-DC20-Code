@@ -4,6 +4,7 @@ import type {
   CampaignData,
   CampaignRecord,
   Character,
+  CharacterBuildData,
   Combatant,
   CombatantTeam,
   Encounter,
@@ -34,10 +35,10 @@ import {
 import { generateUUID } from '../utils/gameUtils';
 import { DEFAULT_PALETTE_ID, themePalette } from '../data/themePalettes';
 
-const STORE_VERSION = 4;
+const STORE_VERSION = 5;
 
 export const defaultCampaignData: CampaignData = {
-  title: 'The Amethyst Chronicle',
+  title: 'DC20 Hub',
   notes: 'Welcome to your campaign. Keep locations, factions, session notes, and secrets here.',
   combats: [],
   campaigns: [],
@@ -327,9 +328,32 @@ function normalizeCharacter(value: unknown): Character {
   const maxHealthPoints = Math.max(1, asNumber(item.maxHealthPoints ?? item.maxHP, fallbackHP));
   const maxStamina = Math.max(0, asNumber(item.maxStamina ?? item.stamina, 0));
   const maxMana = Math.max(0, asNumber(item.maxManaPoints ?? item.mana, 0));
-  const build = item.build && typeof item.build === 'object'
-    ? { ...defaultBuild(), ...(item.build as Record<string, unknown>) }
-    : defaultBuild();
+  const rawBuild = item.build && typeof item.build === 'object'
+    ? item.build as Record<string, unknown>
+    : {};
+  const legacyLanguages = rawBuild.languageMasteries && typeof rawBuild.languageMasteries === 'object'
+    ? rawBuild.languageMasteries as Record<string, unknown>
+    : {};
+  const rawFluencies = rawBuild.languageFluencies && typeof rawBuild.languageFluencies === 'object'
+    ? rawBuild.languageFluencies as Record<string, unknown>
+    : legacyLanguages;
+  const languageFluencies = Object.fromEntries(Object.entries(rawFluencies).map(([language, value]) => {
+    if (value === 'Fluent' || value === 'Master' || value === 'Grandmaster') return [language, 'Fluent'];
+    if (value === 'Limited' || value === 'Novice' || value === 'Adept' || value === 'Expert') return [language, language === 'Common' ? 'Fluent' : 'Limited'];
+    return [language, 'Untrained'];
+  }));
+  languageFluencies.Common = 'Fluent';
+  const build: CharacterBuildData = {
+    ...defaultBuild(),
+    ...rawBuild,
+    attributeAssignments: Array.isArray(rawBuild.attributeAssignments)
+      ? rawBuild.attributeAssignments.slice(0, 4) as CharacterBuildData['attributeAssignments']
+      : [],
+    attributeBonusPoints: rawBuild.attributeBonusPoints && typeof rawBuild.attributeBonusPoints === 'object'
+      ? rawBuild.attributeBonusPoints as CharacterBuildData['attributeBonusPoints']
+      : {},
+    languageFluencies: languageFluencies as CharacterBuildData['languageFluencies'],
+  };
   const attributes = {
     Might: { name: DC20Attributes.MIGHT, score: might, modifier: might },
     Agility: { name: DC20Attributes.AGILITY, score: agility, modifier: agility },
@@ -374,7 +398,7 @@ function normalizeCharacter(value: unknown): Character {
     spells: Array.isArray(item.spells) ? item.spells as Character['spells'] : [],
     maneuvers: Array.isArray(item.maneuvers) ? item.maneuvers as Character['maneuvers'] : [],
     notes: typeof item.notes === 'string' ? item.notes : '',
-    build: build as Character['build'],
+    build,
   };
 }
 
@@ -389,7 +413,9 @@ export function migratePersistedState(value: unknown): PersistedCampaignState {
       : 'Dashboard',
     campaignData: {
       ...defaultCampaignData,
-      title: typeof rawCampaignData.title === 'string' ? rawCampaignData.title : defaultCampaignData.title,
+      title: typeof rawCampaignData.title === 'string' && rawCampaignData.title !== 'The Amethyst Chronicle'
+        ? rawCampaignData.title
+        : defaultCampaignData.title,
       notes: typeof rawCampaignData.notes === 'string' ? rawCampaignData.notes : defaultCampaignData.notes,
       campaigns: Array.isArray(rawCampaignData.campaigns) ? rawCampaignData.campaigns as CampaignRecord[] : [],
       customMonsters: Array.isArray(rawCampaignData.customMonsters)

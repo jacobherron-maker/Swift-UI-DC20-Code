@@ -116,7 +116,7 @@ export const DC20Attributes = {
 
 export type DC20Attribute = (typeof DC20Attributes)[keyof typeof DC20Attributes];
 
-// Mastery levels for skills, trades, languages
+// Mastery levels for skills and trades.
 export const MasteryLevels = {
   UNTRAINED: "Untrained",
   NOVICE: "Novice",
@@ -127,6 +127,15 @@ export const MasteryLevels = {
 } as const;
 
 export type MasteryLevel = (typeof MasteryLevels)[keyof typeof MasteryLevels];
+
+// Languages use fluency rather than the five-stage mastery system.
+export const LanguageFluencyValues = {
+  UNTRAINED: "Untrained",
+  LIMITED: "Limited",
+  FLUENT: "Fluent",
+} as const;
+
+export type LanguageFluency = (typeof LanguageFluencyValues)[keyof typeof LanguageFluencyValues];
 
 // Beta 0.10.5 skills. Knowledge disciplines are Trades in DC20, not Skills.
 export const DC20Skills = {
@@ -223,11 +232,17 @@ export type CharacterPathChoice = 'Martial' | 'Spellcaster';
 export interface CharacterBuildData {
   attributeMethod: AttributeSelectionMethod;
   rolledAttributeResults: number[];
+  /** Pool slot to attribute assignments for Standard Array and Rolled generation. */
+  attributeAssignments: Array<DC20Attribute | null>;
+  /** The +2 creation points and later Attribute Increases allocated after the base pool. */
+  attributeBonusPoints: Partial<Record<DC20Attribute, number>>;
   backgroundName: string;
   backgroundStory: string;
   skillPointsConvertedToTrades: number;
   tradePointsConvertedToLanguages: number;
-  languageMasteries: Record<string, MasteryLevel>;
+  languageFluencies: Record<string, LanguageFluency>;
+  /** Kept only so older saved characters can be migrated without losing language choices. */
+  languageMasteries?: Record<string, MasteryLevel>;
   ancestrySecondary: string;
   selectedAncestryTraitIDs: string[];
   ancestryTraitChoices: Record<string, string[]>;
@@ -252,6 +267,7 @@ export interface Character {
   name: string;
   level: number;
   ancestry: DC20Ancestry | string;
+  size?: string;
   class: DC20Class | string;
   subclass?: string;
   background: string;

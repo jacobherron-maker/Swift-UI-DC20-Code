@@ -13,7 +13,7 @@ const DashboardView: React.FC = () => {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <p className="theme-accent-text text-xs font-black uppercase tracking-[0.28em]">GM command center</p>
+      <p className="theme-accent-text text-xs font-black uppercase tracking-[0.28em]">Dashboard</p>
       <h1 className="mb-2 mt-1 text-4xl font-black text-white">{campaignData.title}</h1>
       <p className="mb-8 text-slate-400">Everything you need to build, prepare, and run DC20 in one place.</p>
 

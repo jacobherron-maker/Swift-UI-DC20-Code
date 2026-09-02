@@ -100,4 +100,16 @@ describe('campaign persistence migration', () => {
     const migrated = parseCampaignBackup({ selectedPaletteID: 'not-a-real-palette' });
     expect(migrated.selectedPaletteID).toBe('amethyst-archive');
   });
+
+  it('migrates the former default title and legacy language mastery to fluency', () => {
+    const migrated = migratePersistedState({
+      campaignData: { title: 'The Amethyst Chronicle' },
+      characters: [{
+        id: 'linguist', name: 'Linguist', level: 1, class: 'Bard',
+        build: { languageMasteries: { Common: 'Novice', Elvish: 'Adept' } },
+      }],
+    });
+    expect(migrated.campaignData.title).toBe('DC20 Hub');
+    expect(migrated.characters[0].build?.languageFluencies).toEqual({ Common: 'Fluent', Elvish: 'Limited' });
+  });
 });

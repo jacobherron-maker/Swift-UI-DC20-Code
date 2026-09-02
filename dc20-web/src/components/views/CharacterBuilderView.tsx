@@ -11,7 +11,9 @@ import type {
   CharacterInventoryItem,
   CharacterPathChoice,
   ClassChoiceGroupReference,
+  ClassReference,
   DC20Attribute,
+  LanguageFluency,
   MasteryLevel,
   MasteryReference,
 } from '../../types/models';
@@ -49,6 +51,9 @@ const DEFAULT_ATTRIBUTES: Record<DC20Attribute, number> = {
   Charisma: 0,
   Intelligence: 0,
 };
+const EMPTY_ATTRIBUTES: Record<DC20Attribute, number> = { Might: 0, Agility: 0, Charisma: 0, Intelligence: 0 };
+const STANDARD_ARRAY = [3, 1, 0, -2];
+const LANGUAGE_FLUENCIES: LanguageFluency[] = ['Untrained', 'Limited', 'Fluent'];
 
 const fieldClass = 'w-full rounded-lg border border-slate-600 bg-slate-950/70 px-3 py-2 text-slate-100 outline-none focus:border-violet-400';
 const panelClass = 'rounded-2xl border border-white/10 bg-slate-900/65 p-5 shadow-xl shadow-black/10';
@@ -73,11 +78,13 @@ function MasteryPicker({
   value,
   maximum,
   bonus = 0,
+  pointsAvailable,
   onChange,
 }: {
   value: MasteryLevel;
   maximum: number;
   bonus?: number;
+  pointsAvailable: number;
   onChange: (value: MasteryLevel) => void;
 }) {
   const effective = Math.min(5, masteryRank(value) + bonus);
@@ -85,9 +92,51 @@ function MasteryPicker({
   return (
     <div className="flex items-center gap-2">
       <select value={value} onChange={(event) => onChange(event.target.value as MasteryLevel)} className="rounded-lg border border-slate-600 bg-slate-900 px-2 py-1 text-sm text-slate-200">
-        {MASTERY_TITLES.slice(0, selectableMaximum + 1).map((title) => <option key={title}>{title}</option>)}
+        {MASTERY_TITLES.slice(0, selectableMaximum + 1).map((title, rank) => <option key={title} value={title} disabled={rank > pointsAvailable}>{title} (+{rank * 2})</option>)}
       </select>
-      {bonus > 0 && <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs font-bold text-emerald-300">Effective: {masteryTitle(effective)}</span>}
+      {bonus > 0 && <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs font-bold text-emerald-300">Effective: {masteryTitle(effective)} (+{effective * 2})</span>}
+    </div>
+  );
+}
+
+function LanguageFluencyPicker({
+  value,
+  pointsAvailable,
+  isFree = false,
+  onChange,
+}: {
+  value: LanguageFluency;
+  pointsAvailable: number;
+  isFree?: boolean;
+  onChange: (value: LanguageFluency) => void;
+}) {
+  return (
+    <select
+      value={value}
+      disabled={isFree}
+      onChange={(event) => onChange(event.target.value as LanguageFluency)}
+      className="rounded-lg border border-slate-600 bg-slate-900 px-2 py-1 text-sm text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+    >
+      {LANGUAGE_FLUENCIES.map((fluency, cost) => <option key={fluency} value={fluency} disabled={!isFree && cost > pointsAvailable}>{fluency}{fluency === 'Limited' ? ' (1 point)' : fluency === 'Fluent' ? ' (2 points)' : ''}</option>)}
+    </select>
+  );
+}
+
+function ClassProgressionCards({ classReference, currentLevel }: { classReference: ClassReference; currentLevel?: number }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+      {classReference.tableRows.map((row) => (
+        <div key={row.level} className={`min-w-0 rounded-xl border p-4 ${row.level === currentLevel ? 'border-violet-400/60 bg-violet-500/10' : 'border-white/10 bg-slate-950/45'}`}>
+          <h4 className="font-black text-violet-200">Level {row.level}</h4>
+          <dl className="mt-3 space-y-2 text-sm">
+            {classReference.tableColumns.filter((column) => column !== 'level').map((column) => {
+              const value = row[column as keyof typeof row];
+              const display = value === undefined || value === '' ? '—' : typeof value === 'number' ? `+${value}` : value;
+              return <div key={column} className="grid min-w-0 grid-cols-[minmax(90px,0.4fr)_minmax(0,1fr)] gap-2"><dt className="text-xs font-bold uppercase tracking-wider text-slate-500">{column}</dt><dd className="min-w-0 break-words text-slate-300">{display}</dd></div>;
+            })}
+          </dl>
+        </div>
+      ))}
     </div>
   );
 }
@@ -101,8 +150,8 @@ function emptyCharacter(): Character {
     class: 'Champion',
     background: '',
     alignment: '',
-    attributes: Object.fromEntries(ATTRIBUTE_NAMES.map((name) => [name, { name, score: DEFAULT_ATTRIBUTES[name], modifier: DEFAULT_ATTRIBUTES[name] }])) as Character['attributes'],
-    primeModifier: 3,
+    attributes: Object.fromEntries(ATTRIBUTE_NAMES.map((name) => [name, { name, score: 0, modifier: 0 }])) as Character['attributes'],
+    primeModifier: 0,
     skillMasteries: {},
     tradeMasteries: {},
     languages: ['Common'],
@@ -135,6 +184,27 @@ function masterySpent(values: Record<string, MasteryLevel>, freeNames: string[] 
   return Object.entries(values).reduce((sum, [name, value]) => sum + (free.has(name) ? 0 : masteryRank(value)), 0);
 }
 
+function fluencyRank(value: LanguageFluency): number {
+  return Math.max(0, LANGUAGE_FLUENCIES.indexOf(value));
+}
+
+function fluencySpent(values: Record<string, LanguageFluency>, freeNames: string[] = []): number {
+  const free = new Set(freeNames);
+  return Object.entries(values).reduce((sum, [name, value]) => sum + (free.has(name) ? 0 : fluencyRank(value)), 0);
+}
+
+function assignedAttributes(
+  pool: number[],
+  assignments: Array<DC20Attribute | null>,
+  bonuses: Partial<Record<DC20Attribute, number>>,
+): Record<DC20Attribute, number> {
+  const result = { ...EMPTY_ATTRIBUTES };
+  assignments.forEach((attribute, index) => {
+    if (attribute && pool[index] !== undefined) result[attribute] = pool[index] + (bonuses[attribute] ?? 0);
+  });
+  return result;
+}
+
 function choiceOptions(trait: AncestryTrait, skills: MasteryReference[], trades: MasteryReference[], spells: Array<{ name: string; source: string; school: string; tags: string }>): string[] {
   if (['Attribute Increase', 'Attribute Decrease'].includes(trait.name)) return ATTRIBUTE_NAMES;
   if (trait.name === 'Skill Expertise') return skills.map(({ name }) => name);
@@ -163,7 +233,37 @@ const CharacterBuilderView: React.FC<{
   const { equipment, isLoading: equipmentLoading } = useEquipmentCatalog();
   const { spells, maneuvers, isLoading: powersLoading, error: powersError } = usePowerCatalog();
   const original = useMemo(() => editingCharacter ?? emptyCharacter(), [editingCharacter]);
-  const originalBuild = useMemo(() => ({ ...defaultBuild(), ...(original.build ?? {}) }), [original]);
+  const originalBuild = useMemo<CharacterBuildData>(() => {
+    const saved = original.build;
+    const defaults = defaultBuild();
+    const legacyFluencies = Object.fromEntries(Object.entries(saved?.languageMasteries ?? {}).map(([language, mastery]) => [
+      language,
+      language === 'Common' ? 'Fluent' : mastery === 'Untrained' ? 'Untrained' : 'Limited',
+    ])) as Record<string, LanguageFluency>;
+    return {
+      ...defaults,
+      ...(saved ?? {}),
+      languageFluencies: {
+        ...(saved?.languageFluencies ?? (Object.keys(legacyFluencies).length > 0 ? legacyFluencies : defaults.languageFluencies)),
+        Common: 'Fluent',
+      },
+    };
+  }, [original]);
+
+  const initialAssignments = useMemo<Array<DC20Attribute | null>>(() => {
+    if (originalBuild.attributeAssignments.length === 4) return originalBuild.attributeAssignments;
+    if (editingCharacter && originalBuild.attributeMethod !== 'Point Buy') return [...ATTRIBUTE_NAMES];
+    return [];
+  }, [editingCharacter, originalBuild]);
+  const initialBonusPoints = useMemo<Partial<Record<DC20Attribute, number>>>(() => {
+    if (Object.keys(originalBuild.attributeBonusPoints).length > 0) return originalBuild.attributeBonusPoints;
+    if (!editingCharacter || originalBuild.attributeMethod === 'Point Buy') return {};
+    const pool = originalBuild.attributeMethod === 'Rolled' ? originalBuild.rolledAttributeResults : STANDARD_ARRAY;
+    return Object.fromEntries(ATTRIBUTE_NAMES.map((attribute, index) => [
+      attribute,
+      Math.max(0, (original.attributes[attribute]?.score ?? pool[index] ?? 0) - (pool[index] ?? 0)),
+    ]));
+  }, [editingCharacter, original, originalBuild]);
 
   const [currentStep, setCurrentStep] = useState<BuilderStep>('attributes');
   const [name, setName] = useState(original.name);
@@ -171,11 +271,13 @@ const CharacterBuilderView: React.FC<{
   const [attributeMethod, setAttributeMethod] = useState<AttributeSelectionMethod>(originalBuild.attributeMethod);
   const [attributes, setAttributes] = useState<Record<DC20Attribute, number>>(Object.fromEntries(ATTRIBUTE_NAMES.map((attribute) => [attribute, original.attributes[attribute]?.score ?? DEFAULT_ATTRIBUTES[attribute]])) as Record<DC20Attribute, number>);
   const [rolledResults, setRolledResults] = useState(originalBuild.rolledAttributeResults);
+  const [attributeAssignments, setAttributeAssignments] = useState<Array<DC20Attribute | null>>(initialAssignments);
+  const [attributeBonusPoints, setAttributeBonusPoints] = useState<Partial<Record<DC20Attribute, number>>>(initialBonusPoints);
   const [backgroundName, setBackgroundName] = useState(originalBuild.backgroundName || original.background);
   const [backgroundStory, setBackgroundStory] = useState(originalBuild.backgroundStory);
   const [skillMasteries, setSkillMasteries] = useState<Record<string, MasteryLevel>>(original.skillMasteries ?? {});
   const [tradeMasteries, setTradeMasteries] = useState<Record<string, MasteryLevel>>(original.tradeMasteries ?? {});
-  const [languageMasteries, setLanguageMasteries] = useState<Record<string, MasteryLevel>>(originalBuild.languageMasteries);
+  const [languageFluencies, setLanguageFluencies] = useState<Record<string, LanguageFluency>>(originalBuild.languageFluencies);
   const [skillConversion, setSkillConversion] = useState(originalBuild.skillPointsConvertedToTrades);
   const [tradeConversion, setTradeConversion] = useState(originalBuild.tradePointsConvertedToLanguages);
   const [ancestry, setAncestry] = useState(original.ancestry || 'Human');
@@ -183,6 +285,8 @@ const CharacterBuilderView: React.FC<{
   const [traitIDs, setTraitIDs] = useState<string[]>(originalBuild.selectedAncestryTraitIDs);
   const [traitChoices, setTraitChoices] = useState<Record<string, string[]>>(originalBuild.ancestryTraitChoices);
   const [className, setClassName] = useState(original.class || 'Champion');
+  const [classPreviewName, setClassPreviewName] = useState(original.class || 'Champion');
+  const [classConfirmed, setClassConfirmed] = useState(Boolean(editingCharacter));
   const [subclass, setSubclass] = useState(original.subclass ?? '');
   const [talents, setTalents] = useState<string[]>(originalBuild.selectedTalents);
   const [storedPathChoices, setPathChoices] = useState<Record<string, CharacterPathChoice>>(originalBuild.pathProgressionChoices);
@@ -203,11 +307,13 @@ const CharacterBuilderView: React.FC<{
     ...originalBuild,
     attributeMethod,
     rolledAttributeResults: rolledResults,
+    attributeAssignments,
+    attributeBonusPoints,
     backgroundName,
     backgroundStory,
     skillPointsConvertedToTrades: skillConversion,
     tradePointsConvertedToLanguages: tradeConversion,
-    languageMasteries,
+    languageFluencies,
     ancestrySecondary: secondaryAncestry,
     selectedAncestryTraitIDs: traitIDs,
     ancestryTraitChoices: traitChoices,
@@ -231,7 +337,7 @@ const CharacterBuilderView: React.FC<{
     attributes: Object.fromEntries(ATTRIBUTE_NAMES.map((attribute) => [attribute, { name: attribute, score: attributes[attribute], modifier: attributes[attribute] }])) as Character['attributes'],
     skillMasteries,
     tradeMasteries,
-    languages: Object.entries(languageMasteries).filter(([, mastery]) => masteryRank(mastery) > 0).map(([language]) => language),
+    languages: Object.entries(languageFluencies).filter(([, fluency]) => fluencyRank(fluency) > 0).map(([language]) => language),
     inventoryItems,
     notes,
     build,
@@ -240,23 +346,41 @@ const CharacterBuilderView: React.FC<{
   const classTotals = classReference ? classTableTotals(classReference, level) : null;
   const expertise = reference ? ancestryExpertise(draft, reference.ancestryTraits) : { skills: {}, trades: {} };
   const selectedTraits = reference ? selectedAncestryTraits(draft, reference.ancestryTraits) : [];
+  const automaticTraitIDs = new Set(selectedTraits.filter((trait) => trait.name === 'Small-Sized').map((trait) => trait.id));
   const ancestrySpent = selectedTraits.reduce((sum, trait) => sum + trait.cost, 0);
   const negativePoints = -selectedTraits.filter(({ cost }) => cost < 0).reduce((sum, trait) => sum + trait.cost, 0);
   const minorTraits = selectedTraits.filter(({ countsAsZeroPointTrait }) => countsAsZeroPointTrait).length;
   const skillSpent = masterySpent(skillMasteries);
   const tradeSpent = masterySpent(tradeMasteries);
-  const languageSpent = masterySpent(languageMasteries, ['Common']);
+  const languageSpent = fluencySpent(languageFluencies, ['Common']);
   const advancementAttributePoints = classTotals?.attribute ?? 0;
-  const rolledBase = rolledResults.length === 4 ? rolledResults.reduce((sum, value) => sum + value, 0) : 2;
-  const attributeBudget = (attributeMethod === 'Rolled' ? rolledBase + 2 : 4) + advancementAttributePoints + talents.filter((talent) => talent === 'Attribute Increase').length * 2;
-  const attributeSpent = Object.values(attributes).reduce((sum, value) => sum + value, 0);
+  const attributeBonusBudget = 2 + advancementAttributePoints + talents.filter((talent) => talent === 'Attribute Increase').length * 2;
+  const attributeBonusSpent = ATTRIBUTE_NAMES.reduce((sum, attribute) => sum + (attributeBonusPoints[attribute] ?? 0), 0);
+  const pointBuyBudget = 4 + advancementAttributePoints + talents.filter((talent) => talent === 'Attribute Increase').length * 2;
+  const pointBuySpent = Object.values(attributes).reduce((sum, value) => sum + value, 0);
+  const usesAttributePool = attributeMethod !== 'Point Buy';
   const currentStepIndex = STEPS.findIndex(({ id }) => id === currentStep);
   const availableTalentSlots = talentSlots(className, level, subclass);
+  const attributePool = attributeMethod === 'Standard Array' ? STANDARD_ARRAY : rolledResults;
+  const assignedCount = new Set(attributeAssignments.filter(Boolean)).size;
+  const previewClassReference = reference?.classes.find((entry) => entry.name === classPreviewName) ?? null;
 
   const changeLevel = (nextLevel: number) => {
     const next = Math.min(10, Math.max(1, Math.trunc(nextLevel)));
     setLevelState(next);
-    setAttributes((current) => Object.fromEntries(ATTRIBUTE_NAMES.map((attribute) => [attribute, Math.min(attributeCap(next), current[attribute])])) as Record<DC20Attribute, number>);
+    if (attributeMethod === 'Point Buy') {
+      setAttributes((current) => Object.fromEntries(ATTRIBUTE_NAMES.map((attribute) => [attribute, Math.min(attributeCap(next), current[attribute])])) as Record<DC20Attribute, number>);
+    } else {
+      setAttributeBonusPoints((current) => {
+        const nextBonuses = Object.fromEntries(ATTRIBUTE_NAMES.map((attribute) => {
+          const slot = attributeAssignments.findIndex((entry) => entry === attribute);
+          const base = slot >= 0 ? attributePool[slot] ?? 0 : 0;
+          return [attribute, Math.min(current[attribute] ?? 0, Math.max(0, attributeCap(next) - base))];
+        })) as Partial<Record<DC20Attribute, number>>;
+        setAttributes(assignedAttributes(attributePool, attributeAssignments, nextBonuses));
+        return nextBonuses;
+      });
+    }
     if (next < 3) setSubclass('');
     if (classReference) {
       setTalents((current) => current.filter((talent) => classReference.talents.some((option) => option.name === talent && option.minimumLevel <= next)).slice(0, talentSlots(classReference.name, next, next >= 3 ? subclass : '')));
@@ -270,25 +394,59 @@ const CharacterBuilderView: React.FC<{
     const clamped = Math.max(-2, Math.min(attributeCap(level), Math.trunc(next)));
     setAttributes((current) => {
       const nextTotal = Object.entries(current).reduce((sum, [key, value]) => sum + (key === attribute ? clamped : value), 0);
-      return nextTotal <= attributeBudget ? { ...current, [attribute]: clamped } : current;
+      return nextTotal <= pointBuyBudget ? { ...current, [attribute]: clamped } : current;
+    });
+  };
+
+  const assignAttribute = (slot: number, attribute: DC20Attribute | '') => {
+    setAttributeAssignments((current) => {
+      const next = Array.from({ length: 4 }, (_, index) => current[index] ?? null);
+      if (attribute) {
+        for (let index = 0; index < next.length; index += 1) if (next[index] === attribute) next[index] = null;
+        next[slot] = attribute;
+      } else {
+        next[slot] = null;
+      }
+      setAttributes(assignedAttributes(attributePool, next, attributeBonusPoints));
+      return next;
+    });
+  };
+
+  const adjustAssignedAttribute = (attribute: DC20Attribute, direction: -1 | 1) => {
+    if (!attributeAssignments.includes(attribute)) return;
+    setAttributeBonusPoints((current) => {
+      const currentValue = current[attribute] ?? 0;
+      const nextValue = currentValue + direction;
+      const slot = attributeAssignments.findIndex((entry) => entry === attribute);
+      const base = attributePool[slot] ?? 0;
+      if (nextValue < 0 || base + nextValue > attributeCap(level)) return current;
+      if (direction > 0 && attributeBonusSpent >= attributeBonusBudget) return current;
+      const next = { ...current, [attribute]: nextValue };
+      setAttributes(assignedAttributes(attributePool, attributeAssignments, next));
+      return next;
     });
   };
 
   const changeAttributeMethod = (method: AttributeSelectionMethod) => {
     setAttributeMethod(method);
     setRolledResults([]);
+    setAttributeAssignments([]);
+    setAttributeBonusPoints({});
     setAttributes(method === 'Point Buy'
       ? { Might: -2, Agility: -2, Charisma: -2, Intelligence: -2 }
-      : DEFAULT_ATTRIBUTES);
+      : EMPTY_ATTRIBUTES);
   };
 
   const rollAttributes = () => {
     const results = ATTRIBUTE_NAMES.map(() => Math.floor(Math.random() * 6) - 2);
     setRolledResults(results);
-    setAttributes(Object.fromEntries(ATTRIBUTE_NAMES.map((attribute, index) => [attribute, results[index]])) as Record<DC20Attribute, number>);
+    setAttributeAssignments([]);
+    setAttributeBonusPoints({});
+    setAttributes(EMPTY_ATTRIBUTES);
   };
 
   const toggleTrait = (trait: AncestryTrait) => {
+    if (automaticTraitIDs.has(trait.id)) return;
     const selected = traitIDs.includes(trait.id);
     if (selected) {
       setTraitIDs((current) => current.filter((id) => id !== trait.id));
@@ -314,6 +472,12 @@ const CharacterBuilderView: React.FC<{
     setPathChoices({});
   };
 
+  const confirmClass = () => {
+    if (!previewClassReference) return;
+    if (previewClassReference.name !== className) setClass(previewClassReference.name);
+    setClassConfirmed(true);
+  };
+
   const toggleLimited = (values: string[], value: string, limit: number, setter: React.Dispatch<React.SetStateAction<string[]>>) => {
     setter(values.includes(value) ? values.filter((entry) => entry !== value) : values.length < limit ? [...values, value] : values);
   };
@@ -329,7 +493,7 @@ const CharacterBuilderView: React.FC<{
   };
 
   const allowedSpells = (() => {
-    if (!classReference) return [];
+    if (!classReference || (derived?.spellLimit ?? 0) === 0 && (derived?.cantripLimit ?? 0) === 0) return [];
     if (className === 'Psion') return spells.filter((spell) => {
       const tags = spell.tags.split(', ').map((tag) => tag.trim());
       return tags.some((tag) => ['Psychic', 'Gravity', 'Illusion'].includes(tag)) || ['Divination', 'Enchantment', 'Nullification'].includes(spell.school);
@@ -338,6 +502,9 @@ const CharacterBuilderView: React.FC<{
     const source = classReference.fixedSpellSource ?? spellSource;
     return source ? spells.filter((spell) => spell.source.split(', ').includes(source)) : spells;
   })();
+  const hasSpells = (derived?.spellLimit ?? 0) > 0 || (derived?.cantripLimit ?? 0) > 0;
+  const canChooseSpellSource = hasSpells && !classReference?.fixedSpellSource && !['Bard', 'Psion'].includes(className);
+  const hasManeuvers = (derived?.maneuverLimit ?? 0) > 0;
 
   const startingEquipment = (() => {
     if (!classReference) return { arsenal: [], armor: [], tools: [] };
@@ -372,15 +539,18 @@ const CharacterBuilderView: React.FC<{
     const issues: string[] = [];
     if (!name.trim()) issues.push('Enter a character name.');
     if (!derived) issues.push('Character rules are still loading.');
-    if (attributeSpent !== attributeBudget) issues.push(`Spend all Attribute Points (${attributeBudget - attributeSpent} remaining).`);
+    if (usesAttributePool && (attributePool.length !== 4 || assignedCount !== 4)) issues.push('Assign every Standard Array or rolled value to an Attribute.');
+    if (usesAttributePool && attributeBonusSpent !== attributeBonusBudget) issues.push(`Spend all Attribute Points (${attributeBonusBudget - attributeBonusSpent} remaining).`);
+    if (!usesAttributePool && pointBuySpent !== pointBuyBudget) issues.push(`Spend all Attribute Points (${pointBuyBudget - pointBuySpent} remaining).`);
     if (derived && skillSpent > derived.skillPointBudget) issues.push('Skill mastery exceeds the available Skill Points.');
     if (derived && tradeSpent > derived.tradePointBudget) issues.push('Trade mastery exceeds the available Trade Points.');
-    if (derived && languageSpent > derived.languagePointBudget) issues.push('Language mastery exceeds the available Language Points.');
+    if (derived && languageSpent > derived.languagePointBudget) issues.push('Language fluency exceeds the available Language Points.');
     if (derived && ancestrySpent > derived.ancestryPointBudget) issues.push('Ancestry traits exceed the available Ancestry Points.');
     if (negativePoints > 2) issues.push('Negative ancestry traits can grant at most 2 points.');
     if (minorTraits > 1) issues.push('Choose at most one 0-point minor ancestry trait.');
     if (talents.length > availableTalentSlots) issues.push('Too many Talents are selected.');
     if (level >= 3 && classReference?.subclasses.length && !subclass) issues.push('Choose a subclass.');
+    if (!classConfirmed) issues.push('Review and confirm a class.');
     if (derived && selectedSpells.length > derived.spellLimit) issues.push('Too many Spells are selected.');
     if (derived && selectedManeuvers.length > derived.maneuverLimit) issues.push('Too many Maneuvers are selected.');
     return issues;
@@ -432,52 +602,55 @@ const CharacterBuilderView: React.FC<{
           {currentStep === 'attributes' && <section>
             <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_160px]"><label className="text-sm font-bold text-slate-300">Player Character Name<input autoFocus value={name} onChange={(event) => setName(event.target.value)} className={`${fieldClass} mt-2 text-lg`} placeholder="Character name" /></label><label className="text-sm font-bold text-slate-300">Character Level<input type="number" min={1} max={10} value={level} onChange={(event) => setLevel(Math.min(10, Math.max(1, Number(event.target.value))))} className={`${fieldClass} mt-2`} /></label></div>
             <div className="mb-6 grid gap-3 md:grid-cols-3">{(['Standard Array', 'Point Buy', 'Rolled'] as AttributeSelectionMethod[]).map((method) => <button type="button" key={method} onClick={() => changeAttributeMethod(method)} className={`rounded-xl border p-4 text-left ${attributeMethod === method ? 'border-violet-400 bg-violet-500/15 text-violet-200' : 'border-slate-700 bg-slate-950/50 text-slate-300'}`}><div className="font-black">{method}</div><div className="mt-1 text-xs text-slate-500">{method === 'Standard Array' ? '3, 1, 0, −2, then 2 additional points.' : method === 'Point Buy' ? 'Start at −2 and spend 12 points.' : 'Roll 1d6−3 four times, then add 2 points.'}</div></button>)}</div>
-            {attributeMethod === 'Rolled' && <button type="button" onClick={rollAttributes} className="mb-6 rounded-xl bg-fuchsia-600 px-5 py-3 font-black text-white hover:bg-fuchsia-500">🎲 Roll The Dice! <span className="ml-2 font-normal">{rolledResults.length === 4 ? rolledResults.join(', ') : '1d6−3 × 4'}</span></button>}
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{ATTRIBUTE_NAMES.map((attribute) => <div key={attribute} className="rounded-2xl border border-white/10 bg-slate-950/55 p-5"><div className="flex items-center justify-between"><h3 className="font-black text-violet-200">{attribute}</h3><span className="text-3xl font-black text-white">{attributes[attribute] >= 0 ? '+' : ''}{attributes[attribute]}</span></div><div className="mt-5 flex items-center justify-center gap-3"><button type="button" onClick={() => setAttribute(attribute, attributes[attribute] - 1)} className="h-10 w-10 rounded-lg bg-slate-800 text-xl text-slate-200">−</button><button type="button" onClick={() => setAttribute(attribute, attributes[attribute] + 1)} className="h-10 w-10 rounded-lg bg-violet-600 text-xl text-white">+</button></div></div>)}</div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3"><Metric label="Allocation Total" value={`${attributeSpent} / ${attributeBudget}`} tone={attributeSpent === attributeBudget ? 'green' : 'violet'} /><Metric label="Prime Modifier" value={`+${Math.max(...Object.values(attributes))}`} /><Metric label="Combat Mastery" value={`+${derived?.combatMastery ?? 1}`} /></div>
+            {attributeMethod === 'Rolled' && <button type="button" onClick={rollAttributes} className="mb-6 rounded-xl bg-fuchsia-600 px-5 py-3 font-black text-white hover:bg-fuchsia-500">🎲 Roll The Dice! <span className="ml-2 font-normal">{rolledResults.length === 4 ? 'Roll again' : '1d6−3 × 4'}</span></button>}
+            {usesAttributePool && attributePool.length === 4 && <div className="mb-6 rounded-2xl border border-violet-400/20 bg-violet-500/5 p-4"><h3 className="font-black text-violet-200">Assign each {attributeMethod === 'Rolled' ? 'roll' : 'array value'}</h3><p className="mt-1 text-sm text-slate-500">Each value can be assigned once. Pick the Attribute that receives it, then allocate the additional Attribute Points below.</p><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{attributePool.map((result, index) => <label key={`${result}-${index}`} className="rounded-xl border border-white/10 bg-slate-950/55 p-3 text-sm font-bold text-slate-300"><span className="mb-2 block text-2xl font-black text-fuchsia-200">{result >= 0 ? '+' : ''}{result}</span><select value={attributeAssignments[index] ?? ''} onChange={(event) => assignAttribute(index, event.target.value as DC20Attribute | '')} className={fieldClass}><option value="">Choose Attribute…</option>{ATTRIBUTE_NAMES.map((attribute) => <option key={attribute} value={attribute} disabled={attributeAssignments.some((entry, slot) => entry === attribute && slot !== index)}>{attribute}</option>)}</select></label>)}</div></div>}
+            {usesAttributePool && attributeMethod === 'Rolled' && attributePool.length !== 4 && <div className="mb-6 rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4 text-sm text-fuchsia-100">Roll four results before assigning Attributes.</div>}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{ATTRIBUTE_NAMES.map((attribute) => { const assigned = !usesAttributePool || attributeAssignments.includes(attribute); const bonus = attributeBonusPoints[attribute] ?? 0; const atCap = attributes[attribute] >= attributeCap(level); const noPoints = usesAttributePool ? attributeBonusSpent >= attributeBonusBudget : pointBuySpent >= pointBuyBudget; return <div key={attribute} className={`rounded-2xl border border-white/10 bg-slate-950/55 p-5 ${assigned ? '' : 'opacity-50'}`}><div className="flex items-center justify-between"><div><h3 className="font-black text-violet-200">{attribute}</h3>{usesAttributePool && <span className="text-xs text-slate-500">{assigned ? `Base + ${bonus} added` : 'Unassigned'}</span>}</div><span className="text-3xl font-black text-white">{assigned ? `${attributes[attribute] >= 0 ? '+' : ''}${attributes[attribute]}` : '—'}</span></div><div className="mt-5 flex items-center justify-center gap-3"><button type="button" disabled={usesAttributePool ? bonus <= 0 : attributes[attribute] <= -2} onClick={() => usesAttributePool ? adjustAssignedAttribute(attribute, -1) : setAttribute(attribute, attributes[attribute] - 1)} className="h-10 w-10 rounded-lg bg-slate-800 text-xl text-slate-200 disabled:cursor-not-allowed disabled:opacity-30">−</button><button type="button" disabled={!assigned || atCap || noPoints} onClick={() => usesAttributePool ? adjustAssignedAttribute(attribute, 1) : setAttribute(attribute, attributes[attribute] + 1)} className="h-10 w-10 rounded-lg bg-violet-600 text-xl text-white disabled:cursor-not-allowed disabled:opacity-30">+</button></div></div>; })}</div>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3"><Metric label={usesAttributePool ? 'Additional Points' : 'Allocation Total'} value={usesAttributePool ? `${attributeBonusSpent} / ${attributeBonusBudget}` : `${pointBuySpent} / ${pointBuyBudget}`} tone={(usesAttributePool ? attributeBonusSpent === attributeBonusBudget : pointBuySpent === pointBuyBudget) ? 'green' : 'violet'} /><Metric label="Prime Modifier" value={`${Math.max(...Object.values(attributes)) >= 0 ? '+' : ''}${Math.max(...Object.values(attributes))}`} /><Metric label="Combat Mastery" value={`+${derived?.combatMastery ?? 1}`} /></div>
             <div className="mt-6 overflow-auto"><table className="w-full min-w-[650px] text-center text-sm"><thead className="text-xs uppercase tracking-wider text-slate-500"><tr><th className="p-2">Level</th>{[1,5,10,15,20].map((entry) => <th key={entry} className="p-2">{entry}</th>)}</tr></thead><tbody><tr className="border-t border-white/10"><th className="p-3 text-left text-slate-300">Attribute Cap</th>{[1,5,10,15,20].map((entry) => <td key={entry} className={`p-3 font-black ${level >= entry && (entry === 20 || level < [5,10,15,20].find((candidate) => candidate > entry)!) ? 'text-violet-300' : 'text-slate-400'}`}>+{attributeCap(entry)}</td>)}</tr></tbody></table></div>
           </section>}
 
           {currentStep === 'skills' && <section>
             <div className="mb-6 grid gap-4 lg:grid-cols-2"><label className="text-sm font-bold text-slate-300">Background Name<input value={backgroundName} onChange={(event) => setBackgroundName(event.target.value)} className={`${fieldClass} mt-2`} placeholder="Scholar, sailor, artisan…" /></label><label className="text-sm font-bold text-slate-300">Background Story<textarea value={backgroundStory} onChange={(event) => setBackgroundStory(event.target.value)} rows={3} className={`${fieldClass} mt-2`} placeholder="Where did this character come from?" /></label></div>
             <div className="mb-6 grid gap-3 sm:grid-cols-3"><label className="rounded-xl border border-white/10 bg-slate-950/50 p-3 text-sm text-slate-400">Skill → Trade conversions<input type="number" min={0} max={derived?.skillPointBudget ?? 0} value={skillConversion} onChange={(event) => setSkillConversion(Math.max(0, Number(event.target.value)))} className={`${fieldClass} mt-2`} /><span className="mt-2 block text-xs">Each Skill Point becomes 2 Trade Points.</span></label><label className="rounded-xl border border-white/10 bg-slate-950/50 p-3 text-sm text-slate-400">Trade → Language conversions<input type="number" min={0} value={tradeConversion} onChange={(event) => setTradeConversion(Math.max(0, Number(event.target.value)))} className={`${fieldClass} mt-2`} /><span className="mt-2 block text-xs">Each Trade Point becomes 2 Language Points.</span></label><div className="grid grid-cols-3 gap-2"><Metric label="Skills" value={`${skillSpent}/${derived?.skillPointBudget ?? 0}`} /><Metric label="Trades" value={`${tradeSpent}/${derived?.tradePointBudget ?? 0}`} /><Metric label="Languages" value={`${languageSpent}/${derived?.languagePointBudget ?? 0}`} /></div></div>
-            <div className="space-y-5">{reference.skillGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-violet-300">{group.name} Skills</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((skillName) => { const item = reference.skills.find(({ name: candidate }) => candidate === skillName)!; const value = skillMasteries[skillName] ?? 'Untrained'; return <InfoDetails key={skillName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span>{skillName}</span><span onClick={(event) => event.stopPropagation()}><MasteryPicker value={value} maximum={Math.min(5, masteryMaximum + (expertise.skills[skillName] ?? 0))} bonus={expertise.skills[skillName] ?? 0} onChange={(next) => setSkillMasteries((current) => ({ ...current, [skillName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-violet-300">{item.attribute}</p>{item.description}</InfoDetails>; })}</div></div>)}
-              {reference.tradeGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-fuchsia-300">{group.name} Trades</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((tradeName) => { const item = reference.trades.find(({ name: candidate }) => candidate === tradeName)!; const value = tradeMasteries[tradeName] ?? 'Untrained'; return <InfoDetails key={tradeName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span>{tradeName}</span><span onClick={(event) => event.stopPropagation()}><MasteryPicker value={value} maximum={Math.min(5, masteryMaximum + (expertise.trades[tradeName] ?? 0))} bonus={expertise.trades[tradeName] ?? 0} onChange={(next) => setTradeMasteries((current) => ({ ...current, [tradeName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-fuchsia-300">{item.attribute} • {item.tool}</p>{item.description}</InfoDetails>; })}</div></div>)}
-              {reference.languageGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-sky-300">{group.name} Languages</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((languageName) => { const item = reference.languages.find(({ name: candidate }) => candidate === languageName)!; const value = languageMasteries[languageName] ?? 'Untrained'; return <InfoDetails key={languageName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span>{languageName}{languageName === 'Common' && <span className="ml-2 text-xs text-emerald-300">Free</span>}</span><span onClick={(event) => event.stopPropagation()}><MasteryPicker value={value} maximum={masteryMaximum} onChange={(next) => setLanguageMasteries((current) => ({ ...current, [languageName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-sky-300">Typical speakers: {item.typicalSpeakers}</p>{item.description}</InfoDetails>; })}</div></div>)}
+            <div className="space-y-5">{reference.skillGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-violet-300">{group.name} Skills</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((skillName) => { const item = reference.skills.find(({ name: candidate }) => candidate === skillName)!; const value = skillMasteries[skillName] ?? 'Untrained'; const pointsAvailable = Math.max(0, (derived?.skillPointBudget ?? 0) - skillSpent + masteryRank(value)); return <InfoDetails key={skillName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span>{skillName}</span><span onClick={(event) => event.stopPropagation()}><MasteryPicker value={value} maximum={Math.min(5, masteryMaximum + (expertise.skills[skillName] ?? 0))} bonus={expertise.skills[skillName] ?? 0} pointsAvailable={pointsAvailable} onChange={(next) => setSkillMasteries((current) => ({ ...current, [skillName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-violet-300">{item.attribute}</p>{item.description}</InfoDetails>; })}</div></div>)}
+              {reference.tradeGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-fuchsia-300">{group.name} Trades</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((tradeName) => { const item = reference.trades.find(({ name: candidate }) => candidate === tradeName)!; const value = tradeMasteries[tradeName] ?? 'Untrained'; const pointsAvailable = Math.max(0, (derived?.tradePointBudget ?? 0) - tradeSpent + masteryRank(value)); return <InfoDetails key={tradeName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span>{tradeName}</span><span onClick={(event) => event.stopPropagation()}><MasteryPicker value={value} maximum={Math.min(5, masteryMaximum + (expertise.trades[tradeName] ?? 0))} bonus={expertise.trades[tradeName] ?? 0} pointsAvailable={pointsAvailable} onChange={(next) => setTradeMasteries((current) => ({ ...current, [tradeName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-fuchsia-300">{item.attribute} • {item.tool}</p>{item.description}</InfoDetails>; })}</div></div>)}
+              {reference.languageGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-sky-300">{group.name} Languages</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((languageName) => { const item = reference.languages.find(({ name: candidate }) => candidate === languageName)!; const value = languageFluencies[languageName] ?? 'Untrained'; const isFree = languageName === 'Common'; const pointsAvailable = Math.max(0, (derived?.languagePointBudget ?? 0) - languageSpent + fluencyRank(value)); return <InfoDetails key={languageName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span>{languageName}{isFree && <span className="ml-2 text-xs text-emerald-300">Free • Fluent</span>}</span><span onClick={(event) => event.stopPropagation()}><LanguageFluencyPicker value={isFree ? 'Fluent' : value} pointsAvailable={pointsAvailable} isFree={isFree} onChange={(next) => setLanguageFluencies((current) => ({ ...current, [languageName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-sky-300">Typical speakers: {item.typicalSpeakers}</p><p className="mb-2 text-xs text-slate-500">Limited speakers make a Language Check when precise understanding or communication matters. Fluent speakers read, write, and speak without that check.</p>{item.description}</InfoDetails>; })}</div></div>)}
             </div>
           </section>}
 
           {currentStep === 'ancestry' && <section>
             <div className="mb-6 grid gap-4 md:grid-cols-2"><label className="text-sm font-bold text-slate-300">Primary Ancestry<select value={ancestry} onChange={(event) => { setAncestry(event.target.value); setTraitIDs([]); setTraitChoices({}); }} className={`${fieldClass} mt-2`}>{reference.ancestries.map((option) => <option key={option}>{option}</option>)}</select></label><label className="text-sm font-bold text-slate-300">Secondary Ancestry (optional)<select value={secondaryAncestry} onChange={(event) => { setSecondaryAncestry(event.target.value); setTraitIDs([]); setTraitChoices({}); }} className={`${fieldClass} mt-2`}><option value="">None</option>{reference.ancestries.filter((option) => option !== ancestry && option !== 'Custom').map((option) => <option key={option}>{option}</option>)}</select></label></div>
-            <div className="mb-6 grid gap-3 sm:grid-cols-4"><Metric label="Ancestry Points" value={`${ancestrySpent}/${derived?.ancestryPointBudget ?? 5}`} /><Metric label="Negative Points" value={`${negativePoints}/2`} /><Metric label="Minor Traits" value={`${minorTraits}/1`} /><Metric label="Traits Chosen" value={traitIDs.length} /></div>
-            <div className="mb-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4"><h3 className="font-black text-emerald-300">Traits shared by every ancestry</h3><div className="mt-3 grid gap-2 md:grid-cols-3">{reference.generalAncestryTraits.map((trait) => <InfoDetails key={trait.id} summary={trait.name}>{trait.description}</InfoDetails>)}</div></div>
-            <div className="space-y-5">{Array.from(new Set(visibleTraits.map(({ category }) => category))).sort().map((category) => <div key={category}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-violet-300">{category} Traits</h3><div className="grid gap-3 lg:grid-cols-2">{visibleTraits.filter((trait) => trait.category === category).map((trait) => { const selected = traitIDs.includes(trait.id); const options = choiceOptions(trait, reference.skills, reference.trades, spells); return <div key={trait.id} className={`rounded-xl border p-4 ${selected ? 'border-violet-400/60 bg-violet-500/10' : 'border-white/10 bg-slate-950/45'}`}><div className="flex items-start justify-between gap-3"><div><h4 className="font-black text-slate-100">{trait.name} <span className="text-sm text-violet-300">({trait.cost > 0 ? '+' : ''}{trait.cost} AP)</span></h4><p className="mt-1 text-xs text-slate-500">{trait.ancestry}{trait.prerequisite ? ` • Requires ${trait.prerequisite}` : ''}</p></div><button type="button" onClick={() => toggleTrait(trait)} className={`rounded-lg px-3 py-2 text-xs font-black ${selected ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'}`}>{selected ? 'Selected' : 'Select'}</button></div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{trait.description}</p>{selected && options.length > 0 && <label className="mt-3 block text-xs font-bold uppercase tracking-wider text-slate-500">Required choice<select value={traitChoices[trait.id]?.[0] ?? ''} onChange={(event) => setTraitChoices((current) => ({ ...current, [trait.id]: [event.target.value] }))} className={`${fieldClass} mt-2 normal-case tracking-normal`}><option value="">Choose…</option>{options.map((option) => <option key={option}>{option}</option>)}</select></label>}</div>; })}</div></div>)}</div>
+            <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><Metric label="Size" value={derived?.size ?? 'Medium'} tone="green" /><Metric label="Ancestry Points" value={`${ancestrySpent}/${derived?.ancestryPointBudget ?? 5}`} /><Metric label="Negative Points" value={`${negativePoints}/2`} /><Metric label="Minor Traits" value={`${minorTraits}/1`} /><Metric label="Traits Chosen" value={selectedTraits.length} /></div>
+            <div className="mb-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4"><h3 className="font-black text-emerald-300">Base Ancestry Statistics</h3><div className="mt-3 grid gap-2 md:grid-cols-3"><InfoDetails summary={`${derived?.size ?? 'Medium'} Size`}>{derived?.size === 'Small' ? 'Your Size is considered Small.' : reference.generalAncestryTraits.find((trait) => trait.name.includes('Medium'))?.description ?? 'Your Size is considered Medium.'}</InfoDetails>{reference.generalAncestryTraits.filter((trait) => !trait.name.includes('Medium')).map((trait) => <InfoDetails key={trait.id} summary={trait.name}>{trait.description}</InfoDetails>)}</div></div>
+            <div className="space-y-5">{Array.from(new Set(visibleTraits.map(({ category }) => category))).sort().map((category) => <div key={category}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-violet-300">{category} Traits</h3><div className="grid gap-3 lg:grid-cols-2">{visibleTraits.filter((trait) => trait.category === category).map((trait) => { const selected = selectedTraits.some(({ id }) => id === trait.id); const automatic = automaticTraitIDs.has(trait.id); const options = choiceOptions(trait, reference.skills, reference.trades, spells); const selectedChoice = traitChoices[trait.id]?.[0] ?? ''; const chosenSpell = ['Celestial Magic', 'Fiendish Magic', 'Psionic Magic'].includes(trait.name) ? spells.find(({ name: spellName }) => spellName === selectedChoice) : undefined; return <div key={trait.id} className={`rounded-xl border p-4 ${selected ? 'border-violet-400/60 bg-violet-500/10' : 'border-white/10 bg-slate-950/45'}`}><div className="flex items-start justify-between gap-3"><div><h4 className="font-black text-slate-100">{trait.name} <span className="text-sm text-violet-300">({trait.cost > 0 ? '+' : ''}{trait.cost} AP)</span></h4><p className="mt-1 text-xs text-slate-500">{trait.ancestry}{trait.prerequisite ? ` • Requires ${trait.prerequisite}` : ''}{automatic ? ' • Applied by ancestry' : ''}</p></div><button type="button" disabled={automatic} onClick={() => toggleTrait(trait)} className={`rounded-lg px-3 py-2 text-xs font-black disabled:cursor-not-allowed disabled:opacity-70 ${selected ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'}`}>{automatic ? 'Applied' : selected ? 'Selected' : 'Select'}</button></div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{trait.description}</p>{selected && options.length > 0 && <label className="mt-3 block text-xs font-bold uppercase tracking-wider text-slate-500">Required choice<select value={selectedChoice} onChange={(event) => setTraitChoices((current) => ({ ...current, [trait.id]: [event.target.value] }))} className={`${fieldClass} mt-2 normal-case tracking-normal`}><option value="">Choose…</option>{options.map((option) => <option key={option} disabled={trait.name === 'Attribute Increase' && attributes[option as DC20Attribute] >= attributeCap(level)}>{option}</option>)}</select></label>}{chosenSpell && <div className="mt-3"><InfoDetails summary={`View ${chosenSpell.name} spell`}><p className="mb-2 text-xs font-bold text-violet-300">{chosenSpell.source} • {chosenSpell.school} • {chosenSpell.cost} • {chosenSpell.range} • {chosenSpell.duration}</p>{chosenSpell.description}{chosenSpell.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{chosenSpell.enhancements}</p></>}</InfoDetails></div>}</div>; })}</div></div>)}</div>
           </section>}
 
           {currentStep === 'class' && classReference && <section>
-            <div className="grid gap-5 xl:grid-cols-[310px_1fr]"><aside className="space-y-2 xl:max-h-[760px] xl:overflow-auto xl:pr-2">{reference.classes.map((entry) => <button type="button" key={entry.name} onClick={() => setClass(entry.name)} className={`w-full rounded-xl border p-3 text-left ${entry.name === className ? 'border-violet-400 bg-violet-500/15' : 'border-white/10 bg-slate-950/45 hover:bg-slate-800'}`}><div className="font-black text-slate-100">{entry.name}</div><div className="mt-1 text-xs text-slate-500">{entry.path} • {entry.levelOneResource}</div><p className="mt-2 text-xs leading-5 text-slate-400">{entry.summary}</p></button>)}</aside><div className="space-y-5"><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">{classReference.path} Path</p><h2 className="text-3xl font-black text-white">{classReference.name}</h2><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{classReference.description}</p></div>
+            <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_180px]"><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Class Builder</p><h2 className="text-2xl font-black text-white">Choose a class and level</h2></div><label className="text-sm font-bold text-slate-300">Character Level<input type="number" min={1} max={10} value={level} onChange={(event) => setLevel(Number(event.target.value))} className={`${fieldClass} mt-2`} /></label></div>
+            <div className="grid min-w-0 gap-5 lg:grid-cols-[270px_minmax(0,1fr)]"><aside className="space-y-2 lg:max-h-[760px] lg:overflow-y-auto lg:pr-2">{reference.classes.map((entry) => <button type="button" key={entry.name} onClick={() => { setClassPreviewName(entry.name); if (entry.name !== className) setClassConfirmed(false); }} className={`w-full rounded-xl border p-3 text-left ${entry.name === classPreviewName ? 'border-violet-400 bg-violet-500/15' : entry.name === className && classConfirmed ? 'border-emerald-400/50 bg-emerald-500/10' : 'border-white/10 bg-slate-950/45 hover:bg-slate-800'}`}><div className="font-black text-slate-100">{entry.name}</div><div className="mt-1 text-xs text-slate-500">{entry.path} • {entry.levelOneResource}</div><p className="mt-2 text-xs leading-5 text-slate-400">{entry.summary}</p></button>)}</aside><div className="min-w-0 space-y-5">{(!classConfirmed || classPreviewName !== className) && previewClassReference ? <><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">{previewClassReference.path} Path</p><h2 className="text-3xl font-black text-white">{previewClassReference.name}</h2><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{previewClassReference.description}</p></div><InfoDetails summary={<span>{previewClassReference.pathTitle}</span>}>{previewClassReference.pathDetails}</InfoDetails><div className={panelClass}><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-black text-violet-200">Class Progression Table</h3><p className="text-xs text-slate-500">{previewClassReference.tableSource}</p></div></div><ClassProgressionCards classReference={previewClassReference} currentLevel={level} /></div><div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Features by Level</h3><div className="space-y-4">{previewClassReference.features.map((entry) => <div key={entry.level}><h4 className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-fuchsia-300">Level {entry.level}</h4><div className="space-y-2">{entry.features.map((feature) => <InfoDetails key={`${entry.level}-${feature.name}`} summary={feature.name}>{feature.description}</InfoDetails>)}</div></div>)}</div></div><button type="button" onClick={confirmClass} className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-4 text-lg font-black text-white">Confirm {previewClassReference.name}</button></> : <><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">{classReference.path} Path • Confirmed</p><h2 className="text-3xl font-black text-white">{classReference.name}</h2><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{classReference.description}</p></div>
               <InfoDetails summary={<span>{classReference.pathTitle}</span>}>{classReference.pathDetails}</InfoDetails>
               {pathLevels.length > 0 && <div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Path Progression Choices</h3><div className="grid gap-3 sm:grid-cols-2">{pathLevels.map((pathLevel) => <div key={pathLevel} className="rounded-xl bg-slate-950/50 p-3"><div className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Level {pathLevel}</div><div className="flex gap-2">{(['Martial', 'Spellcaster'] as CharacterPathChoice[]).map((path) => <button type="button" key={path} onClick={() => setPathChoices((current) => ({ ...current, [String(pathLevel)]: path }))} className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold ${pathChoices[String(pathLevel)] === path ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-400'}`}>{path}</button>)}</div></div>)}</div></div>}
               {level >= 3 && classReference.subclasses.length > 0 && <div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Subclass</h3><div className="grid gap-2 sm:grid-cols-3">{classReference.subclasses.map((option) => <button type="button" key={option} onClick={() => { setSubclass(option); setFeatureChoices({}); }} className={`rounded-lg border px-3 py-3 text-sm font-bold ${subclass === option ? 'border-violet-400 bg-violet-500/15 text-violet-200' : 'border-slate-700 text-slate-400'}`}>{option}</button>)}</div>{subclass && <div className="mt-4 space-y-2">{(classReference.subclassFeatures[subclass] ?? []).map((feature) => <InfoDetails key={feature.name} summary={feature.name}>{feature.description}</InfoDetails>)}</div>}</div>}
-              <div className={panelClass}><div className="mb-3 flex items-center justify-between"><h3 className="font-black text-violet-200">Class Progression Table</h3><span className="text-xs text-slate-500">{classReference.tableSource}</span></div><div className="overflow-auto"><table className="w-full min-w-[850px] text-sm"><thead><tr>{classReference.tableColumns.map((column) => <th key={column} className="border-b border-white/10 p-2 text-left text-[10px] uppercase tracking-wider text-slate-500">{column}</th>)}</tr></thead><tbody>{classReference.tableRows.map((row) => <tr key={row.level} className={row.level === level ? 'bg-violet-500/10 text-violet-100' : 'text-slate-400'}>{classReference.tableColumns.map((column) => <td key={column} className="border-b border-white/5 p-2">{column === 'level' ? row.level : column === 'features' ? row.features : row[column as keyof typeof row] === undefined ? '—' : `+${row[column as keyof typeof row]}`}</td>)}</tr>)}</tbody></table></div></div>
-              <div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Features Gained Through Level {level}</h3><div className="space-y-3">{classReference.features.filter((entry) => entry.level <= level).map((entry) => <div key={entry.level}><h4 className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-fuchsia-300">Level {entry.level}</h4><div className="space-y-2">{entry.features.map((feature) => <InfoDetails key={`${entry.level}-${feature.name}`} summary={feature.name}>{feature.description}</InfoDetails>)}</div></div>)}</div></div>
+              <div className={panelClass}><div className="mb-3 flex items-center justify-between"><h3 className="font-black text-violet-200">Class Progression Table</h3><span className="text-xs text-slate-500">{classReference.tableSource}</span></div><ClassProgressionCards classReference={classReference} currentLevel={level} /></div>
+              <div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Features Gained at Level {level}</h3><div className="space-y-3">{classReference.features.filter((entry) => entry.level === level).map((entry) => <div key={entry.level}><div className="space-y-2">{entry.features.map((feature) => <InfoDetails key={`${entry.level}-${feature.name}`} summary={feature.name}>{feature.description}</InfoDetails>)}</div></div>)}{!classReference.features.some((entry) => entry.level === level) && <p className="text-sm text-slate-500">No new class features are listed at this level.</p>}</div></div>
               {availableTalentSlots > 0 && <div className={panelClass}><h3 className="mb-1 font-black text-violet-200">Talents ({talents.length}/{availableTalentSlots})</h3><p className="mb-3 text-sm text-slate-500">Only talents whose level prerequisites are met are shown.</p><div className="grid gap-2 lg:grid-cols-2">{classReference.talents.filter((talent) => talent.minimumLevel <= level).map((talent) => <div key={talent.name} className={`rounded-xl border p-3 ${talents.includes(talent.name) ? 'border-violet-400/50 bg-violet-500/10' : 'border-white/10 bg-slate-950/45'}`}><div className="flex items-center justify-between gap-2"><span className="font-bold text-slate-200">{talent.name}</span><button type="button" onClick={() => toggleLimited(talents, talent.name, availableTalentSlots, setTalents)} className="rounded bg-slate-800 px-2 py-1 text-xs font-bold text-violet-200">{talents.includes(talent.name) ? 'Remove' : 'Select'}</button></div><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-400">{talent.description}</p></div>)}</div></div>}
               {featureChoiceGroups.length > 0 && <div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Class Feature Options</h3><div className="space-y-4">{featureChoiceGroups.map((group) => <div key={`${group.id}-${group.requiredSubclass ?? ''}`} className="rounded-xl border border-white/10 bg-slate-950/45 p-4"><h4 className="font-black text-slate-200">{group.title} <span className="text-xs text-slate-500">({group.feature})</span></h4><p className="mt-1 text-sm text-slate-500">{group.prompt} Choose {group.limit}.</p><div className="mt-3 grid gap-2 md:grid-cols-2">{group.options.map((option) => <InfoDetails key={option.name} summary={<label className="flex flex-1 cursor-pointer items-center gap-2" onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={(featureChoices[group.id] ?? []).includes(option.name)} onChange={() => setFeatureChoice(group, option.name)} />{option.name}</label>}>{option.description}</InfoDetails>)}</div></div>)}</div></div>}
-              <div className={panelClass}><label className="block text-sm font-bold text-slate-300">Spell Source{!classReference.fixedSpellSource && <select value={spellSource} onChange={(event) => { setSpellSource(event.target.value); setSelectedSpells([]); }} className={`${fieldClass} mt-2`}><option value="">Choose a source or review all eligible spells</option>{Array.from(new Set(spells.flatMap((spell) => spell.source.split(', ')))).sort().map((source) => <option key={source}>{source}</option>)}</select>}{classReference.fixedSpellSource && <div className="mt-2 rounded-lg bg-slate-950/50 px-3 py-2 text-violet-200">{classReference.fixedSpellSource}</div>}</label>
-                <div className="mt-4 space-y-3"><details className="rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="cursor-pointer font-black text-violet-200">Spells ({selectedSpells.length}/{derived?.spellLimit ?? 0})</summary><div className="mt-4 grid max-h-[520px] gap-2 overflow-auto pr-2 lg:grid-cols-2">{allowedSpells.map((spell) => <InfoDetails key={spell.name} summary={<label className="flex flex-1 cursor-pointer items-center gap-2" onClick={(event) => event.stopPropagation()}><input type="checkbox" disabled={(derived?.spellLimit ?? 0) === 0} checked={selectedSpells.includes(spell.name)} onChange={() => toggleLimited(selectedSpells, spell.name, derived?.spellLimit ?? 0, setSelectedSpells)} />{spell.name}<span className="ml-auto text-xs text-slate-500">{spell.cost}</span></label>}><p className="mb-2 text-xs font-bold text-violet-300">{spell.source} • {spell.school} • {spell.range} • {spell.duration}</p>{spell.description}{spell.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{spell.enhancements}</p></>}</InfoDetails>)}</div></details>
+              {(hasSpells || hasManeuvers) && <div className={panelClass}>{hasSpells && (canChooseSpellSource || classReference.fixedSpellSource) && <label className="block text-sm font-bold text-slate-300">Spell Source{canChooseSpellSource && <select value={spellSource} onChange={(event) => { setSpellSource(event.target.value); setSelectedSpells([]); }} className={`${fieldClass} mt-2`}><option value="">Choose a source</option>{Array.from(new Set(spells.flatMap((spell) => spell.source.split(', ')))).sort().map((source) => <option key={source}>{source}</option>)}</select>}{classReference.fixedSpellSource && <div className="mt-2 rounded-lg bg-slate-950/50 px-3 py-2 text-violet-200">{classReference.fixedSpellSource}</div>}</label>}
+                <div className="mt-4 space-y-3">{hasSpells && <details className="rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="cursor-pointer font-black text-violet-200">Spells ({selectedSpells.length}/{derived?.spellLimit ?? 0})</summary><div className="mt-4 grid max-h-[520px] gap-2 overflow-y-auto pr-2 lg:grid-cols-2">{allowedSpells.map((spell) => <InfoDetails key={spell.name} summary={<label className="flex flex-1 cursor-pointer items-center gap-2" onClick={(event) => event.stopPropagation()}><input type="checkbox" disabled={(derived?.spellLimit ?? 0) === 0} checked={selectedSpells.includes(spell.name)} onChange={() => toggleLimited(selectedSpells, spell.name, derived?.spellLimit ?? 0, setSelectedSpells)} />{spell.name}<span className="ml-auto text-xs text-slate-500">{spell.cost}</span></label>}><p className="mb-2 text-xs font-bold text-violet-300">{spell.source} • {spell.school} • {spell.range} • {spell.duration}</p>{spell.description}{spell.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{spell.enhancements}</p></>}</InfoDetails>)}</div></details>}
                   {classTotals && classTotals.cantrips > 0 && <details className="rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="cursor-pointer font-black text-sky-200">Psion Cantrips ({selectedCantrips.length}/{derived?.cantripLimit ?? 0})</summary><div className="mt-4 grid gap-2 lg:grid-cols-2">{allowedSpells.filter(({ cost }) => cost.includes('0 MP') || !cost.includes('MP')).map((spell) => <label key={spell.name} className="flex items-center gap-2 rounded-lg bg-slate-900 p-3 text-sm text-slate-300"><input type="checkbox" checked={selectedCantrips.includes(spell.name)} onChange={() => toggleLimited(selectedCantrips, spell.name, derived?.cantripLimit ?? 0, setSelectedCantrips)} />{spell.name}</label>)}</div></details>}
-                  <details className="rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="cursor-pointer font-black text-fuchsia-200">Maneuvers ({selectedManeuvers.length}/{derived?.maneuverLimit ?? 0})</summary><div className="mt-4 grid max-h-[520px] gap-2 overflow-auto pr-2 lg:grid-cols-2">{maneuvers.map((maneuver) => <InfoDetails key={maneuver.name} summary={<label className="flex flex-1 cursor-pointer items-center gap-2" onClick={(event) => event.stopPropagation()}><input type="checkbox" disabled={(derived?.maneuverLimit ?? 0) === 0} checked={selectedManeuvers.includes(maneuver.name)} onChange={() => toggleLimited(selectedManeuvers, maneuver.name, derived?.maneuverLimit ?? 0, setSelectedManeuvers)} />{maneuver.name}<span className="ml-auto text-xs text-slate-500">{maneuver.cost}</span></label>}><p className="mb-2 text-xs font-bold text-fuchsia-300">{maneuver.category} • {maneuver.range}{maneuver.requirements ? ` • ${maneuver.requirements}` : ''}</p>{maneuver.description}{maneuver.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{maneuver.enhancements}</p></>}</InfoDetails>)}</div></details></div>
-              </div>
-            </div></div>
+                  {hasManeuvers && <details className="rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="cursor-pointer font-black text-fuchsia-200">Maneuvers ({selectedManeuvers.length}/{derived?.maneuverLimit ?? 0})</summary><div className="mt-4 grid max-h-[520px] gap-2 overflow-y-auto pr-2 lg:grid-cols-2">{maneuvers.map((maneuver) => <InfoDetails key={maneuver.name} summary={<label className="flex flex-1 cursor-pointer items-center gap-2" onClick={(event) => event.stopPropagation()}><input type="checkbox" disabled={(derived?.maneuverLimit ?? 0) === 0} checked={selectedManeuvers.includes(maneuver.name)} onChange={() => toggleLimited(selectedManeuvers, maneuver.name, derived?.maneuverLimit ?? 0, setSelectedManeuvers)} />{maneuver.name}<span className="ml-auto text-xs text-slate-500">{maneuver.cost}</span></label>}><p className="mb-2 text-xs font-bold text-fuchsia-300">{maneuver.category} • {maneuver.range}{maneuver.requirements ? ` • ${maneuver.requirements}` : ''}</p>{maneuver.description}{maneuver.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{maneuver.enhancements}</p></>}</InfoDetails>)}</div></details>}</div>
+              </div>}
+            </>}</div></div>
           </section>}
 
-          {currentStep === 'equipment' && classReference && <section><div className="mb-6"><p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">{classReference.name} Training</p><h2 className="text-2xl font-black text-white">Starting Equipment</h2><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{classReference.startingEquipment.description}</p></div>{equipmentLoading ? <p className="text-slate-400">Loading equipment…</p> : <div className="space-y-6">{([['arsenal', `Arsenal — choose ${classReference.startingEquipment.arsenalCount}`], ['armor', 'Armor — choose 1'], ['tools', `Trade Tools — choose ${classReference.startingEquipment.tradeToolCount}`]] as const).map(([group, title]) => <div key={group}><h3 className="mb-3 font-black text-violet-200">{title}</h3><div className="grid gap-2 lg:grid-cols-2">{startingEquipment[group].map((item) => { const selected = inventoryItems.some((entry) => entry.equipmentID === item.id && entry.source === 'startingEquipment'); return <InfoDetails key={item.id} summary={<label className="flex flex-1 cursor-pointer items-center gap-2" onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected} onChange={() => toggleStartingEquipment(item.id, group)} />{item.name}<span className="ml-auto text-xs text-slate-500">{item.slot}</span></label>}><p className="mb-2 font-semibold text-violet-200">{item.summary}</p>{item.mechanics}</InfoDetails>; })}</div></div>)}</div>}<label className="mt-6 block text-sm font-bold text-slate-300">Character Notes<textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={5} className={`${fieldClass} mt-2`} placeholder="Goals, bonds, appearance, reminders…" /></label></section>}
+          {currentStep === 'equipment' && classReference && <section><div className="mb-6"><p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">{classReference.name} Training</p><h2 className="text-2xl font-black text-white">Starting Equipment</h2><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{classReference.startingEquipment.description}</p></div>{equipmentLoading ? <p className="text-slate-400">Loading equipment…</p> : <div className="space-y-6">{([['arsenal', `Arsenal — choose ${classReference.startingEquipment.arsenalCount}`], ['armor', 'Armor — choose 1'], ['tools', `Trade Tools — choose ${classReference.startingEquipment.tradeToolCount}`]] as const).map(([group, title]) => { const limit = group === 'arsenal' ? classReference.startingEquipment.arsenalCount : group === 'armor' ? 1 : classReference.startingEquipment.tradeToolCount; const groupIDs = new Set(startingEquipment[group].map(({ id }) => id)); const selectedCount = inventoryItems.filter((entry) => entry.source === 'startingEquipment' && groupIDs.has(entry.equipmentID)).length; const groupFull = selectedCount >= limit; return <div key={group}><h3 className="mb-3 font-black text-violet-200">{title} <span className={`ml-2 text-xs ${groupFull ? 'text-emerald-300' : 'text-slate-500'}`}>({selectedCount}/{limit})</span></h3><div className="grid gap-2 lg:grid-cols-2">{startingEquipment[group].map((item) => { const selected = inventoryItems.some((entry) => entry.equipmentID === item.id && entry.source === 'startingEquipment'); const disabled = groupFull && !selected; return <div key={item.id} className={disabled ? 'opacity-40' : ''}><InfoDetails summary={<label className={`flex flex-1 items-center gap-2 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`} onClick={(event) => event.stopPropagation()}><input type="checkbox" disabled={disabled} checked={selected} onChange={() => toggleStartingEquipment(item.id, group)} />{item.name}<span className="ml-auto text-xs text-slate-500">{item.slot}</span></label>}><p className="mb-2 font-semibold text-violet-200">{item.summary}</p>{item.mechanics}</InfoDetails></div>; })}</div></div>; })}</div>}<label className="mt-6 block text-sm font-bold text-slate-300">Character Notes<textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={5} className={`${fieldClass} mt-2`} placeholder="Goals, bonds, appearance, reminders…" /></label></section>}
 
-          {currentStep === 'summary' && derived && classReference && <section><h2 className="text-2xl font-black text-white">Final Character Summary</h2><p className="mt-2 text-slate-400">All health, resources, defenses, combat values, and saves are calculated from the preceding choices.</p><div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6"><Metric label="Maximum HP" value={derived.maxHP} tone="red" /><Metric label="Action Points" value={4} /><Metric label="Stamina" value={derived.maxStamina} tone="blue" /><Metric label="Mana" value={derived.maxMana} tone="blue" /><Metric label="Physical Defense" value={derived.physicalDefense} /><Metric label="Arcane Defense" value={derived.arcaneDefense} /><Metric label="Combat Mastery" value={`+${derived.combatMastery}`} /><Metric label="Prime Modifier" value={`+${derived.primeModifier}`} /><Metric label="Martial Check" value={`+${derived.martialCheck}`} /><Metric label="Spell Check" value={`+${derived.spellCheck}`} /><Metric label="Class Save DC" value={derived.saveDC} /><Metric label="Speed" value={derived.speed} /></div><div className="mt-6 grid gap-5 lg:grid-cols-2"><div className={panelClass}><h3 className="font-black text-violet-200">Identity</h3><dl className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-slate-500">Name</dt><dd className="font-bold text-slate-200">{name || 'Unnamed'}</dd></div><div><dt className="text-slate-500">Level & Class</dt><dd className="font-bold text-slate-200">Level {level} {className}</dd></div><div><dt className="text-slate-500">Subclass</dt><dd className="font-bold text-slate-200">{subclass || 'Not yet available'}</dd></div><div><dt className="text-slate-500">Ancestry</dt><dd className="font-bold text-slate-200">{ancestry}{secondaryAncestry ? ` / ${secondaryAncestry}` : ''}</dd></div><div className="col-span-2"><dt className="text-slate-500">Background</dt><dd className="font-bold text-slate-200">{backgroundName || 'Unnamed background'}</dd></div></dl></div><div className={panelClass}><h3 className="font-black text-violet-200">Attributes & Saves</h3><div className="mt-3 grid grid-cols-2 gap-3">{ATTRIBUTE_NAMES.map((attribute) => <div key={attribute} className="rounded-lg bg-slate-950/50 p-3"><div className="text-xs text-slate-500">{attribute}</div><div className="text-xl font-black text-slate-100">{derived.effectiveAttributes[attribute] >= 0 ? '+' : ''}{derived.effectiveAttributes[attribute]}</div><div className="text-xs text-violet-300">Save +{derived.effectiveAttributes[attribute] + derived.combatMastery}</div></div>)}</div></div><div className={panelClass}><h3 className="font-black text-violet-200">Training</h3><p className="mt-3 text-sm text-slate-400">Skills {skillSpent}/{derived.skillPointBudget} • Trades {tradeSpent}/{derived.tradePointBudget} • Languages {languageSpent}/{derived.languagePointBudget}</p><p className="mt-2 text-sm text-slate-400">Mastery cap: {masteryTitle(masteryMaximum)}{Object.keys(expertise.skills).length || Object.keys(expertise.trades).length ? ' (expertise bonuses shown in Skills)' : ''}</p></div><div className={panelClass}><h3 className="font-black text-violet-200">Features & Powers</h3><p className="mt-3 text-sm text-slate-400">{classReference.features.filter(({ level: featureLevel }) => featureLevel <= level).reduce((sum, entry) => sum + entry.features.length, 0)} class features • {selectedTraits.length} ancestry traits • {talents.length} talents</p><p className="mt-2 text-sm text-slate-400">{selectedSpells.length} spells • {selectedCantrips.length} cantrips • {selectedManeuvers.length} maneuvers</p></div></div>{validation.length > 0 && <div role="alert" className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4"><h3 className="font-black text-amber-200">Finish these choices</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-100/80">{validation.map((issue) => <li key={issue}>{issue}</li>)}</ul></div>}</section>}
+          {currentStep === 'summary' && derived && classReference && <section><h2 className="text-2xl font-black text-white">Final Character Summary</h2><p className="mt-2 text-slate-400">All health, resources, defenses, combat values, and saves are calculated from the preceding choices.</p><div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6"><Metric label="Maximum HP" value={derived.maxHP} tone="red" /><Metric label="Action Points" value={4} /><Metric label="Stamina" value={derived.maxStamina} tone="blue" /><Metric label="Mana" value={derived.maxMana} tone="blue" /><Metric label="Physical Defense" value={derived.physicalDefense} /><Metric label="Arcane Defense" value={derived.arcaneDefense} /><Metric label="Combat Mastery" value={`+${derived.combatMastery}`} /><Metric label="Prime Modifier" value={`+${derived.primeModifier}`} /><Metric label="Martial Check" value={`+${derived.martialCheck}`} /><Metric label="Spell Check" value={`+${derived.spellCheck}`} /><Metric label="Class Save DC" value={derived.saveDC} /><Metric label="Speed" value={derived.speed} /></div><div className="mt-6 grid gap-5 lg:grid-cols-2"><div className={panelClass}><h3 className="font-black text-violet-200">Identity</h3><dl className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-slate-500">Name</dt><dd className="font-bold text-slate-200">{name || 'Unnamed'}</dd></div><div><dt className="text-slate-500">Level & Class</dt><dd className="font-bold text-slate-200">Level {level} {className}</dd></div><div><dt className="text-slate-500">Subclass</dt><dd className="font-bold text-slate-200">{subclass || 'Not yet available'}</dd></div><div><dt className="text-slate-500">Ancestry</dt><dd className="font-bold text-slate-200">{ancestry}{secondaryAncestry ? ` / ${secondaryAncestry}` : ''}</dd></div><div><dt className="text-slate-500">Size</dt><dd className="font-bold text-slate-200">{derived.size}</dd></div><div><dt className="text-slate-500">Background</dt><dd className="font-bold text-slate-200">{backgroundName || 'Unnamed background'}</dd></div></dl></div><div className={panelClass}><h3 className="font-black text-violet-200">Attributes & Saves</h3><div className="mt-3 grid grid-cols-2 gap-3">{ATTRIBUTE_NAMES.map((attribute) => <div key={attribute} className="rounded-lg bg-slate-950/50 p-3"><div className="text-xs text-slate-500">{attribute}</div><div className="text-xl font-black text-slate-100">{derived.effectiveAttributes[attribute] >= 0 ? '+' : ''}{derived.effectiveAttributes[attribute]}</div><div className="text-xs text-violet-300">Save +{derived.effectiveAttributes[attribute] + derived.combatMastery}</div></div>)}</div></div><div className={panelClass}><h3 className="font-black text-violet-200">Training</h3><p className="mt-3 text-sm text-slate-400">Skills {skillSpent}/{derived.skillPointBudget} • Trades {tradeSpent}/{derived.tradePointBudget} • Language Points {languageSpent}/{derived.languagePointBudget}</p><p className="mt-2 text-sm text-slate-400">Mastery cap: {masteryTitle(masteryMaximum)}{Object.keys(expertise.skills).length || Object.keys(expertise.trades).length ? ' (expertise bonuses shown in Skills)' : ''}</p></div><div className={panelClass}><h3 className="font-black text-violet-200">Features & Powers</h3><p className="mt-3 text-sm text-slate-400">{classReference.features.filter(({ level: featureLevel }) => featureLevel <= level).reduce((sum, entry) => sum + entry.features.length, 0)} class features • {selectedTraits.length} ancestry traits • {talents.length} talents</p><p className="mt-2 text-sm text-slate-400">{selectedSpells.length} spells • {selectedCantrips.length} cantrips • {selectedManeuvers.length} maneuvers</p></div></div>{validation.length > 0 && <div role="alert" className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4"><h3 className="font-black text-amber-200">Finish these choices</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-100/80">{validation.map((issue) => <li key={issue}>{issue}</li>)}</ul></div>}</section>}
         </main>
 
         {(rulesError || powersError) && <div role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">{rulesError || powersError}</div>}
-        <footer className="mt-5 flex items-center justify-between gap-3"><button type="button" disabled={currentStepIndex === 0} onClick={() => setCurrentStep(STEPS[Math.max(0, currentStepIndex - 1)].id)} className="rounded-xl border border-slate-600 bg-slate-900 px-5 py-3 font-bold text-slate-300 disabled:opacity-30">← Previous</button><span className="hidden text-sm text-slate-500 sm:block">Step {currentStepIndex + 1} of {STEPS.length}{powersLoading ? ' • Loading powers…' : ''}</span>{currentStep !== 'summary' ? <button type="button" disabled={currentStep === 'attributes' && !name.trim()} onClick={() => setCurrentStep(STEPS[Math.min(STEPS.length - 1, currentStepIndex + 1)].id)} className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3 font-black text-white disabled:opacity-40">Next →</button> : <button type="button" disabled={validation.length > 0} onClick={finish} className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{editingCharacter ? 'Save Character' : 'Finish Character'}</button>}</footer>
+        <footer className="mt-5 flex items-center justify-between gap-3"><button type="button" disabled={currentStepIndex === 0} onClick={() => setCurrentStep(STEPS[Math.max(0, currentStepIndex - 1)].id)} className="rounded-xl border border-slate-600 bg-slate-900 px-5 py-3 font-bold text-slate-300 disabled:opacity-30">← Previous</button><span className="hidden text-sm text-slate-500 sm:block">Step {currentStepIndex + 1} of {STEPS.length}{powersLoading ? ' • Loading powers…' : ''}</span>{currentStep !== 'summary' ? <button type="button" disabled={(currentStep === 'attributes' && !name.trim()) || (currentStep === 'class' && !classConfirmed)} onClick={() => setCurrentStep(STEPS[Math.min(STEPS.length - 1, currentStepIndex + 1)].id)} className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3 font-black text-white disabled:opacity-40">Next →</button> : <button type="button" disabled={validation.length > 0} onClick={finish} className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{editingCharacter ? 'Save Character' : 'Finish Character'}</button>}</footer>
       </div>
     </div>
   );

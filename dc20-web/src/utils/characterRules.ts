@@ -78,13 +78,17 @@ export function ancestryPointBudget(character: Pick<Character, 'level' | 'class'
   return 5 + advancement + talentPoints;
 }
 
-export function selectedAncestryTraits(character: Pick<Character, 'build'>, traits: AncestryTrait[]): AncestryTrait[] {
+export function selectedAncestryTraits(character: Pick<Character, 'build' | 'ancestry'>, traits: AncestryTrait[]): AncestryTrait[] {
   const selected = new Set(character.build?.selectedAncestryTraitIDs ?? []);
+  const ancestries = new Set([character.ancestry, character.build?.ancestrySecondary].filter(Boolean));
+  for (const trait of traits) {
+    if (trait.name === 'Small-Sized' && ancestries.has(trait.ancestry)) selected.add(trait.id);
+  }
   return traits.filter((trait) => selected.has(trait.id));
 }
 
 export function ancestryExpertise(
-  character: Pick<Character, 'build'>,
+  character: Pick<Character, 'build' | 'ancestry'>,
   traits: AncestryTrait[],
 ): { skills: Record<string, number>; trades: Record<string, number> } {
   const result = { skills: {} as Record<string, number>, trades: {} as Record<string, number> };
@@ -157,6 +161,7 @@ export interface CharacterDerivedSummary {
   maneuverLimit: number;
   physicalDR: number;
   mysticalDR: number;
+  size: string;
 }
 
 export function deriveCharacter(
@@ -226,6 +231,7 @@ export function deriveCharacter(
     maneuverLimit: totals.maneuvers + martialPaths + (character.build?.selectedTalents ?? []).filter((name) => name === 'Martial Expansion').length * 2,
     physicalDR: equipment.physicalDR,
     mysticalDR: equipment.mysticalDR,
+    size: chosenTraits.some((trait) => trait.name === 'Small-Sized') ? 'Small' : 'Medium',
   };
 }
 
@@ -251,6 +257,7 @@ export function applyDerivedCharacter(character: Character, derived: CharacterDe
     arcaneDefense: derived.arcaneDefense,
     defense: derived.physicalDefense,
     speed: derived.speed,
+    size: derived.size,
   };
 }
 
@@ -258,11 +265,13 @@ export function defaultBuild(): CharacterBuildData {
   return {
     attributeMethod: 'Standard Array',
     rolledAttributeResults: [],
+    attributeAssignments: [],
+    attributeBonusPoints: {},
     backgroundName: '',
     backgroundStory: '',
     skillPointsConvertedToTrades: 0,
     tradePointsConvertedToLanguages: 0,
-    languageMasteries: { Common: 'Novice' },
+    languageFluencies: { Common: 'Fluent' },
     ancestrySecondary: '',
     selectedAncestryTraitIDs: [],
     ancestryTraitChoices: {},

@@ -72,6 +72,18 @@ describe('DC20 character calculations', () => {
     expect(ancestryExpertise(hero, reference.ancestryTraits).skills.Athletics).toBe(1);
   });
 
+  it('automatically applies the Small-Sized default trait to Halflings and Gnomes', () => {
+    const halfling = character();
+    halfling.ancestry = 'Halfling';
+    const halflingDerived = deriveCharacter(halfling, barbarian, reference.ancestryTraits, []);
+    expect(halflingDerived.size).toBe('Small');
+
+    const gnome = character();
+    gnome.ancestry = 'Gnome';
+    const gnomeDerived = deriveCharacter(gnome, barbarian, reference.ancestryTraits, []);
+    expect(gnomeDerived.size).toBe('Small');
+  });
+
   it('lets martial classes take Spellcaster Path Progression', () => {
     const hero = character();
     hero.level = 2;
