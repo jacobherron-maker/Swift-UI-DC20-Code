@@ -1,12 +1,12 @@
 [build]
-  command = "npm run build"
-  publish = "dist"
+  command = "npm --prefix dc20-web run build"
+  publish = "dc20-web/dist"
 
 [context.production]
-  command = "npm run build"
+  command = "npm --prefix dc20-web run build"
 
 [context.deploy-preview]
-  command = "npm run build"
+  command = "npm --prefix dc20-web run build"
 
 [[redirects]]
   from = "/*"
