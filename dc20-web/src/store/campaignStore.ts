@@ -31,6 +31,10 @@ interface CampaignStore extends HubState {
   addCombat: (combat: SavedCombat) => void;
   removeCombat: (id: string) => void;
   updateCombat: (combat: SavedCombat) => void;
+  // Custom monsters management
+  addCustomMonster: (monster: Monster) => void;
+  updateCustomMonster: (monster: Monster) => void;
+  removeCustomMonster: (id: string) => void;
 }
 
 export const useCampaignStore = create<CampaignStore>()(
@@ -128,6 +132,33 @@ export const useCampaignStore = create<CampaignStore>()(
             combats: state.campaignData.combats.map((c) =>
               c.id === combat.id ? combat : c
             ),
+          },
+        })),
+
+      // Custom monsters management
+      addCustomMonster: (monster: Monster) =>
+        set((state) => ({
+          campaignData: {
+            ...state.campaignData,
+            customMonsters: [...state.campaignData.customMonsters, monster],
+          },
+        })),
+
+      updateCustomMonster: (monster: Monster) =>
+        set((state) => ({
+          campaignData: {
+            ...state.campaignData,
+            customMonsters: state.campaignData.customMonsters.map((m) =>
+              m.id === monster.id ? monster : m
+            ),
+          },
+        })),
+
+      removeCustomMonster: (id: string) =>
+        set((state) => ({
+          campaignData: {
+            ...state.campaignData,
+            customMonsters: state.campaignData.customMonsters.filter((m) => m.id !== id),
           },
         })),
     }),
