@@ -20,7 +20,6 @@ const PowersView: React.FC = () => {
     fetch('/data/BetaSpells.json')
       .then((r) => r.json())
       .then((data) => {
-        // data may be array of objects with name/description
         setSpells(
           Array.isArray(data)
             ? data.map((s: any, i: number) => ({ id: s.name || String(i), name: s.name || s.title || `Spell ${i + 1}`, description: s.description, enhancements: s.enhancements }))
@@ -50,6 +49,49 @@ const PowersView: React.FC = () => {
         );
       })
       .catch(() => setClassFeatures([]));
+
+    // load parsed entries from PDFs (if present) and merge, avoiding duplicates by name
+    fetch('/data/parsed_from_pdfs/parsed_spells.json')
+      .then((r) => {
+        if (!r.ok) throw new Error('no parsed spells');
+        return r.json();
+      })
+      .then((parsed) => {
+        setSpells((prev) => {
+          const names = new Set(prev.map((p) => p.name));
+          const merged = prev.concat(parsed.filter((p: any) => !names.has(p.name)));
+          return merged;
+        });
+      })
+      .catch(() => {});
+
+    fetch('/data/parsed_from_pdfs/parsed_maneuvers.json')
+      .then((r) => {
+        if (!r.ok) throw new Error('no parsed maneuvers');
+        return r.json();
+      })
+      .then((parsed) => {
+        setManeuvers((prev) => {
+          const names = new Set(prev.map((p) => p.name));
+          const merged = prev.concat(parsed.filter((p: any) => !names.has(p.name)));
+          return merged;
+        });
+      })
+      .catch(() => {});
+
+    fetch('/data/parsed_from_pdfs/parsed_class_features.json')
+      .then((r) => {
+        if (!r.ok) throw new Error('no parsed features');
+        return r.json();
+      })
+      .then((parsed) => {
+        setClassFeatures((prev) => {
+          const names = new Set(prev.map((p) => p.name));
+          const merged = prev.concat(parsed.filter((p: any) => !names.has(p.name)));
+          return merged;
+        });
+      })
+      .catch(() => {});
   }, []);
 
   const items = useMemo(() => {
