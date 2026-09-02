@@ -9,11 +9,27 @@ const sectionSymbols: Record<HubSection, string> = {
   Dashboard: '✦', Rules: '📚', 'Spells & Maneuvers': '✨', 'Dice Roller': '🎲', Encounters: '◈', Monsters: '🐾', Characters: '🧙', Equipment: '🎒', Combat: '⚡', Campaign: '🗺',
 };
 
+const sections: HubSection[] = [
+  HubSectionValues.DASHBOARD,
+  HubSectionValues.RULES,
+  HubSectionValues.CHARACTERS,
+  HubSectionValues.DICE,
+  HubSectionValues.EQUIPMENT,
+  HubSectionValues.POWERS,
+  HubSectionValues.MONSTERS,
+  HubSectionValues.ENCOUNTERS,
+  HubSectionValues.COMBAT,
+  HubSectionValues.CAMPAIGN,
+];
+
+const sectionLabels: Partial<Record<HubSection, string>> = {
+  'Spells & Maneuvers': 'Spells and Maneuvers',
+  Campaign: 'Campaigns',
+};
+
 const Sidebar: React.FC = () => {
   const { currentSection, setCurrentSection, exportData } = useCampaignStore();
   const [showCustomize, setShowCustomize] = useState(false);
-
-  const sections = Object.values(HubSectionValues);
 
   return (
     <aside className="sidebar flex w-72 shrink-0 flex-col overflow-hidden max-lg:w-20 max-lg:px-3">
@@ -32,10 +48,10 @@ const Sidebar: React.FC = () => {
                 ? 'nav-item-active text-white shadow-lg'
                 : 'text-gray-300 hover:bg-gray-800 hover:text-white'
             }`}
-            title={section}
+            title={sectionLabels[section] ?? section}
           >
             <span aria-hidden="true" className="w-5 text-center">{sectionSymbols[section as HubSection]}</span>
-            <span className="grow max-lg:hidden">{section}</span>
+            <span className="grow max-lg:hidden">{sectionLabels[section] ?? section}</span>
             <svg width="18" height="18" viewBox="0 0 24 24" className="opacity-30 max-lg:hidden">
               <path fill="currentColor" d="M10 17l5-5-5-5v10z" />
             </svg>
