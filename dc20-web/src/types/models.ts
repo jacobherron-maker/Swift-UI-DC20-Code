@@ -86,18 +86,81 @@ export interface CampaignData {
   customMonsters: Monster[];
 }
 
+export interface Attribute {
+  name: string;
+  score: number;
+  modifier: number;
+}
+
+// DC20 Classes
+export const DC20Classes = {
+  BARBARIAN: "Barbarian",
+  BARD: "Bard",
+  CHAMPION: "Champion",
+  CLERIC: "Cleric",
+  COMMANDER: "Commander",
+  DRUID: "Druid",
+  HUNTER: "Hunter",
+  MONK: "Monk",
+  ROGUE: "Rogue",
+  SORCERER: "Sorcerer",
+  SPELLBLADE: "Spellblade",
+  WARLOCK: "Warlock",
+  WIZARD: "Wizard",
+} as const;
+
+export type DC20Class = (typeof DC20Classes)[keyof typeof DC20Classes];
+
+// DC20 Ancestries
+export const DC20Ancestries = {
+  HUMAN: "Human",
+  ELF: "Elf",
+  DWARF: "Dwarf",
+  HALFLING: "Halfling",
+  GNOME: "Gnome",
+  ORC: "Orc",
+  DRAGONBORN: "Dragonborn",
+  GIANTBORN: "Giantborn",
+  ANGELBORN: "Angelborn",
+  FIENDBORN: "Fiendborn",
+  BEASTBORN: "Beastborn",
+} as const;
+
+export type DC20Ancestry = (typeof DC20Ancestries)[keyof typeof DC20Ancestries];
+
+// DC20 Attributes (the 6 core stats)
+export const DC20Attributes = {
+  MIGHT: "Might",
+  INTELLECT: "Intellect",
+  PRESENCE: "Presence",
+  AGILITY: "Agility",
+  FORTITUDE: "Fortitude",
+  ATTUNEMENT: "Attunement",
+} as const;
+
+export type DC20Attribute = (typeof DC20Attributes)[keyof typeof DC20Attributes];
+
 export interface Character {
   id: string;
   name: string;
   level: number;
-  ancestry: string;
-  class: string;
+  ancestry: DC20Ancestry;
+  class: DC20Class;
+  subclass?: string;
   background: string;
   alignment: string;
+  // Attributes (Might, Intellect, Presence, Agility, Fortitude, Attunement)
+  attributes: Record<DC20Attribute, Attribute>;
+  // Combat stats
+  healthPoints: number;
+  maxHealthPoints: number;
   stamina: number;
   maxStamina: number;
+  manaPoints: number;
+  maxManaPoints: number;
+  defense: number;
+  // Character details
   injuries: Injury[];
-  abilities: Ability[];
   skills: Skill[];
   equipment: Equipment[];
   spells: Spell[];

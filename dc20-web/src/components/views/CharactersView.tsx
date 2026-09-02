@@ -1,236 +1,173 @@
 import React, { useMemo, useState } from 'react';
 import { useCampaignStore } from '../../store/campaignStore';
-import type { Character } from '../../types/models';
-import { generateUUID } from '../../utils/gameUtils';
+import CharacterBuilderView from './CharacterBuilderView';
+import CharacterSheet from './CharacterSheet';
 
 const CharactersView: React.FC = () => {
-  const { characters, addCharacter, deleteCharacter, selectCharacter, selectedCharacterId, updateCharacter } = useCampaignStore();
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    level: 1,
-    ancestry: '',
-    class: '',
-  });
+  const { characters, deleteCharacter, selectCharacter, selectedCharacterId } = useCampaignStore();
+  const [mode, setMode] = useState<'list' | 'builder' | 'sheet'>('list');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const selectedCharacter = useMemo(() => characters.find((c) => c.id === selectedCharacterId) || null, [characters, selectedCharacterId]);
+  const selectedCharacter = useMemo(
+    () => characters.find((c) => c.id === selectedCharacterId) || null,
+    [characters, selectedCharacterId]
+  );
 
-  const handleAddCharacter = () => {
-    if (formData.name.trim()) {
-      const newCharacter: Character = {
-        id: generateUUID(),
-        name: formData.name,
-        level: formData.level,
-        ancestry: formData.ancestry,
-        class: formData.class,
-        background: '',
-        alignment: '',
-        stamina: 20,
-        maxStamina: 20,
-        injuries: [],
-        abilities: [],
-        skills: [],
-        equipment: [],
-        spells: [],
-        maneuvers: [],
-        notes: '',
-      };
-      addCharacter(newCharacter);
-      setFormData({ name: '', level: 1, ancestry: '', class: '' });
-      setShowForm(false);
-      selectCharacter(newCharacter.id);
-    }
-  };
+  const filteredCharacters = useMemo(
+    () =>
+      characters.filter((c) =>
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.class.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.ancestry.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [characters, searchTerm]
+  );
 
-  const [editing, setEditing] = useState(false);
-  const [editData, setEditData] = useState<Partial<Character>>({});
+  if (mode === 'builder') {
+    return (
+      <CharacterBuilderView
+        onCharacterCreated={() => setMode('sheet')}
+      />
+    );
+  }
 
-  const startEdit = (c: Character) => {
-    setEditData({ ...c });
-    setEditing(true);
-  };
+  if (mode === 'sheet' && selectedCharacter) {
+    return (
+      <CharacterSheet
+        character={selectedCharacter}
+        onClose={() => setMode('list')}
+      />
+    );
+  }
 
-  const saveEdit = () => {
-    if (!editData || !editData.id) return;
-    const toSave: Character = {
-      id: editData.id,
-      name: editData.name || 'Unnamed',
-      level: editData.level || 1,
-      ancestry: editData.ancestry || '',
-      class: editData.class || '',
-      background: editData.background || '',
-      alignment: editData.alignment || '',
-      stamina: editData.stamina ?? 20,
-      maxStamina: editData.maxStamina ?? 20,
-      injuries: editData.injuries || [],
-      abilities: editData.abilities || [],
-      skills: editData.skills || [],
-      equipment: editData.equipment || [],
-      spells: editData.spells || [],
-      maneuvers: editData.maneuvers || [],
-      notes: editData.notes || '',
-    };
-    updateCharacter(toSave);
-    setEditing(false);
-  };
-
+  // List view
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-purple-400">Characters</h1>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
-          >
-            ➕ New Character
-          </button>
-        </div>
+        <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+          Characters
+        </h1>
+        <button
+          onClick={() => setMode('builder')}
+          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition"
+        >
+          + New Character
+        </button>
       </div>
 
-      {showForm && (
-        <div className="bg-gray-800 card rounded-lg p-6 border border-gray-700 mb-8">
-          <h2 className="text-xl font-bold text-purple-300 mb-4">Create New Character</h2>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <input
-              type="text"
-              placeholder="Character Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400"
-            />
-            <input
-              type="number"
-              min="1"
-              max="20"
-              placeholder="Level"
-              value={formData.level}
-              onChange={(e) => setFormData({ ...formData, level: parseInt(e.target.value) || 1 })}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Ancestry"
-              value={formData.ancestry}
-              onChange={(e) => setFormData({ ...formData, ancestry: e.target.value })}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Class"
-              value={formData.class}
-              onChange={(e) => setFormData({ ...formData, class: e.target.value })}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400"
-            />
-          </div>
-          <div className="flex gap-2">
+      {/* Search */}
+      <div className="mb-8">
+        <input
+          type="text"
+          placeholder="Search characters by name, class, or ancestry..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-3 bg-slate-800 text-white rounded-lg border border-slate-700 focus:border-purple-500 focus:outline-none"
+        />
+      </div>
+
+      {/* Characters Grid */}
+      {filteredCharacters.length === 0 ? (
+        <div className="text-center py-16">
+          <p className="text-slate-400 text-lg mb-6">
+            {characters.length === 0
+              ? "No characters yet. Create your first character to begin!"
+              : "No characters match your search."}
+          </p>
+          {characters.length === 0 && (
             <button
-              onClick={handleAddCharacter}
-              className="flex-1 btn-primary"
+              onClick={() => setMode('builder')}
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition"
             >
-              Create
+              Create First Character
             </button>
-            <button
-              onClick={() => setShowForm(false)}
-              className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold rounded-lg transition-colors"
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCharacters.map((character) => (
+            <div
+              key={character.id}
+              className={`bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-6 border-2 transition cursor-pointer transform hover:scale-105 ${
+                selectedCharacterId === character.id
+                  ? 'border-purple-500 ring-2 ring-purple-500'
+                  : 'border-slate-700 hover:border-purple-500'
+              }`}
+              onClick={() => {
+                selectCharacter(character.id);
+                setMode('sheet');
+              }}
             >
-              Cancel
-            </button>
-          </div>
+              <div className="mb-4">
+                <h3 className="text-2xl font-bold text-purple-400">{character.name}</h3>
+                <p className="text-slate-400 text-sm">
+                  Level {character.level} {character.class}
+                </p>
+              </div>
+
+              <div className="space-y-2 mb-4 text-sm text-slate-300">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Ancestry:</span>
+                  <span className="font-semibold">{character.ancestry}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">HP:</span>
+                  <span className={character.healthPoints < character.maxHealthPoints / 2 ? 'text-red-400' : 'text-green-400'}>
+                    {character.healthPoints}/{character.maxHealthPoints}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Defense:</span>
+                  <span className="text-blue-400 font-semibold">{character.defense}</span>
+                </div>
+              </div>
+
+              {/* Attributes Summary */}
+              <div className="bg-slate-700/50 rounded p-3 mb-4">
+                <div className="text-xs text-slate-400 mb-2 font-semibold">Attributes</div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="bg-slate-600 rounded p-2 text-center">
+                    <div className="text-slate-400">STR</div>
+                    <div className="font-bold text-purple-300">{character.attributes.Might.score}</div>
+                  </div>
+                  <div className="bg-slate-600 rounded p-2 text-center">
+                    <div className="text-slate-400">INT</div>
+                    <div className="font-bold text-purple-300">{character.attributes.Intellect.score}</div>
+                  </div>
+                  <div className="bg-slate-600 rounded p-2 text-center">
+                    <div className="text-slate-400">DEX</div>
+                    <div className="font-bold text-purple-300">{character.attributes.Agility.score}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    selectCharacter(character.id);
+                    setMode('sheet');
+                  }}
+                  className="flex-1 px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition text-sm font-semibold"
+                >
+                  View
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Delete ${character.name}?`)) {
+                      deleteCharacter(character.id);
+                    }
+                  }}
+                  className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition text-sm font-semibold"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
-
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-1 bg-gray-800 rounded-lg p-4 border border-gray-700 h-[65vh] overflow-auto">
-          {characters.length === 0 ? (
-            <p className="text-gray-400">No characters yet. Create one to get started!</p>
-          ) : (
-            characters.map((character) => (
-              <div
-                key={character.id}
-                onClick={() => selectCharacter(character.id)}
-                className={`p-3 rounded-lg border mb-3 transition-all cursor-pointer ${
-                  selectedCharacterId === character.id
-                    ? 'bg-purple-900 border-purple-500 shadow-lg'
-                    : 'bg-gray-800 border-gray-700 hover:border-purple-500'
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-semibold text-purple-300">{character.name}</h3>
-                    <p className="text-gray-400">Level {character.level} {character.ancestry} {character.class}</p>
-                  </div>
-                  <div className="flex flex-col gap-2 items-end">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); startEdit(character); }}
-                      className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); if (confirm('Delete this character?')) deleteCharacter(character.id); }}
-                      className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="col-span-2 bg-gray-800 card rounded-lg p-6 border border-gray-700 h-[65vh] overflow-auto">
-          {selectedCharacter ? (
-            <div>
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-2xl font-bold text-purple-300">{selectedCharacter.name}</h2>
-                  <p className="text-gray-300">Level {selectedCharacter.level} • {selectedCharacter.ancestry} {selectedCharacter.class}</p>
-                  <p className="text-sm text-gray-400 mt-2">❤️ {selectedCharacter.stamina}/{selectedCharacter.maxStamina} Stamina</p>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => startEdit(selectedCharacter)} className="btn-primary">Edit</button>
-                </div>
-              </div>
-
-              {editing ? (
-                <div className="mt-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <input value={editData.name || ''} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="px-4 py-2 bg-gray-900 rounded" />
-                    <input type="number" value={editData.level || 1} onChange={(e) => setEditData({ ...editData, level: parseInt(e.target.value) || 1 })} className="px-4 py-2 bg-gray-900 rounded" />
-                    <input value={editData.ancestry || ''} onChange={(e) => setEditData({ ...editData, ancestry: e.target.value })} className="px-4 py-2 bg-gray-900 rounded" />
-                    <input value={editData.class || ''} onChange={(e) => setEditData({ ...editData, class: e.target.value })} className="px-4 py-2 bg-gray-900 rounded" />
-                    <input type="number" value={editData.stamina || 20} onChange={(e) => setEditData({ ...editData, stamina: parseInt(e.target.value) || 0 })} className="px-4 py-2 bg-gray-900 rounded" />
-                    <input type="number" value={editData.maxStamina || 20} onChange={(e) => setEditData({ ...editData, maxStamina: parseInt(e.target.value) || 0 })} className="px-4 py-2 bg-gray-900 rounded" />
-                  </div>
-                  <div className="mt-4 flex gap-2">
-                    <button onClick={saveEdit} className="btn-primary">Save</button>
-                    <button onClick={() => setEditing(false)} className="px-4 py-2 bg-gray-700 rounded">Cancel</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold text-gray-200">Notes</h3>
-                  <p className="text-gray-300 whitespace-pre-wrap">{selectedCharacter.notes || 'No notes yet.'}</p>
-
-                  <h3 className="text-lg font-semibold text-gray-200 mt-4">Abilities</h3>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    {selectedCharacter.abilities.map((a) => (
-                      <div key={a.name} className="bg-gray-900 p-2 rounded">{a.name}: {a.score} ({a.modifier>=0?'+':''}{a.modifier})</div>
-                    ))}
-                  </div>
-
-                  <h3 className="text-lg font-semibold text-gray-200 mt-4">Spells & Maneuvers</h3>
-                  <div className="mt-2 text-gray-300">{(selectedCharacter.spells?.length || 0) + (selectedCharacter.maneuvers?.length || 0)} items</div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-gray-400">Select a character to view details and edit their sheet.</div>
-          )}
-        </div>
-      </div>
     </div>
   );
 };
