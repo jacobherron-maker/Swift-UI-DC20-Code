@@ -132,7 +132,7 @@ const CharactersView: React.FC = () => {
                   </div>
                   <div className="bg-slate-600 rounded p-2 text-center">
                     <div className="text-slate-400">INT</div>
-                    <div className="font-bold text-purple-300">{character.attributes.Intellect.score}</div>
+                    <div className="font-bold text-purple-300">{character.attributes.Intelligence.score}</div>
                   </div>
                   <div className="bg-slate-600 rounded p-2 text-center">
                     <div className="text-slate-400">DEX</div>

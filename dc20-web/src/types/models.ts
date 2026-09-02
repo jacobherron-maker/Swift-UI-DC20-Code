@@ -86,13 +86,76 @@ export interface CampaignData {
   customMonsters: Monster[];
 }
 
-export interface Attribute {
-  name: string;
-  score: number;
-  modifier: number;
-}
+// ============================================
+// DC20 SYSTEM ENUMS & TYPES
+// ============================================
 
-// DC20 Classes
+// Only 4 core attributes in DC20
+export const DC20Attributes = {
+  MIGHT: "Might",
+  AGILITY: "Agility",
+  INTELLIGENCE: "Intelligence",
+  CHARISMA: "Charisma",
+} as const;
+
+export type DC20Attribute = (typeof DC20Attributes)[keyof typeof DC20Attributes];
+
+// Mastery levels for skills, trades, languages
+export const MasteryLevels = {
+  UNTRAINED: "Untrained",
+  NOVICE: "Novice",
+  ADEPT: "Adept",
+  EXPERT: "Expert",
+  MASTER: "Master",
+} as const;
+
+export type MasteryLevel = (typeof MasteryLevels)[keyof typeof MasteryLevels];
+
+// 18 Skills in DC20
+export const DC20Skills = {
+  ACROBATICS: "Acrobatics",
+  ANIMAL_HANDLING: "Animal Handling",
+  ARCANA: "Arcana",
+  ATHLETICS: "Athletics",
+  DECEPTION: "Deception",
+  HISTORY: "History",
+  INSIGHT: "Insight",
+  INTIMIDATION: "Intimidation",
+  INVESTIGATION: "Investigation",
+  MEDICINE: "Medicine",
+  NATURE: "Nature",
+  PERCEPTION: "Perception",
+  PERFORMANCE: "Performance",
+  PERSUASION: "Persuasion",
+  RELIGION: "Religion",
+  SLEIGHT_OF_HAND: "Sleight of Hand",
+  STEALTH: "Stealth",
+  SURVIVAL: "Survival",
+} as const;
+
+export type DC20Skill = (typeof DC20Skills)[keyof typeof DC20Skills];
+
+// 5 Trades in DC20
+export const DC20Trades = {
+  ARTISTRY: "Artistry",
+  CRAFTING: "Crafting",
+  KNOWLEDGE: "Knowledge",
+  SERVICES: "Services",
+  SUBTERFUGE: "Subterfuge",
+} as const;
+
+export type DC20Trade = (typeof DC20Trades)[keyof typeof DC20Trades];
+
+// Attribute selection method for character creation (Step 1)
+export const AttributeSelectionMethods = {
+  STANDARD_ARRAY: "Standard Array",
+  POINT_BUY: "Point Buy",
+  DICE_ROLLER: "Dice Roller",
+} as const;
+
+export type AttributeSelectionMethod = (typeof AttributeSelectionMethods)[keyof typeof AttributeSelectionMethods];
+
+// Classes
 export const DC20Classes = {
   BARBARIAN: "Barbarian",
   BARD: "Bard",
@@ -111,7 +174,7 @@ export const DC20Classes = {
 
 export type DC20Class = (typeof DC20Classes)[keyof typeof DC20Classes];
 
-// DC20 Ancestries
+// Ancestries
 export const DC20Ancestries = {
   HUMAN: "Human",
   ELF: "Elf",
@@ -128,17 +191,21 @@ export const DC20Ancestries = {
 
 export type DC20Ancestry = (typeof DC20Ancestries)[keyof typeof DC20Ancestries];
 
-// DC20 Attributes (the 6 core stats)
-export const DC20Attributes = {
-  MIGHT: "Might",
-  INTELLECT: "Intellect",
-  PRESENCE: "Presence",
-  AGILITY: "Agility",
-  FORTITUDE: "Fortitude",
-  ATTUNEMENT: "Attunement",
-} as const;
+// Ancestry trait information
+export interface AncestryTrait {
+  id: string;
+  name: string;
+  costInPoints: number;
+  description: string;
+  effects: string[];
+}
 
-export type DC20Attribute = (typeof DC20Attributes)[keyof typeof DC20Attributes];
+// Character model with proper DC20 attributes (4, not 6)
+export interface Attribute {
+  name: DC20Attribute;
+  score: number;
+  modifier: number;
+}
 
 export interface Character {
   id: string;
@@ -149,8 +216,13 @@ export interface Character {
   subclass?: string;
   background: string;
   alignment: string;
-  // Attributes (Might, Intellect, Presence, Agility, Fortitude, Attunement)
+  // Only 4 attributes in DC20
   attributes: Record<DC20Attribute, Attribute>;
+  primeModifier: number; // Derived from highest attribute
+  // Mastery system
+  skillMasteries: Record<DC20Skill, MasteryLevel>;
+  tradeMasteries: Record<DC20Trade, MasteryLevel>;
+  languages: string[];
   // Combat stats
   healthPoints: number;
   maxHealthPoints: number;
@@ -166,12 +238,6 @@ export interface Character {
   spells: Spell[];
   maneuvers: Maneuver[];
   notes: string;
-}
-
-export interface Ability {
-  name: string;
-  score: number;
-  modifier: number;
 }
 
 export interface Skill {
@@ -224,7 +290,7 @@ export interface Monster {
   ac: number;
   stamina: number;
   speed: Record<string, string>;
-  abilities: Ability[];
+  abilities: Attribute[];
   skills: Record<string, number>;
   languages: string[];
   traits: MonsterTrait[];
