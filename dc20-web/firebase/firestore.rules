@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /hub_state/{userId} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function hasValidHubState() {
+        return request.resource.data.keys().hasOnly(['user_id', 'payload', 'updated_at'])
+          && request.resource.data.user_id == request.auth.uid
+          && request.resource.data.payload is map
+          && request.resource.data.updated_at is string;
+      }
+
+      allow read: if isOwner();
+      allow create, update: if isOwner() && hasValidHubState();
+    }
+  }
+}

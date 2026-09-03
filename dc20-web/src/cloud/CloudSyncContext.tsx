@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { doc, getDoc, setDoc } from 'firebase/firestore/lite';
 import { useAuth } from '../auth/AuthContext';
-import { supabase } from '../lib/supabase';
+import { firestore } from '../lib/firebase';
 import { migratePersistedState, useCampaignStore } from '../store/campaignStore';
 
 /* oxlint-disable react/only-export-components */
@@ -13,6 +14,12 @@ interface CloudSyncContextValue {
   error: string;
   lastSyncedAt: string | null;
   syncNow: () => Promise<void>;
+}
+
+interface HubStateDocument {
+  user_id: string;
+  payload: Record<string, unknown>;
+  updated_at: string;
 }
 
 const CloudSyncContext = createContext<CloudSyncContextValue | null>(null);
@@ -32,29 +39,29 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const isInitialized = useRef(false);
 
   const syncNow = useCallback(async () => {
-    if (!supabase || !user || !isInitialized.current) return;
+    if (!firestore || !user || !isInitialized.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = null;
     setStatus('saving');
     setError('');
     const updatedAt = new Date().toISOString();
-    const { data, error: syncError } = await supabase
-      .from('hub_state')
-      .upsert({ user_id: user.id, payload: backupPayload(), updated_at: updatedAt }, { onConflict: 'user_id' })
-      .select('updated_at')
-      .single();
-    if (syncError) {
+    try {
+      await setDoc(doc(firestore, 'hub_state', user.uid), {
+        user_id: user.uid,
+        payload: backupPayload(),
+        updated_at: updatedAt,
+      } satisfies HubStateDocument);
+      setLastSyncedAt(updatedAt);
+      setStatus('synced');
+    } catch (caught) {
       setStatus('error');
-      setError(syncError.message);
-      return;
+      setError(caught instanceof Error ? caught.message : 'The cloud save could not be completed.');
     }
-    setLastSyncedAt(data.updated_at ?? updatedAt);
-    setStatus('synced');
   }, [user]);
 
   useEffect(() => {
-    const client = supabase;
-    if (!client || !user) {
+    const database = firestore;
+    if (!database || !user) {
       isInitialized.current = false;
       return;
     }
@@ -66,31 +73,30 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     const initialize = async () => {
       try {
         const previousUserID = window.localStorage.getItem(LAST_CLOUD_USER_KEY);
-        if (previousUserID && previousUserID !== user.id) {
+        if (previousUserID && previousUserID !== user.uid) {
           useCampaignStore.setState(migratePersistedState({}));
         }
-        const { data, error: loadError } = await client
-          .from('hub_state')
-          .select('payload, updated_at')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (loadError) throw loadError;
+
+        const stateReference = doc(database, 'hub_state', user.uid);
+        const stateSnapshot = await getDoc(stateReference);
         if (disposed) return;
 
-        if (data?.payload) {
+        if (stateSnapshot.exists()) {
+          const data = stateSnapshot.data() as HubStateDocument;
           useCampaignStore.getState().importData(data.payload);
           setLastSyncedAt(data.updated_at ?? null);
         } else {
           const updatedAt = new Date().toISOString();
-          const { error: seedError } = await client
-            .from('hub_state')
-            .upsert({ user_id: user.id, payload: backupPayload(), updated_at: updatedAt }, { onConflict: 'user_id' });
-          if (seedError) throw seedError;
+          await setDoc(stateReference, {
+            user_id: user.uid,
+            payload: backupPayload(),
+            updated_at: updatedAt,
+          } satisfies HubStateDocument);
           if (disposed) return;
           setLastSyncedAt(updatedAt);
         }
 
-        window.localStorage.setItem(LAST_CLOUD_USER_KEY, user.id);
+        window.localStorage.setItem(LAST_CLOUD_USER_KEY, user.uid);
         isInitialized.current = true;
         setStatus('synced');
       } catch (caught) {

@@ -16,7 +16,7 @@ DC20 Hub is a cross-platform React and TypeScript companion for building charact
 - Multiple campaigns with multiple named notes nested inside each campaign
 - Standard dice roller and stacked advantage/disadvantage
 - Sixteen curated class-themed palettes carried over from the macOS app
-- Supabase accounts with email/password and Google sign-in
+- Firebase accounts with email/password and Google sign-in
 - Private cross-device cloud synchronization with local fallback and JSON backup export/restore
 - Installable web app manifest and offline reference caching
 
@@ -43,26 +43,29 @@ The test suite covers character calculations and progression, equipment behavior
 
 ## Accounts, cloud saves, and backups
 
-When Supabase environment variables are configured, DC20 Hub requires an account and automatically synchronizes a user's complete hub between devices. Each account can read and update only its own row through Postgres Row Level Security. The browser retains a local copy for resilience, and the header shows the current cloud-save state.
+When Firebase environment variables are configured, DC20 Hub requires an account and automatically synchronizes a user's complete hub between devices. Each account can read and update only its own Firestore document through Firebase Authentication and Security Rules. The browser retains a local copy for resilience, and the header shows the current cloud-save state.
 
 Without those environment variables, the app remains in local-only mode so development and existing deployments continue to work.
 
 Use **Export Data** in the sidebar to download a complete versioned JSON backup. Use **Customize → Import Backup** to restore it in another supported browser or operating system.
 
-## Configure Supabase authentication
+## Configure Firebase authentication and Firestore
 
-1. Create a Supabase project.
-2. Open its SQL Editor and run [`supabase/schema.sql`](supabase/schema.sql). This creates the private `hub_state` table and its user-only access policies.
-3. In **Authentication → URL Configuration**, set the Site URL to the production Netlify URL. Add the production URL and `http://localhost:5173` to the redirect allow list.
-4. For Google sign-in, create a **Web application** OAuth client in Google Auth Platform. Add the callback URL displayed by **Supabase → Authentication → Providers → Google** as an authorized redirect URI, then place the Google Client ID and Client Secret into that Supabase provider screen.
-5. In Netlify, add these environment variables and redeploy:
+1. Create a Firebase project on the no-cost Spark plan, then register a Web app from the project overview.
+2. Open **Build → Authentication → Sign-in method**. Enable **Email/Password** and **Google**.
+3. In **Authentication → Settings → Authorized domains**, add the production Netlify hostname. `localhost` is normally present for local development.
+4. Open **Build → Firestore Database**, create the default database, and select an appropriate region.
+5. Open the Firestore **Rules** tab, replace its contents with [`firebase/firestore.rules`](firebase/firestore.rules), and publish the rules. They restrict every hub document to its authenticated owner.
+6. Copy the corresponding values from the Firebase Web app configuration into these Netlify environment variables, then redeploy:
 
 ```text
-VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YOUR_KEY
+VITE_FIREBASE_API_KEY=YOUR_WEB_API_KEY
+VITE_FIREBASE_AUTH_DOMAIN=YOUR_PROJECT.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=YOUR_PROJECT_ID
+VITE_FIREBASE_APP_ID=YOUR_WEB_APP_ID
 ```
 
-Use only the publishable browser key. Never place a Supabase secret or service-role key in a `VITE_` variable.
+These values identify the Firebase Web app and are intended for browser use. Data privacy is enforced by the published Firestore Security Rules, so do not skip that step or replace them with public-access rules.
 
 ## Install on another operating system
 
@@ -73,7 +76,7 @@ Once deployed to HTTPS, supported browsers can install DC20 Hub as an app:
 - iPhone and iPad: use **Share → Add to Home Screen**.
 - Android: use **Install app** or **Add to Home screen**.
 
-The service worker caches the app shell and local reference catalogs for use after an initial online visit. User-created data remains in the browser and can be moved with backups.
+The service worker caches the app shell and local reference catalogs for use after an initial online visit. Signed-in user data synchronizes through Firestore while a local browser copy and manual backups provide additional resilience.
 
 ## Netlify deployment
 
@@ -86,12 +89,13 @@ npm --prefix dc20-web run build
 
 and publishes `dc20-web/dist`.
 
-Cloud-enabled deployments require the two public Supabase variables shown above. No environment variables are needed for local-only mode.
+Cloud-enabled deployments require the four Firebase Web app variables shown above. No environment variables are needed for local-only mode.
 
 ## Project layout
 
 ```text
 dc20-web/
+├── firebase/           # Private per-user Firestore security rules
 ├── public/data/        # Curated runtime catalogs; no sourcebook PDFs
 ├── scripts/            # Reproducible Swift-to-JSON source exporters
 ├── src/components/     # Layout, builder, sheet, and module views
