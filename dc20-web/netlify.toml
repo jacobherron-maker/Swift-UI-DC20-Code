@@ -4,6 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # Firebase publishes this placeholder in its type documentation. It is not a credential.
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIzaSyDOCAbC123dEf456GhI789jKl012-MnO"
 
 [context.production]
   command = "npm ci && npm run build"
