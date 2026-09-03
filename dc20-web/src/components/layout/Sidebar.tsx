@@ -30,41 +30,89 @@ const sectionLabels: Partial<Record<HubSection, string>> = {
 const Sidebar: React.FC = () => {
   const { currentSection, setCurrentSection, exportData } = useCampaignStore();
   const [showCustomize, setShowCustomize] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const chooseSection = (section: HubSection) => {
+    setCurrentSection(section);
+    setMobileOpen(false);
+  };
+
+  const navigation = () => (
+    <nav aria-label="DC20 Hub sections" className="flex-1 space-y-2 overflow-y-auto overscroll-contain">
+      {sections.map((section) => (
+        <button
+          key={section}
+          onClick={() => chooseSection(section)}
+          className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-4 py-3 text-left font-medium transition-all ${
+            currentSection === section
+              ? 'nav-item-active text-white shadow-lg'
+              : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+          }`}
+          title={sectionLabels[section] ?? section}
+        >
+          <span aria-hidden="true" className="w-5 shrink-0 text-center">{sectionSymbols[section]}</span>
+          <span className="min-w-0 grow truncate">{sectionLabels[section] ?? section}</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" className="opacity-30" aria-hidden="true">
+            <path fill="currentColor" d="M10 17l5-5-5-5v10z" />
+          </svg>
+        </button>
+      ))}
+    </nav>
+  );
+
+  const utilityButtons = () => (
+    <div className="mt-4 space-y-2 border-t border-white/5 pt-4">
+      <button type="button" onClick={() => { setShowCustomize(true); setMobileOpen(false); }} className="btn-primary min-h-11 w-full text-sm" title="Customize">🎨 Customize</button>
+      <button type="button" onClick={() => downloadHubBackup(exportData())} className="min-h-11 w-full rounded-lg bg-gray-800 py-2 text-sm text-gray-200 hover:bg-gray-700" title="Export Data">💾 Export Data</button>
+    </div>
+  );
 
   return (
-    <aside className="sidebar flex w-72 shrink-0 flex-col overflow-hidden max-lg:w-20 max-lg:px-3">
-      <div className="mb-4">
-        <h1 className="hub-logo text-2xl font-extrabold max-lg:text-center max-lg:text-xl"><span className="lg:hidden">D20</span><span className="max-lg:hidden">DC20 Hub</span></h1>
-        <p className="text-muted mt-1 text-sm max-lg:hidden">TTRPG Assistant</p>
-      </div>
+    <>
+      <button
+        type="button"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open navigation menu"
+        aria-expanded={mobileOpen}
+        aria-controls="mobile-navigation"
+        className="mobile-menu-trigger fixed z-40 grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-slate-950/90 text-xl text-violet-200 shadow-xl backdrop-blur lg:hidden"
+      >
+        <span aria-hidden="true">☰</span>
+      </button>
 
-      <nav className="flex-1 overflow-y-auto space-y-2">
-        {sections.map((section) => (
-          <button
-            key={section}
-            onClick={() => setCurrentSection(section as HubSection)}
-            className={`w-full text-left px-4 py-3 rounded-lg transition-all font-medium flex items-center gap-3 ${
-              currentSection === section
-                ? 'nav-item-active text-white shadow-lg'
-                : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-            }`}
-            title={sectionLabels[section] ?? section}
-          >
-            <span aria-hidden="true" className="w-5 text-center">{sectionSymbols[section as HubSection]}</span>
-            <span className="grow max-lg:hidden">{sectionLabels[section] ?? section}</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" className="opacity-30 max-lg:hidden">
-              <path fill="currentColor" d="M10 17l5-5-5-5v10z" />
-            </svg>
-          </button>
-        ))}
-      </nav>
+      {mobileOpen && <div className="fixed inset-0 z-50 lg:hidden">
+        <button
+          type="button"
+          aria-label="Close navigation menu"
+          onClick={() => setMobileOpen(false)}
+          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        />
+        <aside
+          id="mobile-navigation"
+          className="sidebar mobile-drawer absolute inset-y-0 left-0 flex w-[min(86vw,20rem)] flex-col overflow-hidden shadow-2xl"
+        >
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="hub-logo text-2xl font-extrabold">DC20 Hub</h1>
+              <p className="text-muted mt-1 text-sm">TTRPG Assistant</p>
+            </div>
+            <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu" className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-slate-800 text-xl text-slate-200">×</button>
+          </div>
+          {navigation()}
+          {utilityButtons()}
+        </aside>
+      </div>}
 
-      <div className="mt-4 space-y-2">
-        <button type="button" onClick={() => setShowCustomize(true)} className="btn-primary w-full text-sm" title="Customize">🎨 <span className="max-lg:hidden">Customize</span></button>
-        <button type="button" onClick={() => downloadHubBackup(exportData())} className="w-full rounded-lg bg-gray-800 py-2 text-sm text-gray-200 hover:bg-gray-700" title="Export Data">💾 <span className="max-lg:hidden">Export Data</span></button>
-      </div>
+      <aside className="sidebar hidden w-72 shrink-0 flex-col overflow-hidden lg:flex">
+        <div className="mb-4">
+          <h1 className="hub-logo text-2xl font-extrabold">DC20 Hub</h1>
+          <p className="text-muted mt-1 text-sm">TTRPG Assistant</p>
+        </div>
+        {navigation()}
+        {utilityButtons()}
+      </aside>
       {showCustomize && <CustomizeDialog onClose={() => setShowCustomize(false)} />}
-    </aside>
+    </>
   );
 };
 

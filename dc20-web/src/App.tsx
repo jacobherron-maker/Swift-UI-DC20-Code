@@ -70,11 +70,11 @@ function App() {
   };
 
   return (
-    <div data-palette={palette.id} style={themeStyle} className={`dc20-theme flex h-screen ${isDarkMode ? 'dark' : ''}`}>
+    <div data-palette={palette.id} style={themeStyle} className={`dc20-theme flex h-[100dvh] min-h-[100dvh] overflow-hidden ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header />
-        <main ref={contentRef} className="app-main flex-1 overflow-auto">
+        <main ref={contentRef} className="app-main min-h-0 flex-1 overflow-auto overscroll-contain">
           {renderContent()}
         </main>
       </div>

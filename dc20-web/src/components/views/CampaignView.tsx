@@ -48,8 +48,8 @@ export default function CampaignView() {
   };
 
   return (
-    <div className="flex min-h-full bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)]">
-      <aside className="w-80 shrink-0 border-r border-white/5 bg-slate-950/45 p-4">
+    <div className="flex min-h-full flex-col bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)] lg:h-full lg:flex-row lg:overflow-hidden">
+      <aside className="w-full shrink-0 border-b border-white/5 bg-slate-950/45 p-4 lg:w-80 lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-black text-white">Campaigns</h1>
@@ -57,7 +57,7 @@ export default function CampaignView() {
           </div>
           <button type="button" onClick={createCampaign} className="btn-primary text-sm font-bold">+ New</button>
         </div>
-        <div className="mt-5 space-y-2">
+        <div className="mt-5 max-h-64 space-y-2 overflow-y-auto overscroll-contain pr-1 lg:max-h-none">
           {campaignData.campaigns.length === 0 && <button type="button" onClick={createCampaign} className="w-full rounded-xl border border-dashed border-white/10 p-5 text-sm text-slate-500 hover:border-violet-400/30 hover:text-violet-300">Create your first campaign</button>}
           {campaignData.campaigns.map((entry) => (
             <button
@@ -82,7 +82,7 @@ export default function CampaignView() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 overflow-y-auto">
+      <main className="min-w-0 flex-1 lg:overflow-y-auto">
         {!campaign && <div className="grid min-h-full place-items-center p-8 text-center text-slate-500">Select a campaign or create a new one.</div>}
         {campaign && (
           <CampaignEditor
@@ -125,11 +125,11 @@ function CampaignEditor({ campaign, note, selectedNoteId, onSelectNote, onCreate
   onDeleteCampaign: () => void;
 }) {
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-8">
+    <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6 lg:space-y-6 lg:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-72 grow">
+        <div className="min-w-0 grow basis-64">
           <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Campaign Workspace</div>
-          <input className="mt-1 w-full border-0 bg-transparent p-0 text-4xl font-black tracking-tight text-white outline-none focus:text-violet-100" value={campaign.name} onChange={(event) => onUpdateCampaign({ name: event.target.value })} aria-label="Campaign name" />
+          <input className="mt-1 w-full border-0 bg-transparent p-0 text-3xl font-black tracking-tight text-white outline-none focus:text-violet-100 sm:text-4xl" value={campaign.name} onChange={(event) => onUpdateCampaign({ name: event.target.value })} aria-label="Campaign name" />
         </div>
         <button type="button" onClick={onDeleteCampaign} className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/20">Delete Campaign</button>
       </div>
@@ -156,11 +156,11 @@ function CampaignEditor({ campaign, note, selectedNoteId, onSelectNote, onCreate
           </div>
         </aside>
 
-        <section className="min-w-0 p-5 lg:p-7">
+        <section className="min-w-0 p-4 sm:p-5 lg:p-7">
           {!note && <div className="grid h-full place-items-center text-center text-slate-500">Select a note or create a new one.</div>}
           {note && (
             <div className="flex h-full flex-col">
-              <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+              <div className="flex flex-wrap items-center gap-3 border-b border-white/5 pb-4">
                 <input className="min-w-0 grow bg-transparent text-2xl font-black text-white outline-none focus:text-violet-100" value={note.title} onChange={(event) => onUpdateNote({ title: event.target.value })} placeholder="Note title" aria-label="Note title" />
                 <button type="button" onClick={onDeleteNote} className="rounded-lg px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Delete Note</button>
               </div>

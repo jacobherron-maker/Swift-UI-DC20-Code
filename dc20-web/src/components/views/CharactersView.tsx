@@ -50,9 +50,9 @@ const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) =
 
   // List view
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+    <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 sm:mb-8">
+        <h1 className="bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl">
           Characters
         </h1>
         <button
@@ -60,7 +60,7 @@ const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) =
             selectCharacter(null);
             navigate('builder');
           }}
-          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition"
+          className="min-h-11 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-3 font-semibold text-white transition hover:from-purple-700 hover:to-pink-700 sm:px-6"
         >
           + New Character
         </button>
@@ -102,7 +102,7 @@ const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) =
           {filteredCharacters.map((character) => (
             <div
               key={character.id}
-              className={`bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-6 border-2 transition cursor-pointer transform hover:scale-105 ${
+              className={`cursor-pointer rounded-lg border-2 bg-gradient-to-br from-slate-800 to-slate-900 p-4 transition sm:p-6 md:hover:scale-[1.02] ${
                 selectedCharacterId === character.id
                   ? 'border-purple-500 ring-2 ring-purple-500'
                   : 'border-slate-700 hover:border-purple-500'

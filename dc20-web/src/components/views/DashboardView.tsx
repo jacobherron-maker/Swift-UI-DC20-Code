@@ -12,9 +12,9 @@ const DashboardView: React.FC = () => {
   ];
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
       <p className="theme-accent-text text-xs font-black uppercase tracking-[0.28em]">Dashboard</p>
-      <h1 className="mb-2 mt-1 text-4xl font-black text-white">{campaignData.title}</h1>
+      <h1 className="mb-2 mt-1 break-words text-3xl font-black text-white sm:text-4xl">{campaignData.title}</h1>
       <p className="mb-8 text-slate-400">Everything you need to build, prepare, and run DC20 in one place.</p>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

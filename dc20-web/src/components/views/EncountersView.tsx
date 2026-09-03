@@ -73,8 +73,8 @@ export default function EncountersView() {
   };
 
   return (
-    <div className="flex min-h-full bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)]">
-      <aside className="w-80 shrink-0 border-r border-white/5 bg-slate-950/45 p-4">
+    <div className="flex min-h-full flex-col bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)] lg:h-full lg:flex-row lg:overflow-hidden">
+      <aside className="w-full shrink-0 border-b border-white/5 bg-slate-950/45 p-4 lg:w-80 lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-black text-white">Encounters</h1>
@@ -82,7 +82,7 @@ export default function EncountersView() {
           </div>
           <button type="button" onClick={createEncounter} className="btn-primary text-sm font-bold">+ New</button>
         </div>
-        <div className="mt-5 space-y-2">
+        <div className="mt-5 max-h-64 space-y-2 overflow-y-auto overscroll-contain pr-1 lg:max-h-none">
           {encounters.length === 0 && (
             <button type="button" onClick={createEncounter} className="w-full rounded-xl border border-dashed border-white/10 p-5 text-sm text-slate-500 hover:border-violet-400/30 hover:text-violet-300">Create your first encounter</button>
           )}
@@ -103,7 +103,7 @@ export default function EncountersView() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 overflow-y-auto">
+      <main className="min-w-0 flex-1 lg:overflow-y-auto">
         {!selected && <div className="grid min-h-full place-items-center p-8 text-center text-slate-500">Select an encounter or create a new one.</div>}
         {selected && <EncounterEditor
           encounter={selected}
@@ -150,12 +150,12 @@ function EncounterEditor({ encounter, sourceMonsters, customMonsters, monsterToA
   });
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-8">
+    <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6 lg:space-y-6 lg:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-72 grow">
+        <div className="min-w-0 grow basis-64">
           <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Encounter Builder</div>
           <input
-            className="mt-1 w-full border-0 bg-transparent p-0 text-4xl font-black tracking-tight text-white outline-none focus:text-violet-100"
+            className="mt-1 w-full border-0 bg-transparent p-0 text-3xl font-black tracking-tight text-white outline-none focus:text-violet-100 sm:text-4xl"
             value={encounter.name}
             onChange={(event) => onUpdate({ name: event.target.value })}
             aria-label="Encounter name"

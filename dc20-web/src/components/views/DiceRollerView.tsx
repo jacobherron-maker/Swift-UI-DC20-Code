@@ -22,11 +22,11 @@ const DiceRollerView: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-      <h1 className="mb-6 text-4xl font-black text-purple-400">🎲 Dice Roller</h1>
+      <h1 className="mb-6 text-3xl font-black text-purple-400 sm:text-4xl">🎲 Dice Roller</h1>
 
       <div className="grid gap-5 md:grid-cols-2">
         {/* Standard Roller */}
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <div className="rounded-lg border border-gray-700 bg-gray-800 p-4 sm:p-6">
           <h2 className="text-2xl font-bold text-purple-300 mb-6">Standard Roll</h2>
 
           <div className="space-y-4">
@@ -77,13 +77,13 @@ const DiceRollerView: React.FC = () => {
         </div>
 
         {/* D20 Roller */}
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <div className="rounded-lg border border-gray-700 bg-gray-800 p-4 sm:p-6">
           <h2 className="text-2xl font-bold text-purple-300 mb-6">D20 With Advantage/Disadvantage</h2>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-300 mb-2">Adjustment</label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="number"
                   value={d20Adjustment}

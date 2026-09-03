@@ -98,12 +98,12 @@ function SourceMonsterDetail({ monster, onDuplicate }: { monster: Monster; onDup
     .map((kind) => ({ kind, entries: monster.abilities.filter((ability) => ability.kind === kind) }))
     .filter(({ entries }) => entries.length > 0);
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6 lg:p-8">
-      <div className="rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-950/50 via-slate-900 to-slate-950 p-6">
+    <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6 lg:space-y-6 lg:p-8">
+      <div className="rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-950/50 via-slate-900 to-slate-950 p-4 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Sourcebook Monster</div>
-            <h2 className="mt-1 text-4xl font-black tracking-tight text-white">{monster.name}</h2>
+            <h2 className="mt-1 break-words text-3xl font-black tracking-tight text-white sm:text-4xl">{monster.name}</h2>
             <p className="mt-2 text-slate-300">{monster.size} {monster.creatureType} • {monsterLevelLabel(monster.level)} • {monster.publishedRole || monster.role}</p>
             <p className="mt-1 text-xs text-slate-500">{monster.sourceBook}{monster.sourcePage ? ` • Page ${monster.sourcePage}` : ''}</p>
           </div>
@@ -208,7 +208,7 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
   const removeAbility = (id: string) => update('abilities', monster.abilities.filter((ability) => ability.id !== id));
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6 lg:p-8">
+    <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6 lg:space-y-6 lg:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Custom Monster Builder</div>
@@ -309,7 +309,7 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
             <h3 className="text-xl font-black text-violet-200">Abilities</h3>
             <p className="text-sm text-slate-500">Traits, features, actions, reactions, and boss round actions.</p>
           </div>
-          <label className="min-w-64">
+          <label className="min-w-0 grow basis-64">
             <span className={labelClass}>Quick Add Published Trait</span>
             <select
               className={fieldClass}
@@ -404,8 +404,8 @@ export default function MonstersView() {
   const createMonster = () => addCustomMonster(createCustomMonster());
 
   return (
-    <div className="flex min-h-full bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)]">
-      <aside className="w-[22rem] shrink-0 border-r border-white/5 bg-slate-950/45 p-4">
+    <div className="flex min-h-full flex-col bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)] lg:h-full lg:flex-row lg:overflow-hidden">
+      <aside className="w-full shrink-0 border-b border-white/5 bg-slate-950/45 p-4 lg:w-[22rem] lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-black text-white">Monsters</h1>
@@ -420,7 +420,7 @@ export default function MonstersView() {
           placeholder="Search names, roles, traits…"
           aria-label="Search monsters"
         />
-        <div className="mt-5 space-y-5">
+        <div className="mt-5 max-h-80 space-y-5 overflow-y-auto overscroll-contain pr-1 lg:max-h-none lg:overflow-visible">
           <section>
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-xs font-black uppercase tracking-[0.16em] text-violet-300">Sourcebook Monsters</h2>
@@ -428,7 +428,7 @@ export default function MonstersView() {
             </div>
             {isLoading && <p className="rounded-xl border border-white/5 p-3 text-sm text-slate-500">Loading audited library…</p>}
             {error && <p className="rounded-xl border border-red-400/20 bg-red-500/5 p-3 text-sm text-red-300">{error}</p>}
-            <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-1">
+            <div className="max-h-44 space-y-2 overflow-y-auto pr-1 lg:max-h-[42vh]">
               {filteredSources.map((monster) => <MonsterListButton key={monster.id} monster={monster} active={monster.id === selectedMonsterId} onClick={() => selectMonster(monster.id)} />)}
             </div>
           </section>
@@ -437,7 +437,7 @@ export default function MonstersView() {
               <h2 className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">Custom Monsters</h2>
               <span className="text-xs text-slate-600">{filteredCustom.length}</span>
             </div>
-            <div className="max-h-[32vh] space-y-2 overflow-y-auto pr-1">
+            <div className="max-h-40 space-y-2 overflow-y-auto pr-1 lg:max-h-[32vh]">
               {filteredCustom.length === 0 && <button type="button" onClick={createMonster} className="w-full rounded-xl border border-dashed border-white/10 p-4 text-sm text-slate-500 hover:border-violet-400/30 hover:text-violet-300">Create your first custom monster</button>}
               {filteredCustom.map((monster) => <MonsterListButton key={monster.id} monster={monster} active={monster.id === selectedMonsterId} onClick={() => selectMonster(monster.id)} />)}
             </div>
@@ -445,7 +445,7 @@ export default function MonstersView() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 overflow-y-auto">
+      <main className="min-w-0 flex-1 lg:overflow-y-auto">
         {!selected && <div className="grid min-h-full place-items-center p-8 text-center text-slate-500">Select a monster or create a custom one.</div>}
         {selected && !isCustom && <SourceMonsterDetail monster={selected} onDuplicate={() => duplicate(selected)} />}
         {selected && isCustom && (

@@ -34,8 +34,8 @@ export default function AuthScreen() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#4c1d95_0%,#111827_45%,#020617_100%)] p-5 text-slate-100">
-      <div className="w-full max-w-md rounded-3xl border border-violet-300/15 bg-slate-950/80 p-7 shadow-2xl shadow-violet-950/60 backdrop-blur-xl sm:p-9">
+    <main className="flex min-h-[100dvh] items-center justify-center overflow-y-auto bg-[radial-gradient(circle_at_top,#4c1d95_0%,#111827_45%,#020617_100%)] p-3 text-slate-100 sm:p-5">
+      <div className="w-full max-w-md rounded-2xl border border-violet-300/15 bg-slate-950/80 p-5 shadow-2xl shadow-violet-950/60 backdrop-blur-xl sm:rounded-3xl sm:p-9">
         <div className="text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 text-2xl shadow-lg shadow-violet-950">✦</div>
           <p className="mt-5 text-xs font-black uppercase tracking-[0.3em] text-violet-300">DC20 Hub</p>

@@ -44,8 +44,8 @@ export default function EquipmentView() {
   };
 
   return (
-    <div className="flex min-h-full bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)]">
-      <aside className="w-[23rem] shrink-0 border-r border-white/5 bg-slate-950/45 p-4">
+    <div className="flex min-h-full flex-col bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)] lg:h-full lg:flex-row lg:overflow-hidden">
+      <aside className="w-full shrink-0 border-b border-white/5 bg-slate-950/45 p-4 lg:w-[23rem] lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <div>
           <h1 className="text-2xl font-black text-white">Equipment</h1>
           <p className="text-xs text-slate-500">Beta 0.10.5 mechanical catalog</p>
@@ -63,7 +63,7 @@ export default function EquipmentView() {
             </button>
           ))}
         </div>
-        <div className="mt-4 max-h-[68vh] space-y-2 overflow-y-auto pr-1">
+        <div className="mt-4 max-h-72 space-y-2 overflow-y-auto overscroll-contain pr-1 lg:max-h-[68vh]">
           {isLoading && <div className="rounded-xl border border-white/5 p-4 text-sm text-slate-500">Loading the native catalog…</div>}
           {error && <div className="rounded-xl border border-red-400/20 bg-red-500/5 p-4 text-sm text-red-300">{error}</div>}
           {!isLoading && filtered.length === 0 && <div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-sm text-slate-500">No equipment matches this search.</div>}
@@ -82,7 +82,7 @@ export default function EquipmentView() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 overflow-y-auto">
+      <main className="min-w-0 flex-1 lg:overflow-y-auto">
         {!selected && <div className="grid min-h-full place-items-center p-8 text-slate-500">Select an equipment record.</div>}
         {selected && <EquipmentDetail
           item={selected}
@@ -106,16 +106,16 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
   notice: string;
 }) {
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6 lg:p-8">
+    <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6 lg:space-y-6 lg:p-8">
       <div className="rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-950/50 via-slate-900 to-slate-950 p-6">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">{item.category}</div>
-            <h2 className="mt-1 text-4xl font-black tracking-tight text-white">{item.name}</h2>
+            <h2 className="mt-1 break-words text-3xl font-black tracking-tight text-white sm:text-4xl">{item.name}</h2>
             <p className="mt-2 text-slate-400">{item.subtype} • {item.slot}</p>
             <p className="mt-1 text-xs text-slate-600">{item.sourcePage}</p>
           </div>
-          <div className="min-w-72 rounded-xl border border-white/8 bg-slate-950/55 p-3">
+          <div className="min-w-0 grow basis-64 rounded-xl border border-white/8 bg-slate-950/55 p-3 sm:min-w-72 sm:grow-0">
             {characters.length > 0 ? (
               <>
                 <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Add to Character Inventory</label>

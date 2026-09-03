@@ -64,8 +64,8 @@ export default function CombatView() {
   };
 
   return (
-    <div className="flex min-h-full bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)]">
-      <aside className="w-80 shrink-0 border-r border-white/5 bg-slate-950/45 p-4">
+    <div className="flex min-h-full flex-col bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)] lg:h-full lg:flex-row lg:overflow-hidden">
+      <aside className="w-full shrink-0 border-b border-white/5 bg-slate-950/45 p-4 lg:w-80 lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-black text-white">Combat</h1>
@@ -83,7 +83,7 @@ export default function CombatView() {
             <button type="button" disabled={!encounterChoice} onClick={launchEncounter} className="mt-2 w-full rounded-lg bg-violet-500/20 px-3 py-2 text-sm font-bold text-violet-200 hover:bg-violet-500/30 disabled:opacity-40">Create Combat</button>
           </div>
         )}
-        <div className="mt-5 space-y-2">
+        <div className="mt-5 max-h-64 space-y-2 overflow-y-auto overscroll-contain pr-1 lg:max-h-none">
           {combats.length === 0 && <button type="button" onClick={createCombat} className="w-full rounded-xl border border-dashed border-white/10 p-5 text-sm text-slate-500 hover:border-violet-400/30 hover:text-violet-300">Create your first combat</button>}
           {combats.map((combat) => (
             <button
@@ -99,7 +99,7 @@ export default function CombatView() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 overflow-y-auto">
+      <main className="min-w-0 flex-1 lg:overflow-y-auto">
         {!selected && <div className="grid min-h-full place-items-center p-8 text-center text-slate-500">Select a saved combat or create a new one.</div>}
         {selected && (
           <CombatEditor
@@ -148,11 +148,11 @@ function CombatEditor({ combat, participantChoice, setParticipantChoice, sourceM
   });
 
   return (
-    <div className="space-y-6 p-6 lg:p-8">
+    <div className="space-y-5 p-4 sm:p-6 lg:space-y-6 lg:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-72 grow">
+        <div className="min-w-0 grow basis-64">
           <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Combat Tracker</div>
-          <input className="mt-1 w-full border-0 bg-transparent p-0 text-4xl font-black tracking-tight text-white outline-none focus:text-violet-100" value={combat.name} onChange={(event) => update({ name: event.target.value })} aria-label="Combat name" />
+          <input className="mt-1 w-full border-0 bg-transparent p-0 text-3xl font-black tracking-tight text-white outline-none focus:text-violet-100 sm:text-4xl" value={combat.name} onChange={(event) => update({ name: event.target.value })} aria-label="Combat name" />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => update({ round: Math.max(1, combat.round - 1) })} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-bold text-slate-200 hover:bg-white/10">←</button>
@@ -167,7 +167,7 @@ function CombatEditor({ combat, participantChoice, setParticipantChoice, sourceM
 
       <section className="rounded-2xl border border-white/8 bg-slate-900/75 p-5">
         <div className="flex flex-wrap gap-3">
-          <select className={`${inputClass} min-w-64 grow`} value={participantChoice} onChange={(event) => setParticipantChoice(event.target.value)}>
+          <select className={`${inputClass} min-w-0 grow basis-64`} value={participantChoice} onChange={(event) => setParticipantChoice(event.target.value)}>
             <option value="">Add a character or monster…</option>
             {characters.length > 0 && <optgroup label="Characters">
               {characters.map((character) => <option key={character.id} value={`character:${character.id}`}>{character.name || 'Unnamed Character'} — Level {character.level} {character.class}</option>)}

@@ -597,7 +597,7 @@ const CharacterBuilderView: React.FC<{
           <div className="flex gap-2"><Metric label="Level" value={level} /><Metric label="Mastery Cap" value={masteryTitle(masteryMaximum)} /><Metric label="Attribute Cap" value={`+${attributeCap(level)}`} /></div>
         </header>
 
-        <nav className="mb-5 grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-slate-950/60 p-2 lg:grid-cols-6" aria-label="Character builder steps">
+        <nav className="mb-5 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/60 p-2 sm:grid-cols-3 lg:grid-cols-6" aria-label="Character builder steps">
           {STEPS.map((step, index) => <button type="button" key={step.id} onClick={() => setCurrentStep(step.id)} className={`rounded-xl px-3 py-3 text-sm font-bold transition ${currentStep === step.id ? 'bg-violet-600 text-white shadow-lg shadow-violet-950' : index < currentStepIndex ? 'bg-violet-500/10 text-violet-200 hover:bg-violet-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}><span className="mr-2 text-xs opacity-60">{index + 1}</span>{step.title}</button>)}
         </nav>
 
