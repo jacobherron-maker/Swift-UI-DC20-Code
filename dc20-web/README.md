@@ -53,7 +53,7 @@ Use **Export Data** in the sidebar to download a complete versioned JSON backup.
 
 1. Create a Firebase project on the no-cost Spark plan, then register a Web app from the project overview.
 2. Open **Build → Authentication → Sign-in method**. Enable **Email/Password** and **Google**.
-3. In **Authentication → Settings → Authorized domains**, add the production Netlify hostname. `localhost` is normally present for local development.
+3. In **Authentication → Settings → Authorized domains**, add the production Netlify hostname. For local development, also add `localhost` explicitly; Firebase projects created after April 28, 2025 no longer include it automatically.
 4. Open **Build → Firestore Database**, create the default database, and select an appropriate region.
 5. Open the Firestore **Rules** tab, replace its contents with [`firebase/firestore.rules`](firebase/firestore.rules), and publish the rules. They restrict every hub document to its authenticated owner.
 6. Copy the corresponding values from the Firebase Web app configuration into these Netlify environment variables, then redeploy:
