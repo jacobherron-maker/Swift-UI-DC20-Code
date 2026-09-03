@@ -86,7 +86,7 @@ describe('campaign persistence migration', () => {
         currentSection: 'Campaign',
         selectedPaletteID: 'druid-verdant',
         campaignData: { title: 'The Green March' },
-        characters: [{ id: 'hero', name: 'Oak', level: 2, class: 'Druid' }],
+        characters: [{ id: 'hero', name: 'Oak', avatarDataURL: 'data:image/webp;base64,UklGRg==', level: 2, class: 'Druid' }],
       },
     });
 
@@ -94,6 +94,7 @@ describe('campaign persistence migration', () => {
     expect(migrated.selectedPaletteID).toBe('druid-verdant');
     expect(migrated.campaignData.title).toBe('The Green March');
     expect(migrated.characters[0].name).toBe('Oak');
+    expect(migrated.characters[0].avatarDataURL).toBe('data:image/webp;base64,UklGRg==');
   });
 
   it('falls back to the default palette when an imported id is unknown', () => {

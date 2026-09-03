@@ -265,6 +265,8 @@ export interface CharacterBuildData {
 export interface Character {
   id: string;
   name: string;
+  /** Optimized square portrait stored with the character for backups and cloud sync. */
+  avatarDataURL?: string;
   level: number;
   ancestry: DC20Ancestry | string;
   size?: string;

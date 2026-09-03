@@ -3,6 +3,7 @@ import { useCharacterReference } from '../../hooks/useCharacterReference';
 import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { usePowerCatalog } from '../../hooks/usePowerCatalog';
 import { useCampaignStore } from '../../store/campaignStore';
+import { CharacterAvatarEditor } from '../character/CharacterAvatar';
 import type {
   AncestryTrait,
   AttributeSelectionMethod,
@@ -267,6 +268,7 @@ const CharacterBuilderView: React.FC<{
 
   const [currentStep, setCurrentStep] = useState<BuilderStep>('attributes');
   const [name, setName] = useState(original.name);
+  const [avatarDataURL, setAvatarDataURL] = useState(original.avatarDataURL);
   const [level, setLevelState] = useState(Math.min(10, original.level));
   const [attributeMethod, setAttributeMethod] = useState<AttributeSelectionMethod>(originalBuild.attributeMethod);
   const [attributes, setAttributes] = useState<Record<DC20Attribute, number>>(Object.fromEntries(ATTRIBUTE_NAMES.map((attribute) => [attribute, original.attributes[attribute]?.score ?? DEFAULT_ATTRIBUTES[attribute]])) as Record<DC20Attribute, number>);
@@ -329,6 +331,7 @@ const CharacterBuilderView: React.FC<{
   const draft: Character = {
     ...original,
     name,
+    avatarDataURL,
     level,
     ancestry,
     class: className,
@@ -600,7 +603,7 @@ const CharacterBuilderView: React.FC<{
 
         <main className={`${panelClass} min-h-[620px]`}>
           {currentStep === 'attributes' && <section>
-            <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_160px]"><label className="text-sm font-bold text-slate-300">Player Character Name<input autoFocus value={name} onChange={(event) => setName(event.target.value)} className={`${fieldClass} mt-2 text-lg`} placeholder="Character name" /></label><label className="text-sm font-bold text-slate-300">Character Level<input type="number" min={1} max={10} value={level} onChange={(event) => setLevel(Math.min(10, Math.max(1, Number(event.target.value))))} className={`${fieldClass} mt-2`} /></label></div>
+            <div className="mb-6 grid items-start gap-5 lg:grid-cols-[180px_minmax(0,1fr)]"><div><p className="mb-2 text-center text-sm font-bold text-slate-300 lg:text-left">Character Avatar</p><CharacterAvatarEditor image={avatarDataURL} name={name} onChange={setAvatarDataURL} className="mx-auto w-40 lg:mx-0" /></div><div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_160px]"><label className="text-sm font-bold text-slate-300">Player Character Name<input autoFocus value={name} onChange={(event) => setName(event.target.value)} className={`${fieldClass} mt-2 text-lg`} placeholder="Character name" /></label><label className="text-sm font-bold text-slate-300">Character Level<input type="number" min={1} max={10} value={level} onChange={(event) => setLevel(Math.min(10, Math.max(1, Number(event.target.value))))} className={`${fieldClass} mt-2`} /></label></div></div>
             <div className="mb-6 grid gap-3 md:grid-cols-3">{(['Standard Array', 'Point Buy', 'Rolled'] as AttributeSelectionMethod[]).map((method) => <button type="button" key={method} onClick={() => changeAttributeMethod(method)} className={`rounded-xl border p-4 text-left ${attributeMethod === method ? 'border-violet-400 bg-violet-500/15 text-violet-200' : 'border-slate-700 bg-slate-950/50 text-slate-300'}`}><div className="font-black">{method}</div><div className="mt-1 text-xs text-slate-500">{method === 'Standard Array' ? '3, 1, 0, −2, then 2 additional points.' : method === 'Point Buy' ? 'Start at −2 and spend 12 points.' : 'Roll 1d6−3 four times, then add 2 points.'}</div></button>)}</div>
             {attributeMethod === 'Rolled' && <button type="button" onClick={rollAttributes} className="mb-6 rounded-xl bg-fuchsia-600 px-5 py-3 font-black text-white hover:bg-fuchsia-500">🎲 Roll The Dice! <span className="ml-2 font-normal">{rolledResults.length === 4 ? 'Roll again' : '1d6−3 × 4'}</span></button>}
             {usesAttributePool && attributePool.length === 4 && <div className="mb-6 rounded-2xl border border-violet-400/20 bg-violet-500/5 p-4"><h3 className="font-black text-violet-200">Assign each {attributeMethod === 'Rolled' ? 'roll' : 'array value'}</h3><p className="mt-1 text-sm text-slate-500">Each value can be assigned once. Pick the Attribute that receives it, then allocate the additional Attribute Points below.</p><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{attributePool.map((result, index) => <label key={`${result}-${index}`} className="rounded-xl border border-white/10 bg-slate-950/55 p-3 text-sm font-bold text-slate-300"><span className="mb-2 block text-2xl font-black text-fuchsia-200">{result >= 0 ? '+' : ''}{result}</span><select value={attributeAssignments[index] ?? ''} onChange={(event) => assignAttribute(index, event.target.value as DC20Attribute | '')} className={fieldClass}><option value="">Choose Attribute…</option>{ATTRIBUTE_NAMES.map((attribute) => <option key={attribute} value={attribute} disabled={attributeAssignments.some((entry, slot) => entry === attribute && slot !== index)}>{attribute}</option>)}</select></label>)}</div></div>}

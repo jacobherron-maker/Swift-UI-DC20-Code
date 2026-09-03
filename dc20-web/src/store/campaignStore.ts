@@ -35,7 +35,7 @@ import {
 import { generateUUID } from '../utils/gameUtils';
 import { DEFAULT_PALETTE_ID, themePalette } from '../data/themePalettes';
 
-const STORE_VERSION = 5;
+const STORE_VERSION = 6;
 
 export const defaultCampaignData: CampaignData = {
   title: 'DC20 Hub',
@@ -306,6 +306,11 @@ function normalizeEncounter(value: unknown): Encounter {
   };
 }
 
+function normalizeAvatarDataURL(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.length > 180_000) return undefined;
+  return /^data:image\/(?:jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(value) ? value : undefined;
+}
+
 function normalizeCharacter(value: unknown): Character {
   const item = value && typeof value === 'object' ? value as Record<string, unknown> : {};
   const rawAttributes = item.attributes && typeof item.attributes === 'object'
@@ -363,6 +368,7 @@ function normalizeCharacter(value: unknown): Character {
   return {
     id: typeof item.id === 'string' ? item.id : generateUUID(),
     name: typeof item.name === 'string' && item.name.trim() ? item.name : 'Unnamed Character',
+    avatarDataURL: normalizeAvatarDataURL(item.avatarDataURL),
     level,
     ancestry: typeof item.ancestry === 'string' ? item.ancestry : 'Human',
     class: characterClass,

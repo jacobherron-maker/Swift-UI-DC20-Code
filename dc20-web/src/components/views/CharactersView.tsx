@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useCampaignStore } from '../../store/campaignStore';
 import CharacterBuilderView from './CharacterBuilderView';
 import CharacterSheet from './CharacterSheet';
+import { CharacterAvatar } from '../character/CharacterAvatar';
 
 const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
   const { characters, deleteCharacter, selectCharacter, selectedCharacterId, updateCharacter } = useCampaignStore();
@@ -111,11 +112,14 @@ const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) =
                 navigate('sheet');
               }}
             >
-              <div className="mb-4">
-                <h3 className="text-2xl font-bold text-purple-400">{character.name}</h3>
-                <p className="text-slate-400 text-sm">
-                  Level {character.level} {character.class}
-                </p>
+              <div className="mb-4 flex items-center gap-4">
+                <CharacterAvatar image={character.avatarDataURL} name={character.name} className="w-20 shrink-0" />
+                <div className="min-w-0">
+                  <h3 className="break-words text-2xl font-bold text-purple-400">{character.name}</h3>
+                  <p className="text-slate-400 text-sm">
+                    Level {character.level} {character.class}
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-2 mb-4 text-sm text-slate-300">

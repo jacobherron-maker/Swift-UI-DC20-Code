@@ -8,6 +8,7 @@ DC20 Hub is a cross-platform React and TypeScript companion for building charact
 - 475 searchable reference documents, including conditions, class tables, and standalone subclasses
 - 160 spells and 30 maneuvers with complete metadata, descriptions, and enhancements
 - Six-step DC20 character builder with calculated summary and interactive character sheet
+- Uploadable square character avatars optimized for backups and Firestore synchronization
 - All 15 supported classes, including Psion and Summoner, plus Psyborn ancestry support
 - Correct skill, trade, language, mastery-cap, ancestry-trait, talent, path, equipment, and resource logic
 - 98-item equipment catalog with character inventory and equipped-state support
