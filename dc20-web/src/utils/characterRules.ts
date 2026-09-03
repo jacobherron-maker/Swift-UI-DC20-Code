@@ -6,6 +6,7 @@ import type {
   DC20Attribute,
   EquipmentCatalogItem,
   MasteryLevel,
+  Spell,
 } from '../types/models';
 
 export const ATTRIBUTE_NAMES: DC20Attribute[] = ['Might', 'Agility', 'Charisma', 'Intelligence'];
@@ -80,11 +81,37 @@ export function ancestryPointBudget(character: Pick<Character, 'level' | 'class'
 
 export function selectedAncestryTraits(character: Pick<Character, 'build' | 'ancestry'>, traits: AncestryTrait[]): AncestryTrait[] {
   const selected = new Set(character.build?.selectedAncestryTraitIDs ?? []);
-  const ancestries = new Set([character.ancestry, character.build?.ancestrySecondary].filter(Boolean));
+  const ancestries = new Set([character.ancestry, character.build?.ancestrySecondary].filter((ancestry): ancestry is string => Boolean(ancestry)));
   for (const trait of traits) {
-    if (trait.name === 'Small-Sized' && ancestries.has(trait.ancestry)) selected.add(trait.id);
+    if (isAutomaticAncestryTrait(trait, ancestries)) selected.add(trait.id);
   }
   return traits.filter((trait) => selected.has(trait.id));
+}
+
+export function isAutomaticAncestryTrait(trait: AncestryTrait, ancestries: ReadonlySet<string>): boolean {
+  if (!ancestries.has(trait.ancestry)) return false;
+  if (trait.name === 'Small-Sized') return ['Gnome', 'Halfling'].includes(trait.ancestry);
+  return trait.ancestry === 'Beastborn' && trait.name === 'Beastkind';
+}
+
+export function spellIsAvailableToClass(
+  className: string,
+  spell: Pick<Spell, 'school' | 'source' | 'tags'>,
+  fixedSpellSource?: string,
+  selectedSpellSource = '',
+): boolean {
+  const tags = (spell.tags ?? '').split(',').map((tag) => tag.trim().toLowerCase());
+  if (className === 'Summoner') {
+    return ['Astromancy', 'Conjuration', 'Transmutation'].includes(spell.school)
+      || tags.some((tag) => tag.includes('summon'));
+  }
+  if (className === 'Psion') {
+    return tags.some((tag) => ['psychic', 'gravity', 'illusion'].includes(tag))
+      || ['Divination', 'Enchantment', 'Nullification'].includes(spell.school);
+  }
+  if (className === 'Bard') return true;
+  const source = fixedSpellSource ?? selectedSpellSource;
+  return source ? (spell.source ?? '').split(', ').includes(source) : true;
 }
 
 export function ancestryExpertise(

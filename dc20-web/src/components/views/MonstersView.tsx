@@ -378,6 +378,7 @@ export default function MonstersView() {
   } = useCampaignStore();
   const { monsters: sourceMonsters, isLoading, error } = useSourceMonsters();
   const [search, setSearch] = useState('');
+  const [customMonstersExpanded, setCustomMonstersExpanded] = useState(true);
   const customMonsters = campaignData.customMonsters;
   const selected = sourceMonsters.find(({ id }) => id === selectedMonsterId)
     ?? customMonsters.find(({ id }) => id === selectedMonsterId)
@@ -433,14 +434,14 @@ export default function MonstersView() {
             </div>
           </section>
           <section>
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">Custom Monsters</h2>
-              <span className="text-xs text-slate-600">{filteredCustom.length}</span>
-            </div>
-            <div className="max-h-40 space-y-2 overflow-y-auto pr-1 lg:max-h-[32vh]">
+            <button type="button" onClick={() => setCustomMonstersExpanded((expanded) => !expanded)} aria-expanded={customMonstersExpanded} className="mb-2 flex min-h-11 w-full items-center justify-between rounded-lg px-2 text-left hover:bg-white/5">
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">Custom Monsters</span>
+              <span className="flex items-center gap-2 text-xs text-slate-600"><span>{filteredCustom.length}</span><span aria-hidden="true" className={`text-amber-300 transition-transform ${customMonstersExpanded ? 'rotate-90' : ''}`}>›</span></span>
+            </button>
+            {customMonstersExpanded && <div className="max-h-40 space-y-2 overflow-y-auto pr-1 lg:max-h-[32vh]">
               {filteredCustom.length === 0 && <button type="button" onClick={createMonster} className="w-full rounded-xl border border-dashed border-white/10 p-4 text-sm text-slate-500 hover:border-violet-400/30 hover:text-violet-300">Create your first custom monster</button>}
               {filteredCustom.map((monster) => <MonsterListButton key={monster.id} monster={monster} active={monster.id === selectedMonsterId} onClick={() => selectMonster(monster.id)} />)}
-            </div>
+            </div>}
           </section>
         </div>
       </aside>

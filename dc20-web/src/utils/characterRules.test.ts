@@ -10,6 +10,8 @@ import {
   defaultBuild,
   deriveCharacter,
   masteryCap,
+  selectedAncestryTraits,
+  spellIsAvailableToClass,
 } from './characterRules';
 
 const reference = referenceDocument as CharacterReferenceData;
@@ -82,6 +84,24 @@ describe('DC20 character calculations', () => {
     gnome.ancestry = 'Gnome';
     const gnomeDerived = deriveCharacter(gnome, barbarian, reference.ancestryTraits, []);
     expect(gnomeDerived.size).toBe('Small');
+  });
+
+  it('applies Beastkind, not the negative Small-Sized trait, to Beastborn', () => {
+    const beastborn = character();
+    beastborn.ancestry = 'Beastborn';
+    const selected = selectedAncestryTraits(beastborn, reference.ancestryTraits);
+    expect(selected.map(({ name }) => name)).toContain('Beastkind');
+    expect(selected.map(({ name }) => name)).not.toContain('Small-Sized');
+    expect(deriveCharacter(beastborn, barbarian, reference.ancestryTraits, []).size).toBe('Medium');
+  });
+
+  it('gives Summoners school-based and Summoning-tag spell access without a source', () => {
+    const spell = (school: string, tags = '', source = 'Arcane') => ({ school, tags, source });
+    expect(spellIsAvailableToClass('Summoner', spell('Astromancy'))).toBe(true);
+    expect(spellIsAvailableToClass('Summoner', spell('Conjuration'))).toBe(true);
+    expect(spellIsAvailableToClass('Summoner', spell('Transmutation'))).toBe(true);
+    expect(spellIsAvailableToClass('Summoner', spell('Elemental', 'Fire, Summoning', 'Primal'))).toBe(true);
+    expect(spellIsAvailableToClass('Summoner', spell('Elemental', 'Fire', 'Primal'))).toBe(false);
   });
 
   it('lets martial classes take Spellcaster Path Progression', () => {
