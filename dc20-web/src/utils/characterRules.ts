@@ -108,6 +108,15 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
     ? character.build?.sheetFeatureSelections?.['spellblade.boundDamage.current']
       ?? character.build?.classFeatureSelections?.['spellblade.boundDamage']?.[0]
     : undefined;
+  const clericDomains = new Set(character.class === 'Cleric'
+    ? character.build?.classFeatureSelections?.['cleric.domains'] ?? []
+    : []);
+  const clericDivineDamage = character.class === 'Cleric'
+    ? character.build?.classFeatureSelections?.['cleric.divineDamage']?.[0]
+    : undefined;
+  const inquisitorResistances = character.class === 'Cleric' && character.subclass === 'Inquisitor'
+    ? ['Charmed Condition', 'Intimidated Condition', 'Taunted Condition']
+    : [];
   return {
     physicalDefense: character.physicalDefense - (isRaging ? 5 : 0),
     speed: character.speed + (activeRune === 'Lightning Rune' ? 1 : 0),
@@ -117,6 +126,8 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
       ...(isRaging ? ['Elemental (Half)', 'Physical (Half)'] : []),
       ...(adaptiveDamage ? [`${adaptiveDamage} (1)`] : []),
       ...(spellWarderActive && spellWarderDamage ? [`${spellWarderDamage} (${spellWarderHalf ? 'Half' : '1'})`] : []),
+      ...(clericDomains.has('Divine Damage Expansion') && clericDivineDamage ? [`${clericDivineDamage} (1)`] : []),
+      ...inquisitorResistances,
     ],
   };
 }
@@ -131,10 +142,15 @@ export function rogueStaminaRegenAmount(maximumStamina: number): number {
   return Math.max(0, Math.ceil(maximumStamina / 2));
 }
 
-/** The Mortal Language selected for Cypher Speech is Fluent without spending Language Points. */
-export function grantedClassLanguageNames(character: Pick<Character, 'class' | 'build'>): string[] {
-  if (character.class !== 'Rogue') return [];
-  return (character.build?.classFeatureSelections?.['rogue.language'] ?? []).slice(0, 1);
+/** Languages granted directly by Class Features are Fluent without spending Language Points. */
+export function grantedClassLanguageNames(character: Pick<Character, 'class' | 'subclass' | 'build'>): string[] {
+  if (character.class === 'Rogue') {
+    return (character.build?.classFeatureSelections?.['rogue.language'] ?? []).slice(0, 1);
+  }
+  if (character.class === 'Warlock' && character.subclass === 'Eldritch') {
+    return ['Deep Speech'];
+  }
+  return [];
 }
 
 /** Cheap Shot improves at Expert Rogue; each Sinister Shot adds damage per Condition beyond the first. */
@@ -158,6 +174,14 @@ export function classChoiceSelectionLimit(
   group: ClassChoiceGroupReference,
   character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>,
 ): number {
+  if (group.id === 'cleric.domains' && character.class === 'Cleric') {
+    const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Order').length;
+    return 2 + expanded * 2 + Number(character.level >= 5);
+  }
+  if (group.id === 'warlock.boon' && character.class === 'Warlock') {
+    const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Boon').length;
+    return Math.min(group.options.length, 1 + expanded);
+  }
   if (group.id !== 'spellblade.disciplines' || character.class !== 'Spellblade') return group.limit;
   const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Disciplines').length;
   const paladinReserve = character.subclass === 'Paladin' ? 1 : 0;
@@ -165,16 +189,47 @@ export function classChoiceSelectionLimit(
 }
 
 /** Maneuvers granted by a class feature do not consume the class-table Maneuvers Known allowance. */
-export function grantedClassManeuverNames(character: Pick<Character, 'class' | 'subclass' | 'build'>): string[] {
-  if (character.class !== 'Barbarian' || character.subclass !== 'Spirit Guardian') return [];
-  return (character.build?.classFeatureSelections?.['barbarian.guardianManeuver'] ?? []).slice(0, 1);
+export function grantedClassManeuverNames(character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>): string[] {
+  const choices = character.build?.classFeatureSelections ?? {};
+  if (character.class === 'Barbarian' && character.subclass === 'Spirit Guardian') {
+    return (choices['barbarian.guardianManeuver'] ?? []).slice(0, 1);
+  }
+  if (character.class === 'Warlock') {
+    const boons = new Set(choices['warlock.boon'] ?? []);
+    const maneuverLimit = character.level >= 5 ? 3 : 2;
+    return Array.from(new Set([
+      ...(boons.has('Pact Weapon') ? (choices['warlock.pactWeaponManeuvers'] ?? []).slice(0, maneuverLimit) : []),
+      ...(boons.has('Pact Armor') ? (choices['warlock.pactArmorManeuvers'] ?? []).slice(0, maneuverLimit) : []),
+    ]));
+  }
+  if (character.class === 'Cleric') {
+    const domains = new Set(choices['cleric.domains'] ?? []);
+    return Array.from(new Set([
+      ...(domains.has('War') ? (choices['cleric.warManeuver'] ?? []).slice(0, 1) : []),
+      ...(domains.has('Peace') ? (choices['cleric.peaceManeuver'] ?? []).slice(0, 1) : []),
+    ]));
+  }
+  return [];
 }
 
-/** Spells explicitly learned from Summoner features are additional to the class-table Spells Known. */
-export function grantedClassSpellNames(character: Pick<Character, 'class' | 'subclass' | 'build'>): string[] {
-  if (character.class !== 'Summoner') return [];
+/** Spells explicitly learned from class features are additional to the class-table Spells Known. */
+export function grantedClassSpellNames(character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>): string[] {
   const choices = character.build?.classFeatureSelections ?? {};
   const talents = new Set(character.build?.selectedTalents ?? []);
+  if (character.class === 'Warlock') {
+    const boons = new Set(choices['warlock.boon'] ?? []);
+    return Array.from(new Set([
+      ...(boons.has('Pact Familiar') ? ['Call Familiar'] : []),
+      ...(character.level >= 3 && character.subclass === 'Eldritch' ? choices['warlock.psychicSpell'] ?? [] : []),
+      ...(character.level >= 5 && boons.has('Pact Spell') ? (choices['warlock.expertSpells'] ?? []).slice(0, 2) : []),
+      ...(character.level >= 3 && talents.has('Pact Bane') ? choices['warlock.pactBaneSpells'] ?? [] : []),
+    ]));
+  }
+  if (character.class === 'Cleric') {
+    const magicDomains = (choices['cleric.domains'] ?? []).filter((domain) => domain === 'Magic').length;
+    return Array.from(new Set((choices['cleric.magicDomainSpells'] ?? []).slice(0, magicDomains).filter(Boolean)));
+  }
+  if (character.class !== 'Summoner') return [];
   const groups = [
     'summoner.bondedSummon',
     ...(character.subclass === 'Chimera' ? ['summoner.chimeraSummons'] : []),
@@ -188,7 +243,9 @@ export function ancestryPointBudget(character: Pick<Character, 'level' | 'class'
   const laterIncrease = character.class === 'Psion' ? 7 : 8;
   const advancement = (character.level >= 4 ? 2 : 0) + (character.level >= laterIncrease ? 2 : 0);
   const talentPoints = (character.build?.selectedTalents ?? []).filter((name) => name === 'Ancestry Increase').length * 4;
-  return 5 + advancement + talentPoints;
+  const clericAncestralDomain = character.class === 'Cleric'
+    && (character.build?.classFeatureSelections?.['cleric.domains'] ?? []).includes('Ancestral') ? 2 : 0;
+  return 5 + advancement + talentPoints + clericAncestralDomain;
 }
 
 export function selectedAncestryTraits(character: Pick<Character, 'build' | 'ancestry'>, traits: AncestryTrait[]): AncestryTrait[] {
@@ -212,6 +269,8 @@ export function spellIsAvailableToClass(
   fixedSpellSource?: string,
   selectedSpellSource = '',
   selectedSpellSchools: string[] = [],
+  subclass = '',
+  featureSpellTags: string[] = [],
 ): boolean {
   const tags = (spell.tags ?? '').split(',').map((tag) => tag.trim().toLowerCase());
   if (className === 'Summoner') {
@@ -230,7 +289,11 @@ export function spellIsAvailableToClass(
     return selectedSpellSchools.includes(spell.school)
       || tags.some((tag) => ['weapon', 'ward'].includes(tag));
   }
-  if (className === 'Warlock') return selectedSpellSchools.includes(spell.school);
+  if (className === 'Warlock') {
+    return selectedSpellSchools.includes(spell.school)
+      || (subclass === 'Eldritch' && tags.includes('psychic'));
+  }
+  if (className === 'Cleric' && featureSpellTags.some((tag) => tags.includes(tag.toLowerCase()))) return true;
   const source = fixedSpellSource ?? selectedSpellSource;
   return source ? (spell.source ?? '').split(', ').includes(source) : true;
 }
@@ -282,6 +345,7 @@ function equipmentBonuses(character: Character, catalog: EquipmentCatalogItem[])
     ad: (armor[armorName]?.ad ?? 0) + shield.ad + focusAD,
     physicalDR: armor[armorName]?.pdr ?? 0,
     mysticalDR: focusMDR,
+    hasArmor: Boolean(armorName),
     speedPenalty: (armorName.includes('Heavy Armor') ? 1 : 0)
       + Number(names.has('Kite Shield')) + Number(names.has('Tower Shield')),
     isUnarmored: !armorName,
@@ -348,13 +412,23 @@ export function deriveCharacter(
     + (equipment.isUnarmored ? traitCount(chosenTraits, 'Thick-Skinned') + traitCount(chosenTraits, 'Hard Shell') : 0);
   const classPD = equipment.isUnarmored && character.class === 'Monk' ? 2 : 0;
   const classAD = equipment.isUnarmored && character.class === 'Barbarian' ? 2 : 0;
+  const warlockPactBoons = new Set(character.class === 'Warlock'
+    ? character.build?.classFeatureSelections?.['warlock.boon'] ?? []
+    : []);
+  const pactArmorActive = equipment.hasArmor && warlockPactBoons.has('Pact Armor');
+  const classFeatureHP = character.class === 'Warlock' && character.level >= 5 ? 2 : 0;
   const classSpeed = character.class === 'Barbarian' ? 1
     : character.class === 'Monk' ? (character.level >= 5 ? 2 : 1) : 0;
   const disciplines = new Set(spellbladeDisciplineNames(character));
+  const clericDomains = character.class === 'Cleric'
+    ? character.build?.classFeatureSelections?.['cleric.domains'] ?? [] : [];
+  const clericMagicDomains = clericDomains.filter((domain) => domain === 'Magic').length;
   const featureMana = character.class === 'Sorcerer' ? (character.level >= 5 ? 2 : 1)
-    : character.class === 'Spellblade' && disciplines.has('Magus') ? 1 : 0;
+    : character.class === 'Spellblade' && disciplines.has('Magus') ? 1
+      : clericMagicDomains;
   const skillFeaturePoints = character.class === 'Bard' ? (character.level >= 5 ? 4 : 2)
-    : character.class === 'Rogue' ? (character.level >= 5 ? 2 : 1) : 0;
+    : character.class === 'Rogue' ? (character.level >= 5 ? 2 : 1)
+      : character.class === 'Cleric' && clericDomains.includes('Knowledge') ? 2 : 0;
   const bardMagicalSecrets = character.class === 'Bard' ? (character.level >= 5 ? 6 : 2) : 0;
   const skillConversions = character.build?.skillPointsConvertedToTrades ?? 0;
   const tradeConversions = character.build?.tradePointsConvertedToLanguages ?? 0;
@@ -366,11 +440,11 @@ export function deriveCharacter(
     effectiveAttributes,
     primeModifier,
     combatMastery: mastery,
-    maxHP: Math.max(1, classHealth(character.class, character.level) + effectiveAttributes.Might + ancestryHP),
+    maxHP: Math.max(1, classHealth(character.class, character.level) + effectiveAttributes.Might + ancestryHP + classFeatureHP),
     maxStamina: totals.stamina + martialPaths,
     maxMana: totals.mana + spellcasterPaths * 3 + manaTraits + featureMana,
     physicalDefense: 8 + mastery + effectiveAttributes.Agility + effectiveAttributes.Intelligence + equipment.pd + ancestryPD + classPD,
-    arcaneDefense: 8 + mastery + effectiveAttributes.Might + effectiveAttributes.Charisma + equipment.ad + ancestryAD + classAD,
+    arcaneDefense: 8 + mastery + effectiveAttributes.Might + effectiveAttributes.Charisma + equipment.ad + ancestryAD + classAD + Number(pactArmorActive),
     speed: Math.max(0, 5 + traitCount(chosenTraits, 'Speed Increase') - traitCount(chosenTraits, 'Short-Legged')
       - traitCount(chosenTraits, 'Hard Shell') - equipment.speedPenalty + classSpeed),
     saveDC: 10 + primeModifier + mastery,
@@ -388,7 +462,7 @@ export function deriveCharacter(
       + selectedTalents.filter((name) => name === 'Martial Expansion').length * 2
       + Number(character.class === 'Spellblade' && disciplines.has('Warrior')),
     physicalDR: equipment.physicalDR,
-    mysticalDR: equipment.mysticalDR,
+    mysticalDR: equipment.mysticalDR + Number(pactArmorActive),
     size: chosenTraits.some((trait) => trait.name === 'Small-Sized') ? 'Small' : 'Medium',
   };
 }

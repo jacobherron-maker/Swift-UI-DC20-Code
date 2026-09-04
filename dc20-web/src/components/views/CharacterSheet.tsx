@@ -65,6 +65,42 @@ const ROGUE_CHEAP_SHOT_CONDITIONS = 'rogue.cheapShot.conditionCount';
 const ROGUE_TARGET_FLANKED = 'rogue.cheapShot.flanked';
 const ROGUE_TARGET_HIDDEN = 'rogue.cheapShot.hidden';
 const ROGUE_TAUNT_USED = 'rogue.tauntingShot.used';
+const WARLOCK_HASTY_ACTIVE = 'warlock.hastyBargain.active';
+const WARLOCK_DESPERATE_USED = 'warlock.desperateBargain.used';
+const WARLOCK_LIFE_TAP_USED = 'warlock.lifeTap.used';
+const WARLOCK_LIFE_TAP_ADV = 'warlock.lifeTap.advantage';
+const WARLOCK_LIFE_TAP_COST = 'warlock.lifeTap.effectCost';
+const WARLOCK_LIFE_TAP_HP = 'warlock.lifeTap.hpSpent';
+const WARLOCK_PACT_WEAPON_STOWED = 'warlock.pactWeapon.stowed';
+const WARLOCK_PACT_ARMOR_STOWED = 'warlock.pactArmor.stowed';
+const WARLOCK_PACT_SPELL_FAVOR_USED = 'warlock.pactSpell.patronFavor.used';
+const WARLOCK_PACT_SPELL_FAVOR_ACTIVE = 'warlock.pactSpell.patronFavor.active';
+const WARLOCK_ELDRITCH_BARGAIN_ACTIVE = 'warlock.eldritchBargain.active';
+const WARLOCK_ELDRITCH_BARGAIN_DEFENSE = 'warlock.eldritchBargain.defense';
+const WARLOCK_FORBIDDEN_USED = 'warlock.forbiddenKnowledge.used';
+const WARLOCK_FEY_STEP_USED = 'warlock.feyStep.used';
+const WARLOCK_BEGUILING_USED = 'warlock.beguilingBargain.used';
+const WARLOCK_PACT_BANE_ACTIVE = 'warlock.pactBane.active';
+const WARLOCK_SUBCONTRACT_ACTIVE = 'warlock.subcontract.active';
+const CLERIC_BLESSING_CHOICE = 'cleric.blessing.choice';
+const CLERIC_BLESSING_ONE = 'cleric.blessing.one';
+const CLERIC_BLESSING_TWO = 'cleric.blessing.two';
+const CLERIC_BLESSING_ONE_MP = 'cleric.blessing.oneMP';
+const CLERIC_BLESSING_TWO_MP = 'cleric.blessing.twoMP';
+const CLERIC_BLESSING_EXTRA_MP = 'cleric.blessing.extraMP';
+const CLERIC_BOUNTIFUL_USED = 'cleric.bountiful.used';
+const CLERIC_CHANNEL_CHOICE = 'cleric.channel.choice';
+const CLERIC_CHANNEL_USED = 'cleric.channel.used';
+const CLERIC_CHANNEL_POOL = 'cleric.channel.pool';
+const CLERIC_CHAOS_ACTIVE = 'cleric.chaos.active';
+const CLERIC_CHAOS_USED = 'cleric.chaos.used';
+const CLERIC_ORDER_USED = 'cleric.order.used';
+const CLERIC_DIVINATION_ACTIVE = 'cleric.divination.active';
+const CLERIC_LIGHT_ACTIVE = 'cleric.light.active';
+const CLERIC_TRICKERY_ACTIVE = 'cleric.trickery.active';
+const CLERIC_INTERROGATOR_USED = 'cleric.interrogator.used';
+const CLERIC_OMEN_COUNT = 'cleric.omen.count';
+const CLERIC_PRIEST_OVERFLOW = 'cleric.priest.overflow';
 
 interface RollOutcome { label: string; dice: number[]; chosen: number; modifier: number; total: number }
 
@@ -300,6 +336,264 @@ function RogueControls({ character, onChange, onRoll, stealthModifier }: {
   </section>;
 }
 
+function WarlockControls({ character, onChange }: {
+  character: Character;
+  onChange: (values: Partial<Character>) => void;
+}) {
+  const build = character.build;
+  if (!build) return null;
+  const states = build.sheetFeatureStates ?? {};
+  const selections = build.sheetFeatureSelections ?? {};
+  const counters = build.sheetFeatureCounters ?? {};
+  const talents = build.selectedTalents ?? [];
+  const boons = new Set(build.classFeatureSelections['warlock.boon'] ?? []);
+  const pactSpells = build.classFeatureSelections['warlock.pactSpells'] ?? [];
+  const forbiddenSpell = build.classFeatureSelections['warlock.forbiddenKnowledge']?.[0];
+  const feyAspect = build.classFeatureSelections['warlock.feyAspect']?.[0] ?? 'Charmed';
+  const manaSpendLimit = Math.max(1, character.combatMastery);
+  const effectCost = Math.min(manaSpendLimit, Math.max(1, Math.trunc(counters[WARLOCK_LIFE_TAP_COST] ?? 1)));
+  const hpSpent = Math.min(effectCost, Math.max(1, Math.trunc(counters[WARLOCK_LIFE_TAP_HP] ?? 1)));
+  const manaSpent = effectCost - hpSpent;
+  const updateBuild = (values: Partial<NonNullable<Character['build']>>) => onChange({ build: { ...build, ...values } });
+  const setState = (key: string, value: boolean) => updateBuild({ sheetFeatureStates: { ...states, [key]: value } });
+  const setSelection = (key: string, value: string) => updateBuild({ sheetFeatureSelections: { ...selections, [key]: value } });
+  const setCounter = (key: string, value: number) => updateBuild({ sheetFeatureCounters: { ...counters, [key]: value } });
+  const useHastyBargain = () => {
+    if (states[WARLOCK_HASTY_ACTIVE] || character.healthPoints < 1) return;
+    onChange({
+      healthPoints: character.healthPoints - 1,
+      build: { ...build, sheetFeatureStates: { ...states, [WARLOCK_HASTY_ACTIVE]: true } },
+    });
+  };
+  const useDesperateBargain = () => {
+    if (states[WARLOCK_DESPERATE_USED] || character.currentAP < 1) return;
+    onChange({
+      currentAP: character.currentAP - 1,
+      healthPoints: Math.min(character.maxHealthPoints, character.healthPoints + Math.max(0, character.primeModifier)),
+      build: {
+        ...build,
+        sheetFeatureStates: { ...states, [WARLOCK_DESPERATE_USED]: true },
+        sheetConditionLevels: { ...(build.sheetConditionLevels ?? {}), Exposed: 1 },
+      },
+    });
+  };
+  const useLifeTap = () => {
+    if (states[WARLOCK_LIFE_TAP_USED] || character.healthPoints < hpSpent || character.manaPoints < manaSpent) return;
+    onChange({
+      healthPoints: character.healthPoints - hpSpent,
+      manaPoints: character.manaPoints - manaSpent,
+      build: {
+        ...build,
+        sheetFeatureStates: {
+          ...states,
+          [WARLOCK_LIFE_TAP_USED]: true,
+          [WARLOCK_LIFE_TAP_ADV]: character.level >= 5,
+        },
+        sheetFeatureCounters: {
+          ...counters,
+          [WARLOCK_LIFE_TAP_COST]: effectCost,
+          [WARLOCK_LIFE_TAP_HP]: hpSpent,
+        },
+      },
+    });
+  };
+  const useFeyStep = () => {
+    if (states[WARLOCK_FEY_STEP_USED] || character.currentAP < 1) return;
+    onChange({
+      currentAP: character.currentAP - 1,
+      build: {
+        ...build,
+        sheetFeatureStates: { ...states, [WARLOCK_FEY_STEP_USED]: true },
+        sheetConditionLevels: { ...(build.sheetConditionLevels ?? {}), Invisible: 1 },
+      },
+    });
+  };
+  const useBeguilingBargain = () => {
+    if (states[WARLOCK_BEGUILING_USED] || character.healthPoints < 1) return;
+    onChange({
+      healthPoints: character.healthPoints - 1,
+      build: { ...build, sheetFeatureStates: { ...states, [WARLOCK_BEGUILING_USED]: true } },
+    });
+  };
+  const useEldritchBargain = () => {
+    if (states[WARLOCK_ELDRITCH_BARGAIN_ACTIVE] || character.healthPoints < 1) return;
+    onChange({
+      healthPoints: character.healthPoints - 1,
+      build: { ...build, sheetFeatureStates: { ...states, [WARLOCK_ELDRITCH_BARGAIN_ACTIVE]: true } },
+    });
+  };
+
+  return <section className="mb-5 rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-purple-950/55 via-fuchsia-950/30 to-slate-950/75 p-4 sm:p-5">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-300">Live Class Features</p><h2 className="text-xl font-black text-white">Warlock Controls</h2></div><div className="flex flex-wrap gap-1.5">{Array.from(boons).map((boon) => <span key={boon} className="rounded-full border border-fuchsia-400/25 bg-fuchsia-500/10 px-2.5 py-1 text-[10px] font-black text-fuchsia-100">{boon}</span>)}</div></div>
+    <div className="grid gap-3 lg:grid-cols-3">
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-fuchsia-200">Hasty Bargain</h3><p className="mt-2 text-xs leading-5 text-slate-400">Once per turn, spend 1 HP to gain ADV on your next Check. The advantage is consumed automatically when you roll.</p><button type="button" disabled={Boolean(states[WARLOCK_HASTY_ACTIVE]) || character.healthPoints < 1} onClick={useHastyBargain} className="mt-3 w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-35">{states[WARLOCK_HASTY_ACTIVE] ? 'ADV ready for next Check' : 'Gain ADV • 1 HP'}</button>{states[WARLOCK_HASTY_ACTIVE] && <button type="button" onClick={() => setState(WARLOCK_HASTY_ACTIVE, false)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Cancel unused bargain</button>}</div>
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-red-200">Desperate Bargain</h3><p className="mt-2 text-xs leading-5 text-slate-400">Once per Combat, spend 1 AP to regain {Math.max(0, character.primeModifier)} HP and become Exposed until the end of your next turn.</p><button type="button" disabled={Boolean(states[WARLOCK_DESPERATE_USED]) || character.currentAP < 1} onClick={useDesperateBargain} className="mt-3 w-full rounded-lg bg-red-800 px-3 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-35">{states[WARLOCK_DESPERATE_USED] ? 'Used This Combat' : `Regain ${Math.max(0, character.primeModifier)} HP • 1 AP`}</button>{states[WARLOCK_DESPERATE_USED] && <button type="button" onClick={() => setState(WARLOCK_DESPERATE_USED, false)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Reset for new Combat</button>}</div>
+      {character.level >= 2 && <div className="rounded-xl border border-violet-400/20 bg-violet-950/25 p-4"><h3 className="font-black text-violet-200">Life Tap</h3><p className="mt-2 text-xs leading-5 text-slate-400">Once per Long Rest or Initiative, pay HP in place of MP. Total HP + MP cannot exceed Mana Spend Limit {manaSpendLimit}.{character.level >= 5 ? ' Expert Warlock also grants ADV on the producing Check.' : ''}</p><div className="mt-3 grid grid-cols-2 gap-2"><label className="text-xs font-bold text-slate-400">Effect MP total<input type="number" min={1} max={manaSpendLimit} value={effectCost} onChange={(event) => setCounter(WARLOCK_LIFE_TAP_COST, Math.min(manaSpendLimit, Math.max(1, Number(event.target.value))))} className={`${fieldClass} mt-1`} /></label><label className="text-xs font-bold text-slate-400">Pay with HP<input type="number" min={1} max={effectCost} value={hpSpent} onChange={(event) => setCounter(WARLOCK_LIFE_TAP_HP, Math.min(effectCost, Math.max(1, Number(event.target.value))))} className={`${fieldClass} mt-1`} /></label></div><p className="mt-2 text-xs text-violet-100">Cost: {hpSpent} HP + {manaSpent} MP</p><button type="button" disabled={Boolean(states[WARLOCK_LIFE_TAP_USED]) || character.healthPoints < hpSpent || character.manaPoints < manaSpent} onClick={useLifeTap} className="mt-3 w-full rounded-lg bg-violet-700 px-3 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-35">{states[WARLOCK_LIFE_TAP_USED] ? 'Life Tap used' : 'Pay for MP Effect'}</button>{states[WARLOCK_LIFE_TAP_USED] && <button type="button" onClick={() => updateBuild({ sheetFeatureStates: { ...states, [WARLOCK_LIFE_TAP_USED]: false, [WARLOCK_LIFE_TAP_ADV]: false } })} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Reset on Initiative / Long Rest</button>}</div>}
+      {(boons.has('Pact Weapon') || boons.has('Pact Armor')) && <div className="rounded-xl border border-sky-400/20 bg-sky-950/20 p-4"><h3 className="font-black text-sky-200">Pact Armaments</h3>{boons.has('Pact Weapon') && <div className="mt-3"><p className="text-xs leading-5 text-slate-300"><strong>Pact Weapon:</strong> trained, a Spell Focus, and {character.level >= 5 ? '3' : '2'} granted Attack Maneuvers.{character.level >= 5 ? ' It gains a 1-point Weapon Property and MP converts to 2 SP of Enhancements.' : ''}</p><button type="button" onClick={() => setState(WARLOCK_PACT_WEAPON_STOWED, !states[WARLOCK_PACT_WEAPON_STOWED])} className="mt-2 w-full rounded-lg bg-sky-800 px-3 py-2 text-xs font-bold text-white">{states[WARLOCK_PACT_WEAPON_STOWED] ? 'Summon from Pocket Dimension' : 'Dismiss to Pocket Dimension'} • Minor Action</button></div>}{boons.has('Pact Armor') && <div className="mt-3"><p className="text-xs leading-5 text-slate-300"><strong>Pact Armor:</strong> trained, +1 AD and MDR while equipped, and {character.level >= 5 ? '3' : '2'} granted Defensive Maneuvers.{character.level >= 5 ? ' It gains a 1-point Armor Property and MP converts to 2 SP of Enhancements.' : ''}</p><button type="button" onClick={() => setState(WARLOCK_PACT_ARMOR_STOWED, !states[WARLOCK_PACT_ARMOR_STOWED])} className="mt-2 w-full rounded-lg bg-sky-800 px-3 py-2 text-xs font-bold text-white">{states[WARLOCK_PACT_ARMOR_STOWED] ? 'Summon from Pocket Dimension' : 'Dismiss to Pocket Dimension'} • Minor Action</button></div>}</div>}
+      {boons.has('Pact Spell') && <div className="rounded-xl border border-purple-400/20 bg-purple-950/20 p-4"><h3 className="font-black text-purple-200">Pact {pactSpells.length === 1 ? 'Spell' : 'Spells'}</h3><div className="mt-2 flex flex-wrap gap-1.5">{pactSpells.map((spell) => <span key={spell} className="rounded-full bg-purple-500/10 px-2 py-1 text-[10px] font-bold text-purple-100">{spell}</span>)}</div><p className="mt-3 text-xs leading-5 text-slate-300"><strong>Death’s Toll:</strong> +1 damage to Bloodied targets. <strong>Range Increase:</strong> range 1 gains +1 Space; otherwise +5 Spaces.</p><button type="button" disabled={Boolean(states[WARLOCK_PACT_SPELL_FAVOR_USED])} onClick={() => updateBuild({ sheetFeatureStates: { ...states, [WARLOCK_PACT_SPELL_FAVOR_USED]: true, [WARLOCK_PACT_SPELL_FAVOR_ACTIVE]: true } })} className="mt-3 w-full rounded-lg bg-purple-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[WARLOCK_PACT_SPELL_FAVOR_USED] ? (states[WARLOCK_PACT_SPELL_FAVOR_ACTIVE] ? 'ADV ready for a Pact Spell Check' : 'Patron’s Favor used this Round') : 'Patron’s Favor • ADV on Pact Spell Check'}</button>{states[WARLOCK_PACT_SPELL_FAVOR_USED] && <button type="button" onClick={() => updateBuild({ sheetFeatureStates: { ...states, [WARLOCK_PACT_SPELL_FAVOR_USED]: false, [WARLOCK_PACT_SPELL_FAVOR_ACTIVE]: false } })} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Reset at start of next Round</button>}</div>}
+      {boons.has('Pact Familiar') && <div className="rounded-xl border border-emerald-400/20 bg-emerald-950/20 p-4"><h3 className="font-black text-emerald-200">Pact Familiar</h3><p className="mt-2 text-xs leading-5 text-slate-300">Call Familiar is granted. Your Familiar gains {character.level >= 5 ? '6 total points of free Familiar or Beast Traits; none can be Negative' : '3 additional Familiar Traits for free'}.</p></div>}
+      {character.subclass === 'Eldritch' && <div className="rounded-xl border border-indigo-400/20 bg-indigo-950/20 p-4 lg:col-span-2"><h3 className="font-black text-indigo-200">Otherworldly Gift</h3><div className="mt-3 grid gap-3 sm:grid-cols-2"><div><label className="text-xs font-bold text-slate-400">Eldritch Bargain target<select value={selections[WARLOCK_ELDRITCH_BARGAIN_DEFENSE] || 'PD'} onChange={(event) => setSelection(WARLOCK_ELDRITCH_BARGAIN_DEFENSE, event.target.value)} className={`${fieldClass} mt-1`}><option>PD</option><option>AD</option></select></label><button type="button" disabled={Boolean(states[WARLOCK_ELDRITCH_BARGAIN_ACTIVE]) || character.healthPoints < 1} onClick={useEldritchBargain} className="mt-2 w-full rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[WARLOCK_ELDRITCH_BARGAIN_ACTIVE] ? `Attack targets ${selections[WARLOCK_ELDRITCH_BARGAIN_DEFENSE] || 'PD'}` : 'Use Eldritch Bargain • 1 HP'}</button>{states[WARLOCK_ELDRITCH_BARGAIN_ACTIVE] && <button type="button" onClick={() => setState(WARLOCK_ELDRITCH_BARGAIN_ACTIVE, false)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Attack resolved</button>}</div><div><p className="text-xs leading-5 text-slate-300"><strong>Forbidden Knowledge:</strong> {forbiddenSpell ?? 'choose after a Rest in the Builder'} • −2 MP (minimum 0) • original cost cannot exceed MSL {manaSpendLimit}.</p>{forbiddenSpell && <button type="button" disabled={Boolean(states[WARLOCK_FORBIDDEN_USED])} onClick={() => setState(WARLOCK_FORBIDDEN_USED, true)} className="mt-2 w-full rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[WARLOCK_FORBIDDEN_USED] ? 'Cast and forgotten' : 'Mark Spell cast'}</button>}{states[WARLOCK_FORBIDDEN_USED] && <button type="button" onClick={() => setState(WARLOCK_FORBIDDEN_USED, false)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Choose again after Rest</button>}</div></div><p className="mt-3 text-xs text-indigo-100"><strong>Alien Comprehension:</strong> Fluent in Deep Speech.</p></div>}
+      {character.subclass === 'Fey' && <div className="rounded-xl border border-pink-400/20 bg-pink-950/20 p-4 lg:col-span-2"><h3 className="font-black text-pink-200">Fey Aspect • {feyAspect}</h3><p className="mt-2 text-xs leading-5 text-slate-300">You have Resistance to {feyAspect}. Fey Step teleports up to 3 Spaces after an Attack hits and makes you Invisible until the start of your next turn.</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><div><button type="button" disabled={Boolean(states[WARLOCK_FEY_STEP_USED]) || character.currentAP < 1} onClick={useFeyStep} className="w-full rounded-lg bg-pink-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[WARLOCK_FEY_STEP_USED] ? 'Fey Step used' : 'Fey Step • Reaction + 1 AP'}</button>{states[WARLOCK_FEY_STEP_USED] && <button type="button" onClick={() => setState(WARLOCK_FEY_STEP_USED, false)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Reset on Initiative / Long Rest</button>}</div><div><button type="button" disabled={Boolean(states[WARLOCK_BEGUILING_USED]) || character.healthPoints < 1} onClick={useBeguilingBargain} className="w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[WARLOCK_BEGUILING_USED] ? `${feyAspect} bargain used this Round` : `Beguiling Bargain • 1 HP • Save DC ${10 + character.primeModifier + character.combatMastery}`}</button>{states[WARLOCK_BEGUILING_USED] && <button type="button" onClick={() => setState(WARLOCK_BEGUILING_USED, false)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Reset at start of next Round</button>}</div></div></div>}
+      {talents.includes('Pact Bane') && <div className="rounded-xl border border-red-400/20 bg-red-950/20 p-4"><h3 className="font-black text-red-200">Pact Bane</h3><p className="mt-2 text-xs leading-5 text-slate-300">Track a target subjected to Bane. Pact Weapon/Spell hits deal +1 True damage; Pact Armor can Stun 1 on a nearby miss; Pact Familiar Flanks within 1 Space.</p><button type="button" onClick={() => setState(WARLOCK_PACT_BANE_ACTIVE, !states[WARLOCK_PACT_BANE_ACTIVE])} className="mt-3 w-full rounded-lg bg-red-800 px-3 py-2 text-xs font-black text-white">{states[WARLOCK_PACT_BANE_ACTIVE] ? 'Clear Bane target' : 'Track Bane target'}</button></div>}
+      {talents.includes('Warlock Subcontract') && <div className="rounded-xl border border-amber-400/20 bg-amber-950/20 p-4"><h3 className="font-black text-amber-200">Warlock Subcontract</h3><p className="mt-2 text-xs leading-5 text-slate-300">Within 20 Spaces: Shared Telepathy, partner can use Hasty Bargain, and their willing HP can pay Warlock Features and Talents.</p><button type="button" onClick={() => setState(WARLOCK_SUBCONTRACT_ACTIVE, !states[WARLOCK_SUBCONTRACT_ACTIVE])} className="mt-3 w-full rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white">{states[WARLOCK_SUBCONTRACT_ACTIVE] ? 'Void Subcontract' : 'Create Subcontract • 1 minute'}</button>{states[WARLOCK_SUBCONTRACT_ACTIVE] && <button type="button" onClick={() => updateBuild({ temporaryHP: (build.temporaryHP ?? 0) + 1 })} className="mt-2 w-full rounded-lg bg-orange-800 px-3 py-2 text-xs font-bold text-white">Partner uses Hasty Bargain • +1 Temp HP</button>}</div>}
+    </div>
+  </section>;
+}
+
+function ClericControls({ character, onChange, onRoll }: {
+  character: Character;
+  onChange: (values: Partial<Character>) => void;
+  onRoll: (label: string, modifier: number, extraAdjustment?: number) => RollOutcome;
+}) {
+  const build = character.build;
+  if (!build) return null;
+  const states = build.sheetFeatureStates ?? {};
+  const selections = build.sheetFeatureSelections ?? {};
+  const counters = build.sheetFeatureCounters ?? {};
+  const talents = new Set(build.selectedTalents ?? []);
+  const domains = build.classFeatureSelections['cleric.domains'] ?? [];
+  const domainSet = new Set(domains);
+  const divineDamage = build.classFeatureSelections['cleric.divineDamage']?.[0] ?? 'Divine';
+  const magicTags = build.classFeatureSelections['cleric.magicDomainTags'] ?? [];
+  const magicSpells = build.classFeatureSelections['cleric.magicDomainSpells'] ?? [];
+  const saveDC = 10 + character.primeModifier + character.combatMastery;
+  const spellModifier = character.primeModifier + character.combatMastery;
+  const expert = character.level >= 5;
+  const bountiful = talents.has('Bountiful Blessings');
+  const divineCleanse = talents.has('Divine Cleanse');
+  const blessingOptions = ['Destruction', 'Guidance', 'Restoration', ...(character.subclass === 'Inquisitor' ? ['Chastise'] : [])];
+  const blessingChoice = blessingOptions.includes(selections[CLERIC_BLESSING_CHOICE]) ? selections[CLERIC_BLESSING_CHOICE] : blessingOptions[0];
+  const nextBlessingSlot: 1 | 2 = bountiful && selections[CLERIC_BLESSING_ONE] && !selections[CLERIC_BLESSING_TWO] ? 2 : 1;
+  const nextBlessingManaKey = nextBlessingSlot === 1 ? CLERIC_BLESSING_ONE_MP : CLERIC_BLESSING_TWO_MP;
+  const refundableBlessingMana = Math.max(0, counters[nextBlessingManaKey] ?? 0);
+  const storedExtraMP = Math.max(0, Math.trunc(counters[CLERIC_BLESSING_EXTRA_MP] ?? 0));
+  const blessingExtraMP = expert && ['Destruction', 'Restoration'].includes(blessingChoice)
+    ? Math.min(storedExtraMP, Math.max(0, character.manaPoints + refundableBlessingMana - 1)) : 0;
+  const blessingCost = 1 + blessingExtraMP;
+  const channelOptions = ['Divine Rebuke', 'Lesser Divine Intervention', ...(character.subclass === 'Priest' ? ['Hand of Salvation'] : [])];
+  const channelChoice = channelOptions.includes(selections[CLERIC_CHANNEL_CHOICE]) ? selections[CLERIC_CHANNEL_CHOICE] : channelOptions[0];
+  const omenCount = Math.max(0, Math.trunc(counters[CLERIC_OMEN_COUNT] ?? 0));
+  const overflowHealing = Math.max(0, Math.trunc(counters[CLERIC_PRIEST_OVERFLOW] ?? 0));
+  const updateBuild = (values: Partial<NonNullable<Character['build']>>) => onChange({ build: { ...build, ...values } });
+  const setState = (key: string, value: boolean) => updateBuild({ sheetFeatureStates: { ...states, [key]: value } });
+  const setSelection = (key: string, value: string) => updateBuild({ sheetFeatureSelections: { ...selections, [key]: value } });
+  const setCounter = (key: string, value: number) => updateBuild({ sheetFeatureCounters: { ...counters, [key]: value } });
+  const clearBlessing = (slot: 1 | 2, refund: boolean) => {
+    const selectionKey = slot === 1 ? CLERIC_BLESSING_ONE : CLERIC_BLESSING_TWO;
+    const manaKey = slot === 1 ? CLERIC_BLESSING_ONE_MP : CLERIC_BLESSING_TWO_MP;
+    const refundAmount = refund ? Math.max(0, counters[manaKey] ?? 0) : 0;
+    onChange({
+      manaPoints: Math.min(character.maxManaPoints, character.manaPoints + refundAmount),
+      build: {
+        ...build,
+        sheetFeatureSelections: { ...selections, [selectionKey]: '' },
+        sheetFeatureCounters: { ...counters, [manaKey]: 0 },
+      },
+    });
+  };
+  const petitionBlessing = (free = false) => {
+    const slot = nextBlessingSlot;
+    const selectionKey = slot === 1 ? CLERIC_BLESSING_ONE : CLERIC_BLESSING_TWO;
+    const manaKey = slot === 1 ? CLERIC_BLESSING_ONE_MP : CLERIC_BLESSING_TWO_MP;
+    const replacedMana = Math.max(0, counters[manaKey] ?? 0);
+    if ((!free && character.currentAP < 1) || (!free && character.manaPoints + refundableBlessingMana < blessingCost)) return;
+    onChange({
+      currentAP: free ? character.currentAP : character.currentAP - 1,
+      manaPoints: free
+        ? Math.min(character.maxManaPoints, character.manaPoints + replacedMana)
+        : Math.min(character.maxManaPoints, character.manaPoints - blessingCost + replacedMana),
+      build: {
+        ...build,
+        sheetFeatureStates: { ...states, ...(free ? { [CLERIC_BOUNTIFUL_USED]: true } : {}) },
+        sheetFeatureSelections: { ...selections, [selectionKey]: blessingChoice },
+        sheetFeatureCounters: { ...counters, [manaKey]: free ? 0 : blessingCost },
+      },
+    });
+  };
+  const useChannelDivinity = () => {
+    if (states[CLERIC_CHANNEL_USED] || character.currentAP < 2) return;
+    let pool = 0;
+    let manaPoints = character.manaPoints;
+    if (channelChoice === 'Divine Rebuke') {
+      onRoll('Divine Rebuke Spell Attack', spellModifier);
+    } else if (channelChoice === 'Lesser Divine Intervention') {
+      const outcome = onRoll('Lesser Divine Intervention Spell Check', spellModifier);
+      pool = 3 + Number(expert) * 2 + Number(outcome.total >= 20) * 2;
+      if (outcome.total >= 15) manaPoints = Math.min(character.maxManaPoints, manaPoints + 1);
+    }
+    onChange({
+      currentAP: character.currentAP - 2,
+      manaPoints,
+      build: {
+        ...build,
+        sheetFeatureStates: {
+          ...states,
+          [CLERIC_CHANNEL_USED]: true,
+          ...((channelChoice !== 'Hand of Salvation' && states[CLERIC_CHAOS_ACTIVE]) ? { [CLERIC_CHAOS_ACTIVE]: false } : {}),
+        },
+        sheetFeatureCounters: { ...counters, [CLERIC_CHANNEL_POOL]: pool },
+      },
+    });
+  };
+  const commune = () => {
+    if (omenCount > 0) onRoll(`Divine Omen • DC ${15 + (omenCount - 1) * 5}`, spellModifier);
+    updateBuild({
+      sheetFeatureStates: omenCount > 0 && states[CLERIC_CHAOS_ACTIVE]
+        ? { ...states, [CLERIC_CHAOS_ACTIVE]: false } : states,
+      sheetFeatureCounters: { ...counters, [CLERIC_OMEN_COUNT]: omenCount + 1 },
+    });
+  };
+  const useSavingGrace = () => {
+    if (character.currentAP < 1) return;
+    onRoll('Saving Grace Spell Check', spellModifier);
+    onChange({
+      currentAP: character.currentAP - 1,
+      build: {
+        ...build,
+        sheetFeatureStates: states[CLERIC_CHAOS_ACTIVE]
+          ? { ...states, [CLERIC_CHAOS_ACTIVE]: false } : states,
+      },
+    });
+  };
+  const blessingSummary = (name: string, mana: number) => {
+    const extra = Math.max(0, mana - 1);
+    if (name === 'Destruction') return `${3 + (expert ? extra * 2 : 0)} ${divineDamage} damage when the Spell Check equals or exceeds AD.`;
+    if (name === 'Restoration') return `Restore ${3 + (expert ? extra * 2 : 0)} HP.`;
+    if (name === 'Guidance') return 'Grant a d8 Help Die for one Check within 1 minute; that Check gains ADV.';
+    return 'Brand the target for 1 minute: ADV on Insight and Intimidation against it, and once per Round add +1 Divine damage on a Hit.';
+  };
+  const domainNotes: Record<string, string> = {
+    Knowledge: '+2 Skill Points and +1 Knowledge Trade Mastery Limit (does not stack with another Mastery Limit Feature).',
+    Magic: `${magicTags.map((tag, index) => `${tag}: ${magicSpells[index] || 'spell not selected'}`).join(' • ') || 'Configure each Spell Tag and granted Spell in the Builder.'}`,
+    'Divine Damage Expansion': `Spell damage can become ${divineDamage} damage; Resistance (1) to ${divineDamage} is included above.`,
+    Death: 'Enemy creatures within 10 Spaces take +1 Attack damage while Well-Bloodied.',
+    Grave: 'Allied creatures within 10 Spaces take 1 less Attack damage while Well-Bloodied.',
+    Dark: '10-Space Darkvision (or +5 Spaces) and the special Hide option in Dim Light.',
+    War: `Weapon training; granted Attack Maneuver: ${build.classFeatureSelections['cleric.warManeuver']?.[0] ?? 'choose in Builder'}.`,
+    Peace: `Heavy Armor and Heavy Shield training; granted Defense Maneuver: ${build.classFeatureSelections['cleric.peaceManeuver']?.[0] ?? 'choose in Builder'}.`,
+    Ancestral: '+2 Ancestry Points from any Ancestry; already included in the Builder budget.',
+  };
+
+  return <section className="mb-5 rounded-2xl border border-amber-300/25 bg-gradient-to-br from-amber-950/35 via-violet-950/35 to-slate-950/75 p-4 sm:p-5">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">Live Class Features</p><h2 className="text-xl font-black text-white">Cleric Controls</h2></div><div className="flex flex-wrap gap-1.5"><span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-2.5 py-1 text-[10px] font-black text-amber-100">{divineDamage} Divine Damage</span>{domains.map((domain, index) => <span key={`${domain}-${index}`} className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-black text-violet-100">{domain}</span>)}</div></div>
+    <div className="grid gap-3 lg:grid-cols-3">
+      <div className="rounded-xl border border-amber-300/20 bg-amber-950/20 p-4 lg:col-span-2"><h3 className="font-black text-amber-200">Divine Blessing</h3><p className="mt-2 text-xs leading-5 text-slate-400">Petition for a blessing, then apply it to one target of a Spell within 1 minute. An unused blessing returns the MP spent when it ends.</p><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_110px_1fr]"><select value={blessingChoice} onChange={(event) => setSelection(CLERIC_BLESSING_CHOICE, event.target.value)} className={fieldClass}>{blessingOptions.map((option) => <option key={option}>{option}</option>)}</select><label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Extra MP<input type="number" min={0} max={Math.max(0, character.manaPoints + refundableBlessingMana - 1)} disabled={!expert || !['Destruction', 'Restoration'].includes(blessingChoice)} value={blessingExtraMP} onChange={(event) => setCounter(CLERIC_BLESSING_EXTRA_MP, Math.max(0, Number(event.target.value)))} className={`${fieldClass} mt-1 disabled:opacity-35`} /></label><button type="button" disabled={character.currentAP < 1 || character.manaPoints + refundableBlessingMana < blessingCost} onClick={() => petitionBlessing(false)} className="rounded-lg bg-amber-700 px-3 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-35">Petition • 1 AP + {blessingCost} MP</button></div><p className="mt-3 rounded-lg bg-amber-500/10 p-2 text-xs leading-5 text-amber-100">{blessingSummary(blessingChoice, blessingCost)}</p>{bountiful && <button type="button" disabled={Boolean(states[CLERIC_BOUNTIFUL_USED])} onClick={() => petitionBlessing(true)} className="mt-3 w-full rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[CLERIC_BOUNTIFUL_USED] ? 'Free Combat blessing gained' : 'Bountiful Blessings • gain free blessing when Combat starts'}</button>}<div className="mt-3 grid gap-2 sm:grid-cols-2">{([1, 2] as const).filter((slot) => slot === 1 || bountiful).map((slot) => { const name = selections[slot === 1 ? CLERIC_BLESSING_ONE : CLERIC_BLESSING_TWO]; const mana = counters[slot === 1 ? CLERIC_BLESSING_ONE_MP : CLERIC_BLESSING_TWO_MP] ?? 0; return <div key={slot} className="rounded-lg border border-white/10 bg-slate-950/55 p-3"><p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Blessing slot {slot}</p>{name ? <><p className="mt-1 font-black text-amber-100">{name}</p><p className="mt-1 text-xs leading-5 text-slate-400">{blessingSummary(name, mana)}</p><div className="mt-2 flex gap-2"><button type="button" onClick={() => clearBlessing(slot, false)} className="flex-1 rounded bg-emerald-800 px-2 py-1.5 text-xs font-bold text-white">Apply</button><button type="button" onClick={() => clearBlessing(slot, true)} className="flex-1 rounded bg-slate-800 px-2 py-1.5 text-xs font-bold text-slate-300">End unused{mana > 0 ? ` • +${mana} MP` : ''}</button></div></> : <p className="mt-2 text-xs text-slate-600">Empty</p>}</div>; })}</div>{states[CLERIC_BOUNTIFUL_USED] && <button type="button" onClick={() => setState(CLERIC_BOUNTIFUL_USED, false)} className="mt-2 text-xs font-bold text-violet-300">Reset Bountiful Blessings for new Combat</button>}</div>
+      {character.level >= 2 && <div className="rounded-xl border border-violet-400/20 bg-violet-950/25 p-4"><h3 className="font-black text-violet-200">Channel Divinity</h3><select value={channelChoice} onChange={(event) => setSelection(CLERIC_CHANNEL_CHOICE, event.target.value)} className={`${fieldClass} mt-3`}>{channelOptions.map((option) => <option key={option}>{option}</option>)}</select><p className="mt-2 text-xs leading-5 text-slate-400">{channelChoice === 'Divine Rebuke' ? `Spell Attacks vs AD; Hit: ${expert ? 2 : 1} ${divineDamage} damage. Failed repeated Mental Save: Intimidated${character.subclass === 'Inquisitor' ? ' until the duration ends, even after taking damage' : ' until taking damage'}.` : channelChoice === 'Lesser Divine Intervention' ? `DC 15 Spell Check; pool starts at ${expert ? 5 : 3} HP, +2 on Success (5), and regain 1 MP on a Success.` : 'Reaction when an ally within 5 Spaces would be Hit: pull them within 1 Space; the Attack misses and they are immune to damage during the movement.'}</p><button type="button" disabled={Boolean(states[CLERIC_CHANNEL_USED]) || character.currentAP < 2} onClick={useChannelDivinity} className="mt-3 w-full rounded-lg bg-violet-700 px-3 py-2 text-sm font-black text-white disabled:opacity-35">{states[CLERIC_CHANNEL_USED] ? 'Channel Divinity used' : 'Channel • 2 AP'}</button>{(counters[CLERIC_CHANNEL_POOL] ?? 0) > 0 && <div className="mt-3 rounded-lg bg-emerald-500/10 p-2 text-xs text-emerald-100"><strong>Healing pool:</strong> {counters[CLERIC_CHANNEL_POOL]} HP{divineCleanse ? ' • each beneficiary can cure one listed affliction if the Check beat its DC' : ''}</div>}{states[CLERIC_CHANNEL_USED] && <button type="button" onClick={() => updateBuild({ sheetFeatureStates: { ...states, [CLERIC_CHANNEL_USED]: false }, sheetFeatureCounters: { ...counters, [CLERIC_CHANNEL_POOL]: 0 } })} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Reset on Initiative / Long Rest</button>}</div>}
+      {domainSet.has('Order') && <div className="rounded-xl border border-sky-400/20 bg-sky-950/20 p-4"><h3 className="font-black text-sky-200">Order Domain</h3><p className="mt-2 text-xs leading-5 text-slate-400">Reaction within 10 Spaces: remove every instance of ADV and DisADV from a Check.</p><button type="button" disabled={Boolean(states[CLERIC_ORDER_USED]) || character.currentAP < 1} onClick={() => onChange({ currentAP: character.currentAP - 1, build: { ...build, sheetFeatureStates: { ...states, [CLERIC_ORDER_USED]: true } } })} className="mt-3 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[CLERIC_ORDER_USED] ? 'Used this turn' : 'Use Reaction • 1 AP'}</button>{states[CLERIC_ORDER_USED] && <button type="button" onClick={() => setState(CLERIC_ORDER_USED, false)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Reset next turn</button>}</div>}
+      {domainSet.has('Chaos') && <div className="rounded-xl border border-fuchsia-400/20 bg-fuchsia-950/20 p-4"><h3 className="font-black text-fuchsia-200">Chaos Domain</h3><p className="mt-2 text-xs leading-5 text-slate-400">Gain ADV on the next Spell Attack or Spell Check and roll on the Wild Magic Table. The sheet consumes the ADV on that roll.</p><button type="button" disabled={Boolean(states[CLERIC_CHAOS_USED])} onClick={() => updateBuild({ sheetFeatureStates: { ...states, [CLERIC_CHAOS_USED]: true, [CLERIC_CHAOS_ACTIVE]: true } })} className="mt-3 w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[CLERIC_CHAOS_ACTIVE] ? 'ADV ready • roll Wild Magic' : states[CLERIC_CHAOS_USED] ? 'Used' : 'Invoke Chaos'}</button>{states[CLERIC_CHAOS_USED] && <button type="button" onClick={() => updateBuild({ sheetFeatureStates: { ...states, [CLERIC_CHAOS_USED]: false, [CLERIC_CHAOS_ACTIVE]: false } })} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Reset on Initiative / Long Rest</button>}</div>}
+      {domainSet.has('Life') && <div className="rounded-xl border border-emerald-400/20 bg-emerald-950/20 p-4"><h3 className="font-black text-emerald-200">Life Domain</h3><p className="mt-2 text-xs leading-5 text-slate-400">After an MP Effect restores HP, restore 1 HP to one creature within 1 Space.</p><button type="button" disabled={character.healthPoints >= character.maxHealthPoints} onClick={() => onChange({ healthPoints: Math.min(character.maxHealthPoints, character.healthPoints + 1) })} className="mt-3 w-full rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Restore 1 HP to self</button></div>}
+      {domainSet.has('Light') && <div className="rounded-xl border border-yellow-300/20 bg-yellow-950/20 p-4"><h3 className="font-black text-yellow-200">Light Domain</h3><p className="mt-2 text-xs leading-5 text-slate-400">After an MP Effect targets a creature, one target chooses a Might or Charisma Save against DC {saveDC}. Failure: 1-Space Bright Light aura and Hindered on its next Attack.</p><button type="button" onClick={() => setState(CLERIC_LIGHT_ACTIVE, !states[CLERIC_LIGHT_ACTIVE])} className="mt-3 w-full rounded-lg bg-yellow-700 px-3 py-2 text-xs font-black text-white">{states[CLERIC_LIGHT_ACTIVE] ? 'Clear marked target' : 'Mark failed target'}</button></div>}
+      {domainSet.has('Divination') && <div className="rounded-xl border border-indigo-400/20 bg-indigo-950/20 p-4"><h3 className="font-black text-indigo-200">Divination Domain</h3><p className="mt-2 text-xs leading-5 text-slate-400">You can’t be Flanked. After spending MP, you see Invisible creatures and objects until your next turn.</p><button type="button" onClick={() => setState(CLERIC_DIVINATION_ACTIVE, !states[CLERIC_DIVINATION_ACTIVE])} className="mt-3 w-full rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white">{states[CLERIC_DIVINATION_ACTIVE] ? 'Start next turn • end sight' : 'Mark MP spent • reveal Invisible'}</button></div>}
+      {domainSet.has('Trickery') && <div className="rounded-xl border border-purple-400/20 bg-purple-950/20 p-4"><h3 className="font-black text-purple-200">Trickery Domain</h3><p className="mt-2 text-xs leading-5 text-slate-400">After an MP Effect targets a creature, its duplicate gives DisADV to the next Attack against it.</p><button type="button" onClick={() => setState(CLERIC_TRICKERY_ACTIVE, !states[CLERIC_TRICKERY_ACTIVE])} className="mt-3 w-full rounded-lg bg-purple-700 px-3 py-2 text-xs font-black text-white">{states[CLERIC_TRICKERY_ACTIVE] ? 'Attack resolved • remove duplicate' : 'Create duplicate'}</button></div>}
+      {Object.entries(domainNotes).filter(([domain]) => domainSet.has(domain)).map(([domain, note]) => <div key={domain} className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-amber-100">{domain} Domain</h3><p className="mt-2 text-xs leading-5 text-slate-400">{note}</p></div>)}
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-amber-100">Divine Omen</h3><p className="mt-2 text-xs leading-5 text-slate-400">Spend 10 minutes to ask one yes-or-no question. The first communion after a Long Rest needs no Check; each additional one raises the DC by 5.</p><button type="button" onClick={commune} className="mt-3 w-full rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white">{omenCount === 0 ? 'Commune • no Check' : `Commune • Spell Check DC ${15 + (omenCount - 1) * 5}`}</button>{omenCount > 0 && <button type="button" onClick={() => setCounter(CLERIC_OMEN_COUNT, 0)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Complete Long Rest • reset</button>}</div>
+      {character.subclass === 'Inquisitor' && <div className="rounded-xl border border-red-400/20 bg-red-950/20 p-4"><h3 className="font-black text-red-200">Vanquish Heresy</h3><p className="mt-2 text-xs leading-5 text-slate-300">Iron Resolve resistances are included above. Rebuke Heretics prevents damage from ending your Divine Rebuke’s Intimidated Condition. Chastise is available in Divine Blessing.</p><button type="button" disabled={Boolean(states[CLERIC_INTERROGATOR_USED])} onClick={() => setState(CLERIC_INTERROGATOR_USED, true)} className="mt-3 w-full rounded-lg bg-red-800 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[CLERIC_INTERROGATOR_USED] ? 'Divine Interrogator used' : `Divine Interrogator • Charisma Save DC ${saveDC}`}</button>{states[CLERIC_INTERROGATOR_USED] && <button type="button" onClick={() => setState(CLERIC_INTERROGATOR_USED, false)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Reset after Long Rest</button>}</div>}
+      {character.subclass === 'Priest' && <div className="rounded-xl border border-emerald-400/20 bg-emerald-950/20 p-4 lg:col-span-2"><h3 className="font-black text-emerald-200">Sanctification</h3><p className="mt-2 text-xs leading-5 text-slate-300"><strong>Divine Barrier:</strong> MP healing beyond maximum becomes Temp HP for 1 minute. <strong>Spare the Dying:</strong> MP healing on Death’s Door restores +{character.primeModifier} HP. Hand of Salvation is available under Channel Divinity.</p><div className="mt-3 grid gap-2 sm:grid-cols-[130px_1fr]"><input type="number" min={0} value={overflowHealing} onChange={(event) => setCounter(CLERIC_PRIEST_OVERFLOW, Math.max(0, Number(event.target.value)))} className={fieldClass} /><button type="button" disabled={overflowHealing < 1} onClick={() => updateBuild({ temporaryHP: (build.temporaryHP ?? 0) + overflowHealing, sheetFeatureCounters: { ...counters, [CLERIC_PRIEST_OVERFLOW]: 0 } })} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Convert overflow healing to Temp HP</button></div><p className="mt-3 text-xs text-emerald-100"><strong>All that Ails:</strong> ADV on Checks to identify a Disease, Poison, or Curse and determine its effects.</p></div>}
+      {divineCleanse && <div className="rounded-xl border border-cyan-400/20 bg-cyan-950/20 p-4 lg:col-span-2"><h3 className="font-black text-cyan-200">Divine Cleanse</h3><p className="mt-2 text-xs leading-5 text-slate-300"><strong>Saving Grace:</strong> when a visible creature within 10 Spaces fails a Save, spend 1 AP as a Reaction and beat the effect’s Save DC or opposing Check. <strong>Cleansing Intervention:</strong> a Lesser Divine Intervention beneficiary can cure one Curse, Disease, Poison, Blinded, or Deafened effect if the Check beat its DC.</p><button type="button" disabled={character.currentAP < 1} onClick={useSavingGrace} className="mt-3 w-full rounded-lg bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Saving Grace Spell Check • 1 AP</button></div>}
+    </div>
+  </section>;
+}
+
 const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit, onCharacterChange }) => {
   const [selectedTab, setSelectedTab] = useState<SheetTab>('overview');
   const [lastRoll, setLastRoll] = useState<RollOutcome | null>(null);
@@ -322,6 +616,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const isRogue = character.class === 'Rogue';
   const isSummoner = character.class === 'Summoner';
   const isSpellblade = character.class === 'Spellblade';
+  const isWarlock = character.class === 'Warlock';
+  const isCleric = character.class === 'Cleric';
   const isRaging = isBarbarian && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
   const hasUnfathomableStrength = (build?.selectedTalents ?? []).includes('Unfathomable Strength');
   const battlecryShout = featureSelections[BARBARIAN_BATTLECRY_SELECTION] || 'Fortitude Shout';
@@ -364,12 +660,36 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   };
 
   const roll = (label: string, modifier: number, extraAdjustment = 0): RollOutcome => {
-    const featureAdjustment = label === 'Might Save' ? (sheetEffects.saveAdvantage.Might ?? 0) : 0;
+    const pactSpellName = label.endsWith(' Spell Check') ? label.slice(0, -' Spell Check'.length) : '';
+    const pactSpells = build?.classFeatureSelections['warlock.pactSpells'] ?? [];
+    const patronFavorApplies = Boolean(isWarlock && featureStates[WARLOCK_PACT_SPELL_FAVOR_ACTIVE] && pactSpells.includes(pactSpellName));
+    const warlockAdvantage = isWarlock
+      ? Number(Boolean(featureStates[WARLOCK_HASTY_ACTIVE]))
+        + Number(Boolean(featureStates[WARLOCK_LIFE_TAP_ADV]))
+        + Number(patronFavorApplies)
+      : 0;
+    const clericChaosApplies = Boolean(isCleric && featureStates[CLERIC_CHAOS_ACTIVE]
+      && (label.endsWith(' Spell Check') || label.endsWith(' Spell Attack')));
+    const featureAdjustment = (label === 'Might Save' ? (sheetEffects.saveAdvantage.Might ?? 0) : 0)
+      + warlockAdvantage + Number(clericChaosApplies);
     const totalAdjustment = Math.max(-5, Math.min(5, rollAdjustment + featureAdjustment + extraAdjustment));
     const dice = Array.from({ length: 1 + Math.abs(totalAdjustment) }, () => Math.floor(Math.random() * 20) + 1);
     const chosen = totalAdjustment > 0 ? Math.max(...dice) : totalAdjustment < 0 ? Math.min(...dice) : dice[0];
     const result = { label, dice, chosen, modifier, total: chosen + modifier };
     setLastRoll(result);
+    if (warlockAdvantage) {
+      updateBuild({
+        sheetFeatureStates: {
+          ...featureStates,
+          [WARLOCK_HASTY_ACTIVE]: false,
+          [WARLOCK_LIFE_TAP_ADV]: false,
+          ...(patronFavorApplies ? { [WARLOCK_PACT_SPELL_FAVOR_ACTIVE]: false } : {}),
+        },
+      });
+    }
+    if (clericChaosApplies) {
+      updateBuild({ sheetFeatureStates: { ...featureStates, [CLERIC_CHAOS_ACTIVE]: false } });
+    }
     return result;
   };
 
@@ -492,6 +812,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         {isSummoner && <SummonerControls character={character} onChange={update} />}
         {isSpellblade && <SpellbladeControls character={character} onChange={update} onRoll={roll} />}
         {isRogue && <RogueControls character={character} onChange={update} onRoll={roll} stealthModifier={skillModifier('Stealth', character.skillMasteries.Stealth ?? 'Untrained')} />}
+        {isWarlock && <WarlockControls character={character} onChange={update} />}
+        {isCleric && <ClericControls character={character} onChange={update} onRoll={roll} />}
 
         <div className="mb-5 grid gap-4 xl:grid-cols-[1fr_330px]"><nav className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/60 p-2 sm:grid-cols-3 lg:grid-cols-6">{tabs.map((tab) => <button type="button" key={tab.id} onClick={() => setSelectedTab(tab.id)} className={`rounded-xl px-3 py-3 text-sm font-bold ${selectedTab === tab.id ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}>{tab.label}</button>)}</nav><div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/60 p-3"><button type="button" onClick={() => updateBuild({ rollAdjustment: Math.max(-5, rollAdjustment - 1) })} className="h-9 w-9 rounded-lg bg-slate-800 text-lg">−</button><div className="text-center"><div className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Roll Mode</div><div className="font-black text-violet-200">{rollAdjustment > 0 ? `${rollAdjustment}× Advantage` : rollAdjustment < 0 ? `${Math.abs(rollAdjustment)}× Disadvantage` : 'Normal'}</div></div><button type="button" onClick={() => updateBuild({ rollAdjustment: Math.min(5, rollAdjustment + 1) })} className="h-9 w-9 rounded-lg bg-violet-600 text-lg">+</button></div></div>
 
@@ -502,7 +824,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
 
           {selectedTab === 'checks' && <div className="space-y-5"><section><h2 className="mb-3 font-black text-violet-200">Attribute Saves</h2><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{ATTRIBUTE_NAMES.map((attribute) => { const modifier = character.attributes[attribute].modifier + character.combatMastery; return <button type="button" key={attribute} onClick={() => roll(`${attribute} Save`, modifier)} className="rounded-xl border border-white/10 bg-slate-950/45 p-4 text-left hover:border-violet-400/40"><div className="text-xs text-slate-500">{attribute} Save</div><div className="text-2xl font-black text-violet-200">+{modifier}</div></button>; })}</div></section><section><button type="button" onClick={() => setExpandedSkills((value) => !value)} className="mb-3 flex w-full items-center justify-between rounded-xl bg-slate-950/55 p-4 font-black text-violet-200"><span>Skills</span><span>{expandedSkills ? 'Collapse' : 'Expand'}</span></button>{expandedSkills && <div className="space-y-5">{skillGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">{group.name}</h3><div className="grid gap-2 md:grid-cols-2">{group.options.map((name) => { const mastery = character.skillMasteries[name] ?? 'Untrained'; const modifier = skillModifier(name, mastery); return <button type="button" key={name} onClick={() => roll(`${name} Check`, modifier)} className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-950/45 p-3 text-left hover:border-violet-400/40"><span><span className="font-bold text-slate-200">{name}</span><span className="ml-2 text-xs text-slate-500">{mastery}</span></span><span className="font-black text-violet-200">{modifier >= 0 ? '+' : ''}{modifier}</span></button>; })}</div></div>)}</div>}</section><section><button type="button" onClick={() => setExpandedTrades((value) => !value)} className="mb-3 flex w-full items-center justify-between rounded-xl bg-slate-950/55 p-4 font-black text-fuchsia-200"><span>Trades</span><span>{expandedTrades ? 'Collapse' : 'Expand'}</span></button>{expandedTrades && <div className="space-y-5">{tradeGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">{group.name}</h3><div className="grid gap-2 md:grid-cols-2">{group.options.map((name) => { const mastery = character.tradeMasteries[name] ?? 'Untrained'; const modifier = tradeModifier(name, mastery); return <button type="button" key={name} onClick={() => roll(`${name} Trade Check`, modifier)} className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-950/45 p-3 text-left hover:border-fuchsia-400/40"><span><span className="font-bold text-slate-200">{name}</span><span className="ml-2 text-xs text-slate-500">{mastery}</span></span><span className="font-black text-fuchsia-200">{modifier >= 0 ? '+' : ''}{modifier}</span></button>; })}</div></div>)}</div>}</section></div>}
 
-          {selectedTab === 'powers' && <div><div className="mb-5 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Martial Check</div><div className="text-2xl font-black text-violet-200">+{character.primeModifier + character.combatMastery}</div></div><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Spell Check</div><div className="text-2xl font-black text-fuchsia-200">+{character.primeModifier + character.combatMastery}</div></div><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Class Save DC</div><div className="text-2xl font-black text-sky-200">{10 + character.primeModifier + character.combatMastery}</div></div></div><div className="grid gap-5 lg:grid-cols-2"><section><h2 className="mb-3 font-black text-fuchsia-200">Spells</h2><div className="space-y-2">{knownSpells.length === 0 ? <p className="text-slate-500">No spells known.</p> : knownSpells.map((spell) => <Details key={spell.id} title={spell.name} subtitle={[spell.source, spell.school, spell.cost, spell.range, grantedSpells.includes(spell.name) ? 'Granted by Summoner feature' : ''].filter(Boolean).join(' • ')}>{spell.description}{spell.enhancements && <><h4 className="mt-4 font-black text-slate-300">Enhancements</h4><p>{spell.enhancements}</p></>}</Details>)}</div></section><section><h2 className="mb-3 font-black text-violet-200">Maneuvers</h2><div className="space-y-2">{knownManeuvers.length === 0 ? <p className="text-slate-500">No maneuvers known.</p> : knownManeuvers.map((maneuver) => <Details key={maneuver.id} title={maneuver.name} subtitle={[maneuver.category ?? maneuver.type, maneuver.cost, maneuver.range, grantedManeuvers.includes(maneuver.name) ? 'Granted by Bestowed Protection' : ''].filter(Boolean).join(' • ')}>{maneuver.description}{maneuver.enhancements && <><h4 className="mt-4 font-black text-slate-300">Enhancements</h4><p>{maneuver.enhancements}</p></>}</Details>)}</div></section></div></div>}
+          {selectedTab === 'powers' && <div><div className="mb-5 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Martial Check</div><div className="text-2xl font-black text-violet-200">+{character.primeModifier + character.combatMastery}</div></div><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Spell Check</div><div className="text-2xl font-black text-fuchsia-200">+{character.primeModifier + character.combatMastery}</div></div><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Class Save DC</div><div className="text-2xl font-black text-sky-200">{10 + character.primeModifier + character.combatMastery}</div></div></div><div className="grid gap-5 lg:grid-cols-2"><section><h2 className="mb-3 font-black text-fuchsia-200">Spells</h2><div className="space-y-2">{knownSpells.length === 0 ? <p className="text-slate-500">No spells known.</p> : knownSpells.map((spell) => <Details key={spell.id} title={spell.name} subtitle={[spell.source, spell.school, spell.cost, spell.range, grantedSpells.includes(spell.name) ? 'Granted by class feature' : ''].filter(Boolean).join(' • ')}>{spell.description}{spell.enhancements && <><h4 className="mt-4 font-black text-slate-300">Enhancements</h4><p>{spell.enhancements}</p></>}<button type="button" onClick={() => roll(`${spell.name} Spell Check`, character.primeModifier + character.combatMastery)} className="mt-4 w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white">Roll Spell Check</button></Details>)}</div></section><section><h2 className="mb-3 font-black text-violet-200">Maneuvers</h2><div className="space-y-2">{knownManeuvers.length === 0 ? <p className="text-slate-500">No maneuvers known.</p> : knownManeuvers.map((maneuver) => <Details key={maneuver.id} title={maneuver.name} subtitle={[maneuver.category ?? maneuver.type, maneuver.cost, maneuver.range, grantedManeuvers.includes(maneuver.name) ? 'Granted by class feature' : ''].filter(Boolean).join(' • ')}>{maneuver.description}{maneuver.enhancements && <><h4 className="mt-4 font-black text-slate-300">Enhancements</h4><p>{maneuver.enhancements}</p></>}</Details>)}</div></section></div></div>}
 
           {selectedTab === 'features' && <div className="grid gap-5 lg:grid-cols-3"><section><h2 className="mb-3 font-black text-violet-200">Class Features</h2><div className="space-y-3">{classFeatures.map((entry) => <div key={entry.level}><h3 className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Level {entry.level}</h3><div className="space-y-2">{entry.features.map((feature) => <Details key={`${entry.level}-${feature.name}`} title={feature.name}>{featureDescription(feature.name, feature.description)}</Details>)}</div></div>)}{character.subclass && (classReference?.subclassFeatures[character.subclass] ?? []).filter((feature) => feature.level === undefined || feature.level <= character.level).map((feature) => <Details key={`subclass-${feature.name}`} title={feature.name} subtitle={`${character.subclass}${feature.level !== undefined ? ` • Level ${feature.level}` : ''}`}>{featureDescription(feature.name, feature.description)}</Details>)}</div></section><section><h2 className="mb-3 font-black text-fuchsia-200">Talents</h2><div className="space-y-2">{selectedTalentCounts.length === 0 ? <p className="text-slate-500">No talents selected.</p> : selectedTalentCounts.map(([name, count]) => { const talent = classReference?.talents.find(({ name: candidate }) => candidate === name); const description = talent?.description ?? 'Talent details are unavailable.'; return <Details key={name} title={`${name}${count > 1 ? ` ×${count}` : ''}`}>{featureDescription(name, description)}</Details>; })}</div></section><section><h2 className="mb-3 font-black text-emerald-200">Ancestry Traits</h2><div className="space-y-2">{ancestryTraits.length === 0 ? <p className="text-slate-500">No ancestry traits selected.</p> : ancestryTraits.map((trait) => <Details key={trait.id} title={trait.name} subtitle={`${trait.ancestry} • ${trait.cost > 0 ? '+' : ''}${trait.cost} AP`}>{trait.description}{build?.ancestryTraitChoices[trait.id]?.length ? `\n\nChoice: ${build.ancestryTraitChoices[trait.id].join(', ')}` : ''}</Details>)}</div></section></div>}
 

@@ -3230,7 +3230,7 @@
           "feature" : "Cleric Order",
           "id" : "cleric.domains",
           "level" : 1,
-          "limit" : 3,
+          "limit" : 2,
           "options" : [
             {
               "description" : "Your Mastery Limit increases by 1 for all Knowledge Trades. A Trade can only benefit from 1 Feature that increases its Mastery Limit at a time. Additionally, you gain 2 Skill Points.",
@@ -3498,42 +3498,51 @@
         "Inquisitor" : [
           {
             "description" : "You gain the following benefits:\n\nIron Resolve: You have Resistance to the Charmed, Intimidated, and Taunted Conditions.\n\nRebuke Heretics: Creatures Intimidated by your Divine Rebuke (Channel Divinity) don’t stop being Intimidated if they take damage.\n\nYou gain the following Divine Blessing:\n\nChastise: (1 MP) The target is branded as a heretic for 1 minute, granting you the following benefits against it:\n• You have ADV on Insight and Intimidation Checks made against the target.\n• Once per Round, when you Hit the target with an Attack you can choose to deal +1 Divine Damage to it.",
+            "level" : 3,
             "name" : "Vanquish Heresy"
           },
           {
             "description" : "Once per Long Rest, you can interrogate a creature by asking it a Yes or No question. It makes a Charisma Save against your Save DC. Failure: It can’t tell a lie to the question that you asked it. It can choose not to answer at all, but if it does answer it must be either, “Yes,” “No,” or “I don’t know.”",
+            "level" : 3,
             "name" : "Divine Interrogator (Flavor Feature)"
           }
         ],
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ],
         "Priest" : [
           {
             "description" : "You gain the following benefits:\n• Divine Barrier: When you spend MP to heal a creature beyond their HP maximum, they gain an amount of Temp HP equal to the remaining healing. Any Temp HP gained in this way expires after 1 minute.\n• Spare the Dying: When you spend MP to heal a creature on Death’s Door, the HP restored is increased by an amount equal to your Prime Modifier.\n\nYou gain a new Channel Divinity option:\n\nHand of Salvation\nWhen another creature that you can see within 5 Spaces would be Hit by an Attack, you can spend 2 AP as a Reaction to magically pull the creature to an unoccupied Space within 1 Space of you, provided the creature is willing. The Attack misses and has no effect, and the creature is immune to all damage during this movement.",
+            "level" : 3,
             "name" : "Sanctification"
           },
           {
             "description" : "You have an understanding and divine guidance when attempting to learn what is ailing a creature. You have ADV on Checks made to identify or determine the effects of a Disease, Poison, or Curse affecting a creature.",
+            "level" : 3,
             "name" : "All that Ails (Flavor Feature)"
           }
         ]
@@ -8289,7 +8298,7 @@
           "title" : "Pact Boon"
         },
         {
-          "feature" : "Otherwordly Gift",
+          "feature" : "Otherworldly Gift",
           "id" : "warlock.psychicSpell",
           "level" : 3,
           "limit" : 1,
@@ -8366,7 +8375,7 @@
           "title" : "Psychic Spellcasting"
         },
         {
-          "feature" : "Otherwordly Gift",
+          "feature" : "Otherworldly Gift",
           "id" : "warlock.forbiddenKnowledge",
           "level" : 3,
           "limit" : 1,
@@ -9365,11 +9374,11 @@
         {
           "features" : [
             {
-              "description" : "You have a binding agreement with your patron that allows you to make sacrifices in exchange for boons. Hasty Bargain: Once per turn when you make a Check, you can spend 1 HP to gain ADV on the Check. Desperate Bargain: Once per Combat, you can spend 1 AP to regain an amount of HP equal to your Prime Modifier. When you do, you become Exposed until the end of your next turn.",
+              "description" : "You have a binding agreement with your patron that allows you to make sacrifices in exchange for boons.\n\nHasty Bargain: Once per turn when you make a Check, you can spend 1 HP to gain ADV on the Check.\n\nDesperate Bargain: Once per Combat, you can spend 1 AP to regain an amount of HP equal to your Prime Modifier. When you do, you become Exposed until the end of your next turn.",
               "name" : "Warlock Contract"
             },
             {
-              "description" : "You gain a Pact Boon from your Patron. Choose 1 of the following options: Weapon, Armor, Spell, or Familiar. Pact Weapon You can choose a Weapon in your possession and bond with it, making it your Pact Weapon. You can only have 1 Pact Weapon at a time. If the Weapon has the Ammo property, it manifests its own Ammo when you load it, which immediately vanishes once the Attack is resolved. You gain the following benefits while wielding the Weapon:\n• Weapon Training: You’re considered to have Combat Training with your Pact Weapon. DC Tip: Remember, Combat Training with a Weapon allows you to use Martial Enhancements on Attacks with it, including the one related to its Weapon’s Style (such as the Bleed Enhancement from the Axe Style).\n\n• Maneuvers: You learn 2 Attack Maneuvers of your choice.\n• Spell Focus: Your Pact Weapon also counts as a Spell Focus with a 1 point Focus Property. If the Weapon has the Two-Handed Weapon Property, it instead has two 1 point Focus Properties or a 2 point Focus Property (your choice). You can change the chosen Focus Properties when you complete a Quick Rest. Pocket Dimension: Using a Minor Action, you can dismiss the Weapon into a pocket dimension, summon it from that pocket dimension, or summon it from anywhere on the same plane of existence. If you don’t have a free hand when you summon it, or you choose not to grab it, it appears in your Space at your feet. New Pact Weapon: Over the course of a Quick Rest, you can touch a Weapon in your possession, bond with it, and make it your new Pact Weapon, ending your bond with your previous Pact Weapon.\n\nPact Armor You can choose an Armor in your possession and bond with it, making it your Pact Armor. You can only have 1 Pact Armor at a time. You gain the following benefits while wearing the Armor :\n• Armor Training: You’re considered to have Training with your Pact Armor.\n• Maneuvers: You learn 2 Defensive Maneuvers of your choice.\n• Mystical Armor: You gain +1 AD and MDR. Pocket Dimension: Using a Minor Action, you can dismiss the Armor into a pocket dimension, summon it from that pocket dimension, or summon it from anywhere on the same plane of existence. If you aren’t able to wear the Armor when you summon it, or you choose not to wear it, it appears in your Space at your feet. New Pact Armor: Over the course of a Quick Rest, you can touch an Armor in your possession, bond with it, and make it your new Pact Armor, ending your bond with your previous Pact Armor. Pact Spell Choose a Spell you know. The chosen Spell becomes your Pact Spell. When you cast your Pact Spell, you gain the following benefits:\n• Death’s Toll: If the Spell deals damage, it deals an extra +1 damage to Bloodied targets.\n• Range Increase: If the Spell’s range is 1, it increases by 1 Space, otherwise it increases by 5 Spaces.\n• Patron’s Favor: Once per Round, you can grant yourself ADV on any Check you make to cast your Pact Spell. Choosing a New Pact Spell: When you complete a Long Rest, you can choose a different Spell you know. When you do, the new Spell becomes your new Pact Spell. You can only have 1 Pact Spell at a time. Pact Familiar You learn the Call Familiar Spell. When you cast the Spell, your Familiar gains 3 additional Familiar Traits of your choice for free.",
+              "description" : "You gain a Pact Boon from your Patron. Choose 1 of the following options: Weapon, Armor, Spell, or Familiar.\n\nPACT WEAPON\nYou can choose a Weapon in your possession and bond with it, making it your Pact Weapon. You can only have 1 Pact Weapon at a time. If the Weapon has the Ammo property, it manifests its own Ammo when you load it, which immediately vanishes once the Attack is resolved. You gain the following benefits while wielding the Weapon:\n\n• Weapon Training: You’re considered to have Combat Training with your Pact Weapon.\n\nDC Tip: Remember, Combat Training with a Weapon allows you to use Martial Enhancements on Attacks with it, including the one related to its Weapon’s Style (such as the Bleed Enhancement from the Axe Style).\n\n• Maneuvers: You learn 2 Attack Maneuvers of your choice.\n• Spell Focus: Your Pact Weapon also counts as a Spell Focus with a 1 point Focus Property. If the Weapon has the Two-Handed Weapon Property, it instead has two 1 point Focus Properties or a 2 point Focus Property (your choice). You can change the chosen Focus Properties when you complete a Quick Rest.\n\nPocket Dimension: Using a Minor Action, you can dismiss the Weapon into a pocket dimension, summon it from that pocket dimension, or summon it from anywhere on the same plane of existence. If you don’t have a free hand when you summon it, or you choose not to grab it, it appears in your Space at your feet.\n\nNew Pact Weapon: Over the course of a Quick Rest, you can touch a Weapon in your possession, bond with it, and make it your new Pact Weapon, ending your bond with your previous Pact Weapon.\n\nPACT ARMOR\nYou can choose an Armor in your possession and bond with it, making it your Pact Armor. You can only have 1 Pact Armor at a time. You gain the following benefits while wearing the Armor:\n\n• Armor Training: You’re considered to have Training with your Pact Armor.\n• Maneuvers: You learn 2 Defensive Maneuvers of your choice.\n• Mystical Armor: You gain +1 AD and MDR.\n\nPocket Dimension: Using a Minor Action, you can dismiss the Armor into a pocket dimension, summon it from that pocket dimension, or summon it from anywhere on the same plane of existence. If you aren’t able to wear the Armor when you summon it, or you choose not to wear it, it appears in your Space at your feet.\n\nNew Pact Armor: Over the course of a Quick Rest, you can touch an Armor in your possession, bond with it, and make it your new Pact Armor, ending your bond with your previous Pact Armor.\n\nPACT SPELL\nChoose a Spell you know. The chosen Spell becomes your Pact Spell. When you cast your Pact Spell, you gain the following benefits:\n\n• Death’s Toll: If the Spell deals damage, it deals an extra +1 damage to Bloodied targets.\n• Range Increase: If the Spell’s range is 1, it increases by 1 Space, otherwise it increases by 5 Spaces.\n• Patron’s Favor: Once per Round, you can grant yourself ADV on any Check you make to cast your Pact Spell.\n\nChoosing a New Pact Spell: When you complete a Long Rest, you can choose a different Spell you know. When you do, the new Spell becomes your new Pact Spell. You can only have 1 Pact Spell at a time.\n\nPACT FAMILIAR\nYou learn the Call Familiar Spell. When you cast the Spell, your Familiar gains 3 additional Familiar Traits of your choice for free.",
               "name" : "Pact Boon"
             },
             {
@@ -9425,7 +9434,7 @@
         {
           "features" : [
             {
-              "description" : "You gain the following benefits for your Warlock Class Features. Warlock Contract Your maximum HP increases by 2. Pact Boon Pact Weapon:\n• Your Pact Weapon gains an additional 1 point Weapon Property. You can change the chosen Weapon Property when you complete a Quick Rest.\n• You learn 1 Attack Maneuver.\n• You can spend MP on Martial Enhancements and Maneuver performed with your Pact Weapon. When you do, you gain 2 SP worth of Enhancements per MP spent. Pact Armor:\n• Your Pact Armor gains an additional 1 point Armor Property. You can change the chosen Armor Property when you complete a Quick Rest.\n• You learn 1 Defense Maneuver.\n• You can spend MP on Defense Maneuvers. When you do, you gain 2 SP worth of Enhancements per MP spent. Pact Spell:\n• You learn 2 Spells of your choice from any Spell Source.\n• Choose a Spell you know to also become your Pact Spell, granting the benefits of your Pact Spell to both. You can change either or both of your Pact Spells when you complete a Long Rest. DC Tip: You still can only use Patron’s Favor once per Round.\n\nPact Familiar: When you cast the Call Familiar Spell, your Familiar gains an additional 3 points worth of Familiar or Beast Traits (you can’t choose Negative Traits) for free. Life Tap When you use Life Tap, you gain ADV on the Check made to produce the effect.",
+              "description" : "You gain the following benefits for your Warlock Class Features.\n\nWARLOCK CONTRACT\nYour maximum HP increases by 2.\n\nPACT BOON\nPact Weapon:\n• Your Pact Weapon gains an additional 1 point Weapon Property. You can change the chosen Weapon Property when you complete a Quick Rest.\n• You learn 1 Attack Maneuver.\n• You can spend MP on Martial Enhancements and Maneuver performed with your Pact Weapon. When you do, you gain 2 SP worth of Enhancements per MP spent.\n\nPact Armor:\n• Your Pact Armor gains an additional 1 point Armor Property. You can change the chosen Armor Property when you complete a Quick Rest.\n• You learn 1 Defense Maneuver.\n• You can spend MP on Defense Maneuvers. When you do, you gain 2 SP worth of Enhancements per MP spent.\n\nPact Spell:\n• You learn 2 Spells of your choice from any Spell Source.\n• Choose a Spell you know to also become your Pact Spell, granting the benefits of your Pact Spell to both. You can change either or both of your Pact Spells when you complete a Long Rest.\n\nDC Tip: You still can only use Patron’s Favor once per Round.\n\nPact Familiar:\nWhen you cast the Call Familiar Spell, your Familiar gains an additional 3 points worth of Familiar or Beast Traits (you can’t choose Negative Traits) for free.\n\nLIFE TAP\nWhen you use Life Tap, you gain ADV on the Check made to produce the effect.",
               "name" : "Expert Warlock"
             }
           ],
@@ -9524,43 +9533,52 @@
       "subclassFeatures" : {
         "Eldritch" : [
           {
-            "description" : "Your patron grants you the following benefits: Psychic Spellcasting: You learn 1 Spell of your choice with the Psychic Spell Tag. When you learn a new Spell, you can choose any Spell that has the Psychic Spell Tag. Forbidden Knowledge: When you complete a Short or Long Rest, you temporarily learn any Spell of your choice. When you cast that Spell, its MP cost is reduced by 2 (minimum of 0). Its total MP cost before the reduction can’t exceed your Mana Spend Limit. You forget the Spell immediately after you cast it or complete a Short or Long Rest. You gain the following Warlock Contract option:\n• Eldritch Bargain: When you make an Attack against a creature, you can spend 1 HP to target its PD or AD (your choice).",
-            "name" : "Otherwordly Gift"
+            "description" : "Your patron grants you the following benefits:\n\nPsychic Spellcasting: You learn 1 Spell of your choice with the Psychic Spell Tag. When you learn a new Spell, you can choose any Spell that has the Psychic Spell Tag.\n\nForbidden Knowledge: When you complete a Short or Long Rest, you temporarily learn any Spell of your choice. When you cast that Spell, its MP cost is reduced by 2 (minimum of 0). Its total MP cost before the reduction can’t exceed your Mana Spend Limit. You forget the Spell immediately after you cast it or complete a Short or Long Rest.\n\nYou gain the following Warlock Contract option:\n• Eldritch Bargain: When you make an Attack against a creature, you can spend 1 HP to target its PD or AD (your choice).",
+            "level" : 3,
+            "name" : "Otherworldly Gift"
           },
           {
             "description" : "You become Fluent in Deep Speech, and you understand the writings and ramblings of lunatics.",
+            "level" : 3,
             "name" : "Alien Comprehension (Flavor Feature)"
           }
         ],
         "Fey" : [
           {
-            "description" : "Choose 1 of the following Conditions: Charmed or Intimidated. The chosen Condition becomes your Fey Aspect Condition. You gain the following Benefits: Can’t Trick a Trickster: You have Resistance to your Fey Aspect Condition. Fey Step: When you’re Hit by an Attack, you can spend 1 AP as a Reaction to teleport up to 3 Spaces to an unoccupied Space you can see. When you do, you become Invisible until the start of your next turn. You can use this Feature once per Long Rest, and regain the ability to use it again when you roll for Initiative.\n\nYou gain the following Warlock Contract option:\n• Beguiling Bargain: Once per Round, when you target a creature with an Attack or Spell, you can spend 1 HP to force the target to make a Charisma Save against your Save DC. Save Failure: The target becomes subjected to your Fey Aspect Condition until the end of your next turn.",
+            "description" : "Choose 1 of the following Conditions: Charmed or Intimidated. The chosen Condition becomes your Fey Aspect Condition. You gain the following Benefits:\n\nCan’t Trick a Trickster: You have Resistance to your Fey Aspect Condition.\n\nFey Step: When you’re Hit by an Attack, you can spend 1 AP as a Reaction to teleport up to 3 Spaces to an unoccupied Space you can see. When you do, you become Invisible until the start of your next turn. You can use this Feature once per Long Rest, and regain the ability to use it again when you roll for Initiative.\n\nYou gain the following Warlock Contract option:\n• Beguiling Bargain: Once per Round, when you target a creature with an Attack or Spell, you can spend 1 HP to force the target to make a Charisma Save against your Save DC. Save Failure: The target becomes subjected to your Fey Aspect Condition until the end of your next turn.",
+            "level" : 3,
             "name" : "Fey Aspect"
           },
           {
             "description" : "While sleeping, you are lucid and can manipulate what appears in your dreams. Additionally, while you’re in contact with a sleeping creature you can make a Spell Check against the target’s Intelligence Save. Success: You can witness their dream. You choose if the creature notices that you’re watching their dream or not. Failure: You can’t use this Feature again on that creature until it wakes up.",
+            "level" : 3,
             "name" : "Dream Walker (Flavor Feature)"
           }
         ],
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ]
@@ -9687,7 +9705,7 @@
         },
         {
           "description" : "Requirement: Pact Boon\n\nYou gain 1 additional Pact Boon. You can’t choose the same option more than once.",
-          "isRepeatable" : false,
+          "isRepeatable" : true,
           "minimumLevel" : 1,
           "name" : "Expanded Boon"
         },

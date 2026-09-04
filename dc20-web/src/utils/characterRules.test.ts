@@ -30,6 +30,8 @@ const barbarian = reference.classes.find(({ name }) => name === 'Barbarian')!;
 const summoner = reference.classes.find(({ name }) => name === 'Summoner')!;
 const spellblade = reference.classes.find(({ name }) => name === 'Spellblade')!;
 const rogue = reference.classes.find(({ name }) => name === 'Rogue')!;
+const warlock = reference.classes.find(({ name }) => name === 'Warlock')!;
+const cleric = reference.classes.find(({ name }) => name === 'Cleric')!;
 
 function character(className = 'Barbarian'): Character {
   return {
@@ -549,5 +551,216 @@ describe('Rogue Beta 0.10.5 source audit', () => {
     expect(rogueCheapShotDamage(5, 1)).toBe(2);
     expect(rogueCheapShotDamage(5, 3, 1)).toBe(4);
     expect(rogueCheapShotDamage(5, 3, 2)).toBe(6);
+  });
+});
+
+describe('Warlock Beta 0.10.5 source audit', () => {
+  const feature = (level: number, name: string) => warlock.features
+    .find((entry) => entry.level === level)?.features.find((entry) => entry.name === name)?.description;
+
+  it('matches every row of the published Warlock class table', () => {
+    expect(warlock.tableRows.map((row) => ({
+      level: row.level,
+      health: row.health,
+      attribute: row.attribute,
+      skill: row.skill,
+      trade: row.trade,
+      mana: row.mana,
+      spells: row.spells,
+      features: row.features,
+    }))).toEqual([
+      { level: 1, health: 8, attribute: undefined, skill: undefined, trade: undefined, mana: 6, spells: 4, features: 'Class Features' },
+      { level: 2, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Class Feature, Talent, Path Progression' },
+      { level: 3, health: 2, attribute: 1, skill: 1, trade: 1, mana: 3, spells: 1, features: 'Subclass Feature' },
+      { level: 4, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 5, health: 2, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Class Feature' },
+      { level: 6, health: 1, attribute: undefined, skill: 1, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, Path Progression' },
+      { level: 7, health: 2, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Subclass Expert Feature' },
+      { level: 8, health: 1, attribute: 1, skill: 1, trade: 1, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 9, health: 2, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Class Capstone Feature' },
+      { level: 10, health: 1, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Subclass Capstone Feature' },
+    ]);
+  });
+
+  it('preserves the complete published Warlock Contract, Life Tap, and Expert Warlock wording', () => {
+    expect(feature(1, 'Warlock Contract')).toBe('You have a binding agreement with your patron that allows you to make sacrifices in exchange for boons.\n\nHasty Bargain: Once per turn when you make a Check, you can spend 1 HP to gain ADV on the Check.\n\nDesperate Bargain: Once per Combat, you can spend 1 AP to regain an amount of HP equal to your Prime Modifier. When you do, you become Exposed until the end of your next turn.');
+    expect(feature(2, 'Life Tap')).toBe('When you produce an MP Effect, you can spend HP in place of MP. The total amount of HP and MP spent can’t exceed your Mana Spend Limit. You can use this Feature once per Long Rest, and regain the ability to use it again when you roll for Initiative.');
+    expect(feature(5, 'Expert Warlock')).toBe('You gain the following benefits for your Warlock Class Features.\n\nWARLOCK CONTRACT\nYour maximum HP increases by 2.\n\nPACT BOON\nPact Weapon:\n• Your Pact Weapon gains an additional 1 point Weapon Property. You can change the chosen Weapon Property when you complete a Quick Rest.\n• You learn 1 Attack Maneuver.\n• You can spend MP on Martial Enhancements and Maneuver performed with your Pact Weapon. When you do, you gain 2 SP worth of Enhancements per MP spent.\n\nPact Armor:\n• Your Pact Armor gains an additional 1 point Armor Property. You can change the chosen Armor Property when you complete a Quick Rest.\n• You learn 1 Defense Maneuver.\n• You can spend MP on Defense Maneuvers. When you do, you gain 2 SP worth of Enhancements per MP spent.\n\nPact Spell:\n• You learn 2 Spells of your choice from any Spell Source.\n• Choose a Spell you know to also become your Pact Spell, granting the benefits of your Pact Spell to both. You can change either or both of your Pact Spells when you complete a Long Rest.\n\nDC Tip: You still can only use Patron’s Favor once per Round.\n\nPact Familiar:\nWhen you cast the Call Familiar Spell, your Familiar gains an additional 3 points worth of Familiar or Beast Traits (you can’t choose Negative Traits) for free.\n\nLIFE TAP\nWhen you use Life Tap, you gain ADV on the Check made to produce the effect.');
+  });
+
+  it('preserves Warlock spell access, starting equipment, Talents, and subclass metadata', () => {
+    expect(warlock.pathDetails).toBe('Combat Training: Spell Focuses, Light Armor\n\nSpell List: Choose 3 Spell Schools. When you learn a new Spell, you can choose any Spell from the chosen Spell Schools.\n\nSpells Known: The number of Spells you know increases as shown in the Spells Known column of the Warlock Class Table.\n\nMana Points: Your maximum number of Mana Points increases as shown in the Mana Points column of the Warlock Class Table.');
+    expect(warlock.startingEquipment.description).toBe('Arsenal: 2 Spell Focuses. You can choose Weapons if you choose the Pact Weapon option of the Pact Boon Feature.\nArmor: 1 set of Light Armor. You can choose 1 set of Heavy Armor instead if you choose the Pact Armor option of the Pact Boon Feature.\nTrade Tools: Choose 2 of any of the following items:\nAlchemist’s Supplies, Disguise Kit, Jeweler’s Tools, or Sculptor’s Tools.\nAdventuring Pack: Choose 1 of the following packs:\n(Adventuring Packs Coming Soon).');
+    expect(warlock.talents.slice(-3).map(({ name, minimumLevel }) => [name, minimumLevel])).toEqual([
+      ['Expanded Boon', 1],
+      ['Pact Bane', 3],
+      ['Warlock Subcontract', 3],
+    ]);
+    expect(warlock.talents.find(({ name }) => name === 'Expanded Boon')?.isRepeatable).toBe(true);
+    expect(warlock.subclassFeatures.Eldritch.map(({ name, level }) => [name, level])).toEqual([
+      ['Otherworldly Gift', 3],
+      ['Alien Comprehension (Flavor Feature)', 3],
+    ]);
+    expect(warlock.subclassFeatures.Fey.map(({ name, level }) => [name, level])).toEqual([
+      ['Fey Aspect', 3],
+      ['Dream Walker (Flavor Feature)', 3],
+    ]);
+    expect(warlock.subclassFeatures.Paragon.map(({ name, level }) => [name, level])).toEqual([
+      ['Paragon Subclass', 3],
+      ['Novice Paragon', 3],
+      ['Jack of one Trade (Flavor Feature)', 3],
+      ['Expert Paragon', 7],
+      ['Master Paragon', 10],
+    ]);
+  });
+
+  it('routes Expanded Boon and every feature-granted power separately', () => {
+    const boonGroup = warlock.choiceGroups.find(({ id }) => id === 'warlock.boon')!;
+    const hero = character('Warlock');
+    hero.level = 5;
+    hero.subclass = 'Eldritch';
+    hero.build = {
+      ...defaultBuild(),
+      selectedTalents: ['Expanded Boon', 'Expanded Boon', 'Pact Bane'],
+      classFeatureSelections: {
+        'warlock.boon': ['Pact Weapon', 'Pact Familiar', 'Pact Spell'],
+        'warlock.pactWeaponManeuvers': ['Heroic Bash', 'Savage Strike', 'Sunder Strike'],
+        'warlock.psychicSpell': ['Mind Blast'],
+        'warlock.expertSpells': ['Heal', 'Fireball'],
+        'warlock.pactBaneSpells': ['Bane'],
+      },
+    };
+    expect(classChoiceSelectionLimit(boonGroup, hero)).toBe(3);
+    expect(grantedClassManeuverNames(hero)).toEqual(['Heroic Bash', 'Savage Strike', 'Sunder Strike']);
+    expect(grantedClassSpellNames(hero)).toEqual(['Call Familiar', 'Mind Blast', 'Heal', 'Fireball', 'Bane']);
+    expect(grantedClassLanguageNames(hero)).toEqual(['Deep Speech']);
+  });
+
+  it('applies Expert Warlock HP and equipped Pact Armor defenses', () => {
+    const hero = character('Warlock');
+    hero.level = 5;
+    hero.build = {
+      ...defaultBuild(),
+      classFeatureSelections: {
+        'warlock.boon': ['Pact Armor'],
+        'warlock.pactArmorManeuvers': ['Parry', 'Brace', 'Side Step'],
+      },
+    };
+    const armor: EquipmentCatalogItem = {
+      id: 'pact-armor', name: 'Deflecting Heavy Armor', category: 'Armor', subtype: 'Heavy Armor',
+      summary: '', mechanics: '', properties: [], slot: 'Armor', sourcePage: '',
+    };
+    hero.inventoryItems = [{ id: 'inventory', equipmentID: armor.id, quantity: 1, isEquipped: true, source: 'startingEquipment' }];
+    const derived = deriveCharacter(hero, warlock, reference.ancestryTraits, [armor]);
+    expect(derived.maxHP).toBe(19);
+    expect(derived.arcaneDefense).toBe(15);
+    expect(derived.mysticalDR).toBe(1);
+  });
+
+  it('adds Psychic-tag Spells to the Eldritch Warlock list', () => {
+    const spell = (school: string, tags = '') => ({ school, tags, source: 'Arcane' });
+    expect(spellIsAvailableToClass('Warlock', spell('Elemental'), undefined, '', ['Elemental'], 'Eldritch')).toBe(true);
+    expect(spellIsAvailableToClass('Warlock', spell('Enchantment', 'Psychic'), undefined, '', ['Elemental'], 'Eldritch')).toBe(true);
+    expect(spellIsAvailableToClass('Warlock', spell('Enchantment', 'Psychic'), undefined, '', ['Elemental'], 'Fey')).toBe(false);
+  });
+});
+
+describe('Cleric Beta 0.10.5 source audit', () => {
+  const feature = (level: number, name: string) => cleric.features
+    .find((entry) => entry.level === level)?.features.find((entry) => entry.name === name)?.description;
+
+  it('matches every row of the published Cleric class table', () => {
+    expect(cleric.tableRows.map((row) => ({
+      level: row.level,
+      health: row.health,
+      attribute: row.attribute,
+      skill: row.skill,
+      trade: row.trade,
+      mana: row.mana,
+      spells: row.spells,
+      features: row.features,
+    }))).toEqual([
+      { level: 1, health: 7, attribute: undefined, skill: undefined, trade: undefined, mana: 6, spells: 4, features: 'Class Features' },
+      { level: 2, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Class Feature, Talent, Path Progression' },
+      { level: 3, health: 1, attribute: 1, skill: 1, trade: 1, mana: 3, spells: 1, features: 'Subclass Feature' },
+      { level: 4, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 5, health: 1, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Class Feature' },
+      { level: 6, health: 1, attribute: undefined, skill: 1, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, Path Progression' },
+      { level: 7, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Subclass Expert Feature' },
+      { level: 8, health: 1, attribute: 1, skill: 1, trade: 1, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 9, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Class Capstone Feature' },
+      { level: 10, health: 1, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Subclass Capstone Feature' },
+    ]);
+  });
+
+  it('preserves the complete Divine Blessing, Channel Divinity, and Expert Cleric wording', () => {
+    expect(feature(1, 'Divine Blessing')).toBe('You can spend 1 AP to say a prayer and petition your deity for their divine blessing. Choose 1 of the blessings listed below. Each blessing has a listed MP cost that you must spend to gain the blessing. Once during the next minute, you can apply the blessing to a Spell you cast. If your Spell targets more than 1 creature, the blessing only applies to 1 target of your choice.\n\n• Destruction: (1 MP) The target takes 3 Divine damage, provided that the result of the Check used to cast the Spell is equal to or higher than the target’s AD. If the Spell doesn’t normally require a Check, then you must make a Spell Attack Check when you apply this blessing.\n• Guidance: (1 MP) The target gains a d8 Help Die that they can add to 1 Check of their choice they make within the next minute. When they use this Help Die, the Check gains ADV.\n• Restoration: (1 MP) The target regains 3 HP.\n\nUnused Blessing: You can only have 1 blessing at a time. If you petition your deity for a blessing while you already have a blessing, the first blessing immediately ends without granting any benefit. If the blessing ends without granting any benefit, you regain the MP spent to gain the blessing.');
+    expect(feature(2, 'Channel Divinity')).toBe('You gain the ability to channel the direct power of your deity. When you use this Feature, choose 1 of the options below. You can use this Feature once per Long Rest, and regain the ability to use it again when you roll for Initiative.\n\nDivine Rebuke\nYou can spend 2 AP to censure all creatures of your choice who can see or hear you within 5 Spaces. Make a Spell Attack against each target’s AD, and each target makes a Repeated Mental Save against your Save DC. Hit: The target takes 1 Divine Damage. Save Failure: The target becomes Intimidated by you for 1 minute or until it takes damage again.\n\nLesser Divine Intervention\nYou can spend 2 AP to call on your deity to intervene on your behalf when your need is great to replenish you and your allies. You gain a pool of HP which you can distribute to creatures of your choice within 5 Space to restore their HP (in increments of 1 HP). Make a DC 15 Spell Check. Failure: You gain a pool of 3 HP. Success: You gain a pool of 3 HP and you regain 1 MP. Success (5): Your pool of HP increases 2.');
+    expect(feature(5, 'Expert Cleric')).toBe('You gain the following benefits for your Cleric Class Features.\n\nCleric Order\nYou gain 1 additional Divine Domain.\n\nDivine Blessing\nWhen you use Divine Blessing you can spend additional MP to enhance the effect:\nDestruction: The damage increased by 2 per MP spent.\nRestoration: The healing increases by 2 per MP spent.\n\nChannel Divinity\nDivine Rebuke: The damage increases by 1.\nLesser Divine Intervention: The pool of HP increases by 2.');
+  });
+
+  it('preserves all domains, spell access, equipment, Talents, and subclass metadata', () => {
+    expect(cleric.choiceGroups.find(({ id }) => id === 'cleric.domains')?.options.map(({ name }) => name)).toEqual([
+      'Knowledge', 'Magic', 'Divine Damage Expansion', 'Life', 'Death', 'Grave', 'Light', 'Dark',
+      'War', 'Peace', 'Order', 'Chaos', 'Divination', 'Trickery', 'Ancestral',
+    ]);
+    expect(cleric.pathDetails).toBe('Combat Training: Spell Focuses, Light Armor, Light Shields\n\nSpell List: When you learn a new Spell, you can choose any Spell on the Divine Spell Source.\n\nSpells Known: The number of Spells you know increases as shown in the Spells Known column of the Cleric Class Table.\n\nMana Points: Your maximum number of Mana Points increases as shown in the Mana Points column of the Cleric Class Table.');
+    expect(cleric.startingEquipment.description).toBe('Arsenal: Choose 3 of any of the following items: Spell Focus, Weapon, or Light Shield. You can also choose Heavy Shield if you choose the Peace Domain option of the Cleric Order Feature.\nArmor: 1 set of Light Armor. You can choose 1 set of Heavy Armor instead if you choose the Peace Domain option of the Cleric Order Feature.\nTrade Tools: Choose 1 of any of the following items:\nBrewer’s Supplies, Calligrapher’s Supplies, Herbalist’s Supplies, Musical Instrument, or Sculptor’s Tools.\nAdventuring Pack: Choose 1 of the following packs:\n(Adventuring Packs Coming Soon).');
+    expect(cleric.talents.slice(-3).map(({ name, minimumLevel }) => [name, minimumLevel])).toEqual([
+      ['Expanded Order', 1],
+      ['Bountiful Blessings', 3],
+      ['Divine Cleanse', 3],
+    ]);
+    expect(cleric.subclassFeatures.Inquisitor.map(({ name, level }) => [name, level])).toEqual([
+      ['Vanquish Heresy', 3],
+      ['Divine Interrogator (Flavor Feature)', 3],
+    ]);
+    expect(cleric.subclassFeatures.Priest.map(({ name, level }) => [name, level])).toEqual([
+      ['Sanctification', 3],
+      ['All that Ails (Flavor Feature)', 3],
+    ]);
+  });
+
+  it('routes every selected Divine Domain into character calculations and granted powers', () => {
+    const domainGroup = cleric.choiceGroups.find(({ id }) => id === 'cleric.domains')!;
+    const hero = character('Cleric');
+    hero.level = 5;
+    hero.build = {
+      ...defaultBuild(),
+      selectedTalents: ['Expanded Order', 'Expanded Order'],
+      classFeatureSelections: {
+        'cleric.divineDamage': ['Fire'],
+        'cleric.domains': ['Knowledge', 'Magic', 'Magic', 'War', 'Peace', 'Ancestral', 'Divine Damage Expansion'],
+        'cleric.magicDomainTags': ['Healing', 'Fire'],
+        'cleric.magicDomainSpells': ['Heal', 'Fireball'],
+        'cleric.warManeuver': ['Savage Strike'],
+        'cleric.peaceManeuver': ['Parry'],
+      },
+    };
+    expect(classChoiceSelectionLimit(domainGroup, hero)).toBe(7);
+    expect(grantedClassSpellNames(hero)).toEqual(['Heal', 'Fireball']);
+    expect(grantedClassManeuverNames(hero)).toEqual(['Savage Strike', 'Parry']);
+    const derived = deriveCharacter(hero, cleric, reference.ancestryTraits, []);
+    expect(derived.maxMana).toBe(14);
+    expect(derived.skillPointBudget).toBe(10);
+    expect(derived.ancestryPointBudget).toBe(9);
+    expect(derived.spellLimit).toBe(6);
+    expect(characterSheetEffects(hero).resistances).toEqual(['Fire (1)']);
+  });
+
+  it('adds each Magic Domain tag to the Cleric Spell List without replacing Divine access', () => {
+    const spell = (source: string, tags = '') => ({ school: 'Elemental', tags, source });
+    expect(spellIsAvailableToClass('Cleric', spell('Divine'), 'Divine', '', [], '', ['Fire'])).toBe(true);
+    expect(spellIsAvailableToClass('Cleric', spell('Primal', 'Fire'), 'Divine', '', [], '', ['Fire'])).toBe(true);
+    expect(spellIsAvailableToClass('Cleric', spell('Arcane', 'Cold'), 'Divine', '', [], '', ['Fire'])).toBe(false);
+  });
+
+  it('applies the Inquisitor Condition resistances on the live sheet', () => {
+    const hero = character('Cleric');
+    hero.level = 3;
+    hero.subclass = 'Inquisitor';
+    expect(characterSheetEffects(hero).resistances).toEqual([
+      'Charmed Condition', 'Intimidated Condition', 'Taunted Condition',
+    ]);
   });
 });
