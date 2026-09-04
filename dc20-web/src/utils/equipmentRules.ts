@@ -12,6 +12,26 @@ export function isEquipmentEquippable(item: EquipmentCatalogItem): boolean {
   return item.slot !== EquipmentSlotValues.CARRIED;
 }
 
+export function enforceEquipmentHandCapacity(
+  items: CharacterInventoryItem[],
+  catalog: EquipmentCatalogItem[],
+  options: { twoHandedWeaponHandCost?: 1 | 2 } = {},
+): CharacterInventoryItem[] {
+  const byID = new Map(catalog.map((equipment) => [equipment.id, equipment]));
+  let occupiedHands = 0;
+  return items.map((item) => {
+    if (!item.isEquipped) return { ...item };
+    const slot = byID.get(item.equipmentID)?.slot ?? EquipmentSlotValues.CARRIED;
+    const cost = slot === EquipmentSlotValues.TWO_HANDS
+      ? (options.twoHandedWeaponHandCost ?? 2)
+      : equipmentHandCost(slot);
+    if (cost === 0) return { ...item };
+    if (occupiedHands + cost > 2) return { ...item, isEquipped: false };
+    occupiedHands += cost;
+    return { ...item };
+  });
+}
+
 export function addInventoryItem(
   items: CharacterInventoryItem[],
   equipment: EquipmentCatalogItem,
@@ -29,6 +49,7 @@ export function toggleInventoryEquipped(
   items: CharacterInventoryItem[],
   inventoryID: string,
   catalog: EquipmentCatalogItem[],
+  options: { twoHandedWeaponHandCost?: 1 | 2 } = {},
 ): CharacterInventoryItem[] {
   const byID = new Map(catalog.map((equipment) => [equipment.id, equipment]));
   const targetIndex = items.findIndex(({ id }) => id === inventoryID);
@@ -47,22 +68,20 @@ export function toggleInventoryEquipped(
         inventory.isEquipped = false;
       }
     });
-  } else if (targetEquipment.slot === EquipmentSlotValues.TWO_HANDS) {
-    updated.forEach((inventory, index) => {
-      if (index !== targetIndex && equipmentHandCost(byID.get(inventory.equipmentID)?.slot ?? EquipmentSlotValues.CARRIED) > 0) {
-        inventory.isEquipped = false;
-      }
-    });
-  } else if (targetEquipment.slot === EquipmentSlotValues.ONE_HAND) {
+  } else if (targetEquipment.slot === EquipmentSlotValues.TWO_HANDS || targetEquipment.slot === EquipmentSlotValues.ONE_HAND) {
+    const handCost = (slot: EquipmentSlot) => slot === EquipmentSlotValues.TWO_HANDS
+      ? (options.twoHandedWeaponHandCost ?? 2)
+      : equipmentHandCost(slot);
+    const targetHandCost = handCost(targetEquipment.slot);
     const occupied = updated
       .map((inventory, index) => ({ inventory, index, equipment: byID.get(inventory.equipmentID) }))
-      .filter(({ index, inventory, equipment }) => index !== targetIndex && inventory.isEquipped && equipmentHandCost(equipment?.slot ?? EquipmentSlotValues.CARRIED) > 0);
-    let occupiedHands = occupied.reduce((total, { equipment }) => total + equipmentHandCost(equipment?.slot ?? EquipmentSlotValues.CARRIED), 0);
-    while (occupiedHands >= 2) {
+      .filter(({ index, inventory, equipment }) => index !== targetIndex && inventory.isEquipped && handCost(equipment?.slot ?? EquipmentSlotValues.CARRIED) > 0);
+    let occupiedHands = occupied.reduce((total, { equipment }) => total + handCost(equipment?.slot ?? EquipmentSlotValues.CARRIED), 0);
+    while (occupiedHands + targetHandCost > 2) {
       const last = occupied.pop();
       if (!last) break;
       updated[last.index].isEquipped = false;
-      occupiedHands -= equipmentHandCost(last.equipment?.slot ?? EquipmentSlotValues.CARRIED);
+      occupiedHands -= handCost(last.equipment?.slot ?? EquipmentSlotValues.CARRIED);
     }
   }
   updated[targetIndex].isEquipped = true;

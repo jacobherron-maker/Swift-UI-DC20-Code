@@ -2267,42 +2267,51 @@
         "Elemental Fury" : [
           {
             "description" : "You can surround yourself with the elements (such as fire, lightning, water, earth) or violent weather (such as blizzards, storms, volcanoes, or earthquakes). Choose 1 of the following damage types: Cold, Fire, Lightning, or Physical. The chosen Damage Type becomes your Elemental Rage damage. If you chose Physical damage, then each time you Rage you choose Bludgeoning, Piercing, or Slashing damage.\n\nWhile Raging, you gain a 2 Space Aura of elements that grants the following benefits:\n\nErupting Elements: When a creature within your Aura deals damage to you, they immediately take 1 Elemental Rage damage.\n\nElemental Blast: You can spend 1 AP and 1 SP to blast 1 or more creatures of your choice within your Aura. Make an Area Spell Attack against the AD of each target within range.\n\nAttack Hit: A target takes 1 Elemental Rage damage.\n\nSingle Target: If the Attack only targets 1 creature, it targets the creature’s PD and they take 2 damage.\n\nAura Type: Choose 1 of the following additional benefits:\n• Slowing Aura: Spaces within your Aura count as Difficult Terrain for creatures of your choice. Additionally, when a creature within your Aura fails a Save you force it to make, they’re also Slowed until the end of their next turn.\n• Splashing Aura: Once per Turn when you deal Elemental Rage damage to a creature, you can automatically deal 1 Elemental Rage damage to a creature within 1 Space of it.\n• Stunning Aura: Once per Turn when a creature within your Aura fails a Save you force it to make, it also can’t spend AP on Reactions until the start of its next turn.\n• Pushing Aura: When you use your Elemental Blast, creatures affected must make a Physical Save. Failure: Each target is moved 2 Spaces toward or away from you (your choice).",
+            "level" : 3,
             "name" : "Raging Elements"
           },
           {
             "description" : "You are infused with the power of your Element and can make yourself heard over crackling infernos, howling blizzards, thundering storms, and rumbling earthquakes. You gain the following benefits:\n• You can make your voice boom up to 3 times louder than normal.\n• You can call upon non-harmful magic of your Elemental damage type to swirl around you in a visual display.\n• You have Resistance to Exhaustion due to environmental effects.",
+            "level" : 3,
             "name" : "Elemental Affinity (Flavor Feature)"
           }
         ],
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ],
         "Spirit Guardian" : [
           {
             "description" : "Bestowed Protection: You learn 1 of the following Maneuvers: Brace, Parry, or Protect. If you already know all 3, then you can learn any Maneuver of your choice instead.\n\nSpiritual Aura: While Raging, you gain Mystical Resistance (1) and a 5 Space Aura that grants the following benefits:\n• You can use the Shove Action on any creature within your Aura. When you do, the creature is pushed horizontally in a direction of your choice.\n• You can use the Brace, Parry, or Protect Maneuvers on any creature within your Aura, provided you know the Maneuver.",
+            "level" : 3,
             "name" : "Ancestral Guardian"
           },
           {
             "description" : "You have ADV on Checks to recall information about the history of your Ancestries (such as Human, Dwarf, or Elf). Additionally, once per Long Rest when you make a Trade or Language Check, you can choose to gain ADV on the Check as a spirit lends you its experience.",
+            "level" : 3,
             "name" : "Ancestral Knowledge (Flavor Feature)"
           }
         ]
@@ -5976,11 +5985,11 @@
               "name" : "Debilitating Strike"
             },
             {
-              "description" : "Cunning Action: You gain movement equal to half your Speed when you take the Disengage, Feint, or Hide Actions. You can use this movement immediately before or after you take the Action. Skill Expertise: Your Skill Mastery Limit increases by 1, up to Grandmaster (+10). A Skill can only benefit from one increase to its Mastery limit. Multi-Skilled: You gain 1 Skill Point.",
+              "description" : "Cunning Action: You gain movement equal to half your Speed when you take the Disengage, Feint, or Hide Actions. You can use this movement immediately before or after you take the Action.\n\nSkill Expertise: Your Skill Mastery Limit increases by 1, up to Grandmaster (+10). A Skill can only benefit from one increase to its Mastery limit.\n\nMulti-Skilled: You gain 1 Skill Point.",
               "name" : "Roguish Finesse"
             },
             {
-              "description" : "You become Fluent in a Mortal Language of your choice. Additionally, you understand how to speak in code with a specific demographic of your choice (such as upper society, lower society, a faction, etc.). Your coded messages can be concealed in normal conversation and written communications. This allows you to leave simple messages such as “Safety”, “Threat”, or “Wealth”, or mark the location of a cache, a secret passageway, a safehouse, or an area of danger. DC Tip: This could be anything from the slang of the slums, to the fancy language of the upper classes. It could even be more specific as some kind of bizarre double speak between twin siblings or between the political elite. If the Player doesn’t know what to choose for this, they can always defer to a generic thieves guild option.",
+              "description" : "You become Fluent in a Mortal Language of your choice. Additionally, you understand how to speak in code with a specific demographic of your choice (such as upper society, lower society, a faction, etc.). Your coded messages can be concealed in normal conversation and written communications. This allows you to leave simple messages such as “Safety”, “Threat”, or “Wealth”, or mark the location of a cache, a secret passageway, a safehouse, or an area of danger.\n\nDC Tip: This could be anything from the slang of the slums, to the fancy language of the upper classes. It could even be more specific as some kind of bizarre double speak between twin siblings or between the political elite. If the Player doesn’t know what to choose for this, they can always defer to a generic thieves guild option.",
               "name" : "Cypher Speech (Flavor Feature)"
             }
           ],
@@ -6134,43 +6143,52 @@
       "subclassFeatures" : {
         "Long Death" : [
           {
-            "description" : "When a creature fails its Save against your Debilitating Strike, it also begins Bleeding (even if it’s immune to the Condition). If a creature is affected by Bleeding from this Feature, the DC to end any Bleeding on it is equal to your Save DC and it can no longer be ended by regaining HP. DC Tip: These Rogues are able to apply magic or alchemical toxins to their blades that eat away at their targets over time, even things like Elementals or Undead that don’t have blood. The specific narrative reasoning is up to you.",
+            "description" : "When a creature fails its Save against your Debilitating Strike, it also begins Bleeding (even if it’s immune to the Condition). If a creature is affected by Bleeding from this Feature, the DC to end any Bleeding on it is equal to your Save DC and it can no longer be ended by regaining HP.\n\nDC Tip: These Rogues are able to apply magic or alchemical toxins to their blades that eat away at their targets over time, even things like Elementals or Undead that don’t have blood. The specific narrative reasoning is up to you.",
+            "level" : 3,
             "name" : "Thousand Cuts"
           },
           {
             "description" : "You are an expert at studying and identifying weaknesses in bodies and how best to kill creatures. You have ADV on any Check made to determine how something died or could die easier. This also extends to poisons, toxins, or identifying other materials used to kill.",
+            "level" : 3,
             "name" : "Hundred Ways to Die (Flavor Feature)"
           }
         ],
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ],
         "Swashbuckler" : [
           {
             "description" : "You’re skilled at making a mockery of your opponents while taking advantage of their openings. You gain the following benefits:\n• Flourishes: Your Cunning Action now also includes the Disarm and Dodge Actions.\n• Taunting Shot: Once per round, when you make an Attack against a creature that fulfills the criteria for Cheap Shot, you can forgo your Cheap Shot damage to force the target to make a Charisma Save instead. Save Failure: The target is Taunted by you until the end of your next turn.\n• Riposte: When a creature within your Melee Range misses you with an Attack, it provokes an Opportunity Attack from you.",
+            "level" : 3,
             "name" : "Renegade Duelist"
           },
           {
-            "description" : "You know how to play to a crowd. You can spend up to 5 minutes telling a story to a crowd of creatures (that are not immediately hostile to you) and keep their rapt attention the entire time. During this story, creatures within the crowd have DisADV on Awareness Checks. DC Tip: A creature with DisADV on Awareness would have a -5 penalty to their Passive Awareness.",
+            "description" : "You know how to play to a crowd. You can spend up to 5 minutes telling a story to a crowd of creatures (that are not immediately hostile to you) and keep their rapt attention the entire time. During this story, creatures within the crowd have DisADV on Awareness Checks.\n\nDC Tip: A creature with DisADV on Awareness would have a -5 penalty to their Passive Awareness.",
+            "level" : 3,
             "name" : "Tall Tales (Flavor Feature)"
           }
         ]
@@ -7127,7 +7145,7 @@
           "feature" : "Spellblade Disciplines",
           "id" : "spellblade.disciplines",
           "level" : 1,
-          "limit" : 3,
+          "limit" : 2,
           "options" : [
             {
               "description" : "You gain the following benefits:\n• Your Maximum MP increases by 1.\n• You learn 1 additional Spell.",
@@ -7176,6 +7194,19 @@
           "title" : "Disciplines"
         },
         {
+          "feature" : "Holy Warrior",
+          "id" : "spellblade.paladinDiscipline",
+          "level" : 3,
+          "limit" : 1,
+          "options" : [
+
+          ],
+          "optionsFromGroup" : "spellblade.disciplines",
+          "prompt" : "Lay on Hands grants Acolyte. If Acolyte is already one of your base Disciplines, choose a different Discipline instead.",
+          "requiredSubclass" : "Paladin",
+          "title" : "Lay on Hands Discipline"
+        },
+        {
           "feature" : "Divine Strike",
           "id" : "spellblade.paladinDamage",
           "level" : 3,
@@ -7203,6 +7234,7 @@
           "id" : "spellblade.oathTenets",
           "level" : 3,
           "limit" : 7,
+          "minimumSelections" : 0,
           "options" : [
             {
               "description" : "You must be courageous in all things and fight for what is right, whether on the battlefield or within oneself.",
@@ -7304,11 +7336,11 @@
         {
           "features" : [
             {
-              "description" : "During a Quick Rest, you can magically bond with 1 Weapon and choose an Elemental or Mystical damage type to become your Bound Damage type. This bond lasts until you end it for free or use this feature again. Your Bound Weapon gains the following properties:\n• Smite: When you make a Martial Attack with the Weapon, you can spend 1 or more SP to deal +1 Bound Damage per SP spent. When you do, you also gain the benefits of 1 Martial Enhancement of your choice for free.\n• Somatic Weapon: You can use your Bound Weapon to perform the Somatic Components of a Spell.\n• Illuminate: You can cause the Weapon to emit a 5 Spaces of Dim or Bright Light (you choose the light’s appearance). You can extinguish, produce, or adjust the level of this illumination at any time for free.\n• Recall: While the Weapon is within 20 Spaces and isn’t being held or secured, you can call your Weapon back to you for free, causing it to fly to you. If you don’t have a free hand when you call it, or you choose not to grab it, it falls in your Space at your feet. Ending Early: Your bond with the Weapon ends early if you use this Feature again, or you choose to end it for free.",
+              "description" : "During a Quick Rest, you can magically bond with 1 Weapon and choose an Elemental or Mystical damage type to become your Bound Damage type. This bond lasts until you end it for free or use this feature again.\n\nYour Bound Weapon gains the following properties:\n\n• Smite: When you make a Martial Attack with the Weapon, you can spend 1 or more SP to deal +1 Bound Damage per SP spent. When you do, you also gain the benefits of 1 Martial Enhancement of your choice for free.\n• Somatic Weapon: You can use your Bound Weapon to perform the Somatic Components of a Spell.\n• Illuminate: You can cause the Weapon to emit a 5 Spaces of Dim or Bright Light (you choose the light’s appearance). You can extinguish, produce, or adjust the level of this illumination at any time for free.\n• Recall: While the Weapon is within 20 Spaces and isn’t being held or secured, you can call your Weapon back to you for free, causing it to fly to you. If you don’t have a free hand when you call it, or you choose not to grab it, it falls in your Space at your feet.\n\nEnding Early: Your bond with the Weapon ends early if you use this Feature again, or you choose to end it for free.",
               "name" : "Bound Weapon"
             },
             {
-              "description" : "You learn 2 Spellblade Disciplines from the list below. Magus You gain the following benefits:\n• Your Maximum MP increases by 1.\n• You learn 1 additional Spell. Warrior You gain the following benefits:\n• You gain Heavy Armor and Heavy Shield Training.\n• You learn 1 Maneuver. Acolyte You can spend 1 AP and 1 MP to produce 1 of the following effects:\n• Heal: You gain a pool of HP which you can distribute to creatures of your choice within 5 Spaces to restore their HP (in increments of 1 HP). Make a DC 10 Spell Check. Failure: You gain a pool of 2 HP. Success: You gain a pool of 3 HP. Success (each 5): The pool increases by 1 HP. Example: If a Spellblade chooses Heal when using their Acolyte Discipline and gets a result of 20 on their Spell Check, they would gain a pool of 5 HP.\n\n• Cure: You can attempt to remove 1 Basic Poison or Basic Disease from a creature of your choice within 1 Space of you. Make a Spell Check against the DC of the Poison or Disease. Success: The chosen Poison or Disease ends on the target. Hex Warrior You can spend 1 AP and 1 MP to Curse a creature within 10 Spaces for 1 minute. You make a Spell Check against the target’s Repeated Physical Save. Save Failure: The target is Cursed for the duration. While Cursed in this way, the target can’t regain HP, becomes Dazed or Impaired (your choice), and takes 1 Umbral damage at the start of each of their turns. Spell Breaker You can initiate a Spell Duel as the Challenger without spending MP using a Weapon you’re wielding, provided the Caster or a target is within your Weapon’s range or you’re in a Space between them. When you do, you make a Martial Check instead of a Spell Check. You can also spend 1 or more SP to gain a +1 bonus on your Check per SP spent (you can still spend MP as normal to gain +2 on your Check per MP spent). You have ADV on your Check if you are within 1 Space of the Caster.\n\nSpell Warder When you deal Elemental or Mystical damage with an Attack, you gain Resistance (1) to that damage for 1 Round. If you deal Elemental or Mystical damage again while this is already active, you can choose to keep the current Resistance or switch it out for the new one instead. Blink Blade Once per turn when you make an Attack, you can choose to teleport to a Space you can see within 1 Space immediately before or after making the Attack (your choice).",
+              "description" : "You learn 2 Spellblade Disciplines from the list below.\n\nMAGUS\nYou gain the following benefits:\n• Your Maximum MP increases by 1.\n• You learn 1 additional Spell.\n\nWARRIOR\nYou gain the following benefits:\n• You gain Heavy Armor and Heavy Shield Training.\n• You learn 1 Maneuver.\n\nACOLYTE\nYou can spend 1 AP and 1 MP to produce 1 of the following effects:\n• Heal: You gain a pool of HP which you can distribute to creatures of your choice within 5 Spaces to restore their HP (in increments of 1 HP). Make a DC 10 Spell Check. Failure: You gain a pool of 2 HP. Success: You gain a pool of 3 HP. Success (each 5): The pool increases by 1 HP.\n\nExample: If a Spellblade chooses Heal when using their Acolyte Discipline and gets a result of 20 on their Spell Check, they would gain a pool of 5 HP.\n\n• Cure: You can attempt to remove 1 Basic Poison or Basic Disease from a creature of your choice within 1 Space of you. Make a Spell Check against the DC of the Poison or Disease. Success: The chosen Poison or Disease ends on the target.\n\nHEX WARRIOR\nYou can spend 1 AP and 1 MP to Curse a creature within 10 Spaces for 1 minute. You make a Spell Check against the target’s Repeated Physical Save. Save Failure: The target is Cursed for the duration. While Cursed in this way, the target can’t regain HP, becomes Dazed or Impaired (your choice), and takes 1 Umbral damage at the start of each of their turns.\n\nSPELL BREAKER\nYou can initiate a Spell Duel as the Challenger without spending MP using a Weapon you’re wielding, provided the Caster or a target is within your Weapon’s range or you’re in a Space between them. When you do, you make a Martial Check instead of a Spell Check. You can also spend 1 or more SP to gain a +1 bonus on your Check per SP spent (you can still spend MP as normal to gain +2 on your Check per MP spent). You have ADV on your Check if you are within 1 Space of the Caster.\n\nSPELL WARDER\nWhen you deal Elemental or Mystical damage with an Attack, you gain Resistance (1) to that damage for 1 Round. If you deal Elemental or Mystical damage again while this is already active, you can choose to keep the current Resistance or switch it out for the new one instead.\n\nBLINK BLADE\nOnce per turn when you make an Attack, you can choose to teleport to a Space you can see within 1 Space immediately before or after making the Attack (your choice).",
               "name" : "Spellblade Disciplines"
             },
             {
@@ -7321,7 +7353,7 @@
         {
           "features" : [
             {
-              "description" : "Once on each of your turns when you make a Martial Attack, you can also cast a Spell as part of the same Action, spending 1 AP less than normal. Converged Action: When you do, the Spell can only target 1 creature who must be a target of the Attack, and the range of the Attack can’t exceed the range of the Spell. If the Spell requires a Check, it uses your Attack Check instead. Any Saves the Spell forces the target to make are made against your Save DC. Harmonic Strike: The Martial Attack and Spell from a Spellstrike are treated as 1 Attack, and can benefit from Martial Enhancements and Spell Enhancements. The Spell doesn’t require Somatic Components. DC Tip: Because it’s treated as 1 Attack, the damage from the Martial Attack and Spell benefit from Critical Hits, Heavy Hits, and beyond only once. Example 1: A Spellblade makes a Weapon Attack using a Shortsword (1 Slashing damage) as part of the Attack Action. They choose to use Spellstrike, which lets them also cast a Spell as part of the same Action. They choose the Fire Bolt Spell (1 Fire damage). Normally the Spell costs 1 AP to cast, but now costs 0 AP (since Spellstrike reduces its cost by 1). On a Hit, the Spellstrike deals 2 total damage (1 Slashing and 1 Fire). Extended Example 1: The same Spellblade from Example 1 can add even more to their Spellstrike, by spending AP to add Martial Enhancements or to add the Fire Bolt Spell’s Spell Enhancement options that cost AP. You can also spend SP to use Smite.",
+              "description" : "Once on each of your turns when you make a Martial Attack, you can also cast a Spell as part of the same Action, spending 1 AP less than normal.\n\nConverged Action: When you do, the Spell can only target 1 creature who must be a target of the Attack, and the range of the Attack can’t exceed the range of the Spell. If the Spell requires a Check, it uses your Attack Check instead. Any Saves the Spell forces the target to make are made against your Save DC.\n\nHarmonic Strike: The Martial Attack and Spell from a Spellstrike are treated as 1 Attack, and can benefit from Martial Enhancements and Spell Enhancements. The Spell doesn’t require Somatic Components.\n\nDC Tip: Because it’s treated as 1 Attack, the damage from the Martial Attack and Spell benefit from Critical Hits, Heavy Hits, and beyond only once.\n\nExample 1: A Spellblade makes a Weapon Attack using a Shortsword (1 Slashing damage) as part of the Attack Action. They choose to use Spellstrike, which lets them also cast a Spell as part of the same Action. They choose the Fire Bolt Spell (1 Fire damage). Normally the Spell costs 1 AP to cast, but now costs 0 AP (since Spellstrike reduces its cost by 1). On a Hit, the Spellstrike deals 2 total damage (1 Slashing and 1 Fire).\n\nExtended Example 1: The same Spellblade from Example 1 can add even more to their Spellstrike, by spending AP to add Martial Enhancements or to add the Fire Bolt Spell’s Spell Enhancement options that cost AP. You can also spend SP to use Smite.",
               "name" : "Spellstrike"
             },
             {
@@ -7364,7 +7396,7 @@
         {
           "features" : [
             {
-              "description" : "You gain the following benefits for your Spellblade Class Features. Bound Weapon Bound Damage: Your Bound Damage now ignores Resistance to its damage type. Spellblade Discipline You gain 1 Additional Spellblade Discipline. The following Disciplines are changed in the following ways:\n• Acolyte: You can spend additional MP to increase the healing by 2 for each additional MP spent.\n• Hex Warrior: You can spend additional MP increase the damage by 1 for each additional MP spent.\n• Spell Warder: When you gain the Resistance granted by Spell Warder, you can spend 1 MP to gain Resistance (Half) to the damage type instead. Spellstrike The Spell you cast as part of Spellstrike can target multiple creatures or an Area, provided at least one of the Spell targets is also a target of the Martial Attack.",
+              "description" : "You gain the following benefits for your Spellblade Class Features.\n\nBOUND WEAPON\nBound Damage: Your Bound Damage now ignores Resistance to its damage type.\n\nSPELLBLADE DISCIPLINE\nYou gain 1 Additional Spellblade Discipline.\n\nThe following Disciplines are changed in the following ways:\n• Acolyte: You can spend additional MP to increase the healing by 2 for each additional MP spent.\n• Hex Warrior: You can spend additional MP increase the damage by 1 for each additional MP spent.\n• Spell Warder: When you gain the Resistance granted by Spell Warder, you can spend 1 MP to gain Resistance (Half) to the damage type instead.\n\nSPELLSTRIKE\nThe Spell you cast as part of Spellstrike can target multiple creatures or an Area, provided at least one of the Spell targets is also a target of the Martial Attack.",
               "name" : "Expert Spellblade"
             }
           ],
@@ -7467,43 +7499,52 @@
       "subclassFeatures" : {
         "Paladin" : [
           {
-            "description" : "You gain the following benefits: Aura of Protection: Creatures of your choice within 2 Spaces of you have ADV on Mental Saves. Divine Strike: When you deal damage with Spellstrike, you can change the Spell’s damage to Radiant or Umbral (choose when you gain this Feature). Lay on Hands: You gain the Acolyte Discipline. If you already know that Discipline, you gain another one of your choice. Once per Long Rest, you can use the Acolyte Discipline without spending MP and gain a +5 bonus on your Spell Check.",
+            "description" : "You gain the following benefits:\n\nAura of Protection: Creatures of your choice within 2 Spaces of you have ADV on Mental Saves.\n\nDivine Strike: When you deal damage with Spellstrike, you can change the Spell’s damage to Radiant or Umbral (choose when you gain this Feature).\n\nLay on Hands: You gain the Acolyte Discipline. If you already know that Discipline, you gain another one of your choice. Once per Long Rest, you can use the Acolyte Discipline without spending MP and gain a +5 bonus on your Spell Check.",
+            "level" : 3,
             "name" : "Holy Warrior"
           },
           {
-            "description" : "You make an oath to uphold the tenets of your choice below (or create your own with GM approval). While you’re following your oath, you have ADV on Checks made to convince non-hostile creatures to join you in doing so. Tenets Heart of Bravery: You must be courageous in all things and fight for what is right, whether on the battlefield or within oneself. Light in the Darkness: You must be a beacon of hope for others and bring hope to the hopeless when all seems lost. Instill Pain: Teach your enemies the meaning of pain so they may experience it for themselves and learn to never do it to others again. Peacekeeper: You must always seek peace with your enemies first. Protect the Weak: You must protect those that cannot protect themselves. Unrelenting Effort: You must try your best in all things, never carelessly doing anything. Vengeance: You must seek revenge on those who have harmed you, your loved ones, or the innocent. DC Tip: The GM can provide omens or warnings to the PC that they’re at risk of breaking their Tenets, which may come with consequences (at the GM’s discretion), such as sudden headaches, a sense of dread, or visions.",
+            "description" : "You make an oath to uphold the tenets of your choice below (or create your own with GM approval). While you’re following your oath, you have ADV on Checks made to convince non-hostile creatures to join you in doing so.\n\nTENETS\nHeart of Bravery: You must be courageous in all things and fight for what is right, whether on the battlefield or within oneself.\n\nLight in the Darkness: You must be a beacon of hope for others and bring hope to the hopeless when all seems lost.\n\nInstill Pain: Teach your enemies the meaning of pain so they may experience it for themselves and learn to never do it to others again.\n\nPeacekeeper: You must always seek peace with your enemies first.\n\nProtect the Weak: You must protect those that cannot protect themselves.\n\nUnrelenting Effort: You must try your best in all things, never carelessly doing anything.\n\nVengeance: You must seek revenge on those who have harmed you, your loved ones, or the innocent.\n\nDC Tip: The GM can provide omens or warnings to the PC that they’re at risk of breaking their Tenets, which may come with consequences (at the GM’s discretion), such as sudden headaches, a sense of dread, or visions.",
+            "level" : 3,
             "name" : "Oathsworn (Flavor Feature)"
           }
         ],
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ],
         "Rune Knight" : [
           {
-            "description" : "You can inscribe a magical Rune as you bond with your Bound Weapon, which can only bear 1 Rune at a time and lasts until the bond ends. When you complete a Quick Rest, you can change the Rune to another Rune you know. You learn 2 Runes from the following list: Earth Rune Earthquake: When you Smite a target, you can create an area of Difficult Terrain on the ground in a 3 Space diameter Sphere centered on the target. Unmovable: You have ADV on Checks and Saves against being knocked Prone or moved. Flame Rune Scorching: When you Smite a creature with the Weapon, they must make a Physical Save. Save Failure: The target begins Burning. Hearth: You regain 2 Rest Points when you complete a Short Rest, provided you engaged in Combat since applying this Rune. Frost Rune Frostbite: When you Smite a creature with the Weapon, they must make a Physical Save. Save Failure: The target is Immobilized by ice for 1 Round. Glacier: When you roll Initiative, you gain 2 Temp HP. Lightning Rune Charged: When you Smite a creature with the Weapon, they must make a Physical Save. Save Failure: The target is Stunned 1 until the end of your next turn. Quickness: Your Speed increases by 1. Water Rune Wave: When you Smite a creature with the Weapon, they must make a Physical Save. Save Failure: The target is knocked Prone. Healing Waters: When an MP Effect restores your HP, you regain 1 additional HP. Wind Rune Hurricane: When you Smite a creature with the Weapon, they must make a Physical Save. Save Failure: The target is pushed 1 Space horizontally in a direction of your choice. Wind Swept: You gain +3 Jump Distance and your Jump Distance is no longer halved when performing a Stand Jump.",
+            "description" : "You can inscribe a magical Rune as you bond with your Bound Weapon, which can only bear 1 Rune at a time and lasts until the bond ends. When you complete a Quick Rest, you can change the Rune to another Rune you know. You learn 2 Runes from the following list:\n\nEARTH RUNE\nEarthquake: When you Smite a target, you can create an area of Difficult Terrain on the ground in a 3 Space diameter Sphere centered on the target.\n\nUnmovable: You have ADV on Checks and Saves against being knocked Prone or moved.\n\nFLAME RUNE\nScorching: When you Smite a creature with the Weapon, they must make a Physical Save. Save Failure: The target begins Burning.\n\nHearth: You regain 2 Rest Points when you complete a Short Rest, provided you engaged in Combat since applying this Rune.\n\nFROST RUNE\nFrostbite: When you Smite a creature with the Weapon, they must make a Physical Save. Save Failure: The target is Immobilized by ice for 1 Round.\n\nGlacier: When you roll Initiative, you gain 2 Temp HP.\n\nLIGHTNING RUNE\nCharged: When you Smite a creature with the Weapon, they must make a Physical Save. Save Failure: The target is Stunned 1 until the end of your next turn.\n\nQuickness: Your Speed increases by 1.\n\nWATER RUNE\nWave: When you Smite a creature with the Weapon, they must make a Physical Save. Save Failure: The target is knocked Prone.\n\nHealing Waters: When an MP Effect restores your HP, you regain 1 additional HP.\n\nWIND RUNE\nHurricane: When you Smite a creature with the Weapon, they must make a Physical Save. Save Failure: The target is pushed 1 Space horizontally in a direction of your choice.\n\nWind Swept: You gain +3 Jump Distance and your Jump Distance is no longer halved when performing a Stand Jump.",
+            "level" : 3,
             "name" : "Rune Weapon"
           },
           {
-            "description" : "You have ADV on Checks made to understand the purpose and meaning of any magical rune you can see. Rune Names\n\nHere’s a section to add some flavor to the names of the runes.\n\nEnglish\n\nNordic\n\nLatin\n\nEarth\n\nUruz\n\nTerra\n\nFlame\n\nIld\n\nIgnis\n\nFrost\n\nIsaz\n\nFrigus\n\nLightning\n\nThurisaz\n\nFulmen\n\nWater\n\nLaquz\n\nAqua\n\nWind\n\nAnsuz\n\nVentus",
+            "description" : "You have ADV on Checks made to understand the purpose and meaning of any magical rune you can see.\n\nRUNE NAMES\nHere’s a section to add some flavor to the names of the runes.\n\nEnglish • Nordic • Latin\nEarth • Uruz • Terra\nFlame • Ild • Ignis\nFrost • Isaz • Frigus\nLightning • Thurisaz • Fulmen\nWater • Laquz • Aqua\nWind • Ansuz • Ventus",
+            "level" : 3,
             "name" : "Rune Expert (Flavor Feature)"
           }
         ]
@@ -7816,16 +7857,38 @@
           "level" : 3,
           "limit" : 1,
           "options" : [
-            {
-              "description" : "Learn Summon Undead. Its complete creature statistics, Base Summon Traits, Enhancements, and Expanded Summon Traits are available in the Spells list below.",
-              "isRepeatable" : false,
-              "name" : "Summon Undead",
-              "pointCost" : 1
-            }
+
           ],
+          "optionsFromGroup" : "summoner.bondedSummon",
           "prompt" : "Learn Summon Undead, or another Bonded Summons Spell if you already know Summon Undead.",
           "requiredSubclass" : "Dread Lord",
           "title" : "Dread Lord Summon Spell"
+        },
+        {
+          "feature" : "Creature Specialist",
+          "id" : "summoner.creatureSpecialistSpell",
+          "level" : 2,
+          "limit" : 1,
+          "options" : [
+
+          ],
+          "optionsFromGroup" : "summoner.bondedSummon",
+          "prompt" : "Choose 1 Bonded Summons Spell you know to receive the Creature Specialist benefit.",
+          "requiredTalent" : "Creature Specialist",
+          "title" : "Creature Specialist Spell"
+        },
+        {
+          "feature" : "Horde Summoner",
+          "id" : "summoner.hordeSummons",
+          "level" : 2,
+          "limit" : 2,
+          "options" : [
+
+          ],
+          "optionsFromGroup" : "summoner.bondedSummon",
+          "prompt" : "Versatile Summoner teaches you 2 additional Spells listed in Bonded Summons.",
+          "requiredTalent" : "Horde Summoner",
+          "title" : "Versatile Summoner Spells"
         }
       ],
       "description" : "With the release of the 0.10.5 Beta, DC20 received a slew of brand new summoning Spells. To go with that, we decided we wanted to make the Summoner Class! When designing summoning Spells, we knew we wanted to keep the Summoner in mind and balance the Spells around it. So, we did a lot of work to keep the math right, and went ahead and made a working Summoner in the process!\n\nWe think you’ll have a ton of fun with this Class, and can’t wait to hear your feedback on it! In this PDF, you get the new Summoner Class (up to Level 5), 4 Class Talents for the Paragon Summoner, and 2 Subclasses: The Chimera and The Dread Lord.",
@@ -7837,7 +7900,7 @@
               "name" : "Bonded Summons"
             },
             {
-              "description" : "You can spend 1 AP to open a portal in an unoccupied Space of your choice within 2 Spaces. The portal lasts until the start of your next turn and leads to a demiplane of your creation.\n\nDemiplane: The demiplane is a 3 Space diameter Sphere that contains indefinite breathable air, is room temperature, and contains gravity identical to the material plane with the floor as its plane of gravity. A creature that enters the portal's Space instead enters the demiplane in an unoccupied Space of its choice.\n\nExiting the Demiplane: A creature can spend 1 Space of movement to exit the demiplane, emerging into the nearest unoccupied Space of its choice near the portal's entrance. If the portal is closed, a creature can spend 1 AP to emerge in the nearest unoccupied Space of its choice near the portal's last location. A creature can exit the demiplane for free when you open a new portal.\n\nPersistent Plane: Each time you use this Feature, the portal opens to the same demiplane. If you are inside the demiplane when you open the portal, it opens at the last location. If you die, everything immediately exits the demiplane in your Space (or the portal's last open location if you're inside) for free and the demiplane ceases to exist.",
+              "description" : "You can spend 1 AP to open a portal in an unoccupied Space of your choice within 2 Spaces. The portal lasts until the start of your next turn and leads to a demiplane of your creation.\n\nDemiplane: The demiplane is a 3 Space diameter Sphere that contains indefinite breathable air, is room temperature, and contains gravity identical to the material plane with the floor as its plane of gravity. A creature that enters the portal’s Space instead enters the demiplane in an unoccupied Space of its choice.\n\nExiting the Demiplane: A creature can spend 1 Space of movement to exit the demiplane, emerging into the nearest unoccupied Space of their choice near the portal’s entrance. If the portal is closed, a creature can spend 1 AP to emerge in the nearest unoccupied Space of their choice near the portal’s last location. A creature can exit the demiplane for free when you open a new portal.\n\nPersistent Plane: Each time you use this Feature the portal opens to the same demiplane. If you are inside the demiplane when you open the portal, it opens at the last location. If you die, everything immediately exits the demiplane in your Space (or the portals last open location if you’re inside) for free and the demiplane ceases to exist.",
               "name" : "Personal Demiplane"
             },
             {
@@ -7850,7 +7913,7 @@
         {
           "features" : [
             {
-              "description" : "You can spend 1 AP to switch places with a creature within 10 Spaces that you've summoned, such as with the Call Familiar, Summon Celestial, or Summon Undead Spells.",
+              "description" : "You can spend 1 AP to switch places with a creature within 10 Spaces that you’ve summoned (such as with the Call Familiar, Summon Celestial, or Summon Undead Spells).",
               "name" : "Summon Exchange"
             },
             {
@@ -7867,7 +7930,7 @@
         {
           "features" : [
             {
-              "description" : "You choose one of the following Subclasses and gain its Level 3 Features: Chimera, Dread Lord, or Paragon.",
+              "description" : "Choose one of the following options to become your Subclass and gain its Level 3 Features:\n• Chimera\n• Dread Lord\n• Paragon",
               "name" : "Subclass"
             }
           ],
@@ -7893,7 +7956,7 @@
         {
           "features" : [
             {
-              "description" : "You gain the following benefits:\n\n• Summon Conduit: You can cast Spells as if you were standing in the Space of a creature you've summoned, provided it's within 10 Spaces.\n• Summon Translocation: When you use Summon Exchange, you can instead switch the places of two creatures you have summoned, provided they are both within range.\n• Extended Summoning: The duration of Spells listed in Bonded Summons now lasts until you complete a Long Rest.\n\nDC Tip: You can only Sustain 1 Spell at a time out of Combat, so if multiple Summon Spells are active when Combat ends, all but one of them ends (you choose).",
+              "description" : "You gain the following benefits:\n\n• Summon Conduit: You can cast Spells as if you were standing in the Space of a creature you’ve summoned, provided it’s within 10 Spaces.\n• Summon Translocation: When you use Summon Exchange, you can instead switch the places of two creatures you have summoned provided they are both within range.\n• Extended Summoning: The duration of Spells listed in Bonded Summons now last until you complete a Long Rest.\n\nDC Tip: You can only Sustain 1 Spell at a time out of Combat, so if you have multiple Summon Spells active when Combat ends, all but one of them ends (you choose).",
               "name" : "Expert Summoner"
             }
           ],
@@ -7916,7 +7979,7 @@
           "features" : [
             {
               "description" : "Magazine Volume 23 reserves a Subclass Expert Feature at this level but develops the Summoner only through level 5.",
-              "name" : "Subclass Expert Feature - Not Yet Developed"
+              "name" : "Subclass Expert Feature"
             }
           ],
           "level" : 7
@@ -7942,7 +8005,7 @@
           "features" : [
             {
               "description" : "Magazine Volume 23 reserves a Class Capstone Feature at this level but does not provide feature text.",
-              "name" : "Class Capstone Feature - Not Yet Developed"
+              "name" : "Class Capstone Feature"
             }
           ],
           "level" : 9
@@ -7951,7 +8014,7 @@
           "features" : [
             {
               "description" : "Magazine Volume 23 reserves a Subclass Capstone Feature at this level but does not provide feature text.",
-              "name" : "Subclass Capstone Feature - Not Yet Developed"
+              "name" : "Subclass Capstone Feature"
             }
           ],
           "level" : 10
@@ -7992,43 +8055,52 @@
       "subclassFeatures" : {
         "Chimera" : [
           {
-            "description" : "You gain the following benefits:\n\n• You learn 2 Spells of your choice from those listed in Bonded Summons.\n• When you summon a creature with one of the listed Spells, the first creature summoned also gains the Base Summon Traits from another listed Spell that you know.\n• When you use the Additional Traits Enhancement, you can also choose from the Expanded Summon Traits of another listed Spell you know.\n\nWhen you grant a summoned creature Traits from a different listed Spell, it gains the Creature Type of the chosen Spell in addition to its own.\n\nExample: A Chimera Summoner casts the Summon Beast Spell and grants the summoned creature the Base Summon Traits from the Summon Celestial Spell. They also use the Additional Traits Enhancement and grant the creature a Trait from the Summon Ooze Spell. The summoned creature has the following Creature Types: Beast, Celestial, and Ooze.",
+            "description" : "You gain the following benefits:\n\n• You learn 2 Spells of your choice from those listed in Bonded Summons.\n• When you summon a creature with one of the listed Spells, the first creature summoned also gains the Base Summon Traits from another listed Spell that you know.\n• When you use the Additional Traits Enhancement, you can also choose from your Expanded Summon Traits of another listed Spell you know.\n\nWhen you grant a summoned creature the Traits from a different listed Spell, it gains the Creature Type of the chosen Spell in addition to its own.\n\nExample: A Chimera Summoner casts the Summon Beast Spell and grants the summoned creature the Base Summon Traits from the Summon Celestial Spell. They also use the Additional Traits Enhancement and grant the creature a Trait from the Summon Ooze Spell. The summoned creature has the following Creature Types: Beast, Celestial, and Ooze.",
+            "level" : 3,
             "name" : "Summon Chimera"
           },
           {
-            "description" : "You can use a Minor Action to manifest minor characteristics of any Creature Type that matches a Spell you know listed in Bonded Summons, such as the skin of an Ooze. The change in your appearance is purely cosmetic.",
+            "description" : "You can use a Minor Action to manifest minor characteristics of any Creature Type that matches a Spell you know listed in Bonded Summons (such as the skin of an Ooze). The change in your appearance is purely cosmetic.",
+            "level" : 3,
             "name" : "Chimeric Appearance (Flavor Feature)"
           }
         ],
         "Dread Lord" : [
           {
             "description" : "You learn the Summon Undead Spell or another Spell listed in Bonded Summons if you already know it. Creatures you summon with a Spell listed in Bonded Summons gain the following benefits:\n\n• Life Steal: When the creature hits another creature with its Unarmed Strike, it regains 1 HP.\n• Undying: When the creature dies, you can spend 1 AP and 1 or more MP as a Reaction to bring it back to life with an amount of HP equal to 2 per MP spent.",
+            "level" : 3,
             "name" : "Unending March"
           },
           {
             "description" : "You can hear the cries of the anguished dead. While within 5 Spaces of a creature’s corpse, its grave, or its contained ashes, you can hear the lamentations of the creature’s spirit if it still remains on the plane. When you do, you can discern the general reason it remains on the plane (such as unfinished business, a curse, or other happenstance) but no additional details. This Feature doesn’t grant you any special means of communicating with the dead.\n\nDC Tip: If you visit the grave of a creature and don’t hear their cries, you can assume their spirit has left the plane of existence.",
+            "level" : 3,
             "name" : "Anguished Dead (Flavor Feature)"
           }
         ],
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ]

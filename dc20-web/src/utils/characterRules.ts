@@ -2,6 +2,7 @@ import type {
   AncestryTrait,
   Character,
   CharacterBuildData,
+  ClassChoiceGroupReference,
   ClassReference,
   DC20Attribute,
   EquipmentCatalogItem,
@@ -20,6 +21,11 @@ export function attributeCap(level: number): number {
 
 export function masteryCap(level: number): number {
   return level >= 20 ? 5 : level >= 15 ? 4 : level >= 10 ? 3 : level >= 5 ? 2 : 1;
+}
+
+/** Roguish Finesse raises only the Skill Mastery Limit, not the Trade Mastery Limit. */
+export function skillMasteryCap(character: Pick<Character, 'class' | 'level'>): number {
+  return Math.min(5, masteryCap(character.level) + Number(character.class === 'Rogue'));
 }
 
 export function combatMastery(level: number): number {
@@ -72,6 +78,112 @@ export function talentSlots(className: string, level: number, subclass?: string)
   return progression.filter((entry) => entry <= level).length + paragon;
 }
 
+export const BARBARIAN_RAGE_STATE = 'barbarian.rage';
+
+export interface CharacterSheetEffects {
+  physicalDefense: number;
+  speed: number;
+  saveAdvantage: Partial<Record<DC20Attribute, number>>;
+  martialMeleeDamageBonus: number;
+  resistances: string[];
+}
+
+/** Sheet-facing effects that must change live rather than being baked into a character's base statistics. */
+export function characterSheetEffects(character: Character): CharacterSheetEffects {
+  const isRaging = character.class === 'Barbarian'
+    && Boolean(character.build?.sheetFeatureStates?.[BARBARIAN_RAGE_STATE]);
+  const selectedRune = character.class === 'Spellblade'
+    ? character.build?.sheetFeatureSelections?.['spellblade.rune.active']
+    : undefined;
+  const activeRune = selectedRune && character.build?.classFeatureSelections?.['spellblade.runes']?.includes(selectedRune)
+    ? selectedRune : undefined;
+  const spellbladeDisciplines = new Set(spellbladeDisciplineNames(character));
+  const spellWarderActive = character.class === 'Spellblade'
+    && spellbladeDisciplines.has('Spell Warder')
+    && Boolean(character.build?.sheetFeatureStates?.['spellblade.spellWarder.active']);
+  const spellWarderDamage = character.build?.sheetFeatureSelections?.['spellblade.spellWarder.damage'];
+  const spellWarderHalf = (character.build?.sheetFeatureCounters?.['spellblade.spellWarder.half'] ?? 0) > 0;
+  const adaptiveDamage = character.class === 'Spellblade'
+    && (character.build?.selectedTalents ?? []).includes('Adaptive Bond')
+    ? character.build?.sheetFeatureSelections?.['spellblade.boundDamage.current']
+      ?? character.build?.classFeatureSelections?.['spellblade.boundDamage']?.[0]
+    : undefined;
+  return {
+    physicalDefense: character.physicalDefense - (isRaging ? 5 : 0),
+    speed: character.speed + (activeRune === 'Lightning Rune' ? 1 : 0),
+    saveAdvantage: isRaging ? { Might: 1 } : {},
+    martialMeleeDamageBonus: isRaging ? 1 : 0,
+    resistances: [
+      ...(isRaging ? ['Elemental (Half)', 'Physical (Half)'] : []),
+      ...(adaptiveDamage ? [`${adaptiveDamage} (1)`] : []),
+      ...(spellWarderActive && spellWarderDamage ? [`${spellWarderDamage} (${spellWarderHalf ? 'Half' : '1'})`] : []),
+    ],
+  };
+}
+
+/** DC20 rounds fractions up, so a Barbarian regains ceil(maximum SP / 2). */
+export function barbarianStaminaRegenAmount(maximumStamina: number): number {
+  return Math.max(0, Math.ceil(maximumStamina / 2));
+}
+
+/** Every Rogue Martial Path trigger can restore up to half maximum SP once per Round. */
+export function rogueStaminaRegenAmount(maximumStamina: number): number {
+  return Math.max(0, Math.ceil(maximumStamina / 2));
+}
+
+/** The Mortal Language selected for Cypher Speech is Fluent without spending Language Points. */
+export function grantedClassLanguageNames(character: Pick<Character, 'class' | 'build'>): string[] {
+  if (character.class !== 'Rogue') return [];
+  return (character.build?.classFeatureSelections?.['rogue.language'] ?? []).slice(0, 1);
+}
+
+/** Cheap Shot improves at Expert Rogue; each Sinister Shot adds damage per Condition beyond the first. */
+export function rogueCheapShotDamage(level: number, distinctConditions: number, sinisterShotCount = 0): number {
+  const baseDamage = level >= 5 ? 2 : 1;
+  return baseDamage + Math.max(0, Math.trunc(distinctConditions) - 1) * Math.max(0, Math.trunc(sinisterShotCount));
+}
+
+/** Every Spellblade Discipline known from the base feature or Holy Warrior. */
+export function spellbladeDisciplineNames(character: Pick<Character, 'class' | 'build'>): string[] {
+  if (character.class !== 'Spellblade') return [];
+  const choices = character.build?.classFeatureSelections ?? {};
+  return Array.from(new Set([
+    ...(choices['spellblade.disciplines'] ?? []),
+    ...(choices['spellblade.paladinDiscipline'] ?? []),
+  ]));
+}
+
+/** Base Disciplines: 2 at level 1, +2 per Talent, +1 at Expert Spellblade. */
+export function classChoiceSelectionLimit(
+  group: ClassChoiceGroupReference,
+  character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>,
+): number {
+  if (group.id !== 'spellblade.disciplines' || character.class !== 'Spellblade') return group.limit;
+  const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Disciplines').length;
+  const paladinReserve = character.subclass === 'Paladin' ? 1 : 0;
+  return Math.min(Math.max(0, group.options.length - paladinReserve), 2 + expanded * 2 + (character.level >= 5 ? 1 : 0));
+}
+
+/** Maneuvers granted by a class feature do not consume the class-table Maneuvers Known allowance. */
+export function grantedClassManeuverNames(character: Pick<Character, 'class' | 'subclass' | 'build'>): string[] {
+  if (character.class !== 'Barbarian' || character.subclass !== 'Spirit Guardian') return [];
+  return (character.build?.classFeatureSelections?.['barbarian.guardianManeuver'] ?? []).slice(0, 1);
+}
+
+/** Spells explicitly learned from Summoner features are additional to the class-table Spells Known. */
+export function grantedClassSpellNames(character: Pick<Character, 'class' | 'subclass' | 'build'>): string[] {
+  if (character.class !== 'Summoner') return [];
+  const choices = character.build?.classFeatureSelections ?? {};
+  const talents = new Set(character.build?.selectedTalents ?? []);
+  const groups = [
+    'summoner.bondedSummon',
+    ...(character.subclass === 'Chimera' ? ['summoner.chimeraSummons'] : []),
+    ...(character.subclass === 'Dread Lord' ? ['summoner.dreadLordSummon'] : []),
+    ...(talents.has('Horde Summoner') ? ['summoner.hordeSummons'] : []),
+  ];
+  return Array.from(new Set(groups.flatMap((group) => choices[group] ?? [])));
+}
+
 export function ancestryPointBudget(character: Pick<Character, 'level' | 'class' | 'subclass' | 'build'>): number {
   const laterIncrease = character.class === 'Psion' ? 7 : 8;
   const advancement = (character.level >= 4 ? 2 : 0) + (character.level >= laterIncrease ? 2 : 0);
@@ -99,30 +211,40 @@ export function spellIsAvailableToClass(
   spell: Pick<Spell, 'school' | 'source' | 'tags'>,
   fixedSpellSource?: string,
   selectedSpellSource = '',
+  selectedSpellSchools: string[] = [],
 ): boolean {
   const tags = (spell.tags ?? '').split(',').map((tag) => tag.trim().toLowerCase());
   if (className === 'Summoner') {
     return ['Astromancy', 'Conjuration', 'Transmutation'].includes(spell.school)
-      || tags.some((tag) => tag.includes('summon'));
+      || tags.some((tag) => tag === 'summoning' || tag === 'summon');
   }
   if (className === 'Psion') {
     return tags.some((tag) => ['psychic', 'gravity', 'illusion'].includes(tag))
       || ['Divination', 'Enchantment', 'Nullification'].includes(spell.school);
   }
-  if (className === 'Bard') return true;
+  if (className === 'Bard') {
+    return spell.school === 'Enchantment'
+      || tags.some((tag) => ['embolden', 'enfeeble', 'healing', 'illusion', 'sound'].includes(tag));
+  }
+  if (className === 'Spellblade') {
+    return selectedSpellSchools.includes(spell.school)
+      || tags.some((tag) => ['weapon', 'ward'].includes(tag));
+  }
+  if (className === 'Warlock') return selectedSpellSchools.includes(spell.school);
   const source = fixedSpellSource ?? selectedSpellSource;
   return source ? (spell.source ?? '').split(', ').includes(source) : true;
 }
 
 export function ancestryExpertise(
-  character: Pick<Character, 'build' | 'ancestry'>,
+  character: Pick<Character, 'build' | 'ancestry' | 'class'>,
   traits: AncestryTrait[],
 ): { skills: Record<string, number>; trades: Record<string, number> } {
   const result = { skills: {} as Record<string, number>, trades: {} as Record<string, number> };
   for (const trait of selectedAncestryTraits(character, traits)) {
     const choice = character.build?.ancestryTraitChoices?.[trait.id]?.[0];
     if (!choice) continue;
-    if (trait.name === 'Skill Expertise') result.skills[choice] = (result.skills[choice] ?? 0) + 1;
+    // Roguish Finesse already increases every Skill Mastery Limit, and both Features forbid stacking.
+    if (trait.name === 'Skill Expertise' && character.class !== 'Rogue') result.skills[choice] = (result.skills[choice] ?? 0) + 1;
     if (trait.name === 'Trade Expertise') result.trades[choice] = (result.trades[choice] ?? 0) + 1;
   }
   return result;
@@ -228,12 +350,17 @@ export function deriveCharacter(
   const classAD = equipment.isUnarmored && character.class === 'Barbarian' ? 2 : 0;
   const classSpeed = character.class === 'Barbarian' ? 1
     : character.class === 'Monk' ? (character.level >= 5 ? 2 : 1) : 0;
-  const featureMana = character.class === 'Sorcerer' ? (character.level >= 5 ? 2 : 1) : 0;
+  const disciplines = new Set(spellbladeDisciplineNames(character));
+  const featureMana = character.class === 'Sorcerer' ? (character.level >= 5 ? 2 : 1)
+    : character.class === 'Spellblade' && disciplines.has('Magus') ? 1 : 0;
   const skillFeaturePoints = character.class === 'Bard' ? (character.level >= 5 ? 4 : 2)
     : character.class === 'Rogue' ? (character.level >= 5 ? 2 : 1) : 0;
   const bardMagicalSecrets = character.class === 'Bard' ? (character.level >= 5 ? 6 : 2) : 0;
   const skillConversions = character.build?.skillPointsConvertedToTrades ?? 0;
   const tradeConversions = character.build?.tradePointsConvertedToLanguages ?? 0;
+  const selectedTalents = character.build?.selectedTalents ?? [];
+  const skillTalentPoints = selectedTalents.filter((name) => name === 'Skill Increase').length * 4;
+  const paragonTradePoints = character.subclass === 'Paragon' && character.level >= 3 ? 1 : 0;
 
   return {
     effectiveAttributes,
@@ -249,13 +376,17 @@ export function deriveCharacter(
     saveDC: 10 + primeModifier + mastery,
     martialCheck: primeModifier + mastery,
     spellCheck: primeModifier + mastery,
-    skillPointBudget: Math.max(0, 5 + effectiveAttributes.Intelligence + totals.skill + skillFeaturePoints - skillConversions),
-    tradePointBudget: Math.max(0, 3 + totals.trade + skillConversions * 2 - tradeConversions),
+    skillPointBudget: Math.max(0, 5 + effectiveAttributes.Intelligence + totals.skill + skillFeaturePoints + skillTalentPoints - skillConversions),
+    tradePointBudget: Math.max(0, 3 + totals.trade + paragonTradePoints + skillConversions * 2 - tradeConversions),
     languagePointBudget: 2 + tradeConversions * 2,
     ancestryPointBudget: ancestryPointBudget(character),
-    spellLimit: totals.spells + bardMagicalSecrets + spellcasterPaths + (character.build?.selectedTalents ?? []).filter((name) => name === 'Spellcasting Expansion').length * 3,
+    spellLimit: totals.spells + bardMagicalSecrets + spellcasterPaths
+      + selectedTalents.filter((name) => name === 'Spellcasting Expansion').length * 3
+      + Number(character.class === 'Spellblade' && disciplines.has('Magus')),
     cantripLimit: totals.cantrips,
-    maneuverLimit: totals.maneuvers + martialPaths + (character.build?.selectedTalents ?? []).filter((name) => name === 'Martial Expansion').length * 2,
+    maneuverLimit: totals.maneuvers + martialPaths
+      + selectedTalents.filter((name) => name === 'Martial Expansion').length * 2
+      + Number(character.class === 'Spellblade' && disciplines.has('Warrior')),
     physicalDR: equipment.physicalDR,
     mysticalDR: equipment.mysticalDR,
     size: chosenTraits.some((trait) => trait.name === 'Small-Sized') ? 'Small' : 'Medium',
@@ -305,7 +436,9 @@ export function defaultBuild(): CharacterBuildData {
     selectedTalents: [],
     pathProgressionChoices: {},
     classFeatureSelections: {},
+    selectedSpellListClass: '',
     selectedSpellSource: '',
+    selectedSpellSchools: [],
     selectedSpells: [],
     selectedCantrips: [],
     selectedManeuvers: [],
@@ -313,6 +446,9 @@ export function defaultBuild(): CharacterBuildData {
     currentMana: 0,
     temporaryHP: 0,
     sheetConditionLevels: {},
+    sheetFeatureStates: {},
+    sheetFeatureSelections: {},
+    sheetFeatureCounters: {},
     characterNotes: [],
     rollAdjustment: 0,
     isFinalized: false,

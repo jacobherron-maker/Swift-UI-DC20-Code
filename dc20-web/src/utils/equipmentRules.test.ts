@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { CharacterInventoryItem, EquipmentCatalogItem } from '../types/models';
-import { addInventoryItem, toggleInventoryEquipped } from './equipmentRules';
+import { addInventoryItem, enforceEquipmentHandCapacity, toggleInventoryEquipped } from './equipmentRules';
 
 const catalogPath = fileURLToPath(new URL('../../public/data/EquipmentCatalog.json', import.meta.url));
 const catalog = JSON.parse(readFileSync(catalogPath, 'utf8')) as EquipmentCatalogItem[];
@@ -55,6 +55,16 @@ describe('character inventory equipment rules', () => {
   it('enforces the two-hand capacity', () => {
     const items = [inventory(longsword, 'longsword', true), inventory(greatsword, 'greatsword')];
     expect(toggleInventoryEquipped(items, 'greatsword', catalog).map(({ isEquipped }) => isEquipped)).toEqual([false, true]);
+  });
+
+  it('lets Unfathomable Strength treat Two-Handed Weapons as one hand while Raging', () => {
+    const secondGreatsword = inventory(greatsword, 'second-greatsword');
+    const items = [inventory(greatsword, 'greatsword', true), secondGreatsword];
+    expect(toggleInventoryEquipped(items, 'second-greatsword', catalog, { twoHandedWeaponHandCost: 1 }).map(({ isEquipped }) => isEquipped)).toEqual([true, true]);
+    expect(enforceEquipmentHandCapacity([
+      { ...items[0], isEquipped: true },
+      { ...items[1], isEquipped: true },
+    ], catalog).map(({ isEquipped }) => isEquipped)).toEqual([true, false]);
   });
 
   it('does not equip carried consumables', () => {

@@ -249,7 +249,10 @@ export interface CharacterBuildData {
   selectedTalents: string[];
   pathProgressionChoices: Record<string, CharacterPathChoice>;
   classFeatureSelections: Record<string, string[]>;
+  /** Class whose Spell List was gained from Character Path progression. */
+  selectedSpellListClass: string;
   selectedSpellSource: string;
+  selectedSpellSchools: string[];
   selectedSpells: string[];
   selectedCantrips: string[];
   selectedManeuvers: string[];
@@ -257,6 +260,12 @@ export interface CharacterBuildData {
   currentMana: number;
   temporaryHP: number;
   sheetConditionLevels: Record<string, number>;
+  /** Persistent toggles for time-limited class features used from the character sheet. */
+  sheetFeatureStates: Record<string, boolean>;
+  /** Persistent option selections for class-feature controls used from the character sheet. */
+  sheetFeatureSelections: Record<string, string>;
+  /** Persistent numeric enhancement choices for class-feature controls used from the character sheet. */
+  sheetFeatureCounters: Record<string, number>;
   characterNotes: CampaignNote[];
   rollAdjustment: number;
   isFinalized: boolean;
@@ -410,6 +419,8 @@ export interface MasteryReference {
 export interface ClassFeatureReference {
   name: string;
   description: string;
+  /** Subclass feature level, when the source assigns one. Older entries without this field remain visible. */
+  level?: number;
 }
 
 export interface ClassLevelReference {
@@ -446,8 +457,13 @@ export interface ClassChoiceGroupReference {
   title: string;
   prompt: string;
   limit: number;
+  /** Minimum choices required to finish the builder. Defaults to the selection limit. */
+  minimumSelections?: number;
   options: ClassChoiceOptionReference[];
+  /** Reuse the option catalog from another choice group without duplicating source data. */
+  optionsFromGroup?: string;
   requiredSubclass?: string;
+  requiredTalent?: string;
 }
 
 export interface ClassReference {
