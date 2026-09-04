@@ -79,6 +79,7 @@ export function talentSlots(className: string, level: number, subclass?: string)
 }
 
 export const BARBARIAN_RAGE_STATE = 'barbarian.rage';
+export const BARD_PERFORMANCE_STATE = 'bard.performance.active';
 
 export interface CharacterSheetEffects {
   physicalDefense: number;
@@ -117,9 +118,23 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
   const inquisitorResistances = character.class === 'Cleric' && character.subclass === 'Inquisitor'
     ? ['Charmed Condition', 'Intimidated Condition', 'Taunted Condition']
     : [];
+  const bardPerformanceActive = character.class === 'Bard'
+    && Boolean(character.build?.sheetFeatureStates?.[BARD_PERFORMANCE_STATE]);
+  const bardPerformanceAppliesToSelf = bardPerformanceActive
+    && Boolean(character.build?.sheetFeatureStates?.['bard.performance.selfIncluded']);
+  const bardPerformanceEnhanced = character.level >= 5
+    && Boolean(character.build?.sheetFeatureStates?.['bard.performance.enhanced']);
+  const bardPerformance = character.build?.sheetFeatureSelections?.['bard.performance.activeChoice'];
+  const bardEmotionalCondition = character.build?.sheetFeatureSelections?.['bard.performance.condition'];
+  const bardResistances = bardPerformanceAppliesToSelf && bardPerformance === 'Emotional'
+    ? bardPerformanceEnhanced
+      ? ['Charmed Condition', 'Frightened Condition', 'Intimidated Condition', 'Taunted Condition']
+      : bardEmotionalCondition ? [`${bardEmotionalCondition} Condition`] : []
+    : [];
   return {
     physicalDefense: character.physicalDefense - (isRaging ? 5 : 0),
-    speed: character.speed + (activeRune === 'Lightning Rune' ? 1 : 0),
+    speed: character.speed + (activeRune === 'Lightning Rune' ? 1 : 0)
+      + (bardPerformanceAppliesToSelf && bardPerformance === 'Fast Tempo' ? (bardPerformanceEnhanced ? 2 : 1) : 0),
     saveAdvantage: isRaging ? { Might: 1 } : {},
     martialMeleeDamageBonus: isRaging ? 1 : 0,
     resistances: [
@@ -128,8 +143,14 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
       ...(spellWarderActive && spellWarderDamage ? [`${spellWarderDamage} (${spellWarderHalf ? 'Half' : '1'})`] : []),
       ...(clericDomains.has('Divine Damage Expansion') && clericDivineDamage ? [`${clericDivineDamage} (1)`] : []),
       ...inquisitorResistances,
+      ...bardResistances,
     ],
   };
+}
+
+/** Font of Inspiration begins at d8 and improves to d10 with Expert Bard. */
+export function bardHelpDieSize(level: number): number {
+  return level >= 5 ? 10 : 8;
 }
 
 /** DC20 rounds fractions up, so a Barbarian regains ceil(maximum SP / 2). */
@@ -174,6 +195,9 @@ export function classChoiceSelectionLimit(
   group: ClassChoiceGroupReference,
   character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>,
 ): number {
+  if (group.id === 'bard.expression' && character.class === 'Bard') {
+    return (character.build?.selectedTalents ?? []).includes('Expanded Repertoire') ? 2 : 1;
+  }
   if (group.id === 'cleric.domains' && character.class === 'Cleric') {
     const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Order').length;
     return 2 + expanded * 2 + Number(character.level >= 5);
@@ -216,6 +240,16 @@ export function grantedClassManeuverNames(character: Pick<Character, 'class' | '
 export function grantedClassSpellNames(character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>): string[] {
   const choices = character.build?.classFeatureSelections ?? {};
   const talents = new Set(character.build?.selectedTalents ?? []);
+  if (character.class === 'Bard') {
+    return Array.from(new Set([
+      ...(choices['bard.magicalSecrets'] ?? []).slice(0, 2),
+      ...(character.level >= 5 ? (choices['bard.expertSecrets'] ?? []).slice(0, 2) : []),
+      ...(character.level >= 3 && talents.has('Expanded Repertoire')
+        ? (choices['bard.expandedRepertoireSpells'] ?? []).slice(0, 2) : []),
+      ...(character.level >= 3 && character.subclass === 'Eloquence'
+        ? (choices['bard.enthrallSpell'] ?? []).slice(0, 1) : []),
+    ].filter(Boolean)));
+  }
   if (character.class === 'Warlock') {
     const boons = new Set(choices['warlock.boon'] ?? []);
     return Array.from(new Set([
@@ -423,16 +457,16 @@ export function deriveCharacter(
   const clericDomains = character.class === 'Cleric'
     ? character.build?.classFeatureSelections?.['cleric.domains'] ?? [] : [];
   const clericMagicDomains = clericDomains.filter((domain) => domain === 'Magic').length;
+  const selectedTalents = character.build?.selectedTalents ?? [];
   const featureMana = character.class === 'Sorcerer' ? (character.level >= 5 ? 2 : 1)
     : character.class === 'Spellblade' && disciplines.has('Magus') ? 1
       : clericMagicDomains;
-  const skillFeaturePoints = character.class === 'Bard' ? (character.level >= 5 ? 4 : 2)
+  const skillFeaturePoints = character.class === 'Bard'
+    ? (character.level >= 5 ? 4 : 2) + selectedTalents.filter((name) => name === 'Expanded Repertoire').length * 2
     : character.class === 'Rogue' ? (character.level >= 5 ? 2 : 1)
       : character.class === 'Cleric' && clericDomains.includes('Knowledge') ? 2 : 0;
-  const bardMagicalSecrets = character.class === 'Bard' ? (character.level >= 5 ? 6 : 2) : 0;
   const skillConversions = character.build?.skillPointsConvertedToTrades ?? 0;
   const tradeConversions = character.build?.tradePointsConvertedToLanguages ?? 0;
-  const selectedTalents = character.build?.selectedTalents ?? [];
   const skillTalentPoints = selectedTalents.filter((name) => name === 'Skill Increase').length * 4;
   const paragonTradePoints = character.subclass === 'Paragon' && character.level >= 3 ? 1 : 0;
 
@@ -454,7 +488,7 @@ export function deriveCharacter(
     tradePointBudget: Math.max(0, 3 + totals.trade + paragonTradePoints + skillConversions * 2 - tradeConversions),
     languagePointBudget: 2 + tradeConversions * 2,
     ancestryPointBudget: ancestryPointBudget(character),
-    spellLimit: totals.spells + bardMagicalSecrets + spellcasterPaths
+    spellLimit: totals.spells + spellcasterPaths
       + selectedTalents.filter((name) => name === 'Spellcasting Expansion').length * 3
       + Number(character.class === 'Spellblade' && disciplines.has('Magus')),
     cantripLimit: totals.cantrips,

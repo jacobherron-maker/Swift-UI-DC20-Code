@@ -6,6 +6,7 @@ import {
   applyDerivedCharacter,
   attributeCap,
   barbarianStaminaRegenAmount,
+  bardHelpDieSize,
   classChoiceSelectionLimit,
   characterSheetEffects,
   classHealth,
@@ -73,7 +74,7 @@ describe('DC20 character calculations', () => {
     const hero = character('Bard');
     const derived = deriveCharacter(hero, bard, reference.ancestryTraits, []);
     expect(derived.skillPointBudget).toBe(7);
-    expect(derived.spellLimit).toBe(6);
+    expect(derived.spellLimit).toBe(4);
   });
 
   it('applies ancestry attribute increases and expertise mechanically', () => {
@@ -227,6 +228,120 @@ describe('DC20 character calculations', () => {
     const updated = applyDerivedCharacter(hero, { ...derived, maxHP: 15 });
     expect(updated.healthPoints).toBe(11);
     expect(updated.maxHealthPoints).toBe(15);
+  });
+});
+
+describe('Bard Beta 0.10.5 source audit', () => {
+  const feature = (level: number, name: string) => bard.features
+    .find((entry) => entry.level === level)?.features.find((entry) => entry.name === name)?.description;
+
+  it('matches every row of the published Bard class table', () => {
+    expect(bard.tableRows.map((row) => ({
+      level: row.level,
+      health: row.health,
+      attribute: row.attribute,
+      skill: row.skill,
+      trade: row.trade,
+      mana: row.mana,
+      spells: row.spells,
+      features: row.features,
+    }))).toEqual([
+      { level: 1, health: 7, attribute: undefined, skill: undefined, trade: undefined, mana: 6, spells: 4, features: 'Class Features' },
+      { level: 2, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Class Feature, Talent, Path Progression' },
+      { level: 3, health: 1, attribute: 1, skill: 1, trade: 1, mana: 3, spells: 1, features: 'Subclass Feature' },
+      { level: 4, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 5, health: 1, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Class Feature' },
+      { level: 6, health: 1, attribute: undefined, skill: 1, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, Path Progression' },
+      { level: 7, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Subclass Expert Feature' },
+      { level: 8, health: 1, attribute: 1, skill: 1, trade: 1, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 9, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Class Capstone Feature' },
+      { level: 10, health: 1, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Subclass Capstone Feature' },
+    ]);
+  });
+
+  it('preserves the complete Font, Repertoire, Performance, and Expert wording', () => {
+    expect(feature(1, 'Font of Inspiration')).toBe('You are an ever present source of aid for your allies. You gain the following benefits:\n• Ranged Help Attack: The range of your Help Action when aiding an Attack increases to 10 Spaces.\n• Help Reaction: When a creature you can see makes a Check, you can take the Help Action as a Reaction to aid them with their Check, provided you’re within range to do so.\n\nDC Tip: Helping with a Skill or Trade Check doesn’t have a default range limitation. The GM determines the range of the type of help required.');
+    expect(feature(1, 'Remarkable Repertoire')).toBe('You’ve picked up a few tricks along your travels, granting you the following benefits:\n\nJack of All Trades: You gain 2 Skill Points.\n\nMagical Secrets: You learn any 2 Spells of your choice from any Spell List.\n\nMagical Expression: You learn to express your art in a unique manner, granting you the ability to alter how you cast Spells. Choose the manner of your expression: Visual or Auditory.\n• Visual: Through acrobatics, dancing, juggling, painting, drawing, or miming, you can ignore the Verbal Components of a Spell you cast, but you must provide a Somatic Component instead.\n• Auditory: Through singing, playing music, poetry, comedy, or storytelling, you can ignore the Somatic Components of a Spell you cast, but you must provide a Verbal Component instead.');
+    expect(feature(2, 'Bardic Performance')).toBe('You can spend 1 AP and 1 MP to start a performance that grants you a 10 Space Aura for 1 minute. Choose 1 of the performances below. While creatures of your choice are within your Aura (and can see or hear you) they benefit from your performance. A creature can only benefit from one instance of each performance at a time.\n• Battle Ballad: The chosen creatures gain a d4 bonus to the first Attack Check they make on each of their turns.\n• Fast Tempo: The chosen creatures gain +1 Speed.\n• Inspiring: The chosen creatures gain 1 Temp HP at the start of each of their turns.\n• Emotional: Choose 1 of the following Conditions: Charmed, Frightened, Intimidated, or Taunted. The chosen creatures have Resistance against the chosen Condition. If a target is effected by the chosen Condition at the start of its turn, it can immediately attempt to end the Condition on itself by Repeating its Save.\n\nChanging Performances: Once on each of your turns, you can spend 1 AP to change your performance to a different one.\n\nEnding Early: The performance ends early if you become Incapacitated, you die, or choose to end it for free.');
+    expect(feature(5, 'Expert Bard')).toBe('You gain the following benefits for your Bard Class Features.\n\nFont of Inspiration\nYour Help Die now starts at a d10.\n\nRemarkable Repertoire\nYou gain 2 Skill Points and learn any 2 Spells of your choice from any Spell List.\n\nBardic Performance\nChanging Performances: You can change your performance at the start of each of your turns for free.\n\nWhen you start your Bardic Performance you can spend an additional 2 MP to improve the performances in the following ways:\n• Battle Ballad: The size of the die increases to a d8.\n• Fast Tempo: The Speed increases by 2.\n• Inspiring: The Temp HP increases by 1.\n• Emotional: The chosen creatures have Resistance against all of the listed Conditions.');
+  });
+
+  it('preserves spell access, starting equipment, Talents, and subclass level metadata', () => {
+    expect(bard.pathDetails).toBe('Combat Training: Spell Focuses, Light Armor, Light Shields\n\nSpell List: When you learn a new Spell, you can choose any Spell from the Enchantment Spell School or with the following Spell Tags: Embolden, Enfeeble, Healing, Illusion, or Sound.\n\nSpells Known: The number of Spells you know increases as shown in the Spells Known column of the Bard Class Table.\n\nMana Points: Your maximum number of Mana Points increases as shown in the Mana Points column of the Bard Class Table.');
+    expect(bard.startingEquipment.description).toBe('Arsenal: Choose 3 of any of the following items: Spell Focus, Weapon, or Light Shield.\nArmor: 1 set of Light Armor.\nTrade Tools: Choose 1 of any of the following items:\nCalligrapher’s Supplies, Disguise Kit, Gaming Kit, Musical Instrument, or Sculptor’s Tools.\nAdventuring Pack: Choose 1 of the following packs:\n(Adventuring Packs Coming Soon).');
+    expect(bard.talents.slice(-2).map(({ name, minimumLevel }) => [name, minimumLevel])).toEqual([
+      ['Expanded Repertoire', 3],
+      ['Helping Hands', 3],
+    ]);
+    expect(bard.subclassFeatures.Eloquence.map(({ name, level }) => [name, level])).toEqual([
+      ['Beguiling Presence', 3],
+      ['Eloquent Orator (Flavor Feature)', 3],
+    ]);
+    expect(bard.subclassFeatures.Jester.map(({ name, level }) => [name, level])).toEqual([
+      ['Antagonizing Act', 3],
+      ['Comedian (Flavor Feature)', 3],
+    ]);
+    expect(bard.subclassFeatures.Paragon.map(({ name, level }) => [name, level])).toEqual([
+      ['Paragon Subclass', 3],
+      ['Novice Paragon', 3],
+      ['Jack of one Trade (Flavor Feature)', 3],
+      ['Expert Paragon', 7],
+      ['Master Paragon', 10],
+    ]);
+  });
+
+  it('keeps table Spells separate from every Repertoire grant and routes Skill Points', () => {
+    const expressionGroup = bard.choiceGroups.find(({ id }) => id === 'bard.expression')!;
+    const hero = character('Bard');
+    hero.level = 5;
+    hero.subclass = 'Eloquence';
+    hero.build = {
+      ...defaultBuild(),
+      selectedTalents: ['Expanded Repertoire'],
+      classFeatureSelections: {
+        'bard.expression': ['Visual', 'Auditory'],
+        'bard.magicalSecrets': ['Fireball', 'Heal'],
+        'bard.expertSecrets': ['Blink', 'Bane'],
+        'bard.expandedRepertoireSpells': ['Create Water', 'Entangle'],
+        'bard.enthrallSpell': ['Charm'],
+      },
+    };
+    const derived = deriveCharacter(hero, bard, reference.ancestryTraits, []);
+    expect(derived.maxMana).toBe(12);
+    expect(derived.skillPointBudget).toBe(14);
+    expect(derived.spellLimit).toBe(6);
+    expect(classChoiceSelectionLimit(expressionGroup, hero)).toBe(2);
+    expect(grantedClassSpellNames(hero)).toEqual(['Fireball', 'Heal', 'Blink', 'Bane', 'Create Water', 'Entangle', 'Charm']);
+    expect(bardHelpDieSize(hero.level)).toBe(10);
+  });
+
+  it('limits ordinary Bard access to Enchantment and the five published tags', () => {
+    const spell = (school: string, tags = '') => ({ school, tags, source: 'Arcane' });
+    expect(spellIsAvailableToClass('Bard', spell('Enchantment'))).toBe(true);
+    expect(spellIsAvailableToClass('Bard', spell('Elemental', 'Healing'))).toBe(true);
+    expect(spellIsAvailableToClass('Bard', spell('Elemental', 'Sound'))).toBe(true);
+    expect(spellIsAvailableToClass('Bard', spell('Elemental', 'Fire'))).toBe(false);
+  });
+
+  it('applies an enhanced Bardic Performance to the Bard when chosen', () => {
+    const hero = character('Bard');
+    hero.level = 5;
+    hero.build = {
+      ...defaultBuild(),
+      sheetFeatureStates: {
+        'bard.performance.active': true,
+        'bard.performance.selfIncluded': true,
+        'bard.performance.enhanced': true,
+      },
+      sheetFeatureSelections: { 'bard.performance.activeChoice': 'Emotional', 'bard.performance.condition': 'Charmed' },
+    };
+    expect(characterSheetEffects(hero)).toEqual({
+      physicalDefense: 10,
+      speed: 6,
+      saveAdvantage: {},
+      martialMeleeDamageBonus: 0,
+      resistances: ['Charmed Condition', 'Frightened Condition', 'Intimidated Condition', 'Taunted Condition'],
+    });
   });
 });
 

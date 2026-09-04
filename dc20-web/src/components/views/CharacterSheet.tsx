@@ -4,7 +4,7 @@ import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { usePowerCatalog } from '../../hooks/usePowerCatalog';
 import { CharacterAvatarEditor } from '../character/CharacterAvatar';
 import type { CampaignNote, Character, CharacterInventoryItem, DC20Attribute, EquipmentCatalogItem, MasteryLevel } from '../../types/models';
-import { ATTRIBUTE_NAMES, BARBARIAN_RAGE_STATE, applyDerivedCharacter, barbarianStaminaRegenAmount, characterSheetEffects, deriveCharacter, grantedClassLanguageNames, grantedClassManeuverNames, grantedClassSpellNames, masteryBonus, masteryRank, masteryTitle, rogueCheapShotDamage, rogueStaminaRegenAmount, skillMasteryCap, spellbladeDisciplineNames } from '../../utils/characterRules';
+import { ATTRIBUTE_NAMES, BARBARIAN_RAGE_STATE, BARD_PERFORMANCE_STATE, applyDerivedCharacter, barbarianStaminaRegenAmount, bardHelpDieSize, characterSheetEffects, deriveCharacter, grantedClassLanguageNames, grantedClassManeuverNames, grantedClassSpellNames, masteryBonus, masteryRank, masteryTitle, rogueCheapShotDamage, rogueStaminaRegenAmount, skillMasteryCap, spellbladeDisciplineNames } from '../../utils/characterRules';
 import { enforceEquipmentHandCapacity, isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped as toggleInventoryEquippedBase } from '../../utils/equipmentRules';
 import { generateUUID } from '../../utils/gameUtils';
 
@@ -101,6 +101,20 @@ const CLERIC_TRICKERY_ACTIVE = 'cleric.trickery.active';
 const CLERIC_INTERROGATOR_USED = 'cleric.interrogator.used';
 const CLERIC_OMEN_COUNT = 'cleric.omen.count';
 const CLERIC_PRIEST_OVERFLOW = 'cleric.priest.overflow';
+const BARD_PERFORMANCE_PENDING = 'bard.performance.pendingChoice';
+const BARD_PERFORMANCE_ACTIVE = 'bard.performance.activeChoice';
+const BARD_EMOTIONAL_PENDING = 'bard.performance.pendingCondition';
+const BARD_EMOTIONAL_ACTIVE = 'bard.performance.condition';
+const BARD_PERFORMANCE_ENHANCED = 'bard.performance.enhanced';
+const BARD_PERFORMANCE_SELF = 'bard.performance.selfIncluded';
+const BARD_PERFORMANCE_CHANGED = 'bard.performance.changedThisTurn';
+const BARD_HELP_RESULT = 'bard.help.result';
+const BARD_HELP_USES = 'bard.help.usesThisTurn';
+const BARD_HELPING_HANDS_RESULT = 'bard.help.helpingHandsResult';
+const BARD_HELPING_HANDS_USED = 'bard.help.helpingHandsUsed';
+const BARD_JESTER_HECKLE_USED = 'bard.jester.heckleUsed';
+const BARD_JESTER_PRATFALL_ACTIVE = 'bard.jester.pratfallActive';
+const BARD_MIND_GAMES_DAMAGE = 'bard.eloquence.mindGamesDamage';
 
 interface RollOutcome { label: string; dice: number[]; chosen: number; modifier: number; total: number }
 
@@ -110,6 +124,83 @@ function ResourceControl({ label, value, maximum, tone, onChange }: { label: str
 
 function Details({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return <details className="group rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-start justify-between gap-3"><span><span className="font-black text-slate-200">{title}</span>{subtitle && <span className="mt-1 block text-xs text-slate-500">{subtitle}</span>}</span><span className="text-xs font-bold text-violet-300 group-open:hidden">More</span><span className="hidden text-xs font-bold text-violet-300 group-open:inline">Less</span></summary><div className="mt-4 whitespace-pre-wrap border-t border-white/5 pt-4 text-sm leading-6 text-slate-400">{children}</div></details>;
+}
+
+function BardControls({ character, onChange, onRoll, artistryModifier }: {
+  character: Character;
+  onChange: (values: Partial<Character>) => void;
+  onRoll: (label: string, modifier: number, extraAdjustment?: number) => RollOutcome;
+  artistryModifier: number;
+}) {
+  const build = character.build;
+  if (!build) return null;
+  const states = build.sheetFeatureStates ?? {};
+  const selections = build.sheetFeatureSelections ?? {};
+  const counters = build.sheetFeatureCounters ?? {};
+  const performances = ['Battle Ballad', 'Fast Tempo', 'Inspiring', 'Emotional'];
+  const emotions = ['Charmed', 'Frightened', 'Intimidated', 'Taunted'];
+  const pending = selections[BARD_PERFORMANCE_PENDING] || selections[BARD_PERFORMANCE_ACTIVE] || performances[0];
+  const activeChoice = selections[BARD_PERFORMANCE_ACTIVE] || '';
+  const pendingEmotion = selections[BARD_EMOTIONAL_PENDING] || selections[BARD_EMOTIONAL_ACTIVE] || emotions[0];
+  const activeEmotion = selections[BARD_EMOTIONAL_ACTIVE] || emotions[0];
+  const active = Boolean(states[BARD_PERFORMANCE_STATE]);
+  const enhanced = character.level >= 5 && Boolean(states[BARD_PERFORMANCE_ENHANCED]);
+  const appliesToSelf = Boolean(states[BARD_PERFORMANCE_SELF]);
+  const helpingHands = (build.selectedTalents ?? []).includes('Helping Hands');
+  const baseHelpDieSize = bardHelpDieSize(character.level);
+  const helpDieSteps = character.level >= 5 ? [10, 8, 6, 4] : [8, 6, 4];
+  const helpUses = Math.max(0, counters[BARD_HELP_USES] ?? 0);
+  const nextHelpDieSize = helpDieSteps[Math.min(helpUses, helpDieSteps.length - 1)];
+  const saveDC = 10 + character.primeModifier + character.combatMastery;
+  const updateBuild = (values: Partial<NonNullable<Character['build']>>, characterValues: Partial<Character> = {}) => onChange({ ...characterValues, build: { ...build, ...values } });
+  const setState = (key: string, value: boolean) => updateBuild({ sheetFeatureStates: { ...states, [key]: value } });
+  const setSelection = (key: string, value: string) => updateBuild({ sheetFeatureSelections: { ...selections, [key]: value } });
+  const rollDie = (size: number) => Math.floor(Math.random() * size) + 1;
+  const useHelp = () => {
+    if (character.currentAP < 1) return;
+    const helpResult = rollDie(nextHelpDieSize);
+    const useHelpingHands = helpingHands && !states[BARD_HELPING_HANDS_USED];
+    updateBuild({
+      sheetFeatureStates: { ...states, ...(useHelpingHands ? { [BARD_HELPING_HANDS_USED]: true } : {}) },
+      sheetFeatureCounters: { ...counters, [BARD_HELP_RESULT]: helpResult, [BARD_HELP_USES]: helpUses + 1, [BARD_HELPING_HANDS_RESULT]: useHelpingHands ? rollDie(8) : 0 },
+    }, { currentAP: character.currentAP - 1 });
+  };
+  const startPerformance = () => {
+    const manaCost = 1 + (enhanced ? 2 : 0);
+    if (character.currentAP < 1 || character.manaPoints < manaCost) return;
+    updateBuild({
+      sheetFeatureStates: { ...states, [BARD_PERFORMANCE_STATE]: true, [BARD_PERFORMANCE_CHANGED]: false },
+      sheetFeatureSelections: { ...selections, [BARD_PERFORMANCE_ACTIVE]: pending, [BARD_EMOTIONAL_ACTIVE]: pendingEmotion },
+    }, { currentAP: character.currentAP - 1, manaPoints: character.manaPoints - manaCost });
+  };
+  const changePerformance = () => {
+    if (!active || states[BARD_PERFORMANCE_CHANGED] || (pending === activeChoice && (pending !== 'Emotional' || pendingEmotion === activeEmotion))) return;
+    const cost = character.level >= 5 ? 0 : 1;
+    if (character.currentAP < cost) return;
+    updateBuild({
+      sheetFeatureStates: { ...states, [BARD_PERFORMANCE_CHANGED]: true },
+      sheetFeatureSelections: { ...selections, [BARD_PERFORMANCE_ACTIVE]: pending, [BARD_EMOTIONAL_ACTIVE]: pendingEmotion },
+    }, { currentAP: character.currentAP - cost });
+  };
+  const endPerformance = () => updateBuild({ sheetFeatureStates: { ...states, [BARD_PERFORMANCE_STATE]: false, [BARD_PERFORMANCE_ENHANCED]: false, [BARD_PERFORMANCE_CHANGED]: false } });
+  const useDistraction = () => {
+    if (character.currentAP < 1) return;
+    updateBuild({ sheetFeatureCounters: { ...counters, [BARD_HELP_RESULT]: rollDie(baseHelpDieSize), [BARD_HELPING_HANDS_RESULT]: 0 } }, { currentAP: character.currentAP - 1 });
+  };
+  const performanceText = activeChoice === 'Battle Ballad' ? `First Attack Check each turn: +d${enhanced ? 8 : 4}`
+    : activeChoice === 'Fast Tempo' ? `Speed: +${enhanced ? 2 : 1}`
+      : activeChoice === 'Inspiring' ? `Temp HP at the start of each turn: ${enhanced ? 2 : 1}`
+        : activeChoice === 'Emotional' ? `Resistance: ${enhanced ? emotions.join(', ') : activeEmotion}` : '';
+  return <section className="mb-5 rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-950/45 to-slate-950/70 p-4 sm:p-5">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-300">Live Class Features</p><h2 className="text-xl font-black text-white">Bard Controls</h2></div>{active && <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-xs font-black uppercase tracking-wider text-fuchsia-200">Performing</span>}</div>
+    <div className="grid gap-3 lg:grid-cols-3">
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-fuchsia-200">Font of Inspiration</h3><p className="mt-2 text-xs leading-5 text-slate-400">Help Attacks at up to 10 Spaces. When a visible creature makes a Check within range, take the Help Action as a Reaction. Repeated Help Actions on the same turn decay the die toward d4.</p><button type="button" disabled={character.currentAP < 1} onClick={useHelp} className="mt-3 w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Help Reaction • 1 AP • d{nextHelpDieSize}</button>{(counters[BARD_HELP_RESULT] ?? 0) > 0 && <p className="mt-2 rounded-lg bg-fuchsia-500/10 p-2 text-xs text-fuchsia-100">Help Die: <strong>{counters[BARD_HELP_RESULT]}</strong>{(counters[BARD_HELPING_HANDS_RESULT] ?? 0) > 0 && <> • Helping Hands d8: <strong>{counters[BARD_HELPING_HANDS_RESULT]}</strong> for a different creature</>}</p>}{helpUses > 0 && <button type="button" onClick={() => updateBuild({ sheetFeatureStates: { ...states, [BARD_HELPING_HANDS_USED]: false }, sheetFeatureCounters: { ...counters, [BARD_HELP_USES]: 0, [BARD_HELPING_HANDS_RESULT]: 0 } })} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Start next turn • reset Help dice</button>}</div>
+      {character.level >= 2 && <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4 lg:col-span-2"><div className="flex items-center justify-between gap-3"><div><h3 className="font-black text-fuchsia-200">Bardic Performance</h3><p className="mt-1 text-xs text-slate-500">10-Space Aura • 1 minute • chosen creatures that see or hear you</p></div>{character.level >= 5 && <label className="flex items-center gap-2 text-xs font-bold text-amber-200"><input type="checkbox" disabled={active} checked={enhanced} onChange={(event) => setState(BARD_PERFORMANCE_ENHANCED, event.target.checked)} />Enhance +2 MP</label>}</div><div className="mt-3 grid gap-2 sm:grid-cols-2"><label className="text-xs font-bold text-slate-400">Performance<select value={pending} onChange={(event) => setSelection(BARD_PERFORMANCE_PENDING, event.target.value)} className={`${fieldClass} mt-1`} >{performances.map((option) => <option key={option}>{option}</option>)}</select></label>{pending === 'Emotional' && <label className="text-xs font-bold text-slate-400">Condition<select value={pendingEmotion} onChange={(event) => setSelection(BARD_EMOTIONAL_PENDING, event.target.value)} className={`${fieldClass} mt-1`}>{emotions.map((option) => <option key={option}>{option}</option>)}</select></label>}</div>{active ? <><div className="mt-3 rounded-lg bg-fuchsia-500/10 p-3 text-sm text-fuchsia-100"><strong>{activeChoice}</strong> • {performanceText}</div><label className="mt-3 flex items-center gap-2 text-xs font-bold text-slate-300"><input type="checkbox" checked={appliesToSelf} onChange={(event) => setState(BARD_PERFORMANCE_SELF, event.target.checked)} />My Bard is one of the chosen creatures</label>{activeChoice === 'Inspiring' && appliesToSelf && <button type="button" onClick={() => updateBuild({ temporaryHP: (build.temporaryHP ?? 0) + (enhanced ? 2 : 1) })} className="mt-3 w-full rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white">Start turn • gain {enhanced ? 2 : 1} Temp HP</button>}<div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" disabled={Boolean(states[BARD_PERFORMANCE_CHANGED]) || (character.level < 5 && character.currentAP < 1)} onClick={changePerformance} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Change Performance • {character.level >= 5 ? 'free' : '1 AP'}</button><button type="button" onClick={endPerformance} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">End Performance • free</button></div>{states[BARD_PERFORMANCE_CHANGED] && <button type="button" onClick={() => setState(BARD_PERFORMANCE_CHANGED, false)} className="mt-2 w-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-slate-400">Start next turn • reset change</button>}</> : <button type="button" disabled={character.currentAP < 1 || character.manaPoints < 1 + (enhanced ? 2 : 0)} onClick={startPerformance} className="mt-3 w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-sm font-black text-white disabled:opacity-35">Start Performance • 1 AP + {1 + (enhanced ? 2 : 0)} MP</button>}</div>}
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-violet-200">Crowd Pleaser</h3><p className="mt-2 text-xs leading-5 text-slate-400">After performing an Artistry Trade for at least 5 minutes, make its Check against each target’s Charisma Save.</p><button type="button" onClick={() => onRoll('Crowd Pleaser Artistry Trade Check', artistryModifier)} className="mt-3 w-full rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white">Roll Artistry Trade Check • +{artistryModifier}</button></div>
+      {character.subclass === 'Eloquence' && <div className="rounded-xl border border-pink-400/20 bg-pink-950/20 p-4"><h3 className="font-black text-pink-200">Beguiling Presence</h3><p className="mt-2 text-xs leading-5 text-slate-400"><strong>Enthrall:</strong> Charm does not end from damage. <strong>Misleading Muse:</strong> when a creature in your Performance targets only you, make a Spell Check against its Attack Check.</p><button type="button" disabled={!active || character.currentAP < 1} onClick={() => { onChange({ currentAP: character.currentAP - 1 }); onRoll('Misleading Muse Spell Check', character.primeModifier + character.combatMastery); }} className="mt-3 w-full rounded-lg bg-pink-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Misleading Muse Reaction • 1 AP</button><button type="button" onClick={() => updateBuild({ sheetFeatureCounters: { ...counters, [BARD_MIND_GAMES_DAMAGE]: (counters[BARD_MIND_GAMES_DAMAGE] ?? 0) + 1 } })} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Mind Games • deal 1 Psychic</button><p className="mt-2 text-xs text-pink-100">Mind Games damage tracked: {counters[BARD_MIND_GAMES_DAMAGE] ?? 0} • Save DC {saveDC}</p></div>}
+      {character.subclass === 'Jester' && <div className="rounded-xl border border-amber-400/20 bg-amber-950/20 p-4 lg:col-span-2"><h3 className="font-black text-amber-200">Antagonizing Act</h3><div className="mt-3 grid gap-2 sm:grid-cols-3"><button type="button" disabled={!active || Boolean(states[BARD_JESTER_HECKLE_USED])} onClick={() => setState(BARD_JESTER_HECKLE_USED, true)} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[BARD_JESTER_HECKLE_USED] ? 'Heckle used' : 'Heckle • mark Taunted'}</button><button type="button" disabled={character.currentAP < 1} onClick={useDistraction} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Distraction • 1 AP • d{baseHelpDieSize}</button><button type="button" onClick={() => setState(BARD_JESTER_PRATFALL_ACTIVE, !states[BARD_JESTER_PRATFALL_ACTIVE])} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white">{states[BARD_JESTER_PRATFALL_ACTIVE] ? 'Pratfall ADV pending' : 'Pratfall • grant ADV'}</button></div>{states[BARD_JESTER_HECKLE_USED] && <button type="button" onClick={() => setState(BARD_JESTER_HECKLE_USED, false)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Reset Heckle next Round</button>}</div>}
+    </div>
+  </section>;
 }
 
 function SummonerControls({ character, onChange }: { character: Character; onChange: (values: Partial<Character>) => void }) {
@@ -618,6 +709,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const isSpellblade = character.class === 'Spellblade';
   const isWarlock = character.class === 'Warlock';
   const isCleric = character.class === 'Cleric';
+  const isBard = character.class === 'Bard';
   const isRaging = isBarbarian && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
   const hasUnfathomableStrength = (build?.selectedTalents ?? []).includes('Unfathomable Strength');
   const battlecryShout = featureSelections[BARBARIAN_BATTLECRY_SELECTION] || 'Fortitude Shout';
@@ -776,6 +868,9 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     const expertise = ancestryTraits.filter((trait) => trait.name === 'Trade Expertise' && build?.ancestryTraitChoices[trait.id]?.[0] === name).length;
     return attribute + masteryBonus(masteryTitle(masteryRank(mastery) + expertise));
   };
+  const bardArtistryModifier = Math.max(0, ...(reference?.trades
+    .filter(({ group }) => group === 'Artistry')
+    .map(({ name }) => tradeModifier(name, character.tradeMasteries[name] ?? 'Untrained')) ?? []));
 
   const updateNote = (note: CampaignNote) => updateBuild({ characterNotes: notes.map((entry) => entry.id === note.id ? note : entry) });
   const featureDescription = (name: string, description: string): string => {
@@ -809,6 +904,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
           </div>
         </section>}
 
+        {isBard && <BardControls character={character} onChange={update} onRoll={roll} artistryModifier={bardArtistryModifier} />}
         {isSummoner && <SummonerControls character={character} onChange={update} />}
         {isSpellblade && <SpellbladeControls character={character} onChange={update} onRoll={roll} />}
         {isRogue && <RogueControls character={character} onChange={update} onRoll={roll} stealthModifier={skillModifier('Stealth', character.skillMasteries.Stealth ?? 'Untrained')} />}

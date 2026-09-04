@@ -2639,42 +2639,51 @@
         "Eloquence" : [
           {
             "description" : "You gain the following benefits:\n• Enthrall: You learn the Charm Spell, and it doesn’t end as a result of the target taking damage. If you already know it, you instead learn another spell with the Charmed Tag.\n• Misleading Muse: When a creature within your Bardic Performance targets only you with an Attack, you can spend 1 AP as a Reaction to make a Spell Check against the target’s Attack Check. Success: The creature becomes Charmed by you until the end of your next turn. It must target a different creature of its choice (other than itself) within range, or the Attack fails.\n• Mind Games: When the Charmed Condition ends on a creature Charmed by you, you can choose to immediately deal 1 Psychic damage to them.",
+            "level" : 3,
             "name" : "Beguiling Presence"
           },
           {
             "description" : "Your speech is magically enchanted. Creatures can always understand the words you speak, provided they speak at least 1 Language.",
+            "level" : 3,
             "name" : "Eloquent Orator (Flavor Feature)"
           }
         ],
         "Jester" : [
           {
             "description" : "You gain the following benefits:\n\nHeckle: Once per Round when a creature of your choice within your Bardic Performance fails a Save, they’re Taunted by you on the next Attack they make before the end of their next turn.\n\nDistraction: When a hostile creature within 10 Spaces of you makes an Attack, you can spend 1 AP as a Reaction to roll a Help Die and subtract the result from the target’s Check.\n\nPratfall: When you fail a Save imposed by a hostile creature, you can grant a creature within your Bardic Performance ADV on a Check of their choice before the end of their next turn.",
+            "level" : 3,
             "name" : "Antagonizing Act"
           },
           {
             "description" : "You have ADV on Checks to make other creatures laugh.",
+            "level" : 3,
             "name" : "Comedian (Flavor Feature)"
           }
         ],
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ]
