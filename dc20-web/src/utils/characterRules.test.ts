@@ -7,6 +7,12 @@ import {
   attributeCap,
   barbarianStaminaRegenAmount,
   bardHelpDieSize,
+  championStaminaRegenAmount,
+  championTacticalDieSize,
+  commanderHelpDieSize,
+  commanderInspiringPresenceHealing,
+  commanderRallyAmount,
+  commanderStaminaRegenAmount,
   classChoiceSelectionLimit,
   characterSheetEffects,
   classHealth,
@@ -28,6 +34,8 @@ import {
 const reference = referenceDocument as CharacterReferenceData;
 const bard = reference.classes.find(({ name }) => name === 'Bard')!;
 const barbarian = reference.classes.find(({ name }) => name === 'Barbarian')!;
+const champion = reference.classes.find(({ name }) => name === 'Champion')!;
+const commander = reference.classes.find(({ name }) => name === 'Commander')!;
 const summoner = reference.classes.find(({ name }) => name === 'Summoner')!;
 const spellblade = reference.classes.find(({ name }) => name === 'Spellblade')!;
 const rogue = reference.classes.find(({ name }) => name === 'Rogue')!;
@@ -342,6 +350,180 @@ describe('Bard Beta 0.10.5 source audit', () => {
       martialMeleeDamageBonus: 0,
       resistances: ['Charmed Condition', 'Frightened Condition', 'Intimidated Condition', 'Taunted Condition'],
     });
+  });
+});
+
+describe('Champion Beta 0.10.5 source audit', () => {
+  const feature = (level: number, name: string) => champion.features
+    .find((entry) => entry.level === level)?.features.find((entry) => entry.name === name)?.description;
+
+  it('matches every row of the published Champion class table', () => {
+    expect(champion.tableRows.map((row) => ({
+      level: row.level,
+      health: row.health,
+      attribute: row.attribute,
+      skill: row.skill,
+      trade: row.trade,
+      stamina: row.stamina,
+      maneuvers: row.maneuvers,
+      features: row.features,
+    }))).toEqual([
+      { level: 1, health: 8, attribute: undefined, skill: undefined, trade: undefined, stamina: 2, maneuvers: 2, features: 'Class Features' },
+      { level: 2, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Class Feature, Talent, Path Progression' },
+      { level: 3, health: 2, attribute: 1, skill: 1, trade: 1, stamina: 1, maneuvers: 1, features: 'Subclass Feature' },
+      { level: 4, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 5, health: 2, attribute: 1, skill: 2, trade: 1, stamina: undefined, maneuvers: 1, features: 'Class Feature' },
+      { level: 6, health: 2, attribute: undefined, skill: 1, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Talent, Path Progression' },
+      { level: 7, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: 1, maneuvers: 1, features: 'Subclass Expert Feature' },
+      { level: 8, health: 2, attribute: 1, skill: 1, trade: 1, stamina: undefined, maneuvers: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 9, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: 1, maneuvers: 1, features: 'Class Capstone Feature' },
+      { level: 10, health: 2, attribute: 1, skill: 2, trade: 1, stamina: 1, maneuvers: 1, features: 'Subclass Capstone Feature' },
+    ]);
+  });
+
+  it('preserves the complete Master-at-Arms, Fighting Spirit, Adaptive Tactics, and Expert wording', () => {
+    expect(feature(1, 'Master-at-Arms')).toBe('Your training in warfare has granted you the following benefits:\n• Weapon Master: At the start of each of your turns, you can freely swap any Weapon you’re currently wielding in each hand for any other Weapon without provoking Opportunity Attacks.\n• Maneuver Master: You learn 1 Maneuver of your choice. Once per Round when you perform a Maneuver, you can reduce its SP cost by 1.');
+    expect(feature(1, 'Fighting Spirit')).toBe('You stand ready for Combat at any moment, granting you the following benefits:\n• Combat Readiness: At the start of your first turn in Combat, you gain one of the following benefits:\n  • Fortify: You gain the benefits of the Dodge Action and ADV on the next Save you make until the end of Combat.\n  • Advance: You gain the benefits of the Move Action and ADV on the next Martial Attack or Physical Check you make until the end of Combat.\n• Second Wind: Once per Combat when you start your turn Bloodied, you can regain 2 HP and 2 SP.');
+    expect(feature(1, 'Know Your Enemy (Flavor Feature)')).toBe('You can spend 1 minute observing or interacting with a creature out of Combat (or spend 1 AP in Combat) to learn information about its physical capabilities compared to your own. Choose one of the following stats of the creature to assess: Might, Agility, PD, AD, and HP. Make a DC 10 Knowledge or Insight Check (your choice).\n\nSuccess: You learn if the chosen stat is higher, lower, or the same as yours.\n\nDC Tip:** If a creature is better than most at disguising or concealing their “true power” then the GM can increase the DC for this Feature to be used against it. The GM won’t tell you if the DC is higher, and if you roll higher than a 10 and still fail… they can lie about what information you gather.');
+    expect(feature(2, 'Adaptive Tactics')).toBe('When you roll for Initiative, and at the end of each of your turns, you gain a d8 Tactical Die if you don’t already have one. You can spend a Tactical Die to gain one of the following Tactics:\n• Assault: When you make a Martial Attack, you can add the die to the Attack’s result.\n• Deflect: When you are Attacked, you can subtract the die from the Attack’s result.');
+    expect(feature(5, 'Expert Champion')).toBe('You gain the following benefits for your Champion Class Features.\n\nMaster-at-Arms\nYou learn 2 additional Maneuvers of your choice.\n\nFighting Spirit\nWhen you gain the benefits of Second Wind, you regain an additional 2 HP and 2 SP.\n\nAdaptive Tactics\nYour Tactical Die is now a d10.');
+  });
+
+  it('preserves the Champion path, equipment, Talents, and subclass level metadata', () => {
+    expect(champion.pathDetails).toBe('Combat Training: Weapons, All Armor, All Shields\n\nManeuvers: The number of Maneuvers you know increases as shown in the Maneuvers Known column of the Champion Class Table.\n\nStamina Points: Your maximum number of Stamina Points increases as shown in the Stamina Points column of the Champion Class Table.\n\nStamina Regen: Once per Round, you can regain up to half your maximum SP when you perform a Maneuver.');
+    expect(champion.startingEquipment.description).toBe('Arsenal: Choose 3 of any of the following items: Weapon or Shield.\nArmor: 1 set of Armor.\nTrade Tools: Choose 1 of any of the following items:\nCarpenter’s Tools, Cartographer’s Tools, Gaming Kit, or Mason’s Tools.\nAdventuring Pack: Choose 1 of the following packs:\n(Adventuring Packs Coming Soon).');
+    expect(champion.talents.slice(-2).map(({ name, minimumLevel }) => [name, minimumLevel])).toEqual([
+      ["Champion's Resolve", 3],
+      ['Disciplined Combatant', 3],
+    ]);
+    expect(champion.talents.find(({ name }) => name === "Champion's Resolve")?.description).toBe('Requirement: Adaptive Tactics, Level 3\n\nWhen you use a Tactical Die, you gain the following benefit:\n• Assault: The Attack deals +1 damage.\n• Deflect: If the Attack Misses, the Attacker takes 1 damage of a Physical damage type of your choice.');
+    expect(champion.talents.find(({ name }) => name === 'Disciplined Combatant')?.description).toBe('Requirement: Fighting Spirit, Level 3\n\nOnce on each of your turns, you can spend 2 SP to gain the benefit of Combat Readiness. Additionally, you can use Second Wind without being Bloodied.');
+    expect(champion.subclassFeatures.Hero.map(({ name, level }) => [name, level])).toEqual([
+      ['Hero’s Resolve', 3],
+      ['Adventuring Hero (Flavor Feature)', 3],
+    ]);
+    expect(champion.subclassFeatures.Sentinel.map(({ name, level }) => [name, level])).toEqual([
+      ['Stalwart Protector', 3],
+      ['Vigilant Watcher (Flavor Feature)', 3],
+    ]);
+    expect(champion.subclassFeatures.Hero[0].description).toBe('Your warrior spirit refuses to yield in battle. You gain the following benefits:\n\nAdrenaline Boost: When you use your Second Wind, you gain a +5 bonus to Martial Attacks and Martial Checks you make until the end of your turn.\n\nCut Through: Your Martial Attacks that score Heavy Hits ignore the target’s Physical Resistances.\n\nUnyielding Spirit: While Bloodied, you gain 1 Temp HP at the start of each of your turns.');
+    expect(champion.subclassFeatures.Sentinel[0].description).toBe('You gain the following benefits:\n\nSteadfast Defender: You can use your Deflect Tactic against any Attack that targets a creature within your Melee Range.\n\nDefensive Bash: When you use a Defensive Maneuver as a Reaction to an Attack from a creature within 1 Space of you, the attacker must make a Physical Save against your Attack Check. Save Failure: The target is pushed 1 Space away or Taunted by you until the end of its next turn (your choice).\n\nNot on my Watch: Creatures Taunted by you deal 1 less damage to targets within 1 Space of you.');
+    expect(champion.subclassFeatures.Paragon.map(({ name, level }) => [name, level])).toEqual([
+      ['Paragon Subclass', 3],
+      ['Novice Paragon', 3],
+      ['Jack of one Trade (Flavor Feature)', 3],
+      ['Expert Paragon', 7],
+      ['Master Paragon', 10],
+    ]);
+  });
+
+  it('keeps Master-at-Arms Maneuvers separate from table and path allowances', () => {
+    const hero = character('Champion');
+    hero.level = 5;
+    hero.subclass = 'Hero';
+    hero.build = {
+      ...defaultBuild(),
+      pathProgressionChoices: { '2': 'Martial', '4': 'Spellcaster' },
+      classFeatureSelections: {
+        'champion.masterAtArmsManeuver': ['Parry'],
+        'champion.expertManeuvers': ['Savage Strike', 'Sunder Strike'],
+      },
+    };
+    const derived = deriveCharacter(hero, champion, reference.ancestryTraits, []);
+    expect(derived.maneuverLimit).toBe(5);
+    expect(derived.maxStamina).toBe(4);
+    expect(derived.maxMana).toBe(3);
+    expect(grantedClassManeuverNames(hero)).toEqual(['Parry', 'Savage Strike', 'Sunder Strike']);
+  });
+
+  it('uses the published Tactical Die and half-SP recovery progressions', () => {
+    expect([1, 2, 4, 5, 10].map(championTacticalDieSize)).toEqual([8, 8, 8, 10, 10]);
+    expect([0, 1, 2, 3, 7].map(championStaminaRegenAmount)).toEqual([0, 1, 1, 2, 4]);
+    expect(classHealth('Champion', 5)).toBe(16);
+  });
+});
+
+describe('Commander Beta 0.10.5 source audit', () => {
+  const feature = (level: number, name: string) => commander.features
+    .find((entry) => entry.level === level)?.features.find((entry) => entry.name === name)?.description;
+
+  it('matches every row of the published Commander class table', () => {
+    expect(commander.tableRows.map((row) => ({
+      level: row.level,
+      health: row.health,
+      attribute: row.attribute,
+      skill: row.skill,
+      trade: row.trade,
+      stamina: row.stamina,
+      maneuvers: row.maneuvers,
+      features: row.features,
+    }))).toEqual([
+      { level: 1, health: 8, attribute: undefined, skill: undefined, trade: undefined, stamina: 2, maneuvers: 2, features: 'Class Features' },
+      { level: 2, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Class Feature, Talent, Path Progression' },
+      { level: 3, health: 2, attribute: 1, skill: 1, trade: 1, stamina: 1, maneuvers: 1, features: 'Subclass Feature' },
+      { level: 4, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 5, health: 2, attribute: 1, skill: 2, trade: 1, stamina: undefined, maneuvers: 1, features: 'Class Feature' },
+      { level: 6, health: 2, attribute: undefined, skill: 1, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Talent, Path Progression' },
+      { level: 7, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: 1, maneuvers: 1, features: 'Subclass Expert Feature' },
+      { level: 8, health: 2, attribute: 1, skill: 1, trade: 1, stamina: undefined, maneuvers: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 9, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: 1, maneuvers: 1, features: 'Class Capstone Feature' },
+      { level: 10, health: 2, attribute: 1, skill: 2, trade: 1, stamina: 1, maneuvers: 1, features: 'Subclass Capstone Feature' },
+    ]);
+  });
+
+  it('preserves the complete Inspiring Presence, Commander’s Call, Aura, and Expert wording', () => {
+    expect(feature(1, 'Inspiring Presence')).toBe('Once per Round during Combat, when you spend SP you can restore 1 HP to a creature of your choice within 10 Spaces (including yourself) that can see or hear you. If the creature is on Death’s Door, they regain 1 additional HP.');
+    expect(feature(1, 'Commander’s Call')).toBe('You can spend 1 AP and 1 SP to command a willing creature that you can see within 5 Spaces that can also see or hear you. The chosen creature can immediately take 1 of the following Actions of your choice as a Reaction for free. You can only use each of the following commands once on each of your turns.\n• Attack: The creature makes an Attack with ADV. They can’t spend any resources on this Attack, such as AP, SP, or MP.\n• Dodge: The creature takes the Full Dodge Action.\n• Move: The creature moves up to their Speed without provoking Opportunity Attacks.');
+    expect(feature(1, 'Natural Leader (Flavor Feature)')).toBe('You have ADV on Checks made to convince creatures that you are an authority figure. Additionally, you have ADV on the first Charisma Check made to interact with non-hostile members of military groups (such as soldiers, guards, etc.).');
+    expect(feature(2, 'Commanding Aura')).toBe('You’re surrounded by a 5 Space Aura. You can target any creature within your Aura to grant one of the following effects below, provided the target can see or hear you.\n• Bolster: (1 AP) You take the Help Action to aid the target with an Attack. You can also do so as a Reaction whenever a valid target makes an Attack.\n• Rally: (1 AP) You grant creatures of your choice (including yourself) 1 Temp HP.\n• Reinforce: (1 AP) When a creature in your Aura is targeted by an Attack, you can impose DisADV on the Attack as a Reaction.');
+    expect(feature(5, 'Expert Commander')).toBe('You gain the following benefits for your Commander Class Features.\n\nCommander’s Call\nThe range of your Commander’s Call increases to 10 Spaces.\n\nWhen you use Commander’s Call, you can spend 2 additional SP to issue the creature 1 additional command of your choice. The creature chooses the order in which it resolves the granted commands.\n\nExample: You use Commander’s Call on an ally and spend 2 additional SP, 3 SP total. You choose the Move and Attack Commands. The creature chooses to up to their Speed without provoking Opportunity Attacks first and then Attacks with ADV after moving.\n\nDC Tip: You can still only use each command once on each of your turns.\n\nInspiring Presence\nThe amount of HP restored by Inspiring Presence is increased by 1.\n\nCommanding Aura\nWhen you help a creature within your Commanding Aura, your Help Die starts at a d10.\n\nWhen you use Commanding Aura, you can spend additional SP to enhance its effect:\n• Rally: The Temp HP granted increases by 1 per 2 SP spent.\n• Reinforce: You can spend 1 SP to grant the target ADV on any Saves made as part of the Attack.');
+  });
+
+  it('preserves the Commander path, equipment, Talents, and subclass metadata', () => {
+    expect(commander.pathDetails).toBe('Combat Training: Weapons, All Armor, All Shields\n\nManeuvers: The number of Maneuvers you know increases as shown in the Maneuvers Known column of the Commander Class Table.\n\nStamina Points: Your maximum number of Stamina Points increases as shown in the Stamina Points column of the Commander Class Table.\n\nStamina Regen: Once per Round, you can regain up to half your maximum SP when you grant a creature a Help Die.');
+    expect(commander.startingEquipment.description).toBe('Arsenal: Choose 3 of any of the following items: Weapon or Shield.\nArmor: 1 set of Armor.\nTrade Tools: Choose 1 of any of the following items:\nCartographer’s Tools, Calligrapher’s, Cryptographer’s Tools, or Gaming Set.\nAdventuring Pack: Choose 1 of the following packs:\n(Adventuring Packs Coming Soon).');
+    expect(commander.talents.slice(-2).map(({ name, description }) => [name, description])).toEqual([
+      ['Seize Momentum', 'Requirements: Commander’s Call, Commanding Aura, Level 3\n\nWhen an ally within your Commanding Aura scores a Heavy Hit, you can use your Commander’s Call as a Reaction.'],
+      ['Coordinated Command', 'Requirement: Commander’s Call, Level 3\n\nOnce per Round, when you use your Commander’s Call, you can spend 1 additional SP to target a second creature within range (including yourself), they also gain the benefits of the chosen command. You choose who acts first between the targeted creatures.'],
+    ]);
+    expect(commander.subclassFeatures.Crusader.map(({ name, level }) => [name, level])).toEqual([
+      ['Virtuous Vanguard', 3],
+      ['Gallant Hero (Flavor Feature)', 3],
+    ]);
+    expect(commander.subclassFeatures.Warlord.map(({ name, level }) => [name, level])).toEqual([
+      ['Offensive Tactics', 3],
+      ['Battlefield Tactician (Flavor Feature)', 3],
+    ]);
+    expect(commander.subclassFeatures.Paragon.map(({ name, level }) => [name, level])).toEqual([
+      ['Paragon Subclass', 3],
+      ['Novice Paragon', 3],
+      ['Jack of one Trade (Flavor Feature)', 3],
+      ['Expert Paragon', 7],
+      ['Master Paragon', 10],
+    ]);
+  });
+
+  it('routes the table and mixed Path progression without hidden class bonuses', () => {
+    const hero = character('Commander');
+    hero.level = 5;
+    hero.subclass = 'Crusader';
+    hero.build = { ...defaultBuild(), pathProgressionChoices: { '2': 'Martial', '4': 'Spellcaster' } };
+    const derived = deriveCharacter(hero, commander, reference.ancestryTraits, []);
+    expect(derived.maneuverLimit).toBe(5);
+    expect(derived.maxStamina).toBe(4);
+    expect(derived.maxMana).toBe(3);
+    expect(classHealth('Commander', 5)).toBe(16);
+    expect(characterSheetEffects(hero).resistances).toEqual(['Frightened Condition', 'Intimidated Condition']);
+  });
+
+  it('calculates every published scaling Commander effect', () => {
+    expect([0, 1, 2, 3, 4].map((uses) => commanderHelpDieSize(5, uses))).toEqual([10, 8, 6, 4, 4]);
+    expect([0, 1, 2, 3, 7].map(commanderStaminaRegenAmount)).toEqual([0, 1, 1, 2, 4]);
+    expect(commanderInspiringPresenceHealing(4, false)).toBe(1);
+    expect(commanderInspiringPresenceHealing(5, false)).toBe(2);
+    expect(commanderInspiringPresenceHealing(5, true)).toBe(3);
+    expect([0, 2, 4].map((spent) => commanderRallyAmount(5, spent))).toEqual([1, 2, 3]);
+    expect(commanderRallyAmount(4, 4)).toBe(1);
   });
 });
 

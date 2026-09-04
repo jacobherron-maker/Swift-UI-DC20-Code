@@ -131,6 +131,8 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
       ? ['Charmed Condition', 'Frightened Condition', 'Intimidated Condition', 'Taunted Condition']
       : bardEmotionalCondition ? [`${bardEmotionalCondition} Condition`] : []
     : [];
+  const commanderResistances = character.class === 'Commander' && character.subclass === 'Crusader'
+    ? ['Frightened Condition', 'Intimidated Condition'] : [];
   return {
     physicalDefense: character.physicalDefense - (isRaging ? 5 : 0),
     speed: character.speed + (activeRune === 'Lightning Rune' ? 1 : 0)
@@ -144,6 +146,7 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
       ...(clericDomains.has('Divine Damage Expansion') && clericDivineDamage ? [`${clericDivineDamage} (1)`] : []),
       ...inquisitorResistances,
       ...bardResistances,
+      ...commanderResistances,
     ],
   };
 }
@@ -156,6 +159,37 @@ export function bardHelpDieSize(level: number): number {
 /** DC20 rounds fractions up, so a Barbarian regains ceil(maximum SP / 2). */
 export function barbarianStaminaRegenAmount(maximumStamina: number): number {
   return Math.max(0, Math.ceil(maximumStamina / 2));
+}
+
+/** A Champion can recover up to half maximum SP after performing a Maneuver once per Round. */
+export function championStaminaRegenAmount(maximumStamina: number): number {
+  return Math.max(0, Math.ceil(maximumStamina / 2));
+}
+
+/** Adaptive Tactics begins with a d8 Tactical Die and improves with Expert Champion. */
+export function championTacticalDieSize(level: number): number {
+  return level >= 5 ? 10 : 8;
+}
+
+/** Commanding Aura starts with the core d8 Help Die, then Expert Commander starts at d10. */
+export function commanderHelpDieSize(level: number, priorHelpUsesThisTurn = 0): number {
+  const steps = level >= 5 ? [10, 8, 6, 4] : [8, 6, 4];
+  return steps[Math.min(Math.max(0, Math.trunc(priorHelpUsesThisTurn)), steps.length - 1)];
+}
+
+/** A Commander can recover up to half maximum SP after granting a Help Die once per Round. */
+export function commanderStaminaRegenAmount(maximumStamina: number): number {
+  return Math.max(0, Math.ceil(maximumStamina / 2));
+}
+
+/** Inspiring Presence restores 1 HP, 2 at Expert, plus 1 while its target is on Death's Door. */
+export function commanderInspiringPresenceHealing(level: number, onDeathsDoor = false): number {
+  return 1 + Number(level >= 5) + Number(onDeathsDoor);
+}
+
+/** Rally grants 1 Temp HP; Expert Commander adds 1 per 2 additional SP spent. */
+export function commanderRallyAmount(level: number, additionalStamina = 0): number {
+  return 1 + (level >= 5 ? Math.floor(Math.max(0, additionalStamina) / 2) : 0);
 }
 
 /** Every Rogue Martial Path trigger can restore up to half maximum SP once per Round. */
@@ -215,6 +249,12 @@ export function classChoiceSelectionLimit(
 /** Maneuvers granted by a class feature do not consume the class-table Maneuvers Known allowance. */
 export function grantedClassManeuverNames(character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>): string[] {
   const choices = character.build?.classFeatureSelections ?? {};
+  if (character.class === 'Champion') {
+    return Array.from(new Set([
+      ...(choices['champion.masterAtArmsManeuver'] ?? []).slice(0, 1),
+      ...(character.level >= 5 ? (choices['champion.expertManeuvers'] ?? []).slice(0, 2) : []),
+    ].filter(Boolean)));
+  }
   if (character.class === 'Barbarian' && character.subclass === 'Spirit Guardian') {
     return (choices['barbarian.guardianManeuver'] ?? []).slice(0, 1);
   }

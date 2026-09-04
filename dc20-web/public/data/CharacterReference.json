@@ -3001,42 +3001,51 @@
         "Hero" : [
           {
             "description" : "Your warrior spirit refuses to yield in battle. You gain the following benefits:\n\nAdrenaline Boost: When you use your Second Wind, you gain a +5 bonus to Martial Attacks and Martial Checks you make until the end of your turn.\n\nCut Through: Your Martial Attacks that score Heavy Hits ignore the target’s Physical Resistances.\n\nUnyielding Spirit: While Bloodied, you gain 1 Temp HP at the start of each of your turns.",
+            "level" : 3,
             "name" : "Hero’s Resolve"
           },
           {
             "description" : "You ignore the penalties of Forced March and being Encumbered (but not Heavily Encumbered).",
+            "level" : 3,
             "name" : "Adventuring Hero (Flavor Feature)"
           }
         ],
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ],
         "Sentinel" : [
           {
             "description" : "You gain the following benefits:\n\nSteadfast Defender: You can use your Deflect Tactic against any Attack that targets a creature within your Melee Range.\n\nDefensive Bash: When you use a Defensive Maneuver as a Reaction to an Attack from a creature within 1 Space of you, the attacker must make a Physical Save against your Attack Check. Save Failure: The target is pushed 1 Space away or Taunted by you until the end of its next turn (your choice).\n\nNot on my Watch: Creatures Taunted by you deal 1 less damage to targets within 1 Space of you.",
+            "level" : 3,
             "name" : "Stalwart Protector"
           },
           {
             "description" : "During a Long Rest, if you spend both 4 hour periods doing Light Activity, you have ADV on the Might Save you make to avoid gaining Exhaustion. Additionally, the Save DC doesn’t increase on a Failure.",
+            "level" : 3,
             "name" : "Vigilant Watcher (Flavor Feature)"
           }
         ]
@@ -3875,42 +3884,51 @@
         "Crusader" : [
           {
             "description" : "You gain the following benefits:\n\nAura of Courage: While within your Commanding Aura, creatures of your choice have Resistance to Frightened and Intimidated.\n\nProtective Orders: When a creature gains the benefits of your Commander’s Call, they also gain Resistance (1) against the next damage they take before the start of your next turn.\n\nRestoring Rally: When you grant a Bloodied creature Temp HP in Combat using Rally (Commanding Aura), they regain that amount of HP instead.",
+            "level" : 3,
             "name" : "Virtuous Vanguard"
           },
           {
             "description" : "Your presence is a symbol of hope and safety to those around you. You have ADV on Checks to convince creatures not to be afraid.\n\nDC Tip: This Flavor Feature doesn’t interact with Conditions.",
+            "level" : 3,
             "name" : "Gallant Hero (Flavor Feature)"
           }
         ],
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ],
         "Warlord" : [
           {
             "description" : "You gain the following benefits:\n• Morale Breaker: Once per Combat when you use your Commander’s Call, you can use the Intimidate Action for free against a creature of your choice within 10 Spaces.\n• Battlefield Tactics: Allies within your Commanding Aura deal +1 damage on their first Melee Attack on each of their turns against a creature they’re Flanking.\n\nYou gain a new Commanding Aura option:\n• Priority Target: (1 AP + 1 SP) Choose a creature within 10 Spaces. Until the start of your next turn, each creature within your Aura has ADV on the first Attack it makes on each of its turns against the chosen creature.",
+            "level" : 3,
             "name" : "Offensive Tactics"
           },
           {
             "description" : "Through years of study and experience, you’ve mastered military history and strategy. You gain ADV on Checks related to analyzing fields of battle, understanding historical battles and military organizations, or deciphering complex tactical maneuvers.",
+            "level" : 3,
             "name" : "Battlefield Tactician (Flavor Feature)"
           }
         ]

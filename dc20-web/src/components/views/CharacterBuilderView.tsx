@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useCharacterReference } from '../../hooks/useCharacterReference';
 import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
-import { usePowerCatalog } from '../../hooks/usePowerCatalog';
+import { usePowerCatalog, type ManeuverReference } from '../../hooks/usePowerCatalog';
 import { useCampaignStore } from '../../store/campaignStore';
 import { CharacterAvatarEditor } from '../character/CharacterAvatar';
 import type {
@@ -95,6 +95,26 @@ function FeatureSpellPicker({
   onToggle: (name: string) => void;
 }) {
   return <details className="rounded-xl border border-fuchsia-400/20 bg-fuchsia-950/20 p-4"><summary className="cursor-pointer font-black text-fuchsia-200">{title} ({selected.length}/{limit})</summary><p className="mt-3 text-sm leading-6 text-slate-400">{description}</p><div className="mt-3 grid max-h-[520px] gap-2 overflow-y-auto pr-2 md:grid-cols-2">{options.map((spell) => { const isSelected = selected.includes(spell.name); const disabled = !isSelected && (selected.length >= limit || knownOutside.has(spell.name)); return <InfoDetails key={spell.name} summary={<label className={`flex flex-1 items-center gap-2 ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`} onClick={(event) => event.stopPropagation()}><input type="checkbox" disabled={disabled} checked={isSelected} onChange={() => onToggle(spell.name)} />{spell.name}<span className="ml-auto text-xs text-slate-500">{spell.cost}</span></label>}><p className="mb-2 text-xs font-bold text-fuchsia-300">{spell.source} • {spell.school} • {spell.range} • {spell.duration}</p>{spell.description}{spell.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{spell.enhancements}</p></>}</InfoDetails>; })}</div>{options.length === 0 && <p className="mt-3 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-100">No eligible spell is published in the current Beta spell catalog.</p>}</details>;
+}
+
+function FeatureManeuverPicker({
+  title,
+  description,
+  selected,
+  limit,
+  options,
+  knownOutside,
+  onToggle,
+}: {
+  title: string;
+  description: string;
+  selected: string[];
+  limit: number;
+  options: ManeuverReference[];
+  knownOutside: ReadonlySet<string>;
+  onToggle: (name: string) => void;
+}) {
+  return <details className="rounded-xl border border-amber-400/20 bg-amber-950/20 p-4"><summary className="cursor-pointer font-black text-amber-200">{title} ({selected.length}/{limit})</summary><p className="mt-3 text-sm leading-6 text-slate-400">{description}</p><div className="mt-3 grid max-h-[520px] gap-2 overflow-y-auto pr-2 md:grid-cols-2">{options.map((maneuver) => { const isSelected = selected.includes(maneuver.name); const disabled = !isSelected && (selected.length >= limit || knownOutside.has(maneuver.name)); return <InfoDetails key={maneuver.name} summary={<label className={`flex flex-1 items-center gap-2 ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`} onClick={(event) => event.stopPropagation()}><input type="checkbox" disabled={disabled} checked={isSelected} onChange={() => onToggle(maneuver.name)} />{maneuver.name}<span className="ml-auto text-xs text-slate-500">{maneuver.cost}</span></label>}><p className="mb-2 text-xs font-bold text-amber-300">{maneuver.category} • {maneuver.range}{maneuver.requirements ? ` • ${maneuver.requirements}` : ''}</p>{maneuver.description}{maneuver.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{maneuver.enhancements}</p></>}</InfoDetails>; })}</div></details>;
 }
 
 function Metric({ label, value, tone = 'violet' }: { label: string; value: React.ReactNode; tone?: 'violet' | 'red' | 'blue' | 'green' }) {
@@ -733,6 +753,14 @@ const CharacterBuilderView: React.FC<{
   const bardEnthrallOptions = bardKnownBeforeEnthrall.has('Charm')
     ? spells.filter(({ name, tags }) => name !== 'Charm' && (tags ?? '').split(',').some((tag) => tag.trim().toLowerCase() === 'charmed'))
     : spells.filter(({ name }) => name === 'Charm');
+  const championMasterAtArmsManeuver = className === 'Champion'
+    ? featureChoices['champion.masterAtArmsManeuver'] ?? [] : [];
+  const championExpertManeuvers = className === 'Champion' && level >= 5
+    ? featureChoices['champion.expertManeuvers'] ?? [] : [];
+  const championKnownOutside = (groupID: string) => new Set([
+    ...selectedManeuvers,
+    ...(groupID === 'champion.masterAtArmsManeuver' ? championExpertManeuvers : championMasterAtArmsManeuver),
+  ]);
 
   const startingEquipment = (() => {
     if (!classReference) return { arsenal: [], armor: [], tools: [] };
@@ -812,6 +840,12 @@ const CharacterBuilderView: React.FC<{
       const allBardSpells = [...selectedSpells, ...bardFeatureSpellGroups.flatMap(([, names]) => names)];
       if (new Set(allBardSpells).size !== allBardSpells.length) issues.push('A Bard Spell can only be learned once across the class table and Repertoire Features.');
       if (selectedSpells.some((spell) => !allowedSpells.some(({ name }) => name === spell))) issues.push('Remove Spells that are no longer on the Bard Spell List.');
+    }
+    if (className === 'Champion') {
+      if (championMasterAtArmsManeuver.length !== 1) issues.push('Choose the Maneuver granted by Master-at-Arms.');
+      if (level >= 5 && championExpertManeuvers.length !== 2) issues.push('Choose the 2 additional Maneuvers granted by Expert Champion.');
+      const allChampionManeuvers = [...selectedManeuvers, ...championMasterAtArmsManeuver, ...championExpertManeuvers];
+      if (new Set(allChampionManeuvers).size !== allChampionManeuvers.length) issues.push('A Champion Maneuver can only be learned once across the class table and Master-at-Arms.');
     }
     if (className === 'Cleric') {
       const warManeuvers = featureChoices['cleric.warManeuver'] ?? [];
@@ -954,6 +988,13 @@ const CharacterBuilderView: React.FC<{
                     })}</div>
                   </div>;
                 })}</div>
+              </div>}
+              {className === 'Champion' && <div className={panelClass}>
+                <div className="mb-4"><h3 className="font-black text-amber-200">Master-at-Arms Maneuvers</h3><p className="mt-1 text-sm leading-6 text-slate-500">Maneuver Master grants Maneuvers in addition to the Champion Class Table. They are kept separate here so the table allowance remains accurate.</p></div>
+                <div className="space-y-4">
+                  <FeatureManeuverPicker title="Maneuver Master" description="At level 1, learn 1 Maneuver of your choice. Once per Round when you perform a Maneuver, you can reduce its SP cost by 1." selected={championMasterAtArmsManeuver} limit={1} options={maneuvers} knownOutside={championKnownOutside('champion.masterAtArmsManeuver')} onToggle={(maneuver) => toggleStoredFeatureChoice('champion.masterAtArmsManeuver', maneuver, 1)} />
+                  {level >= 5 && <FeatureManeuverPicker title="Expert Champion — Master-at-Arms" description="Learn 2 additional Maneuvers of your choice." selected={championExpertManeuvers} limit={2} options={maneuvers} knownOutside={championKnownOutside('champion.expertManeuvers')} onToggle={(maneuver) => toggleStoredFeatureChoice('champion.expertManeuvers', maneuver, 2)} />}
+                </div>
               </div>}
               {className === 'Bard' && <div className={panelClass}>
                 <div className="mb-4"><h3 className="font-black text-fuchsia-200">Remarkable Repertoire</h3><p className="mt-1 text-sm leading-6 text-slate-500">Magical Secrets and its upgrades grant Spells separately from the Bard Class Table. These pickers use the entire published spell catalog, while the ordinary Spells picker remains limited to the Bard Spell List.</p></div>

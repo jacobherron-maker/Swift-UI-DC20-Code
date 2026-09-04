@@ -4,7 +4,7 @@ import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { usePowerCatalog } from '../../hooks/usePowerCatalog';
 import { CharacterAvatarEditor } from '../character/CharacterAvatar';
 import type { CampaignNote, Character, CharacterInventoryItem, DC20Attribute, EquipmentCatalogItem, MasteryLevel } from '../../types/models';
-import { ATTRIBUTE_NAMES, BARBARIAN_RAGE_STATE, BARD_PERFORMANCE_STATE, applyDerivedCharacter, barbarianStaminaRegenAmount, bardHelpDieSize, characterSheetEffects, deriveCharacter, grantedClassLanguageNames, grantedClassManeuverNames, grantedClassSpellNames, masteryBonus, masteryRank, masteryTitle, rogueCheapShotDamage, rogueStaminaRegenAmount, skillMasteryCap, spellbladeDisciplineNames } from '../../utils/characterRules';
+import { ATTRIBUTE_NAMES, BARBARIAN_RAGE_STATE, BARD_PERFORMANCE_STATE, applyDerivedCharacter, barbarianStaminaRegenAmount, bardHelpDieSize, championStaminaRegenAmount, championTacticalDieSize, characterSheetEffects, commanderHelpDieSize, commanderInspiringPresenceHealing, commanderRallyAmount, commanderStaminaRegenAmount, deriveCharacter, grantedClassLanguageNames, grantedClassManeuverNames, grantedClassSpellNames, masteryBonus, masteryRank, masteryTitle, rogueCheapShotDamage, rogueStaminaRegenAmount, skillMasteryCap, spellbladeDisciplineNames } from '../../utils/characterRules';
 import { enforceEquipmentHandCapacity, isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped as toggleInventoryEquippedBase } from '../../utils/equipmentRules';
 import { generateUUID } from '../../utils/gameUtils';
 
@@ -115,6 +115,48 @@ const BARD_HELPING_HANDS_USED = 'bard.help.helpingHandsUsed';
 const BARD_JESTER_HECKLE_USED = 'bard.jester.heckleUsed';
 const BARD_JESTER_PRATFALL_ACTIVE = 'bard.jester.pratfallActive';
 const BARD_MIND_GAMES_DAMAGE = 'bard.eloquence.mindGamesDamage';
+const CHAMPION_REGEN_USED = 'champion.staminaRegen.used';
+const CHAMPION_MANEUVER_MASTER_USED = 'champion.maneuverMaster.used';
+const CHAMPION_READINESS_ACTIVE = 'champion.readiness.active';
+const CHAMPION_READINESS_CHOICE = 'champion.readiness.choice';
+const CHAMPION_SECOND_WIND_USED = 'champion.secondWind.used';
+const CHAMPION_TACTICAL_DIE = 'champion.tacticalDie.available';
+const CHAMPION_TACTIC_CHOICE = 'champion.tacticalDie.tactic';
+const CHAMPION_TACTIC_RESULT = 'champion.tacticalDie.result';
+const CHAMPION_DISCIPLINED_USED = 'champion.disciplinedCombatant.used';
+const CHAMPION_ADRENALINE_ACTIVE = 'champion.hero.adrenaline.active';
+const CHAMPION_UNYIELDING_USED = 'champion.hero.unyielding.used';
+const CHAMPION_KNOWLEDGE_METHOD = 'champion.knowYourEnemy.method';
+const CHAMPION_KNOWLEDGE_STAT = 'champion.knowYourEnemy.stat';
+const CHAMPION_RESOLVE_DAMAGE = 'champion.resolve.damage';
+const CHAMPION_SENTINEL_BASH = 'champion.sentinel.defensiveBash';
+const COMMANDER_REGEN_USED = 'commander.staminaRegen.used';
+const COMMANDER_HELP_GRANTED = 'commander.help.granted';
+const COMMANDER_HELP_RESULT = 'commander.help.result';
+const COMMANDER_HELP_USES = 'commander.help.usesThisTurn';
+const COMMANDER_INSPIRING_USED = 'commander.inspiringPresence.used';
+const COMMANDER_INSPIRING_TARGET = 'commander.inspiringPresence.target';
+const COMMANDER_INSPIRING_DEATHS_DOOR = 'commander.inspiringPresence.deathsDoor';
+const COMMANDER_INSPIRING_RESULT = 'commander.inspiringPresence.result';
+const COMMANDER_CALL_PRIMARY = 'commander.call.primary';
+const COMMANDER_CALL_SECONDARY = 'commander.call.secondary';
+const COMMANDER_CALL_EXPERT_EXTRA = 'commander.call.expertExtra';
+const COMMANDER_CALL_COORDINATED = 'commander.call.coordinated';
+const COMMANDER_CALL_REACTION = 'commander.call.reaction';
+const COMMANDER_CALL_ATTACK_USED = 'commander.call.attack.used';
+const COMMANDER_CALL_DODGE_USED = 'commander.call.dodge.used';
+const COMMANDER_CALL_MOVE_USED = 'commander.call.move.used';
+const COMMANDER_COORDINATED_USED = 'commander.call.coordinated.used';
+const COMMANDER_CALL_RESULT = 'commander.call.result';
+const COMMANDER_PROTECTIVE_ORDERS = 'commander.crusader.protectiveOrders';
+const COMMANDER_MORALE_AVAILABLE = 'commander.warlord.moraleAvailable';
+const COMMANDER_MORALE_USED = 'commander.warlord.moraleUsed';
+const COMMANDER_RALLY_EXTRA_SP = 'commander.rally.extraSP';
+const COMMANDER_RALLY_TARGET = 'commander.rally.target';
+const COMMANDER_RALLY_RESULT = 'commander.rally.result';
+const COMMANDER_REINFORCE_SAVE_ADV = 'commander.reinforce.saveAdvantage';
+const COMMANDER_REINFORCE_ACTIVE = 'commander.reinforce.active';
+const COMMANDER_PRIORITY_ACTIVE = 'commander.warlord.priorityTarget.active';
 
 interface RollOutcome { label: string; dice: number[]; chosen: number; modifier: number; total: number }
 
@@ -124,6 +166,303 @@ function ResourceControl({ label, value, maximum, tone, onChange }: { label: str
 
 function Details({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return <details className="group rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-start justify-between gap-3"><span><span className="font-black text-slate-200">{title}</span>{subtitle && <span className="mt-1 block text-xs text-slate-500">{subtitle}</span>}</span><span className="text-xs font-bold text-violet-300 group-open:hidden">More</span><span className="hidden text-xs font-bold text-violet-300 group-open:inline">Less</span></summary><div className="mt-4 whitespace-pre-wrap border-t border-white/5 pt-4 text-sm leading-6 text-slate-400">{children}</div></details>;
+}
+
+function ChampionControls({ character, onChange, onRoll, insightModifier, knowledgeModifier }: {
+  character: Character;
+  onChange: (values: Partial<Character>) => void;
+  onRoll: (label: string, modifier: number, extraAdjustment?: number) => RollOutcome;
+  insightModifier: number;
+  knowledgeModifier: number;
+}) {
+  const build = character.build;
+  if (!build) return null;
+  const states = build.sheetFeatureStates ?? {};
+  const selections = build.sheetFeatureSelections ?? {};
+  const counters = build.sheetFeatureCounters ?? {};
+  const talents = new Set(build.selectedTalents ?? []);
+  const dieSize = championTacticalDieSize(character.level);
+  const bloodied = character.healthPoints <= Math.ceil(character.maxHealthPoints / 2);
+  const readiness = selections[CHAMPION_READINESS_CHOICE] || 'Fortify';
+  const tactic = selections[CHAMPION_TACTIC_CHOICE] || 'Assault';
+  const knowMethod = selections[CHAMPION_KNOWLEDGE_METHOD] || 'Insight';
+  const knowStat = selections[CHAMPION_KNOWLEDGE_STAT] || 'Might';
+  const hasResolve = talents.has("Champion's Resolve");
+  const hasDiscipline = talents.has('Disciplined Combatant');
+  const tacticalDieAvailable = character.level >= 2 && Boolean(states[CHAMPION_TACTICAL_DIE]);
+  const updateBuild = (values: Partial<NonNullable<Character['build']>>, characterValues: Partial<Character> = {}) => onChange({ ...characterValues, build: { ...build, ...values } });
+  const setSelection = (key: string, value: string) => updateBuild({ sheetFeatureSelections: { ...selections, [key]: value } });
+  const startCombat = () => updateBuild({
+    sheetFeatureStates: {
+      ...states,
+      [CHAMPION_READINESS_ACTIVE]: true,
+      [CHAMPION_SECOND_WIND_USED]: false,
+      [CHAMPION_TACTICAL_DIE]: character.level >= 2,
+      [CHAMPION_DISCIPLINED_USED]: false,
+      [CHAMPION_ADRENALINE_ACTIVE]: false,
+      [CHAMPION_UNYIELDING_USED]: false,
+      [CHAMPION_MANEUVER_MASTER_USED]: false,
+      [CHAMPION_REGEN_USED]: false,
+    },
+    sheetFeatureCounters: { ...counters, [CHAMPION_TACTIC_RESULT]: 0 },
+  });
+  const endTurn = () => updateBuild({ sheetFeatureStates: {
+    ...states,
+    [CHAMPION_TACTICAL_DIE]: character.level >= 2 ? true : Boolean(states[CHAMPION_TACTICAL_DIE]),
+    [CHAMPION_DISCIPLINED_USED]: false,
+    [CHAMPION_ADRENALINE_ACTIVE]: false,
+    [CHAMPION_UNYIELDING_USED]: false,
+  } });
+  const resetRound = () => updateBuild({ sheetFeatureStates: {
+    ...states,
+    [CHAMPION_MANEUVER_MASTER_USED]: false,
+    [CHAMPION_REGEN_USED]: false,
+  } });
+  const useSecondWind = () => {
+    if (states[CHAMPION_SECOND_WIND_USED] || (!bloodied && !hasDiscipline)) return;
+    const restored = character.level >= 5 ? 4 : 2;
+    updateBuild({ sheetFeatureStates: {
+      ...states,
+      [CHAMPION_SECOND_WIND_USED]: true,
+      ...(character.subclass === 'Hero' ? { [CHAMPION_ADRENALINE_ACTIVE]: true } : {}),
+    } }, {
+      healthPoints: Math.min(character.maxHealthPoints, character.healthPoints + restored),
+      stamina: Math.min(character.maxStamina, character.stamina + restored),
+    });
+  };
+  const useStaminaRegen = () => {
+    if (states[CHAMPION_REGEN_USED] || character.stamina >= character.maxStamina) return;
+    updateBuild({ sheetFeatureStates: { ...states, [CHAMPION_REGEN_USED]: true } }, {
+      stamina: Math.min(character.maxStamina, character.stamina + championStaminaRegenAmount(character.maxStamina)),
+    });
+  };
+  const useTacticalDie = () => {
+    if (!tacticalDieAvailable) return;
+    updateBuild({
+      sheetFeatureStates: { ...states, [CHAMPION_TACTICAL_DIE]: false },
+      sheetFeatureCounters: { ...counters, [CHAMPION_TACTIC_RESULT]: Math.floor(Math.random() * dieSize) + 1 },
+    });
+  };
+  const useDisciplinedReadiness = () => {
+    if (!hasDiscipline || states[CHAMPION_DISCIPLINED_USED] || character.stamina < 2) return;
+    updateBuild({ sheetFeatureStates: {
+      ...states,
+      [CHAMPION_DISCIPLINED_USED]: true,
+      [CHAMPION_READINESS_ACTIVE]: true,
+    } }, { stamina: character.stamina - 2 });
+  };
+  const gainUnyieldingSpirit = () => {
+    if (character.subclass !== 'Hero' || !bloodied || states[CHAMPION_UNYIELDING_USED]) return;
+    updateBuild({
+      temporaryHP: (build.temporaryHP ?? 0) + 1,
+      sheetFeatureStates: { ...states, [CHAMPION_UNYIELDING_USED]: true },
+    });
+  };
+  const assessEnemy = (inCombat: boolean) => {
+    if (inCombat && character.currentAP < 1) return;
+    if (inCombat) onChange({ currentAP: character.currentAP - 1 });
+    onRoll(`Know Your Enemy — ${knowMethod} Check`, knowMethod === 'Knowledge' ? knowledgeModifier : insightModifier);
+  };
+  const resolveDamage = selections[CHAMPION_RESOLVE_DAMAGE] || 'Bludgeoning';
+  return <section className="mb-5 rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-950/45 to-slate-950/70 p-4 sm:p-5">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">Live Class Features</p><h2 className="text-xl font-black text-white">Champion Controls</h2></div><div className="flex flex-wrap gap-2"><button type="button" onClick={endTurn} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white">End Turn</button><button type="button" onClick={startCombat} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200">Roll Initiative / New Combat</button></div></div>
+    <div className="grid gap-3 lg:grid-cols-3">
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-amber-200">Master-at-Arms</h3><p className="mt-2 text-xs leading-5 text-slate-400"><strong>Weapon Master:</strong> freely swap each wielded Weapon at the start of your turn without provoking Opportunity Attacks.</p><p className="mt-2 text-xs leading-5 text-slate-400"><strong>Maneuver Master:</strong> once per Round, reduce a Maneuver’s SP cost by 1.</p><button type="button" disabled={Boolean(states[CHAMPION_MANEUVER_MASTER_USED])} onClick={() => updateBuild({ sheetFeatureStates: { ...states, [CHAMPION_MANEUVER_MASTER_USED]: true } })} className="mt-3 w-full rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[CHAMPION_MANEUVER_MASTER_USED] ? 'Reduction Used This Round' : 'Use −1 SP Maneuver Cost'}</button><button type="button" disabled={(!states[CHAMPION_MANEUVER_MASTER_USED] && !states[CHAMPION_REGEN_USED])} onClick={resetRound} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300 disabled:opacity-35">Start Next Round • Reset</button></div>
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-sky-200">Champion Stamina Regen</h3><p className="mt-2 text-xs leading-5 text-slate-400">Once per Round after you perform a Maneuver, regain up to half your maximum SP.</p><p className="mt-2 text-xs font-bold text-sky-300">Up to {championStaminaRegenAmount(character.maxStamina)} SP</p><button type="button" disabled={Boolean(states[CHAMPION_REGEN_USED]) || character.stamina >= character.maxStamina} onClick={useStaminaRegen} className="mt-3 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[CHAMPION_REGEN_USED] ? 'Used This Round' : 'Maneuver Performed • Regain SP'}</button></div>
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-violet-200">Combat Readiness</h3><label className="mt-2 block text-xs font-bold text-slate-400">Readiness<select value={readiness} onChange={(event) => setSelection(CHAMPION_READINESS_CHOICE, event.target.value)} className={`${fieldClass} mt-1`}><option>Fortify</option><option>Advance</option></select></label><p className="mt-2 text-xs leading-5 text-slate-400">{readiness === 'Fortify' ? 'Dodge Action benefits and ADV on your next Save until the end of Combat.' : 'Move Action benefits and ADV on your next Martial Attack or Physical Check until the end of Combat.'}</p>{states[CHAMPION_READINESS_ACTIVE] && <p className="mt-2 rounded-lg bg-violet-500/10 p-2 text-xs font-bold text-violet-100">{readiness} is ready and will be consumed by its qualifying roll.</p>}{hasDiscipline && <button type="button" disabled={Boolean(states[CHAMPION_DISCIPLINED_USED]) || character.stamina < 2} onClick={useDisciplinedReadiness} className="mt-3 w-full rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Disciplined Combatant • 2 SP</button>}</div>
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-emerald-200">Second Wind</h3><p className="mt-2 text-xs leading-5 text-slate-400">Once per Combat at the start of your turn while Bloodied, regain {character.level >= 5 ? '4 HP and 4 SP' : '2 HP and 2 SP'}.{hasDiscipline ? ' Disciplined Combatant removes the Bloodied requirement.' : ''}</p><button type="button" disabled={Boolean(states[CHAMPION_SECOND_WIND_USED]) || (!bloodied && !hasDiscipline)} onClick={useSecondWind} className="mt-3 w-full rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[CHAMPION_SECOND_WIND_USED] ? 'Used This Combat' : `Start Turn • Regain ${character.level >= 5 ? 4 : 2} HP & SP`}</button>{character.subclass === 'Hero' && states[CHAMPION_ADRENALINE_ACTIVE] && <p className="mt-2 rounded-lg bg-orange-500/10 p-2 text-xs text-orange-100">Adrenaline Boost: +5 to Martial Attacks and Martial Checks until end of turn.</p>}</div>
+      {character.level >= 2 && <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-fuchsia-200">Adaptive Tactics • d{dieSize}</h3><label className="mt-2 block text-xs font-bold text-slate-400">Tactic<select value={tactic} onChange={(event) => setSelection(CHAMPION_TACTIC_CHOICE, event.target.value)} className={`${fieldClass} mt-1`}><option>Assault</option><option>Deflect</option></select></label><p className="mt-2 text-xs leading-5 text-slate-400">{tactic === 'Assault' ? 'Add the Tactical Die to a Martial Attack result.' : `Subtract the Tactical Die from an incoming Attack result${character.subclass === 'Sentinel' ? ', including an Attack against a creature in your Melee Range' : ''}.`}</p>{hasResolve && tactic === 'Assault' && <p className="mt-2 text-xs font-bold text-rose-200">Champion’s Resolve: the Attack also deals +1 damage.</p>}{hasResolve && tactic === 'Deflect' && <label className="mt-2 block text-xs font-bold text-slate-400">Resolve Damage<select value={resolveDamage} onChange={(event) => setSelection(CHAMPION_RESOLVE_DAMAGE, event.target.value)} className={`${fieldClass} mt-1`}><option>Bludgeoning</option><option>Piercing</option><option>Slashing</option></select><span className="mt-1 block font-normal text-rose-200">If the Attack misses, its Attacker takes 1 {resolveDamage} damage.</span></label>}<button type="button" disabled={!tacticalDieAvailable} onClick={useTacticalDie} className="mt-3 w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{tacticalDieAvailable ? `Spend Tactical Die • d${dieSize}` : 'No Tactical Die Available'}</button>{(counters[CHAMPION_TACTIC_RESULT] ?? 0) > 0 && <p className="mt-2 rounded-lg bg-fuchsia-500/10 p-2 text-xs text-fuchsia-100"><strong>{tactic}:</strong> {tactic === 'Assault' ? '+' : '−'}{counters[CHAMPION_TACTIC_RESULT]} to the Attack result.</p>}</div>}
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-cyan-200">Know Your Enemy</h3><div className="mt-2 grid grid-cols-2 gap-2"><label className="text-xs font-bold text-slate-400">Check<select value={knowMethod} onChange={(event) => setSelection(CHAMPION_KNOWLEDGE_METHOD, event.target.value)} className={`${fieldClass} mt-1`}><option>Insight</option><option>Knowledge</option></select></label><label className="text-xs font-bold text-slate-400">Stat<select value={knowStat} onChange={(event) => setSelection(CHAMPION_KNOWLEDGE_STAT, event.target.value)} className={`${fieldClass} mt-1`}><option>Might</option><option>Agility</option><option>PD</option><option>AD</option><option>HP</option></select></label></div><p className="mt-2 text-xs leading-5 text-slate-400">DC 10. On a Success, learn whether the creature’s {knowStat} is higher, lower, or the same as yours.</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => assessEnemy(false)} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Observe 1 Minute • Roll</button><button type="button" disabled={character.currentAP < 1} onClick={() => assessEnemy(true)} className="rounded-lg bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">In Combat • 1 AP</button></div></div>
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4 lg:col-span-3"><h3 className="font-black text-amber-200">Martial Rolls & Subclass Benefits</h3><div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => onRoll('Martial Attack', character.primeModifier + character.combatMastery)} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white">Roll Martial Attack • +{character.primeModifier + character.combatMastery}</button><button type="button" onClick={() => onRoll('Martial Check', character.primeModifier + character.combatMastery)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white">Roll Martial Check • +{character.primeModifier + character.combatMastery}</button></div>{character.subclass === 'Hero' && <div className="mt-3 grid gap-2 text-xs leading-5 text-slate-300 md:grid-cols-3"><p><strong className="text-orange-200">Adrenaline Boost:</strong> Second Wind activates the +5 roll bonus above.</p><p><strong className="text-orange-200">Cut Through:</strong> Martial Heavy Hits ignore Physical Resistances.</p><div><strong className="text-orange-200">Unyielding Spirit:</strong> while Bloodied, gain 1 Temp HP at the start of your turn.<button type="button" disabled={!bloodied || Boolean(states[CHAMPION_UNYIELDING_USED])} onClick={gainUnyieldingSpirit} className="mt-2 w-full rounded-lg bg-orange-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Start Turn • Gain 1 Temp HP</button></div></div>}{character.subclass === 'Sentinel' && <div className="mt-3 grid gap-2 text-xs leading-5 text-slate-300 md:grid-cols-3"><p><strong className="text-sky-200">Steadfast Defender:</strong> Deflect can protect a creature within your Melee Range.</p><label><strong className="text-sky-200">Defensive Bash:</strong> after a qualifying defensive Reaction, the attacker makes a Physical Save against your Attack Check.<select value={selections[CHAMPION_SENTINEL_BASH] || ''} onChange={(event) => setSelection(CHAMPION_SENTINEL_BASH, event.target.value)} className={`${fieldClass} mt-2`}><option value="">Record result…</option><option>Pushed 1 Space</option><option>Taunted until end of its next turn</option></select></label><p><strong className="text-sky-200">Not on my Watch:</strong> creatures Taunted by you deal 1 less damage to targets within 1 Space of you.</p></div>}</div>
+    </div>
+  </section>;
+}
+
+function CommanderControls({ character, onChange, onRoll, intimidationModifier, charismaModifier }: {
+  character: Character;
+  onChange: (values: Partial<Character>) => void;
+  onRoll: (label: string, modifier: number, extraAdjustment?: number) => RollOutcome;
+  intimidationModifier: number;
+  charismaModifier: number;
+}) {
+  const build = character.build;
+  if (!build) return null;
+  const states = build.sheetFeatureStates ?? {};
+  const selections = build.sheetFeatureSelections ?? {};
+  const counters = build.sheetFeatureCounters ?? {};
+  const talents = new Set(build.selectedTalents ?? []);
+  const expert = character.level >= 5;
+  const commands: Record<string, string> = {
+    Attack: 'Immediately make an Attack with ADV without spending AP, SP, or MP on the Attack.',
+    Dodge: 'Immediately take the Full Dodge Action.',
+    Move: 'Immediately move up to their Speed without provoking Opportunity Attacks.',
+  };
+  const commandState: Record<string, string> = {
+    Attack: COMMANDER_CALL_ATTACK_USED,
+    Dodge: COMMANDER_CALL_DODGE_USED,
+    Move: COMMANDER_CALL_MOVE_USED,
+  };
+  const primary = selections[COMMANDER_CALL_PRIMARY] || 'Attack';
+  const secondary = selections[COMMANDER_CALL_SECONDARY] || (primary === 'Attack' ? 'Dodge' : 'Attack');
+  const useExpertExtra = expert && Boolean(states[COMMANDER_CALL_EXPERT_EXTRA]);
+  const hasCoordinatedCommand = talents.has('Coordinated Command');
+  const useCoordinatedCommand = hasCoordinatedCommand && Boolean(states[COMMANDER_CALL_COORDINATED]);
+  const useAsReaction = talents.has('Seize Momentum') && Boolean(states[COMMANDER_CALL_REACTION]);
+  const callCost = 1 + (useExpertExtra ? 2 : 0) + (useCoordinatedCommand ? 1 : 0);
+  const callCommands = useExpertExtra ? [primary, secondary] : [primary];
+  const canCall = character.currentAP >= 1
+    && character.stamina >= callCost
+    && callCommands.every((command) => !states[commandState[command]])
+    && (!useExpertExtra || primary !== secondary)
+    && (!useCoordinatedCommand || !states[COMMANDER_COORDINATED_USED]);
+  const helpUses = Math.max(0, counters[COMMANDER_HELP_USES] ?? 0);
+  const nextHelpDie = commanderHelpDieSize(character.level, helpUses);
+  const inspiringTarget = selections[COMMANDER_INSPIRING_TARGET] || 'Self';
+  const inspiringDeathsDoor = inspiringTarget === 'Self' ? character.healthPoints <= 0 : Boolean(states[COMMANDER_INSPIRING_DEATHS_DOOR]);
+  const inspiringHealing = commanderInspiringPresenceHealing(character.level, inspiringDeathsDoor);
+  const rallyTarget = selections[COMMANDER_RALLY_TARGET] || 'Self';
+  const storedRallySP = expert ? Math.max(0, counters[COMMANDER_RALLY_EXTRA_SP] ?? 0) : 0;
+  const rallyExtraSP = Math.min(Math.floor(character.stamina / 2) * 2, storedRallySP - (storedRallySP % 2));
+  const rallyAmount = commanderRallyAmount(character.level, rallyExtraSP);
+  const bloodied = character.healthPoints <= Math.ceil(character.maxHealthPoints / 2);
+  const rallyRestoresHP = character.subclass === 'Crusader' && bloodied && rallyTarget === 'Self';
+  const reinforceSaveAdvantage = expert && Boolean(states[COMMANDER_REINFORCE_SAVE_ADV]);
+  const updateBuild = (values: Partial<NonNullable<Character['build']>>, characterValues: Partial<Character> = {}) => onChange({ ...characterValues, build: { ...build, ...values } });
+  const setState = (key: string, value: boolean) => updateBuild({ sheetFeatureStates: { ...states, [key]: value } });
+  const setSelection = (key: string, value: string) => updateBuild({ sheetFeatureSelections: { ...selections, [key]: value } });
+  const nextTurn = () => updateBuild({
+    sheetFeatureStates: {
+      ...states,
+      [COMMANDER_HELP_GRANTED]: false,
+      [COMMANDER_CALL_ATTACK_USED]: false,
+      [COMMANDER_CALL_DODGE_USED]: false,
+      [COMMANDER_CALL_MOVE_USED]: false,
+      [COMMANDER_PROTECTIVE_ORDERS]: false,
+      [COMMANDER_MORALE_AVAILABLE]: false,
+      [COMMANDER_REINFORCE_ACTIVE]: false,
+      [COMMANDER_PRIORITY_ACTIVE]: false,
+    },
+    sheetFeatureCounters: { ...counters, [COMMANDER_HELP_USES]: 0, [COMMANDER_HELP_RESULT]: 0 },
+  });
+  const nextRound = () => updateBuild({ sheetFeatureStates: {
+    ...states,
+    [COMMANDER_REGEN_USED]: false,
+    [COMMANDER_INSPIRING_USED]: false,
+    [COMMANDER_COORDINATED_USED]: false,
+  } });
+  const startCombat = () => updateBuild({
+    sheetFeatureStates: {
+      ...states,
+      [COMMANDER_REGEN_USED]: false,
+      [COMMANDER_HELP_GRANTED]: false,
+      [COMMANDER_INSPIRING_USED]: false,
+      [COMMANDER_CALL_ATTACK_USED]: false,
+      [COMMANDER_CALL_DODGE_USED]: false,
+      [COMMANDER_CALL_MOVE_USED]: false,
+      [COMMANDER_COORDINATED_USED]: false,
+      [COMMANDER_PROTECTIVE_ORDERS]: false,
+      [COMMANDER_MORALE_AVAILABLE]: false,
+      [COMMANDER_MORALE_USED]: false,
+      [COMMANDER_REINFORCE_ACTIVE]: false,
+      [COMMANDER_PRIORITY_ACTIVE]: false,
+    },
+    sheetFeatureCounters: {
+      ...counters,
+      [COMMANDER_HELP_USES]: 0,
+      [COMMANDER_HELP_RESULT]: 0,
+      [COMMANDER_INSPIRING_RESULT]: 0,
+      [COMMANDER_RALLY_RESULT]: 0,
+    },
+  });
+  const useBolster = () => {
+    if (character.currentAP < 1) return;
+    updateBuild({
+      sheetFeatureStates: { ...states, [COMMANDER_HELP_GRANTED]: true },
+      sheetFeatureCounters: {
+        ...counters,
+        [COMMANDER_HELP_RESULT]: Math.floor(Math.random() * nextHelpDie) + 1,
+        [COMMANDER_HELP_USES]: helpUses + 1,
+      },
+    }, { currentAP: character.currentAP - 1 });
+  };
+  const regainStamina = () => {
+    if (!states[COMMANDER_HELP_GRANTED] || states[COMMANDER_REGEN_USED]) return;
+    updateBuild({ sheetFeatureStates: { ...states, [COMMANDER_REGEN_USED]: true } }, {
+      stamina: Math.min(character.maxStamina, character.stamina + commanderStaminaRegenAmount(character.maxStamina)),
+    });
+  };
+  const useInspiringPresence = () => {
+    if (states[COMMANDER_INSPIRING_USED]) return;
+    const characterValues = inspiringTarget === 'Self'
+      ? { healthPoints: Math.min(character.maxHealthPoints, character.healthPoints + inspiringHealing) }
+      : {};
+    updateBuild({
+      sheetFeatureStates: { ...states, [COMMANDER_INSPIRING_USED]: true },
+      sheetFeatureCounters: { ...counters, [COMMANDER_INSPIRING_RESULT]: inspiringHealing },
+    }, characterValues);
+  };
+  const useCall = () => {
+    if (!canCall) return;
+    const usedStates = Object.fromEntries(callCommands.map((command) => [commandState[command], true]));
+    updateBuild({
+      sheetFeatureStates: {
+        ...states,
+        ...usedStates,
+        ...(useCoordinatedCommand ? { [COMMANDER_COORDINATED_USED]: true } : {}),
+        ...(character.subclass === 'Crusader' ? { [COMMANDER_PROTECTIVE_ORDERS]: true } : {}),
+        ...(character.subclass === 'Warlord' && !states[COMMANDER_MORALE_USED] ? { [COMMANDER_MORALE_AVAILABLE]: true } : {}),
+      },
+      sheetFeatureSelections: {
+        ...selections,
+        [COMMANDER_CALL_RESULT]: `${callCommands.join(' + ')}${useCoordinatedCommand ? ' • two creatures' : ''}${useAsReaction ? ' • Reaction' : ''}`,
+      },
+    }, { currentAP: character.currentAP - 1, stamina: character.stamina - callCost });
+  };
+  const useRally = () => {
+    if (character.currentAP < 1 || character.stamina < rallyExtraSP) return;
+    const characterValues = rallyTarget !== 'Self' ? {}
+      : rallyRestoresHP
+        ? { healthPoints: Math.min(character.maxHealthPoints, character.healthPoints + rallyAmount) }
+        : {};
+    updateBuild({
+      ...(rallyTarget === 'Self' && !rallyRestoresHP ? { temporaryHP: (build.temporaryHP ?? 0) + rallyAmount } : {}),
+      sheetFeatureCounters: { ...counters, [COMMANDER_RALLY_RESULT]: rallyAmount },
+    }, { ...characterValues, currentAP: character.currentAP - 1, stamina: character.stamina - rallyExtraSP });
+  };
+  const useReinforce = () => {
+    const staminaCost = reinforceSaveAdvantage ? 1 : 0;
+    if (character.currentAP < 1 || character.stamina < staminaCost) return;
+    updateBuild({ sheetFeatureStates: { ...states, [COMMANDER_REINFORCE_ACTIVE]: true } }, {
+      currentAP: character.currentAP - 1,
+      stamina: character.stamina - staminaCost,
+    });
+  };
+  const usePriorityTarget = () => {
+    if (character.currentAP < 1 || character.stamina < 1) return;
+    updateBuild({ sheetFeatureStates: { ...states, [COMMANDER_PRIORITY_ACTIVE]: true } }, {
+      currentAP: character.currentAP - 1,
+      stamina: character.stamina - 1,
+    });
+  };
+  const useMoraleBreaker = () => {
+    if (!states[COMMANDER_MORALE_AVAILABLE] || states[COMMANDER_MORALE_USED]) return;
+    onRoll('Morale Breaker — Intimidation Check', intimidationModifier);
+    updateBuild({ sheetFeatureStates: { ...states, [COMMANDER_MORALE_AVAILABLE]: false, [COMMANDER_MORALE_USED]: true } });
+  };
+  return <section className="mb-5 rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-cyan-950/45 via-violet-950/30 to-slate-950/75 p-4 sm:p-5">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Live Class Features</p><h2 className="text-xl font-black text-white">Commander Controls</h2></div><div className="flex flex-wrap gap-2"><button type="button" onClick={nextTurn} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Start Next Turn</button><button type="button" onClick={nextRound} className="rounded-lg bg-violet-800 px-3 py-2 text-xs font-black text-white">Start Next Round</button><button type="button" onClick={startCombat} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200">New Combat</button></div></div>
+    <div className="grid gap-3 lg:grid-cols-3">
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-emerald-200">Inspiring Presence</h3><p className="mt-2 text-xs leading-5 text-slate-400">Once per Round in Combat after spending SP, restore {expert ? '2' : '1'} HP to a creature within 10 Spaces. A creature on Death’s Door restores 1 additional HP.</p><label className="mt-3 block text-xs font-bold text-slate-400">Target<select value={inspiringTarget} onChange={(event) => setSelection(COMMANDER_INSPIRING_TARGET, event.target.value)} className={`${fieldClass} mt-1`}><option>Self</option><option>Ally</option></select></label>{inspiringTarget === 'Ally' && <label className="mt-2 flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={Boolean(states[COMMANDER_INSPIRING_DEATHS_DOOR])} onChange={(event) => setState(COMMANDER_INSPIRING_DEATHS_DOOR, event.target.checked)} />Ally is on Death’s Door</label>}<button type="button" disabled={Boolean(states[COMMANDER_INSPIRING_USED]) || (inspiringTarget === 'Self' && character.healthPoints >= character.maxHealthPoints)} onClick={useInspiringPresence} className="mt-3 w-full rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[COMMANDER_INSPIRING_USED] ? 'Used This Round' : `SP Spent • Restore ${inspiringHealing} HP`}</button>{(counters[COMMANDER_INSPIRING_RESULT] ?? 0) > 0 && inspiringTarget === 'Ally' && <p className="mt-2 rounded-lg bg-emerald-500/10 p-2 text-xs text-emerald-100">Ally restores {counters[COMMANDER_INSPIRING_RESULT]} HP.</p>}</div>
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-fuchsia-200">Bolster • Help Die d{nextHelpDie}</h3><p className="mt-2 text-xs leading-5 text-slate-400">Spend 1 AP to Help an Attack, or use Bolster as a Reaction when a valid target makes an Attack. Repeated Help Dice on the same turn decay toward d4.</p><button type="button" disabled={character.currentAP < 1} onClick={useBolster} className="mt-3 w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Bolster • 1 AP • Roll d{nextHelpDie}</button>{(counters[COMMANDER_HELP_RESULT] ?? 0) > 0 && <p className="mt-2 rounded-lg bg-fuchsia-500/10 p-2 text-xs text-fuchsia-100">Help Die result: <strong>{counters[COMMANDER_HELP_RESULT]}</strong></p>}<button type="button" disabled={!states[COMMANDER_HELP_GRANTED] || Boolean(states[COMMANDER_REGEN_USED]) || character.stamina >= character.maxStamina} onClick={regainStamina} className="mt-2 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[COMMANDER_REGEN_USED] ? 'Stamina Regen Used This Round' : `Grant Help • Regain up to ${commanderStaminaRegenAmount(character.maxStamina)} SP`}</button></div>
+      <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-amber-200">Natural Leader</h3><p className="mt-2 text-xs leading-5 text-slate-400">You have ADV on Checks made to convince creatures that you are an authority figure. You also have ADV on the first Charisma Check made to interact with non-hostile members of military groups.</p><div className="mt-3 grid gap-2"><button type="button" onClick={() => onRoll('Natural Leader — Authority Check', charismaModifier, 1)} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white">Roll Authority Check with ADV</button><button type="button" onClick={() => onRoll('Natural Leader — First Military Charisma Check', charismaModifier, 1)} className="rounded-lg bg-orange-800 px-3 py-2 text-xs font-black text-white">Roll First Military Check with ADV</button></div><p className="mt-3 text-xs leading-5 text-slate-500">Commanding Aura reaches 5 Spaces. Commander’s Call reaches {expert ? '10' : '5'} Spaces.</p></div>
+      <div className="rounded-xl border border-cyan-400/20 bg-cyan-950/15 p-4 lg:col-span-2"><h3 className="font-black text-cyan-200">Commander’s Call</h3><p className="mt-1 text-xs text-slate-500">1 AP + 1 SP • willing creature who can see or hear you • each command once on each of your turns</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><label className="text-xs font-bold text-slate-400">Command<select value={primary} onChange={(event) => setSelection(COMMANDER_CALL_PRIMARY, event.target.value)} className={`${fieldClass} mt-1`}>{Object.keys(commands).map((command) => <option key={command} disabled={Boolean(states[commandState[command]])}>{command}</option>)}</select></label>{expert && <label className="text-xs font-bold text-slate-400">Additional different command<select disabled={!useExpertExtra} value={secondary} onChange={(event) => setSelection(COMMANDER_CALL_SECONDARY, event.target.value)} className={`${fieldClass} mt-1 disabled:opacity-35`}>{Object.keys(commands).map((command) => <option key={command} disabled={command === primary || Boolean(states[commandState[command]])}>{command}</option>)}</select></label>}</div><p className="mt-2 text-xs leading-5 text-cyan-100"><strong>{primary}:</strong> {commands[primary]}</p>{useExpertExtra && <p className="mt-1 text-xs leading-5 text-cyan-100"><strong>{secondary}:</strong> {commands[secondary]}</p>}<div className="mt-3 grid gap-2 sm:grid-cols-2">{expert && <label className="flex items-center gap-2 rounded-lg bg-slate-950/55 p-2 text-xs text-slate-300"><input type="checkbox" checked={useExpertExtra} onChange={(event) => setState(COMMANDER_CALL_EXPERT_EXTRA, event.target.checked)} />Expert: +2 SP for a different command</label>}{hasCoordinatedCommand && <label className="flex items-center gap-2 rounded-lg bg-slate-950/55 p-2 text-xs text-slate-300"><input type="checkbox" checked={useCoordinatedCommand} disabled={Boolean(states[COMMANDER_COORDINATED_USED])} onChange={(event) => setState(COMMANDER_CALL_COORDINATED, event.target.checked)} />Coordinated Command: +1 SP, second creature</label>}{talents.has('Seize Momentum') && <label className="flex items-center gap-2 rounded-lg bg-slate-950/55 p-2 text-xs text-slate-300"><input type="checkbox" checked={useAsReaction} onChange={(event) => setState(COMMANDER_CALL_REACTION, event.target.checked)} />Seize Momentum: use as Reaction after ally’s Heavy Hit</label>}</div><button type="button" disabled={!canCall} onClick={useCall} className="mt-3 w-full rounded-lg bg-cyan-700 px-3 py-2 text-sm font-black text-white disabled:opacity-35">Issue {useAsReaction ? 'Reaction' : 'Call'} • 1 AP + {callCost} SP</button>{selections[COMMANDER_CALL_RESULT] && <p className="mt-2 rounded-lg bg-cyan-500/10 p-2 text-xs text-cyan-100">Last Call: {selections[COMMANDER_CALL_RESULT]}</p>}{states[COMMANDER_PROTECTIVE_ORDERS] && <p className="mt-2 rounded-lg bg-emerald-500/10 p-2 text-xs font-bold text-emerald-100">Protective Orders: called creature has Resistance (1) against its next damage before your next turn.</p>}</div>
+      <div className="rounded-xl border border-violet-400/20 bg-violet-950/15 p-4"><h3 className="font-black text-violet-200">Rally</h3><p className="mt-2 text-xs leading-5 text-slate-400">Spend 1 AP to grant chosen creatures in your Aura {rallyAmount} Temp HP.{expert ? ' Every 2 additional SP adds 1.' : ''}</p><label className="mt-3 block text-xs font-bold text-slate-400">Tracked target<select value={rallyTarget} onChange={(event) => setSelection(COMMANDER_RALLY_TARGET, event.target.value)} className={`${fieldClass} mt-1`}><option>Self</option><option>Other creature(s)</option></select></label>{expert && <label className="mt-2 block text-xs font-bold text-slate-400">Additional SP<select value={rallyExtraSP} onChange={(event) => updateBuild({ sheetFeatureCounters: { ...counters, [COMMANDER_RALLY_EXTRA_SP]: Number(event.target.value) } })} className={`${fieldClass} mt-1`}>{Array.from({ length: Math.floor(character.stamina / 2) + 1 }, (_, index) => index * 2).map((amount) => <option key={amount} value={amount}>{amount} SP • {commanderRallyAmount(character.level, amount)} HP</option>)}</select></label>}<button type="button" disabled={character.currentAP < 1 || character.stamina < rallyExtraSP} onClick={useRally} className="mt-3 w-full rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Rally • 1 AP{rallyExtraSP > 0 ? ` + ${rallyExtraSP} SP` : ''}</button>{rallyRestoresHP && <p className="mt-2 text-xs font-bold text-emerald-200">Restoring Rally: because you are Bloodied, restore HP instead of Temp HP.</p>}{rallyTarget !== 'Self' && (counters[COMMANDER_RALLY_RESULT] ?? 0) > 0 && <p className="mt-2 rounded-lg bg-violet-500/10 p-2 text-xs text-violet-100">Each chosen target gains {counters[COMMANDER_RALLY_RESULT]} Temp HP. A Bloodied target gains HP instead if you are a Crusader.</p>}</div>
+      <div className="rounded-xl border border-rose-400/20 bg-rose-950/15 p-4"><h3 className="font-black text-rose-200">Reinforce • Reaction</h3><p className="mt-2 text-xs leading-5 text-slate-400">Spend 1 AP when a creature attacks a valid target in your Aura to impose DisADV on the Attack.</p>{expert && <label className="mt-3 flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={reinforceSaveAdvantage} onChange={(event) => setState(COMMANDER_REINFORCE_SAVE_ADV, event.target.checked)} />Spend +1 SP: target has ADV on Saves made as part of the Attack</label>}<button type="button" disabled={character.currentAP < 1 || (reinforceSaveAdvantage && character.stamina < 1)} onClick={useReinforce} className="mt-3 w-full rounded-lg bg-rose-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Reinforce • 1 AP{reinforceSaveAdvantage ? ' + 1 SP' : ''}</button>{states[COMMANDER_REINFORCE_ACTIVE] && <p className="mt-2 rounded-lg bg-rose-500/10 p-2 text-xs text-rose-100">Attack has DisADV{reinforceSaveAdvantage ? '; target’s Saves have ADV' : ''}. Clear after resolving.</p>}</div>
+      {character.subclass === 'Crusader' && <div className="rounded-xl border border-emerald-400/20 bg-emerald-950/15 p-4"><h3 className="font-black text-emerald-200">Virtuous Vanguard</h3><p className="mt-2 text-xs leading-5 text-slate-300"><strong>Aura of Courage:</strong> chosen creatures in your Aura resist Frightened and Intimidated. <strong>Protective Orders</strong> and <strong>Restoring Rally</strong> are applied in the controls above.</p><p className="mt-2 text-xs text-emerald-100"><strong>Gallant Hero:</strong> ADV when convincing creatures not to be afraid.</p></div>}
+      {character.subclass === 'Warlord' && <div className="rounded-xl border border-orange-400/20 bg-orange-950/15 p-4 lg:col-span-2"><h3 className="font-black text-orange-200">Offensive Tactics</h3><p className="mt-2 text-xs leading-5 text-slate-300"><strong>Battlefield Tactics:</strong> allies in your Aura deal +1 damage on their first Melee Attack each turn against a creature they’re Flanking.</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" disabled={!states[COMMANDER_MORALE_AVAILABLE] || Boolean(states[COMMANDER_MORALE_USED])} onClick={useMoraleBreaker} className="rounded-lg bg-orange-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Morale Breaker • Free Intimidate</button><button type="button" disabled={character.currentAP < 1 || character.stamina < 1 || Boolean(states[COMMANDER_PRIORITY_ACTIVE])} onClick={usePriorityTarget} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Priority Target • 1 AP + 1 SP</button></div>{states[COMMANDER_MORALE_USED] && <p className="mt-2 text-xs text-orange-100">Morale Breaker used this Combat.</p>}{states[COMMANDER_PRIORITY_ACTIVE] && <p className="mt-2 rounded-lg bg-amber-500/10 p-2 text-xs text-amber-100">Aura allies have ADV on their first Attack each turn against the chosen creature until your next turn.</p>}<p className="mt-3 text-xs text-orange-100"><strong>Battlefield Tactician:</strong> ADV on relevant battlefield, military-history, organization, and tactical-analysis Checks.</p></div>}
+      {character.subclass === 'Paragon' && <div className="rounded-xl border border-fuchsia-400/20 bg-fuchsia-950/15 p-4"><h3 className="font-black text-fuchsia-200">Paragon</h3><p className="mt-2 text-xs leading-5 text-slate-300">Your level-appropriate extra Class Talents and Level 3 Trade Point are included in the Builder’s budgets and appear in Features.</p></div>}
+    </div>
+  </section>;
 }
 
 function BardControls({ character, onChange, onRoll, artistryModifier }: {
@@ -710,6 +1049,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const isWarlock = character.class === 'Warlock';
   const isCleric = character.class === 'Cleric';
   const isBard = character.class === 'Bard';
+  const isChampion = character.class === 'Champion';
+  const isCommander = character.class === 'Commander';
   const isRaging = isBarbarian && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
   const hasUnfathomableStrength = (build?.selectedTalents ?? []).includes('Unfathomable Strength');
   const battlecryShout = featureSelections[BARBARIAN_BATTLECRY_SELECTION] || 'Fortitude Shout';
@@ -762,12 +1103,21 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       : 0;
     const clericChaosApplies = Boolean(isCleric && featureStates[CLERIC_CHAOS_ACTIVE]
       && (label.endsWith(' Spell Check') || label.endsWith(' Spell Attack')));
+    const championReadiness = featureSelections[CHAMPION_READINESS_CHOICE] || 'Fortify';
+    const physicalCheckLabels = ['Might Check', 'Agility Check', 'Athletics Check', 'Intimidation Check', 'Acrobatics Check', 'Trickery Check', 'Stealth Check'];
+    const championReadinessApplies = Boolean(isChampion && featureStates[CHAMPION_READINESS_ACTIVE] && (
+      (championReadiness === 'Fortify' && label.endsWith(' Save'))
+      || (championReadiness === 'Advance' && (label.includes('Martial Attack') || label.includes('Martial Check') || physicalCheckLabels.includes(label)))
+    ));
+    const championAdrenalineApplies = Boolean(isChampion && featureStates[CHAMPION_ADRENALINE_ACTIVE]
+      && (label.includes('Martial Attack') || label.includes('Martial Check')));
     const featureAdjustment = (label === 'Might Save' ? (sheetEffects.saveAdvantage.Might ?? 0) : 0)
-      + warlockAdvantage + Number(clericChaosApplies);
+      + warlockAdvantage + Number(clericChaosApplies) + Number(championReadinessApplies);
     const totalAdjustment = Math.max(-5, Math.min(5, rollAdjustment + featureAdjustment + extraAdjustment));
     const dice = Array.from({ length: 1 + Math.abs(totalAdjustment) }, () => Math.floor(Math.random() * 20) + 1);
     const chosen = totalAdjustment > 0 ? Math.max(...dice) : totalAdjustment < 0 ? Math.min(...dice) : dice[0];
-    const result = { label, dice, chosen, modifier, total: chosen + modifier };
+    const effectiveModifier = modifier + (championAdrenalineApplies ? 5 : 0);
+    const result = { label, dice, chosen, modifier: effectiveModifier, total: chosen + effectiveModifier };
     setLastRoll(result);
     if (warlockAdvantage) {
       updateBuild({
@@ -781,6 +1131,9 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     }
     if (clericChaosApplies) {
       updateBuild({ sheetFeatureStates: { ...featureStates, [CLERIC_CHAOS_ACTIVE]: false } });
+    }
+    if (championReadinessApplies) {
+      updateBuild({ sheetFeatureStates: { ...featureStates, [CHAMPION_READINESS_ACTIVE]: false } });
     }
     return result;
   };
@@ -871,6 +1224,12 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const bardArtistryModifier = Math.max(0, ...(reference?.trades
     .filter(({ group }) => group === 'Artistry')
     .map(({ name }) => tradeModifier(name, character.tradeMasteries[name] ?? 'Untrained')) ?? []));
+  const championKnowledgeModifier = Math.max(0, ...(reference?.trades
+    .filter(({ group }) => group === 'Knowledge')
+    .map(({ name }) => tradeModifier(name, character.tradeMasteries[name] ?? 'Untrained')) ?? []));
+  const championInsightModifier = skillModifier('Insight', character.skillMasteries.Insight ?? 'Untrained');
+  const commanderIntimidationModifier = skillModifier('Intimidation', character.skillMasteries.Intimidation ?? 'Untrained');
+  const commanderCharismaModifier = character.attributes.Charisma.modifier;
 
   const updateNote = (note: CampaignNote) => updateBuild({ characterNotes: notes.map((entry) => entry.id === note.id ? note : entry) });
   const featureDescription = (name: string, description: string): string => {
@@ -905,6 +1264,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         </section>}
 
         {isBard && <BardControls character={character} onChange={update} onRoll={roll} artistryModifier={bardArtistryModifier} />}
+        {isChampion && <ChampionControls character={character} onChange={update} onRoll={roll} insightModifier={championInsightModifier} knowledgeModifier={championKnowledgeModifier} />}
+        {isCommander && <CommanderControls character={character} onChange={update} onRoll={roll} intimidationModifier={commanderIntimidationModifier} charismaModifier={commanderCharismaModifier} />}
         {isSummoner && <SummonerControls character={character} onChange={update} />}
         {isSpellblade && <SpellbladeControls character={character} onChange={update} onRoll={roll} />}
         {isRogue && <RogueControls character={character} onChange={update} onRoll={roll} stealthModifier={skillModifier('Stealth', character.skillMasteries.Stealth ?? 'Untrained')} />}
