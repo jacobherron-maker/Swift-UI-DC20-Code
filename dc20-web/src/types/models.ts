@@ -229,6 +229,32 @@ export interface Attribute {
 
 export type CharacterPathChoice = 'Martial' | 'Spellcaster';
 
+export type CharacterCompanionKind = 'Familiar' | 'Summon' | 'Pet';
+
+/** A persistent, player-editable stat sheet for a familiar, summon, or other companion. */
+export interface CharacterCompanion {
+  id: string;
+  name: string;
+  kind: CharacterCompanionKind;
+  source: string;
+  size: string;
+  currentHP: number;
+  maxHP: number;
+  sharesHealthWithCharacter: boolean;
+  currentAP: number;
+  maxAP: number;
+  physicalDefense: number;
+  areaDefense: number;
+  speed: number;
+  primeModifier: number;
+  combatMastery: number;
+  attackCheck: number;
+  saveDC: number;
+  attributes: Record<DC20Attribute, number>;
+  features: string;
+  notes: string;
+}
+
 export interface CharacterBuildData {
   attributeMethod: AttributeSelectionMethod;
   rolledAttributeResults: number[];
@@ -259,6 +285,10 @@ export interface CharacterBuildData {
   currentStamina: number;
   currentMana: number;
   temporaryHP: number;
+  /** Remaining recovery currency. A missing value on an older save is treated as full. */
+  restPoints?: number;
+  /** Number of Short Rest benefits taken since the last Long Rest. */
+  shortRestsTaken?: number;
   sheetConditionLevels: Record<string, number>;
   /** Persistent toggles for time-limited class features used from the character sheet. */
   sheetFeatureStates: Record<string, boolean>;
@@ -267,6 +297,7 @@ export interface CharacterBuildData {
   /** Persistent numeric enhancement choices for class-feature controls used from the character sheet. */
   sheetFeatureCounters: Record<string, number>;
   characterNotes: CampaignNote[];
+  sheetCompanions?: CharacterCompanion[];
   rollAdjustment: number;
   isFinalized: boolean;
 }

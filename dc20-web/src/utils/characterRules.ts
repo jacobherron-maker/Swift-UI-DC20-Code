@@ -331,6 +331,121 @@ export function selectedAncestryTraits(character: Pick<Character, 'build' | 'anc
   return traits.filter((trait) => selected.has(trait.id));
 }
 
+export interface AncestryGrantedSpell {
+  name: string;
+  traitName: string;
+  traitDescription: string;
+}
+
+/** Spells learned directly from selected or automatic ancestry traits. */
+export function ancestryGrantedSpellNames(
+  character: Pick<Character, 'build' | 'ancestry'>,
+  traits: AncestryTrait[],
+): AncestryGrantedSpell[] {
+  const fixedSpells: Record<string, string> = {
+    'Fiendish Aura': 'Sorcery',
+    'Psionic Hand': 'Mage Hand',
+  };
+  const choiceTraits = new Set(['Celestial Magic', 'Fiendish Magic', 'Psionic Magic']);
+  const result: AncestryGrantedSpell[] = [];
+  for (const trait of selectedAncestryTraits(character, traits)) {
+    const name = fixedSpells[trait.name]
+      ?? (choiceTraits.has(trait.name) ? character.build?.ancestryTraitChoices?.[trait.id]?.[0] : undefined);
+    if (name && !result.some((entry) => entry.name === name && entry.traitName === trait.name)) {
+      result.push({ name, traitName: trait.name, traitDescription: trait.description });
+    }
+  }
+  return result;
+}
+
+export type CharacterRestType = 'Quick' | 'Short' | 'Long';
+
+export function characterRestPoints(character: Pick<Character, 'maxHealthPoints' | 'build'>): number {
+  return Math.min(character.maxHealthPoints, Math.max(0, character.build?.restPoints ?? character.maxHealthPoints));
+}
+
+const TURN_STATE_KEYS = new Set([
+  'bard.performance.changedThisTurn',
+  'bard.help.helpingHandsUsed',
+  'champion.disciplinedCombatant.used',
+  'champion.hero.adrenaline.active',
+  'champion.hero.unyielding.used',
+  'commander.help.granted',
+  'commander.call.attack.used',
+  'commander.call.dodge.used',
+  'commander.call.move.used',
+  'commander.crusader.protectiveOrders',
+  'commander.warlord.moraleAvailable',
+  'commander.reinforce.active',
+  'commander.warlord.priorityTarget.active',
+  'cleric.order.used',
+]);
+
+/** Starts a fresh turn without incorrectly resetting round-, combat-, or rest-limited features. */
+export function resetCharacterTurn(character: Character): Character {
+  if (!character.build) return { ...character, currentAP: character.maxAP };
+  const states = { ...character.build.sheetFeatureStates };
+  TURN_STATE_KEYS.forEach((key) => { states[key] = false; });
+  return {
+    ...character,
+    currentAP: character.maxAP,
+    build: {
+      ...character.build,
+      sheetFeatureStates: states,
+      sheetFeatureCounters: {
+        ...character.build.sheetFeatureCounters,
+        'bard.help.usesThisTurn': 0,
+        'bard.help.result': 0,
+        'bard.help.helpingHandsResult': 0,
+        'commander.help.usesThisTurn': 0,
+        'commander.help.result': 0,
+      },
+    },
+  };
+}
+
+/** Applies the universal Beta 0.10.5 recovery rules and the sheet's tracked rest interactions. */
+export function completeCharacterRest(character: Character, type: CharacterRestType, requestedRestPoints: number): Character {
+  const build = character.build;
+  if (!build) return character;
+  const shortRestsTaken = Math.max(0, build.shortRestsTaken ?? 0);
+  if (type === 'Short' && shortRestsTaken >= 2) return character;
+
+  const available = characterRestPoints(character);
+  const missingHP = Math.max(0, character.maxHealthPoints - character.healthPoints);
+  const spent = Math.min(available, missingHP, Math.max(0, Math.trunc(requestedRestPoints)));
+  const activeRune = build.sheetFeatureSelections['spellblade.rune.active'];
+  const flameRuneRecovery = type === 'Short' && activeRune === 'Flame Rune' ? 2 : 0;
+  let restPoints = Math.min(character.maxHealthPoints, available - spent + flameRuneRecovery);
+  let sheetFeatureStates = { ...build.sheetFeatureStates };
+  let sheetFeatureCounters = { ...build.sheetFeatureCounters };
+  const sheetConditionLevels = { ...build.sheetConditionLevels };
+
+  if (type === 'Long') {
+    restPoints = character.maxHealthPoints;
+    sheetFeatureStates = Object.fromEntries(Object.keys(sheetFeatureStates).map((key) => [key, false]));
+    sheetFeatureCounters = {};
+    delete sheetConditionLevels.Doomed;
+  }
+
+  return {
+    ...character,
+    healthPoints: character.healthPoints + spent,
+    stamina: type === 'Quick' ? character.stamina : character.maxStamina,
+    manaPoints: type === 'Long' ? character.maxManaPoints : character.manaPoints,
+    currentAP: type === 'Long' ? character.maxAP : character.currentAP,
+    build: {
+      ...build,
+      temporaryHP: type === 'Long' ? 0 : build.temporaryHP,
+      restPoints,
+      shortRestsTaken: type === 'Long' ? 0 : shortRestsTaken + Number(type === 'Short'),
+      sheetConditionLevels,
+      sheetFeatureStates,
+      sheetFeatureCounters,
+    },
+  };
+}
+
 export function isAutomaticAncestryTrait(trait: AncestryTrait, ancestries: ReadonlySet<string>): boolean {
   if (!ancestries.has(trait.ancestry)) return false;
   if (trait.name === 'Small-Sized') return ['Gnome', 'Halfling'].includes(trait.ancestry);
@@ -391,7 +506,103 @@ function traitCount(traits: AncestryTrait[], name: string): number {
   return traits.filter((trait) => trait.name === name).length;
 }
 
-function equipmentBonuses(character: Character, catalog: EquipmentCatalogItem[]) {
+export interface CharacterCombatTraining {
+  categories: string[];
+  weaponTraining: boolean;
+  spellFocusTraining: boolean;
+  lightArmorTraining: boolean;
+  heavyArmorTraining: boolean;
+  lightShieldTraining: boolean;
+  heavyShieldTraining: boolean;
+  pactWeaponTraining: boolean;
+  pactArmorTraining: boolean;
+}
+
+/** Combat-equipment training granted by class paths, talents, ancestry, and selected class features. */
+export function characterCombatTraining(
+  character: Pick<Character, 'class' | 'ancestry' | 'build'>,
+  classReference: ClassReference,
+  allTraits: AncestryTrait[] = [],
+): CharacterCombatTraining {
+  const path = classReference.pathDetails;
+  const talents = new Set(character.build?.selectedTalents ?? []);
+  const choices = character.build?.classFeatureSelections ?? {};
+  const domains = new Set(character.class === 'Cleric' ? choices['cleric.domains'] ?? [] : []);
+  const disciplines = new Set(character.class === 'Spellblade' ? spellbladeDisciplineNames(character) : []);
+  const pactBoons = new Set(character.class === 'Warlock' ? choices['warlock.boon'] ?? [] : []);
+  const naturalCombatant = allTraits.length > 0
+    && selectedAncestryTraits(character, allTraits).some(({ name }) => name === 'Natural Combatant');
+  const martialExpansion = talents.has('Martial Expansion');
+  const allArmor = path.includes('All Armor');
+  const allShields = path.includes('All Shields');
+  const weaponTraining = path.includes('Combat Training: Weapons') || martialExpansion || domains.has('War');
+  const spellFocusTraining = path.includes('Spell Focuses') || talents.has('Spellcasting Expansion');
+  const lightArmorTraining = allArmor || path.includes('Light Armor');
+  const heavyArmorTraining = allArmor || path.includes('Heavy Armor') || martialExpansion || naturalCombatant || domains.has('Peace') || disciplines.has('Warrior');
+  const lightShieldTraining = allShields || path.includes('Light Shields') || martialExpansion || naturalCombatant;
+  const heavyShieldTraining = allShields || path.includes('Heavy Shields') || martialExpansion || naturalCombatant || domains.has('Peace') || disciplines.has('Warrior');
+  const pactWeaponTraining = pactBoons.has('Pact Weapon');
+  const pactArmorTraining = pactBoons.has('Pact Armor');
+  return {
+    categories: [
+      weaponTraining && 'Weapons',
+      spellFocusTraining && 'Spell Focuses',
+      lightArmorTraining && 'Light Armor',
+      heavyArmorTraining && 'Heavy Armor',
+      lightShieldTraining && 'Light Shields',
+      heavyShieldTraining && 'Heavy Shields',
+      pactWeaponTraining && 'Chosen Pact Weapon',
+      pactArmorTraining && 'Chosen Pact Armor',
+    ].filter((entry): entry is string => Boolean(entry)),
+    weaponTraining,
+    spellFocusTraining,
+    lightArmorTraining,
+    heavyArmorTraining,
+    lightShieldTraining,
+    heavyShieldTraining,
+    pactWeaponTraining,
+    pactArmorTraining,
+  };
+}
+
+export interface EquippedCombatModifiers {
+  spellCheckBonus: number;
+  spellAttackBonus: number;
+  spellAttackDamageBonus: number;
+  attackAndSpellDisadvantage: number;
+  agilityCheckDisadvantage: number;
+}
+
+/** Roll-facing modifiers from equipped armor, shields, and trained Spell Focuses. */
+export function equippedCombatModifiers(
+  character: Character,
+  catalog: EquipmentCatalogItem[],
+  classReference: ClassReference,
+  allTraits: AncestryTrait[] = [],
+): EquippedCombatModifiers {
+  const training = characterCombatTraining(character, classReference, allTraits);
+  const equipped = (character.inventoryItems ?? []).filter(({ isEquipped }) => isEquipped)
+    .flatMap(({ equipmentID }) => catalog.filter(({ id }) => id === equipmentID));
+  const focuses = training.spellFocusTraining ? equipped.filter(({ category }) => category === 'Spell Focuses') : [];
+  const untrainedGear = equipped.filter((item) => {
+    if (item.category === 'Armor') {
+      if (training.pactArmorTraining) return false;
+      return item.subtype === 'Heavy Armor' ? !training.heavyArmorTraining : !training.lightArmorTraining;
+    }
+    if (item.category === 'Shields') return item.subtype === 'Heavy Shield' ? !training.heavyShieldTraining : !training.lightShieldTraining;
+    return false;
+  }).length;
+  const heavyGear = equipped.filter(({ subtype }) => subtype === 'Heavy Armor' || subtype === 'Heavy Shield').length;
+  return {
+    spellCheckBonus: focuses.filter(({ properties }) => properties.includes('Channeling')).length,
+    spellAttackBonus: focuses.filter(({ properties }) => properties.includes('Vicious')).length,
+    spellAttackDamageBonus: focuses.filter(({ properties }) => properties.includes('Powerful')).length,
+    attackAndSpellDisadvantage: untrainedGear > 0 ? -untrainedGear : 0,
+    agilityCheckDisadvantage: heavyGear > 0 ? -heavyGear : 0,
+  };
+}
+
+function equipmentBonuses(character: Character, catalog: EquipmentCatalogItem[], training: CharacterCombatTraining) {
   const equipped = (character.inventoryItems ?? [])
     .filter((entry) => entry.isEquipped)
     .flatMap((entry) => catalog.filter((item) => item.id === entry.equipmentID));
@@ -411,8 +622,10 @@ function equipmentBonuses(character: Character, catalog: EquipmentCatalogItem[])
       : names.has('Heater Shield') ? { pd: 1, ad: 1 }
         : names.has('Buckler') ? { pd: 1, ad: 0 }
           : names.has('Round Shield') ? { pd: 0, ad: 1 } : { pd: 0, ad: 0 };
-  const focusAD = equipped.filter((item) => item.category === 'Spell Focuses' && item.properties.includes('Protective')).length;
-  const focusMDR = equipped.some((item) => item.category === 'Spell Focuses' && item.properties.includes('Warded')) ? 1 : 0;
+  const focusAD = training.spellFocusTraining
+    ? equipped.filter((item) => item.category === 'Spell Focuses' && item.properties.includes('Protective')).length : 0;
+  const focusMDR = training.spellFocusTraining
+    && equipped.some((item) => item.category === 'Spell Focuses' && item.properties.includes('Warded')) ? 1 : 0;
   const weaponPD = equipped.filter((item) => item.category === 'Weapons' && item.properties.includes('Guard')).length;
   return {
     pd: (armor[armorName]?.pd ?? 0) + shield.pd + weaponPD,
@@ -472,7 +685,8 @@ export function deriveCharacter(
   })) as Record<DC20Attribute, number>;
   const primeModifier = Math.max(...Object.values(effectiveAttributes));
   const mastery = combatMastery(character.level);
-  const equipment = equipmentBonuses(character, equipmentCatalog);
+  const training = characterCombatTraining(character, classReference, allTraits);
+  const equipment = equipmentBonuses(character, equipmentCatalog, training);
   const totals = classTableTotals(classReference, character.level);
   const paths = Object.values(character.build?.pathProgressionChoices ?? {});
   const martialPaths = paths.filter((path) => path === 'Martial').length;
@@ -593,11 +807,14 @@ export function defaultBuild(): CharacterBuildData {
     currentStamina: 0,
     currentMana: 0,
     temporaryHP: 0,
+    restPoints: undefined,
+    shortRestsTaken: 0,
     sheetConditionLevels: {},
     sheetFeatureStates: {},
     sheetFeatureSelections: {},
     sheetFeatureCounters: {},
     characterNotes: [],
+    sheetCompanions: [],
     rollAdjustment: 0,
     isFinalized: false,
   };

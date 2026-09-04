@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import referenceDocument from '../../public/data/CharacterReference.json';
+import equipmentDocument from '../../public/data/EquipmentCatalog.json';
 import type { Character, CharacterReferenceData, EquipmentCatalogItem } from '../types/models';
 import {
+  ancestryGrantedSpellNames,
   ancestryExpertise,
   applyDerivedCharacter,
   attributeCap,
@@ -14,17 +16,22 @@ import {
   commanderRallyAmount,
   commanderStaminaRegenAmount,
   classChoiceSelectionLimit,
+  characterCombatTraining,
+  characterRestPoints,
   characterSheetEffects,
   classHealth,
   combatMastery,
+  completeCharacterRest,
   defaultBuild,
   deriveCharacter,
+  equippedCombatModifiers,
   grantedClassLanguageNames,
   grantedClassManeuverNames,
   grantedClassSpellNames,
   masteryCap,
   rogueCheapShotDamage,
   rogueStaminaRegenAmount,
+  resetCharacterTurn,
   selectedAncestryTraits,
   skillMasteryCap,
   spellbladeDisciplineNames,
@@ -41,6 +48,8 @@ const spellblade = reference.classes.find(({ name }) => name === 'Spellblade')!;
 const rogue = reference.classes.find(({ name }) => name === 'Rogue')!;
 const warlock = reference.classes.find(({ name }) => name === 'Warlock')!;
 const cleric = reference.classes.find(({ name }) => name === 'Cleric')!;
+const wizard = reference.classes.find(({ name }) => name === 'Wizard')!;
+const equipmentCatalog = equipmentDocument as EquipmentCatalogItem[];
 
 function character(className = 'Barbarian'): Character {
   return {
@@ -118,6 +127,92 @@ describe('DC20 character calculations', () => {
     expect(selected.map(({ name }) => name)).toContain('Beastkind');
     expect(selected.map(({ name }) => name)).not.toContain('Small-Sized');
     expect(deriveCharacter(beastborn, barbarian, reference.ancestryTraits, []).size).toBe('Medium');
+  });
+
+  it('routes choice-based and fixed ancestry spells into the character sheet', () => {
+    const angelborn = character();
+    angelborn.ancestry = 'Angelborn';
+    const celestialMagic = reference.ancestryTraits.find(({ name }) => name === 'Celestial Magic')!;
+    angelborn.build = {
+      ...defaultBuild(),
+      selectedAncestryTraitIDs: [celestialMagic.id],
+      ancestryTraitChoices: { [celestialMagic.id]: ['Heal'] },
+    };
+    expect(ancestryGrantedSpellNames(angelborn, reference.ancestryTraits)).toEqual([
+      { name: 'Heal', traitName: 'Celestial Magic', traitDescription: celestialMagic.description },
+    ]);
+
+    const psyborn = character();
+    psyborn.ancestry = 'Psyborn';
+    const psionicHand = reference.ancestryTraits.find(({ name }) => name === 'Psionic Hand')!;
+    const psionicMagic = reference.ancestryTraits.find(({ name }) => name === 'Psionic Magic')!;
+    psyborn.build = {
+      ...defaultBuild(),
+      selectedAncestryTraitIDs: [psionicHand.id, psionicMagic.id],
+      ancestryTraitChoices: { [psionicMagic.id]: ['Gravity Well'] },
+    };
+    expect(ancestryGrantedSpellNames(psyborn, reference.ancestryTraits)).toEqual([
+      { name: 'Mage Hand', traitName: 'Psionic Hand', traitDescription: psionicHand.description },
+      { name: 'Gravity Well', traitName: 'Psionic Magic', traitDescription: psionicMagic.description },
+    ]);
+  });
+
+  it('applies Quick, Short, and Long Rest recovery without granting free Long Rest healing', () => {
+    const hero = character('Spellblade');
+    hero.healthPoints = 5;
+    hero.stamina = 0;
+    hero.maxStamina = 4;
+    hero.manaPoints = 1;
+    hero.maxManaPoints = 6;
+    hero.currentAP = 1;
+    hero.build = {
+      ...defaultBuild(),
+      temporaryHP: 3,
+      restPoints: 4,
+      sheetConditionLevels: { Doomed: 2, Poisoned: 1 },
+      sheetFeatureStates: { 'cleric.channel.used': true },
+      sheetFeatureSelections: { 'spellblade.rune.active': 'Flame Rune' },
+      sheetFeatureCounters: { 'cleric.omen.count': 2 },
+    };
+
+    const quick = completeCharacterRest(hero, 'Quick', 3);
+    expect([quick.healthPoints, quick.stamina, quick.manaPoints, characterRestPoints(quick)]).toEqual([8, 0, 1, 1]);
+
+    const short = completeCharacterRest(hero, 'Short', 2);
+    expect([short.healthPoints, short.stamina, short.manaPoints, characterRestPoints(short), short.build?.shortRestsTaken]).toEqual([7, 4, 1, 4, 1]);
+    const secondShort = completeCharacterRest(short, 'Short', 0);
+    expect(secondShort.build?.shortRestsTaken).toBe(2);
+    expect(completeCharacterRest(secondShort, 'Short', 1)).toBe(secondShort);
+
+    const long = completeCharacterRest(hero, 'Long', 1);
+    expect(long.healthPoints).toBe(6);
+    expect([long.stamina, long.manaPoints, long.currentAP]).toEqual([4, 6, 4]);
+    expect(characterRestPoints(long)).toBe(11);
+    expect(long.build?.temporaryHP).toBe(0);
+    expect(long.build?.shortRestsTaken).toBe(0);
+    expect(long.build?.sheetConditionLevels).toEqual({ Poisoned: 1 });
+    expect(long.build?.sheetFeatureStates['cleric.channel.used']).toBe(false);
+    expect(long.build?.sheetFeatureCounters).toEqual({});
+  });
+
+  it('resets AP and only turn-limited character-sheet state on Reset Turn', () => {
+    const hero = character('Commander');
+    hero.currentAP = 0;
+    hero.build = {
+      ...defaultBuild(),
+      sheetFeatureStates: {
+        'commander.call.attack.used': true,
+        'commander.staminaRegen.used': true,
+        'barbarian.rage.active': true,
+      },
+      sheetFeatureCounters: { 'commander.help.usesThisTurn': 3, 'commander.help.result': 8 },
+    };
+    const reset = resetCharacterTurn(hero);
+    expect(reset.currentAP).toBe(4);
+    expect(reset.build?.sheetFeatureStates['commander.call.attack.used']).toBe(false);
+    expect(reset.build?.sheetFeatureStates['commander.staminaRegen.used']).toBe(true);
+    expect(reset.build?.sheetFeatureStates['barbarian.rage.active']).toBe(true);
+    expect(reset.build?.sheetFeatureCounters['commander.help.usesThisTurn']).toBe(0);
   });
 
   it('gives Summoners school-based and Summoning-tag spell access without a source', () => {
@@ -236,6 +331,39 @@ describe('DC20 character calculations', () => {
     const updated = applyDerivedCharacter(hero, { ...derived, maxHP: 15 });
     expect(updated.healthPoints).toBe(11);
     expect(updated.maxHealthPoints).toBe(15);
+  });
+});
+
+describe('character-sheet combat training and equipment modifiers', () => {
+  it('collects class-feature and talent training for the Features tab', () => {
+    const clericHero = character('Cleric');
+    clericHero.build = { ...defaultBuild(), selectedTalents: ['Martial Expansion'], classFeatureSelections: { 'cleric.domains': ['War', 'Peace'] } };
+    expect(characterCombatTraining(clericHero, cleric, reference.ancestryTraits).categories).toEqual([
+      'Weapons', 'Spell Focuses', 'Light Armor', 'Heavy Armor', 'Light Shields', 'Heavy Shields',
+    ]);
+  });
+
+  it('separates trained Spell Check and Spell Attack focus bonuses', () => {
+    const hero = character('Wizard');
+    const orb = equipmentCatalog.find(({ name }) => name === 'Orb')!;
+    const crystal = equipmentCatalog.find(({ name }) => name === 'Crystal')!;
+    hero.inventoryItems = [orb, crystal].map((item, index) => ({ id: `focus-${index}`, equipmentID: item.id, quantity: 1, isEquipped: true, source: 'added' }));
+    expect(equippedCombatModifiers(hero, equipmentCatalog, wizard)).toMatchObject({
+      spellCheckBonus: 1,
+      spellAttackBonus: 1,
+      spellAttackDamageBonus: 0,
+      attackAndSpellDisadvantage: 0,
+    });
+  });
+
+  it('reports untrained armor and heavy-gear Agility penalties as DisADV', () => {
+    const hero = character('Wizard');
+    const heavyArmor = equipmentCatalog.find(({ name }) => name === 'Defensive Heavy Armor')!;
+    hero.inventoryItems = [{ id: 'heavy', equipmentID: heavyArmor.id, quantity: 1, isEquipped: true, source: 'added' }];
+    expect(equippedCombatModifiers(hero, equipmentCatalog, wizard)).toMatchObject({
+      attackAndSpellDisadvantage: -1,
+      agilityCheckDisadvantage: -1,
+    });
   });
 });
 

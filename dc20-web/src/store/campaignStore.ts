@@ -358,6 +358,11 @@ function normalizeCharacter(value: unknown): Character {
       ? rawBuild.attributeBonusPoints as CharacterBuildData['attributeBonusPoints']
       : {},
     languageFluencies: languageFluencies as CharacterBuildData['languageFluencies'],
+    restPoints: Math.min(maxHealthPoints, Math.max(0, asNumber(rawBuild.restPoints, maxHealthPoints))),
+    shortRestsTaken: Math.min(2, Math.max(0, Math.trunc(asNumber(rawBuild.shortRestsTaken, 0)))),
+    sheetCompanions: Array.isArray(rawBuild.sheetCompanions)
+      ? rawBuild.sheetCompanions as CharacterBuildData['sheetCompanions']
+      : [],
   };
   const attributes = {
     Might: { name: DC20Attributes.MIGHT, score: might, modifier: might },
