@@ -31,6 +31,17 @@ import {
   completeCharacterRest,
   defaultBuild,
   deriveCharacter,
+  DRUID_WILD_FORM_ACTIVE,
+  DRUID_WILD_FORM_DAMAGE,
+  DRUID_WILD_FORM_EXPANSION_ACTIVE,
+  DRUID_WILD_FORM_EXTRA_MP,
+  DRUID_WILD_FORM_FREE_USED,
+  DRUID_WILD_FORM_HP,
+  DRUID_WILD_FORM_SKILLS,
+  DRUID_WILD_FORM_TRAITS,
+  DRUID_WILD_FORM_TYPE,
+  druidBeastTraitSelection,
+  druidWildFormProfile,
   equippedCombatModifiers,
   grantedClassLanguageNames,
   grantedClassManeuverNames,
@@ -55,6 +66,7 @@ const spellblade = reference.classes.find(({ name }) => name === 'Spellblade')!;
 const rogue = reference.classes.find(({ name }) => name === 'Rogue')!;
 const warlock = reference.classes.find(({ name }) => name === 'Warlock')!;
 const cleric = reference.classes.find(({ name }) => name === 'Cleric')!;
+const druid = reference.classes.find(({ name }) => name === 'Druid')!;
 const wizard = reference.classes.find(({ name }) => name === 'Wizard')!;
 const equipmentCatalog = equipmentDocument as EquipmentCatalogItem[];
 
@@ -1332,5 +1344,193 @@ describe('Cleric Beta 0.10.5 source audit', () => {
     expect(characterSheetEffects(hero).resistances).toEqual([
       'Charmed Condition', 'Intimidated Condition', 'Taunted Condition',
     ]);
+  });
+});
+
+describe('Druid Beta 0.10.5 source audit', () => {
+  const feature = (level: number, name: string) => druid.features
+    .find((entry) => entry.level === level)?.features.find((entry) => entry.name === name)?.description;
+
+  it('matches every row of the published Druid class table', () => {
+    expect(druid.tableRows.map((row) => ({
+      level: row.level,
+      health: row.health,
+      attribute: row.attribute,
+      skill: row.skill,
+      trade: row.trade,
+      mana: row.mana,
+      spells: row.spells,
+      features: row.features,
+    }))).toEqual([
+      { level: 1, health: 7, attribute: undefined, skill: undefined, trade: undefined, mana: 6, spells: 4, features: 'Class Features' },
+      { level: 2, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Class Feature, Talent, Path Progression' },
+      { level: 3, health: 1, attribute: 1, skill: 1, trade: 1, mana: 3, spells: 1, features: 'Subclass Feature' },
+      { level: 4, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 5, health: 1, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Class Feature' },
+      { level: 6, health: 1, attribute: undefined, skill: 1, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, Path Progression' },
+      { level: 7, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Subclass Expert Feature' },
+      { level: 8, health: 1, attribute: 1, skill: 1, trade: 1, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 9, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Class Capstone Feature' },
+      { level: 10, health: 1, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Subclass Capstone Feature' },
+    ]);
+    expect(druid.tableSource).toBe('BETA 0.10.5 • PAGE 230');
+  });
+
+  it('preserves the complete level-two and Expert Druid rules text', () => {
+    expect(feature(2, 'Nature’s Torrent')).toBe('When a creature within 10 spaces of you takes Elemental damage, you can spend 1 AP as a Reaction to summon a torrent of nature. The torrent fills a 3 Space Diameter Sphere centered on the target that lasts for 1 minute. While creatures are within the area, they have Vulnerability (1) against the triggering damage type and have DisADV on Checks and Saves to resist being moved or knocked Prone. Ending Early: The torrent ends early if you use this Feature again, become Incapacitated, die, or choose to end it for free at anytime.');
+    expect(feature(5, 'Expert Druid')).toBe('You gain the following benefits for your Druid Class Features. Druid Domain The number of Domain Spaces you create increases to 10. Losing Domain Spaces: A Domain Space disappears if you end your turn farther than 20 Spaces away from it. You can spend additional MP when you use Druid Domain to increase the number of Domain Spaces created by 8 per additional MP spent. Wild Growth: You can spend additional MP to increase the healing by 1 per 2 additional MP spent. Wild Form Your Wild Forms have +1 HP and 1 additional Trait Point. Nature’s Torrent The range of Nature’s Torrent increases to 15 Spaces. When you use Nature’s Torrent, you can spend MP to enhance its effects:\n• Vulnerability: (2 MP) The Vulnerability increases by 1.\n• Area: (X MP) The diameter of the Sphere increases by X.');
+    expect(feature(1, 'Wild Form')).toContain('Once per Long Rest, you can transform without spending MP or using MP enhancements.');
+    expect(feature(1, 'Wild Form')).toContain('You can have multiple Wild Forms available at a time which have their own Wild Form HP and Traits.');
+    expect(feature(1, 'Wild Form')).toContain('You don’t benefit from your Ancestry Traits, but you gain 3 Trait Points to spend on Beast Traits or Wild Form Traits of your choice.');
+  });
+
+  it('preserves Druid training, equipment, Talents, and level-gated subclass metadata', () => {
+    expect(druid.pathDetails).toBe('Combat Training: Spell Focuses, Light Armor\n\nSpell List: When you learn a new Spell, you can choose any Spell on the Primal Spell Source.\n\nSpells Known: The number of Spells you know increases as shown in the Spells Known column of the Druid Class Table.\n\nMana Points: Your maximum number of Mana Points increases as shown in the Mana Points column of the Druid Class Table.');
+    expect(druid.startingEquipment.description).toBe('Arsenal: 2 Spell Focuses.\nArmor: 1 set of Light Armor.\nTrade Tools: Choose 2 of any of the following items:\nHerbalist’s Supplies, Leatherworker’s Tools, Sculptor’s Tools, or Weaver’s Tools.\nAdventuring Pack: Choose 1 of the following packs:\n(Adventuring Packs Coming Soon).');
+    expect(druid.choiceGroups.map(({ id }) => id)).toEqual(['druid.wildSpeech']);
+    expect(druid.talents.slice(-2).map(({ name, minimumLevel }) => [name, minimumLevel])).toEqual([
+      ['Wild Form Expansion', 3],
+      ['Nature’s Vortex', 3],
+    ]);
+    expect(druid.subclassFeatures.Phoenix.map(({ name, level }) => [name, level])).toEqual([
+      ['Flames of Rebirth', 3],
+      ['Fire Within (Flavor Feature)', 3],
+    ]);
+    expect(druid.subclassFeatures['Rampant Growth'].map(({ name, level }) => [name, level])).toEqual([
+      ['Overgrowth', 3],
+      ['Seed Vault (Flavor Feature)', 3],
+    ]);
+  });
+
+  it('routes Wild Speech and every selected Wild Form statistic to the live sheet', () => {
+    const hero = character('Druid');
+    hero.level = 5;
+    hero.subclass = 'Phoenix';
+    hero.primeModifier = 3;
+    hero.combatMastery = 3;
+    hero.build = {
+      ...defaultBuild(),
+      classFeatureSelections: {
+        'druid.wildSpeech': ['Weather'],
+        [DRUID_WILD_FORM_TRAITS]: [
+          'Healthy', 'Healthy', 'Defensive — PD', 'Defensive — AD',
+          'Attribute Increase — Might', 'Skillful', 'Resistance — Fire', 'Swift',
+        ],
+        [DRUID_WILD_FORM_SKILLS]: ['Animal', 'Survival'],
+      },
+      sheetFeatureStates: {
+        [DRUID_WILD_FORM_ACTIVE]: true,
+        [DRUID_WILD_FORM_EXPANSION_ACTIVE]: true,
+      },
+      sheetFeatureCounters: {
+        [DRUID_WILD_FORM_EXTRA_MP]: 1,
+        [DRUID_WILD_FORM_HP]: 5,
+      },
+      sheetFeatureSelections: {
+        [DRUID_WILD_FORM_TYPE]: 'Elemental (Fire)',
+        [DRUID_WILD_FORM_DAMAGE]: 'Fire',
+      },
+    };
+    const profile = druidWildFormProfile(hero);
+    expect(grantedClassSpellNames(hero)).toEqual(['Druidcraft']);
+    expect(profile).toMatchObject({
+      active: true,
+      traitPointBudget: 8,
+      traitPointsSpent: 8,
+      maximumHP: 8,
+      currentHP: 5,
+      physicalDefense: 16,
+      areaDefense: 16,
+      speed: 6,
+      size: 'Medium',
+      creatureType: 'Elemental (Fire)',
+      might: 3,
+      agility: 1,
+      naturalWeaponDamageType: 'Fire',
+      resistances: ['Fire (1)'],
+      skillMasteries: ['Animal', 'Survival'],
+    });
+  });
+
+  it('routes positive Beast Traits selected for a Wild Form into its live mechanics', () => {
+    const hero = character('Druid');
+    hero.level = 5;
+    hero.primeModifier = 3;
+    hero.combatMastery = 3;
+    hero.build = {
+      ...defaultBuild(),
+      classFeatureSelections: {
+        [DRUID_WILD_FORM_TRAITS]: [
+          druidBeastTraitSelection('Quick Reactions', 1),
+          druidBeastTraitSelection('Thick-Skinned', 1),
+          druidBeastTraitSelection('Hard Shell', 1),
+          druidBeastTraitSelection('Shell Retreat', 1),
+          druidBeastTraitSelection('Tough', 1),
+          druidBeastTraitSelection('Natural Armor', 2),
+          'Swift',
+        ],
+      },
+      sheetFeatureStates: {
+        [DRUID_WILD_FORM_ACTIVE]: true,
+        [DRUID_WILD_FORM_EXPANSION_ACTIVE]: true,
+        'ancestry.shellRetreat.active': true,
+      },
+      sheetFeatureCounters: {
+        [DRUID_WILD_FORM_EXTRA_MP]: 1,
+        [DRUID_WILD_FORM_HP]: 4,
+      },
+    };
+    expect(druidWildFormProfile(hero)).toMatchObject({
+      traitPointBudget: 8,
+      traitPointsSpent: 8,
+      maximumHP: 5,
+      currentHP: 4,
+      physicalDefense: 20,
+      areaDefense: 21,
+      speed: 0,
+      physicalDamageReduction: true,
+      elementalDamageReduction: true,
+      shellRetreatAvailable: true,
+      shellRetreatActive: true,
+      beastTraits: ['Quick Reactions', 'Thick-Skinned', 'Hard Shell', 'Shell Retreat', 'Tough', 'Natural Armor'],
+    });
+  });
+
+  it('expires Wild Forms and their Long-Rest resources on a Long Rest', () => {
+    const hero = character('Druid');
+    hero.manaPoints = 0;
+    hero.maxManaPoints = 9;
+    hero.build = {
+      ...defaultBuild(),
+      classFeatureSelections: {
+        [DRUID_WILD_FORM_TRAITS]: ['Healthy', 'Swift'],
+        [DRUID_WILD_FORM_SKILLS]: [],
+      },
+      sheetFeatureStates: {
+        [DRUID_WILD_FORM_ACTIVE]: true,
+        [DRUID_WILD_FORM_FREE_USED]: true,
+      },
+      sheetFeatureCounters: {
+        [DRUID_WILD_FORM_EXTRA_MP]: 1,
+        [DRUID_WILD_FORM_HP]: 2,
+      },
+      sheetFeatureSelections: {
+        [DRUID_WILD_FORM_TYPE]: 'Beast',
+        [DRUID_WILD_FORM_DAMAGE]: 'Piercing',
+      },
+      druidWildForms: [{
+        id: 'wolf', name: 'Wolf', size: 'Medium', creatureType: 'Beast', naturalWeaponDamageType: 'Piercing',
+        traits: ['Healthy', 'Swift'], skillMasteries: [], currentHP: 2, extraMP: 1, expansionApplied: false,
+      }],
+    };
+    const rested = completeCharacterRest(hero, 'Long', 0);
+    expect(rested.manaPoints).toBe(9);
+    expect(rested.build?.sheetFeatureStates[DRUID_WILD_FORM_ACTIVE]).toBe(false);
+    expect(rested.build?.sheetFeatureStates[DRUID_WILD_FORM_FREE_USED]).toBe(false);
+    expect(rested.build?.sheetFeatureCounters).toEqual({});
+    expect(rested.build?.classFeatureSelections[DRUID_WILD_FORM_TRAITS]).toEqual([]);
+    expect(rested.build?.sheetFeatureSelections[DRUID_WILD_FORM_TYPE]).toBeUndefined();
+    expect(rested.build?.sheetFeatureSelections[DRUID_WILD_FORM_DAMAGE]).toBeUndefined();
+    expect(rested.build?.druidWildForms).toEqual([]);
   });
 });

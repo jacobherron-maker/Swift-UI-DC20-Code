@@ -4,8 +4,56 @@ import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { usePowerCatalog } from '../../hooks/usePowerCatalog';
 import { CharacterAvatarEditor } from '../character/CharacterAvatar';
 import { CharacterRestControls, CharacterSheetTabContent, type RedesignedSheetTab } from '../character/CharacterSheetTabs';
-import type { CampaignNote, Character, CharacterInventoryItem, DC20Attribute, EquipmentCatalogItem, MasteryLevel } from '../../types/models';
-import { ATTRIBUTE_NAMES, BARBARIAN_RAGE_STATE, BARD_PERFORMANCE_STATE, ancestryGrantedSpellNames, applyDerivedCharacter, barbarianStaminaRegenAmount, bardHelpDieSize, championStaminaRegenAmount, championTacticalDieSize, characterSheetEffects, commanderHelpDieSize, commanderInspiringPresenceHealing, commanderRallyAmount, commanderStaminaRegenAmount, deriveCharacter, grantedClassLanguageNames, grantedClassManeuverNames, grantedClassSpellNames, masteryBonus, masteryRank, masteryTitle, rogueCheapShotDamage, rogueStaminaRegenAmount, selectedAncestryTraits, skillMasteryCap, spellbladeDisciplineNames } from '../../utils/characterRules';
+import type { AncestryTrait, CampaignNote, Character, CharacterInventoryItem, DC20Attribute, DruidWildFormRecord, EquipmentCatalogItem, MasteryLevel } from '../../types/models';
+import {
+  ATTRIBUTE_NAMES,
+  BARBARIAN_RAGE_STATE,
+  BARD_PERFORMANCE_STATE,
+  DRUID_DOMAIN_ACTIVE,
+  DRUID_NATURE_TORRENT_ACTIVE,
+  DRUID_WILD_FORM_ACTIVE,
+  DRUID_WILD_FORM_DAMAGE,
+  DRUID_WILD_FORM_EXPANSION_ACTIVE,
+  DRUID_WILD_FORM_EXPANSION_USED,
+  DRUID_WILD_FORM_EXTRA_MP,
+  DRUID_WILD_FORM_FREE_USED,
+  DRUID_WILD_FORM_HP,
+  DRUID_WILD_FORM_ID,
+  DRUID_WILD_FORM_NAME,
+  DRUID_WILD_FORM_SIZE,
+  DRUID_WILD_FORM_SKILLS,
+  DRUID_WILD_FORM_SKILL_OPTIONS,
+  DRUID_WILD_FORM_TRAITS,
+  DRUID_WILD_FORM_TRAIT_OPTIONS,
+  DRUID_WILD_FORM_TYPE,
+  ancestryGrantedSpellNames,
+  applyDerivedCharacter,
+  barbarianStaminaRegenAmount,
+  bardHelpDieSize,
+  championStaminaRegenAmount,
+  championTacticalDieSize,
+  characterSheetEffects,
+  commanderHelpDieSize,
+  commanderInspiringPresenceHealing,
+  commanderRallyAmount,
+  commanderStaminaRegenAmount,
+  deriveCharacter,
+  druidBeastTraitName,
+  druidBeastTraitSelection,
+  druidWildFormTraitCost,
+  druidWildFormProfile,
+  grantedClassLanguageNames,
+  grantedClassManeuverNames,
+  grantedClassSpellNames,
+  masteryBonus,
+  masteryRank,
+  masteryTitle,
+  rogueCheapShotDamage,
+  rogueStaminaRegenAmount,
+  selectedAncestryTraits,
+  skillMasteryCap,
+  spellbladeDisciplineNames,
+} from '../../utils/characterRules';
 import { enforceEquipmentHandCapacity, isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped as toggleInventoryEquippedBase } from '../../utils/equipmentRules';
 import { generateUUID } from '../../utils/gameUtils';
 
@@ -88,6 +136,12 @@ const CLERIC_BLESSING_ONE = 'cleric.blessing.one';
 const CLERIC_BLESSING_TWO = 'cleric.blessing.two';
 const CLERIC_BLESSING_ONE_MP = 'cleric.blessing.oneMP';
 const CLERIC_BLESSING_TWO_MP = 'cleric.blessing.twoMP';
+const DRUID_DOMAIN_EXTRA_MP = 'druid.domain.extraMP';
+const DRUID_WILD_GROWTH_EXTRA_MP = 'druid.wildGrowth.extraMP';
+const DRUID_TORRENT_DAMAGE = 'druid.naturesTorrent.damage';
+const DRUID_TORRENT_VULNERABILITY_MP = 'druid.naturesTorrent.vulnerabilityMP';
+const DRUID_TORRENT_AREA_MP = 'druid.naturesTorrent.areaMP';
+const DRUID_WEATHER_USED = 'druid.wildSpeech.weatherUsed';
 const CLERIC_BLESSING_EXTRA_MP = 'cleric.blessing.extraMP';
 const CLERIC_BOUNTIFUL_USED = 'cleric.bountiful.used';
 const CLERIC_CHANNEL_CHOICE = 'cleric.channel.choice';
@@ -1025,6 +1079,380 @@ function ClericControls({ character, onChange, onRoll }: {
   </section>;
 }
 
+function DruidWildFormPanel({ character, beastTraits, onChange }: {
+  character: Character;
+  beastTraits: AncestryTrait[];
+  onChange: (values: Partial<Character>) => void;
+}) {
+  const [notice, setNotice] = useState('');
+  const [useStartOfTurnShift, setUseStartOfTurnShift] = useState(false);
+  const build = character.build;
+  const profile = druidWildFormProfile(character);
+  if (!build) return null;
+
+  const states = build.sheetFeatureStates ?? {};
+  const counters = build.sheetFeatureCounters ?? {};
+  const selections = build.sheetFeatureSelections ?? {};
+  const classChoices = build.classFeatureSelections ?? {};
+  const wildFormTraits = classChoices[DRUID_WILD_FORM_TRAITS] ?? [];
+  const wildFormSkills = classChoices[DRUID_WILD_FORM_SKILLS] ?? [];
+  const forms = (build.druidWildForms ?? []).filter(({ currentHP }) => currentHP > 0);
+  const selectedFormID = selections[DRUID_WILD_FORM_ID] ?? '';
+  const selectedForm = forms.find(({ id }) => id === selectedFormID);
+  const legacyFormAvailable = !selectedForm
+    && Object.prototype.hasOwnProperty.call(counters, DRUID_WILD_FORM_HP)
+    && (counters[DRUID_WILD_FORM_HP] ?? 0) > 0;
+  const formAvailable = Boolean(selectedForm) || legacyFormAvailable;
+  const formLocked = profile.active || formAvailable;
+  const expansionPrepared = Boolean(states[DRUID_WILD_FORM_EXPANSION_ACTIVE]);
+  const expansionUsed = Boolean(states[DRUID_WILD_FORM_EXPANSION_USED]);
+  const hasWildFormExpansion = build.selectedTalents.includes('Wild Form Expansion');
+  const shiftAPCost = hasWildFormExpansion && useStartOfTurnShift ? 0 : 1;
+  const manaSpendLimit = character.combatMastery;
+  const maximumExtraFormMP = Math.max(0, manaSpendLimit - 1);
+  const formExtraMP = Math.min(maximumExtraFormMP, Math.max(0, counters[DRUID_WILD_FORM_EXTRA_MP] ?? 0));
+  const traitCount = (name: string) => wildFormTraits.filter((entry) => entry === name).length;
+  const beastTraitCount = (name: string) => wildFormTraits.filter((entry) => druidBeastTraitName(entry) === name).length;
+  const requiredSkillChoices = traitCount('Skillful') * 2;
+  const formReady = profile.traitPointsSpent === profile.traitPointBudget && wildFormSkills.length === requiredSkillChoices;
+  const formTypes = ['Beast', ...(character.subclass === 'Phoenix' ? ['Elemental (Fire)'] : []), ...(character.subclass === 'Rampant Growth' ? ['Plant'] : [])];
+  const positiveBeastTraits = beastTraits.filter(({ cost }) => cost > 0);
+
+  const updateBuild = (values: Partial<NonNullable<Character['build']>>, characterValues: Partial<Character> = {}) => onChange({
+    ...characterValues,
+    build: { ...build, ...values },
+  });
+  const setSelection = (key: string, value: string) => updateBuild({
+    sheetFeatureSelections: { ...selections, [key]: value },
+  });
+  const trimTraits = (traits: string[], budget: number) => {
+    const next = [...traits];
+    const spent = () => next.reduce((total, selection) => total + druidWildFormTraitCost(selection), 0);
+    while (spent() > budget) next.pop();
+    return next;
+  };
+  const prerequisiteMet = (trait: AncestryTrait, traits: string[]) => {
+    if (!trait.prerequisite) return true;
+    const selectedNames = traits.map(druidBeastTraitName).filter((name): name is string => Boolean(name));
+    if (trait.prerequisite === 'Any Flying Beast Trait') {
+      const flying = new Set(positiveBeastTraits.filter(({ category }) => category === 'Flying').map(({ name }) => name));
+      return selectedNames.some((name) => flying.has(name));
+    }
+    return selectedNames.includes(trait.prerequisite);
+  };
+  const pruneInvalidBeastTraits = (traits: string[]) => {
+    let next = [...traits];
+    let changed = true;
+    while (changed) {
+      changed = false;
+      next = next.filter((selection) => {
+        const name = druidBeastTraitName(selection);
+        if (!name) return true;
+        const trait = positiveBeastTraits.find((candidate) => candidate.name === name);
+        const keep = Boolean(trait && prerequisiteMet(trait, next));
+        if (!keep) changed = true;
+        return keep;
+      });
+    }
+    return next;
+  };
+  const saveTraits = (traits: string[]) => {
+    const pruned = pruneInvalidBeastTraits(traits);
+    const skillfulCount = pruned.filter((entry) => entry === 'Skillful').length;
+    updateBuild({
+      classFeatureSelections: {
+        ...classChoices,
+        [DRUID_WILD_FORM_TRAITS]: pruned,
+        [DRUID_WILD_FORM_SKILLS]: wildFormSkills.slice(0, skillfulCount * 2),
+      },
+    });
+  };
+  const adjustTrait = (name: string, direction: -1 | 1) => {
+    if (formLocked) return;
+    const option = DRUID_WILD_FORM_TRAIT_OPTIONS.find((entry) => entry.name === name);
+    if (!option) return;
+    const currentCount = traitCount(name);
+    if (direction < 0) {
+      const index = wildFormTraits.lastIndexOf(name);
+      if (index >= 0) saveTraits(wildFormTraits.filter((_, candidate) => candidate !== index));
+      return;
+    }
+    if ((!option.repeatable && currentCount > 0) || (option.maximumCount !== undefined && currentCount >= option.maximumCount)) return;
+    if (profile.traitPointsSpent + option.cost > profile.traitPointBudget) return;
+    const withoutOtherSize = name.startsWith('Size — ')
+      ? wildFormTraits.filter((entry) => !entry.startsWith('Size — ')) : wildFormTraits;
+    saveTraits([...withoutOtherSize, name]);
+  };
+  const adjustBeastTrait = (trait: AncestryTrait, direction: -1 | 1) => {
+    if (formLocked) return;
+    const selection = druidBeastTraitSelection(trait.name, trait.cost);
+    const currentCount = beastTraitCount(trait.name);
+    if (direction < 0) {
+      const index = wildFormTraits.lastIndexOf(selection);
+      if (index >= 0) saveTraits(wildFormTraits.filter((_, candidate) => candidate !== index));
+      return;
+    }
+    const repeatLimit = trait.name === 'Keen Sense' ? 3
+      : trait.name === 'Capable Limb' ? beastTraitCount('Additional Limb')
+        : trait.isRepeatable ? Number.POSITIVE_INFINITY : 1;
+    if (currentCount >= repeatLimit || !prerequisiteMet(trait, wildFormTraits)) return;
+    if (profile.traitPointsSpent + trait.cost > profile.traitPointBudget) return;
+    saveTraits([...wildFormTraits, selection]);
+  };
+  const adjustFormExtraMP = (direction: -1 | 1) => {
+    if (formLocked) return;
+    const next = Math.min(maximumExtraFormMP, Math.max(0, formExtraMP + direction));
+    const nextBudget = 3 + Number(character.level >= 5) + next * 2 + Number(expansionPrepared) * 2;
+    const nextTraits = pruneInvalidBeastTraits(trimTraits(wildFormTraits, nextBudget));
+    const nextSkills = wildFormSkills.slice(0, nextTraits.filter((entry) => entry === 'Skillful').length * 2);
+    updateBuild({
+      classFeatureSelections: { ...classChoices, [DRUID_WILD_FORM_TRAITS]: nextTraits, [DRUID_WILD_FORM_SKILLS]: nextSkills },
+      sheetFeatureCounters: { ...counters, [DRUID_WILD_FORM_EXTRA_MP]: next },
+    });
+  };
+  const toggleExpansion = () => {
+    if (formLocked || !hasWildFormExpansion || (expansionUsed && !expansionPrepared)) return;
+    const nextPrepared = !expansionPrepared;
+    const nextBudget = 3 + Number(character.level >= 5) + formExtraMP * 2 + Number(nextPrepared) * 2;
+    const nextTraits = pruneInvalidBeastTraits(trimTraits(wildFormTraits, nextBudget));
+    updateBuild({
+      classFeatureSelections: {
+        ...classChoices,
+        [DRUID_WILD_FORM_TRAITS]: nextTraits,
+        [DRUID_WILD_FORM_SKILLS]: wildFormSkills.slice(0, nextTraits.filter((entry) => entry === 'Skillful').length * 2),
+      },
+      sheetFeatureStates: { ...states, [DRUID_WILD_FORM_EXPANSION_ACTIVE]: nextPrepared },
+    });
+  };
+  const toggleWildFormSkill = (skill: string) => {
+    if (formLocked) return;
+    const selected = wildFormSkills.includes(skill);
+    const next = selected ? wildFormSkills.filter((entry) => entry !== skill)
+      : wildFormSkills.length < requiredSkillChoices ? [...wildFormSkills, skill] : wildFormSkills;
+    updateBuild({ classFeatureSelections: { ...classChoices, [DRUID_WILD_FORM_SKILLS]: next } });
+  };
+  const makeRecord = (id: string, currentHP: number): DruidWildFormRecord => ({
+    id,
+    name: selections[DRUID_WILD_FORM_NAME]?.trim() || `Wild Form ${forms.length + 1}`,
+    size: selections[DRUID_WILD_FORM_SIZE] ?? 'Medium',
+    creatureType: selections[DRUID_WILD_FORM_TYPE] ?? 'Beast',
+    naturalWeaponDamageType: selections[DRUID_WILD_FORM_DAMAGE] ?? 'Bludgeoning',
+    traits: wildFormTraits,
+    skillMasteries: wildFormSkills,
+    currentHP,
+    extraMP: formExtraMP,
+    expansionApplied: expansionPrepared,
+  });
+  const activateWildForm = (free: boolean) => {
+    const returning = formAvailable;
+    const manaCost = free || returning ? 0 : 1 + formExtraMP;
+    if (!formReady || profile.active || character.currentAP < shiftAPCost || character.manaPoints < manaCost
+      || (free && states[DRUID_WILD_FORM_FREE_USED]) || (free && formExtraMP > 0)) return;
+    const formID = selectedForm?.id ?? (returning ? generateUUID() : generateUUID());
+    const record = selectedForm ?? makeRecord(formID, returning ? profile.currentHP : profile.maximumHP);
+    const nextForms = selectedForm ? forms : [...forms, record];
+    updateBuild({
+      druidWildForms: nextForms,
+      sheetFeatureStates: {
+        ...states,
+        [DRUID_WILD_FORM_ACTIVE]: true,
+        'ancestry.shellRetreat.active': false,
+        ...(free && !returning ? { [DRUID_WILD_FORM_FREE_USED]: true } : {}),
+        ...(expansionPrepared && !returning ? { [DRUID_WILD_FORM_EXPANSION_USED]: true } : {}),
+      },
+      sheetFeatureSelections: {
+        ...selections,
+        [DRUID_WILD_FORM_ID]: record.id,
+        [DRUID_WILD_FORM_NAME]: record.name,
+      },
+      sheetFeatureCounters: { ...counters, [DRUID_WILD_FORM_HP]: record.currentHP },
+    }, { currentAP: character.currentAP - shiftAPCost, manaPoints: character.manaPoints - manaCost });
+    setUseStartOfTurnShift(false);
+    setNotice(`${returning ? 'Returned to' : 'Created'} ${record.name}.`);
+  };
+  const selectForm = (record: DruidWildFormRecord) => {
+    if (record.currentHP <= 0 || character.currentAP < shiftAPCost || (profile.active && record.id === selectedFormID)) return;
+    updateBuild({
+      classFeatureSelections: {
+        ...classChoices,
+        [DRUID_WILD_FORM_TRAITS]: record.traits,
+        [DRUID_WILD_FORM_SKILLS]: record.skillMasteries,
+      },
+      sheetFeatureSelections: {
+        ...selections,
+        [DRUID_WILD_FORM_ID]: record.id,
+        [DRUID_WILD_FORM_NAME]: record.name,
+        [DRUID_WILD_FORM_SIZE]: record.size,
+        [DRUID_WILD_FORM_TYPE]: record.creatureType,
+        [DRUID_WILD_FORM_DAMAGE]: record.naturalWeaponDamageType,
+      },
+      sheetFeatureCounters: {
+        ...counters,
+        [DRUID_WILD_FORM_HP]: record.currentHP,
+        [DRUID_WILD_FORM_EXTRA_MP]: Math.min(maximumExtraFormMP, record.extraMP),
+      },
+      sheetFeatureStates: {
+        ...states,
+        [DRUID_WILD_FORM_ACTIVE]: true,
+        [DRUID_WILD_FORM_EXPANSION_ACTIVE]: record.expansionApplied,
+        'ancestry.shellRetreat.active': false,
+      },
+    }, { currentAP: character.currentAP - shiftAPCost });
+    setUseStartOfTurnShift(false);
+    setNotice(`Shifted into ${record.name}.`);
+  };
+  const leaveWildForm = () => {
+    if (!profile.active || character.currentAP < shiftAPCost) return;
+    updateBuild({
+      sheetFeatureStates: { ...states, [DRUID_WILD_FORM_ACTIVE]: false, 'ancestry.shellRetreat.active': false },
+    }, { currentAP: character.currentAP - shiftAPCost });
+    setUseStartOfTurnShift(false);
+    setNotice('Returned to True Form. This Wild Form remains available with its current HP.');
+  };
+  const changeWildFormHP = (nextHP: number) => {
+    const hp = Math.min(profile.maximumHP, Math.max(0, nextHP));
+    const overflowHealing = Math.max(0, nextHP - profile.maximumHP);
+    const overflowDamage = Math.max(0, -nextHP);
+    const trueFormHP = Math.min(character.maxHealthPoints, Math.max(0, character.healthPoints + overflowHealing - overflowDamage));
+    const nextForms = selectedForm
+      ? forms.filter(({ id }) => hp > 0 || id !== selectedForm.id).map((form) => form.id === selectedForm.id ? { ...form, currentHP: hp } : form)
+      : forms;
+    updateBuild({
+      druidWildForms: nextForms,
+      sheetFeatureCounters: { ...counters, [DRUID_WILD_FORM_HP]: hp },
+      sheetFeatureStates: hp === 0
+        ? { ...states, [DRUID_WILD_FORM_ACTIVE]: false, 'ancestry.shellRetreat.active': false }
+        : states,
+      ...(hp === 0 ? { sheetFeatureSelections: { ...selections, [DRUID_WILD_FORM_ID]: '' } } : {}),
+    }, { healthPoints: trueFormHP });
+    if (hp === 0) setNotice(`Wild Form HP reached 0; the form ended${overflowDamage ? ` and ${overflowDamage} excess damage carried over` : ''}.`);
+    else if (overflowHealing) setNotice(`${overflowHealing} excess healing carried over to True Form HP.`);
+  };
+  const clearFormConfiguration = (nextForms = forms) => updateBuild({
+    druidWildForms: nextForms,
+    classFeatureSelections: { ...classChoices, [DRUID_WILD_FORM_TRAITS]: [], [DRUID_WILD_FORM_SKILLS]: [] },
+    sheetFeatureSelections: {
+      ...selections,
+      [DRUID_WILD_FORM_ID]: '',
+      [DRUID_WILD_FORM_NAME]: '',
+      [DRUID_WILD_FORM_SIZE]: 'Medium',
+      [DRUID_WILD_FORM_TYPE]: 'Beast',
+      [DRUID_WILD_FORM_DAMAGE]: 'Bludgeoning',
+    },
+    sheetFeatureStates: { ...states, [DRUID_WILD_FORM_ACTIVE]: false, [DRUID_WILD_FORM_EXPANSION_ACTIVE]: false, 'ancestry.shellRetreat.active': false },
+    sheetFeatureCounters: { ...counters, [DRUID_WILD_FORM_EXTRA_MP]: 0, [DRUID_WILD_FORM_HP]: 0 },
+  });
+  const configureNewForm = () => {
+    if (profile.active) return;
+    clearFormConfiguration();
+    setNotice('Ready to configure a new Wild Form.');
+  };
+  const removeSelectedForm = () => {
+    if (profile.active) return;
+    clearFormConfiguration(forms.filter(({ id }) => id !== selectedFormID));
+    setNotice('Wild Form removed.');
+  };
+
+  const beastTraitGroups = Array.from(new Set(positiveBeastTraits.map(({ category }) => category)));
+  const formDisplaySize = (form: DruidWildFormRecord) => form.traits.includes('Size — Tiny')
+    ? 'Tiny' : form.traits.includes('Size — Large') ? 'Large' : form.size;
+
+  return <div className="rounded-xl border border-emerald-400/20 bg-slate-950/55 p-4">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><h3 className="font-black text-emerald-200">Wild Form</h3><p className="mt-1 text-xs text-slate-500">Each form keeps its own Traits and HP • {profile.traitPointsSpent}/{profile.traitPointBudget} Trait Points</p></div>
+      <div className="flex gap-2">{profile.active && <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[10px] font-black uppercase text-emerald-200">Active</span>}{!profile.active && selectedForm && <button type="button" onClick={removeSelectedForm} className="rounded-lg bg-red-950/60 px-2 py-1 text-[10px] font-black text-red-200">Remove</button>}</div>
+    </div>
+    {notice && <p role="status" className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-100">{notice}</p>}
+    {hasWildFormExpansion && <button type="button" aria-pressed={useStartOfTurnShift} onClick={() => setUseStartOfTurnShift((current) => !current)} className={`mt-3 w-full rounded-lg px-3 py-2 text-xs font-black ${useStartOfTurnShift ? 'bg-fuchsia-700 text-white' : 'bg-slate-800 text-fuchsia-200'}`}>Start-of-Turn Shift {useStartOfTurnShift ? 'Selected • 0 AP' : '• use without spending AP'}</button>}
+    {forms.length > 0 && <div className="mt-3"><div className="flex items-center justify-between gap-2"><p className="text-xs font-black uppercase tracking-wider text-slate-400">Available Forms</p>{!profile.active && <button type="button" onClick={configureNewForm} className="rounded-lg bg-slate-800 px-2 py-1 text-xs font-bold text-slate-200">Configure New Form</button>}</div><div className="mt-2 grid gap-2 sm:grid-cols-2">{forms.map((form) => <button type="button" key={form.id} disabled={character.currentAP < shiftAPCost || (profile.active && form.id === selectedFormID)} onClick={() => selectForm(form)} className={`rounded-lg border p-3 text-left disabled:opacity-45 ${form.id === selectedFormID ? 'border-emerald-400/50 bg-emerald-500/10' : 'border-white/10 bg-slate-900/70'}`}><span className="block font-black text-slate-100">{form.name}</span><span className="mt-1 block text-[10px] text-slate-400">{formDisplaySize(form)} {form.creatureType} • {form.currentHP} HP • {form.traits.length} Traits</span><span className="mt-1 block text-[10px] font-bold text-emerald-300">{profile.active && form.id === selectedFormID ? 'Current form' : `Shift • ${shiftAPCost} AP`}</span></button>)}</div></div>}
+    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{[
+      ['HP', `${profile.currentHP}/${profile.maximumHP}`], ['PD', profile.physicalDefense], ['AD', profile.areaDefense], ['Speed', profile.speed],
+      ['Size', profile.size], ['Type', profile.creatureType], ['Might', profile.might], ['Agility', profile.agility],
+    ].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-900/75 p-2"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</span><strong className="text-emerald-100">{value}</strong></div>)}</div>
+    {profile.active && <div className="mt-3 flex items-center justify-between rounded-lg bg-red-950/30 p-2"><button type="button" onClick={() => changeWildFormHP(profile.currentHP - 1)} className="h-8 w-8 rounded bg-slate-800">−</button><span className="text-sm font-black text-red-100">Wild Form HP {profile.currentHP} / {profile.maximumHP}</span><button type="button" onClick={() => changeWildFormHP(profile.currentHP + 1)} className="h-8 w-8 rounded bg-red-800">+</button></div>}
+    <label className="mt-3 block text-xs font-bold text-slate-400">Form Name<input disabled={formLocked} value={selections[DRUID_WILD_FORM_NAME] ?? ''} placeholder={`Wild Form ${forms.length + 1}`} onChange={(event) => setSelection(DRUID_WILD_FORM_NAME, event.target.value)} className={`${fieldClass} mt-1 disabled:opacity-40`} /></label>
+    <div className="mt-3 grid gap-2 sm:grid-cols-3"><label className="text-xs font-bold text-slate-400">Base Size<select disabled={formLocked} value={selections[DRUID_WILD_FORM_SIZE] ?? 'Medium'} onChange={(event) => setSelection(DRUID_WILD_FORM_SIZE, event.target.value)} className={`${fieldClass} mt-1 disabled:opacity-40`}><option>Small</option><option>Medium</option></select></label><label className="text-xs font-bold text-slate-400">Creature Type<select disabled={formLocked} value={profile.creatureType} onChange={(event) => setSelection(DRUID_WILD_FORM_TYPE, event.target.value)} className={`${fieldClass} mt-1 disabled:opacity-40`}>{formTypes.map((type) => <option key={type}>{type}</option>)}</select></label><label className="text-xs font-bold text-slate-400">Natural Weapon<select disabled={formLocked} value={selections[DRUID_WILD_FORM_DAMAGE] ?? 'Bludgeoning'} onChange={(event) => setSelection(DRUID_WILD_FORM_DAMAGE, event.target.value)} className={`${fieldClass} mt-1 disabled:opacity-40`}>{profile.damageTypes.map((damage) => <option key={damage}>{damage}</option>)}</select></label></div>
+    <div className="mt-3 flex flex-wrap items-center gap-2"><button type="button" disabled={formLocked || formExtraMP <= 0} onClick={() => adjustFormExtraMP(-1)} className="h-8 w-8 rounded bg-slate-800 disabled:opacity-35">−</button><span className="text-xs font-bold text-slate-300">MP Enhancements: {formExtraMP} MP • +{formExtraMP * 2} Trait Points</span><button type="button" disabled={formLocked || formExtraMP >= maximumExtraFormMP} onClick={() => adjustFormExtraMP(1)} className="h-8 w-8 rounded bg-violet-700 disabled:opacity-35">+</button>{hasWildFormExpansion && <button type="button" disabled={formLocked || (expansionUsed && !expansionPrepared)} onClick={toggleExpansion} className={`rounded-lg px-3 py-2 text-xs font-black disabled:opacity-35 ${expansionPrepared ? 'bg-fuchsia-700 text-white' : 'bg-slate-800 text-slate-300'}`}>Wild Form Expansion {expansionPrepared ? '• +2 Points' : expansionUsed ? '• Used' : ''}</button>}</div>
+    <details className="mt-3 rounded-lg border border-white/10 p-3"><summary className="cursor-pointer text-sm font-black text-emerald-100">Wild Form Traits</summary><div className="mt-3 grid gap-2 md:grid-cols-2">{DRUID_WILD_FORM_TRAIT_OPTIONS.map((option) => { const count = traitCount(option.name); const disabled = formLocked || profile.traitPointsSpent + option.cost > profile.traitPointBudget || (!option.repeatable && count > 0) || (option.maximumCount !== undefined && count >= option.maximumCount); return <div key={option.name} className="rounded-lg bg-slate-900/70 p-2"><div className="flex items-center justify-between gap-2"><span className="text-xs font-black text-slate-200">({option.cost}) {option.name}{count > 0 ? ` ×${count}` : ''}</span><span className="flex gap-1"><button type="button" disabled={formLocked || count === 0} onClick={() => adjustTrait(option.name, -1)} className="h-7 w-7 rounded bg-slate-800 disabled:opacity-30">−</button><button type="button" disabled={disabled} onClick={() => adjustTrait(option.name, 1)} className="h-7 w-7 rounded bg-emerald-700 disabled:opacity-30">+</button></span></div><p className="mt-1 text-[10px] leading-4 text-slate-500">{option.description}</p></div>; })}</div>{requiredSkillChoices > 0 && <div className="mt-3"><p className="text-xs font-black text-violet-200">Skillful choices ({wildFormSkills.length}/{requiredSkillChoices})</p><div className="mt-2 flex flex-wrap gap-2">{DRUID_WILD_FORM_SKILL_OPTIONS.map((skill) => <label key={skill} className={`rounded-lg px-2 py-1 text-xs ${wildFormSkills.includes(skill) ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'} ${formLocked || (!wildFormSkills.includes(skill) && wildFormSkills.length >= requiredSkillChoices) ? 'opacity-40' : ''}`}><input type="checkbox" className="mr-1" disabled={formLocked || (!wildFormSkills.includes(skill) && wildFormSkills.length >= requiredSkillChoices)} checked={wildFormSkills.includes(skill)} onChange={() => toggleWildFormSkill(skill)} />{skill}</label>)}</div></div>}</details>
+    <details className="mt-3 rounded-lg border border-amber-400/15 p-3"><summary className="cursor-pointer text-sm font-black text-amber-100">Positive Beast Traits</summary><p className="mt-2 text-xs leading-5 text-slate-500">Wild Form can spend its Trait Points on any positive Beast Trait. Prerequisites and point costs are enforced; selected traits appear in the form’s live statistics and reference list.</p><div className="mt-3 space-y-3">{beastTraitGroups.map((group) => <div key={group}><h4 className="text-[10px] font-black uppercase tracking-wider text-amber-300">{group}</h4><div className="mt-2 grid gap-2 md:grid-cols-2">{positiveBeastTraits.filter(({ category }) => category === group).map((trait) => { const count = beastTraitCount(trait.name); const repeatLimit = trait.name === 'Keen Sense' ? 3 : trait.name === 'Capable Limb' ? beastTraitCount('Additional Limb') : trait.isRepeatable ? Number.POSITIVE_INFINITY : 1; const disabled = formLocked || count >= repeatLimit || !prerequisiteMet(trait, wildFormTraits) || profile.traitPointsSpent + trait.cost > profile.traitPointBudget; return <details key={trait.id} className="rounded-lg bg-slate-900/70 p-2"><summary className="cursor-pointer list-none"><div className="flex items-center justify-between gap-2"><span className="text-xs font-black text-slate-200">({trait.cost}) {trait.name}{count > 0 ? ` ×${count}` : ''}</span><span className="flex gap-1" onClick={(event) => event.preventDefault()}><button type="button" disabled={formLocked || count === 0} onClick={() => adjustBeastTrait(trait, -1)} className="h-7 w-7 rounded bg-slate-800 disabled:opacity-30">−</button><button type="button" disabled={disabled} onClick={() => adjustBeastTrait(trait, 1)} className="h-7 w-7 rounded bg-amber-700 disabled:opacity-30">+</button></span></div>{trait.prerequisite && <span className="mt-1 block text-[10px] font-bold text-amber-300">Requires {trait.prerequisite}</span>}</summary><p className="mt-2 whitespace-pre-wrap border-t border-white/5 pt-2 text-[10px] leading-4 text-slate-400">{trait.description}</p></details>; })}</div></div>)}</div></details>
+    {profile.beastTraits.length > 0 && <p className="mt-3 text-xs leading-5 text-amber-100"><strong>Selected Beast Traits:</strong> {profile.beastTraits.join(' • ')}</p>}
+    <div className="mt-3 grid gap-2 sm:grid-cols-3">{profile.active ? <button type="button" disabled={character.currentAP < shiftAPCost} onClick={leaveWildForm} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35 sm:col-span-3">Return to True Form • {shiftAPCost} AP</button> : <><button type="button" disabled={!formReady || character.currentAP < shiftAPCost || (!formAvailable && character.manaPoints < 1 + formExtraMP)} onClick={() => activateWildForm(false)} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{formAvailable ? `Return to Selected Form • ${shiftAPCost} AP` : `Create & Transform • ${shiftAPCost} AP + ${1 + formExtraMP} MP`}</button>{!formAvailable && <button type="button" disabled={!formReady || Boolean(states[DRUID_WILD_FORM_FREE_USED]) || character.currentAP < shiftAPCost || formExtraMP > 0} onClick={() => activateWildForm(true)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Free Transform • {shiftAPCost} AP</button>}<button type="button" onClick={selectedForm ? removeSelectedForm : configureNewForm} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">{selectedForm ? 'Remove Form' : 'Clear Configuration'}</button></>}</div>
+    {!formReady && <p className="mt-2 text-xs font-bold text-amber-200">Spend exactly {profile.traitPointBudget} Trait Points{wildFormSkills.length !== requiredSkillChoices ? ` and choose ${requiredSkillChoices} Skillful Skills` : ''} before transforming.</p>}
+    {profile.resistances.length > 0 && <p className="mt-2 text-xs text-sky-200"><strong>Resistances:</strong> {profile.resistances.join(' • ')}</p>}{profile.bleedingImmune && <p className="mt-2 text-xs font-bold text-emerald-200">Plant Form is immune to Bleeding.</p>}
+  </div>;
+}
+
+function DruidControls({ character, beastTraits, onChange, onRoll }: {
+  character: Character;
+  beastTraits: AncestryTrait[];
+  onChange: (values: Partial<Character>) => void;
+  onRoll: (label: string, modifier: number, extraAdjustment?: number) => unknown;
+}) {
+  const [notice, setNotice] = useState('');
+  const [torrentMode, setTorrentMode] = useState<'Reaction' | 'Vortex'>('Reaction');
+  const [vortexBoost, setVortexBoost] = useState(false);
+  const build = character.build;
+  if (!build) return null;
+  const states = build.sheetFeatureStates ?? {};
+  const counters = build.sheetFeatureCounters ?? {};
+  const selections = build.sheetFeatureSelections ?? {};
+  const classChoices = build.classFeatureSelections ?? {};
+  const wildSpeech = classChoices['druid.wildSpeech']?.[0] ?? '';
+  const domainActive = Boolean(states[DRUID_DOMAIN_ACTIVE]);
+  const torrentActive = Boolean(states[DRUID_NATURE_TORRENT_ACTIVE]);
+  const hasNaturesVortex = build.selectedTalents.includes('Nature’s Vortex');
+  const spellModifier = character.primeModifier + character.combatMastery;
+  const manaSpendLimit = character.combatMastery;
+  const domainExtraMP = Math.min(Math.max(0, manaSpendLimit - 1), Math.max(0, counters[DRUID_DOMAIN_EXTRA_MP] ?? 0));
+  const wildGrowthExtraMP = character.level >= 5
+    ? Math.min(Math.max(0, manaSpendLimit - 1), Math.max(0, counters[DRUID_WILD_GROWTH_EXTRA_MP] ?? 0)) : 0;
+  const torrentDamage = selections[DRUID_TORRENT_DAMAGE] ?? 'Cold';
+  const torrentVulnerabilityMP = character.level >= 5
+    ? Math.min(manaSpendLimit, Math.max(0, Math.trunc((counters[DRUID_TORRENT_VULNERABILITY_MP] ?? 0) / 2) * 2)) : 0;
+  const torrentAreaMP = character.level >= 5
+    ? Math.min(manaSpendLimit, Math.max(0, Math.trunc(counters[DRUID_TORRENT_AREA_MP] ?? 0))) : 0;
+  const torrentEnhancementMP = torrentVulnerabilityMP + torrentAreaMP;
+  const updateBuild = (values: Partial<NonNullable<Character['build']>>, characterValues: Partial<Character> = {}) => onChange({
+    ...characterValues,
+    build: { ...build, ...values },
+  });
+  const setCounter = (key: string, value: number) => updateBuild({ sheetFeatureCounters: { ...counters, [key]: Math.max(0, Math.trunc(value)) } });
+  const setSelection = (key: string, value: string) => updateBuild({ sheetFeatureSelections: { ...selections, [key]: value } });
+
+  const useDomain = () => {
+    const manaCost = 1 + domainExtraMP;
+    if (character.currentAP < 1 || character.manaPoints < manaCost) return;
+    updateBuild({ sheetFeatureStates: { ...states, [DRUID_DOMAIN_ACTIVE]: true } }, { currentAP: character.currentAP - 1, manaPoints: character.manaPoints - manaCost });
+    setNotice(`Druid Domain ${domainActive ? 'expanded' : 'created'}: ${character.level >= 5 ? 10 : 8}${domainExtraMP ? ` + ${domainExtraMP * 8}` : ''} connected Spaces.`);
+  };
+  const domainAction = (action: 'Nature’s Grasp' | 'Move Creature' | 'Move Object' | 'Wild Growth') => {
+    const manaCost = action === 'Wild Growth' ? 1 + wildGrowthExtraMP : 0;
+    if (!domainActive || character.currentAP < 1 || character.manaPoints < manaCost) return;
+    if (action === 'Nature’s Grasp') onRoll('Nature’s Grasp Spell Check', spellModifier);
+    if (action === 'Wild Growth') onRoll(`Wild Growth Spell Check • DC 10 • immediate healing ${1 + Math.floor(wildGrowthExtraMP / 2)}`, spellModifier);
+    updateBuild({}, { currentAP: character.currentAP - 1, manaPoints: character.manaPoints - manaCost });
+    setNotice(`${action} used${character.subclass === 'Rampant Growth' && action === 'Nature’s Grasp' ? ' • failed Save also begins Bleeding' : ''}${character.subclass === 'Phoenix' && action === 'Wild Growth' ? ' • Cleansing Flames available' : ''}.`);
+  };
+  const useTorrent = () => {
+    const direct = hasNaturesVortex && torrentMode === 'Vortex';
+    const actionCost = direct ? 2 : 1;
+    if (character.currentAP < actionCost || character.manaPoints < torrentEnhancementMP || torrentEnhancementMP > manaSpendLimit) return;
+    updateBuild({ sheetFeatureStates: { ...states, [DRUID_NATURE_TORRENT_ACTIVE]: true } }, { currentAP: character.currentAP - actionCost, manaPoints: character.manaPoints - torrentEnhancementMP });
+    setNotice(`${direct ? 'Nature’s Vortex' : 'Nature’s Torrent'} active: ${3 + torrentAreaMP + Number(hasNaturesVortex && vortexBoost)}-Space Diameter • ${torrentDamage} Vulnerability (${1 + Math.floor(torrentVulnerabilityMP / 2)})${hasNaturesVortex ? ' • chosen creatures are immune' : ''}.`);
+  };
+  const resetInitiative = () => {
+    updateBuild({ sheetFeatureStates: { ...states, [DRUID_WILD_FORM_EXPANSION_USED]: false } });
+    setNotice('Initiative rolled: Wild Form Expansion recharged. The free Wild Form remains Long-Rest-only.');
+    onRoll('Initiative Check', character.attributes.Agility.modifier + character.combatMastery);
+  };
+  const useWeather = () => {
+    if (wildSpeech !== 'Weather' || states[DRUID_WEATHER_USED]) return;
+    updateBuild({ sheetFeatureStates: { ...states, [DRUID_WEATHER_USED]: true } });
+    setNotice('Commune with Nature cast as a Ritual. Available again after a Long Rest.');
+  };
+  return <section className="rounded-2xl border border-emerald-400/25 bg-gradient-to-br from-emerald-950/45 to-slate-950/70 p-4 sm:p-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">Live Class Features</p><h2 className="text-xl font-black text-white">Druid Controls</h2></div><button type="button" onClick={resetInitiative} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-slate-200">Roll Initiative / New Combat</button></div>{notice && <p role="status" className="mb-4 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-100">{notice}</p>}<div className="grid gap-4 xl:grid-cols-2"><DruidWildFormPanel character={character} beastTraits={beastTraits} onChange={onChange} /><div className="space-y-4"><div className="rounded-xl border border-lime-400/20 bg-slate-950/55 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black text-lime-200">Druid Domain</h3><p className="mt-1 text-xs text-slate-500">{character.level >= 5 ? 10 : 8} Spaces • losing distance {character.level >= 5 ? 20 : 15} Spaces</p></div>{domainActive && <span className="rounded-full bg-lime-500/15 px-2 py-1 text-[10px] font-black uppercase text-lime-200">Active</span>}</div><div className="mt-3 flex items-center gap-2"><button type="button" disabled={domainExtraMP <= 0} onClick={() => setCounter(DRUID_DOMAIN_EXTRA_MP, domainExtraMP - 1)} className="h-8 w-8 rounded bg-slate-800 disabled:opacity-35">−</button><span className="text-xs text-slate-300">Extra MP: {domainExtraMP}{character.level >= 5 ? ` • +${domainExtraMP * 8} Spaces` : ' • no published enhancement before Expert Druid'}</span><button type="button" disabled={character.level < 5 || domainExtraMP >= Math.max(0, manaSpendLimit - 1)} onClick={() => setCounter(DRUID_DOMAIN_EXTRA_MP, domainExtraMP + 1)} className="h-8 w-8 rounded bg-lime-700 disabled:opacity-35">+</button></div><button type="button" disabled={character.currentAP < 1 || character.manaPoints < 1 + domainExtraMP} onClick={useDomain} className="mt-3 w-full rounded-lg bg-lime-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{domainActive ? 'Expand Domain' : 'Create Domain'} • 1 AP + {1 + domainExtraMP} MP</button>{domainActive && <><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" disabled={character.currentAP < 1} onClick={() => domainAction('Nature’s Grasp')} className="rounded-lg bg-emerald-800 px-2 py-2 text-xs font-bold text-white">Nature’s Grasp • 1 AP</button><button type="button" disabled={character.currentAP < 1} onClick={() => domainAction('Move Creature')} className="rounded-lg bg-slate-700 px-2 py-2 text-xs font-bold text-white">Move Creature • 1 AP</button><button type="button" disabled={character.currentAP < 1} onClick={() => domainAction('Move Object')} className="rounded-lg bg-slate-700 px-2 py-2 text-xs font-bold text-white">Move Object • 1 AP</button><button type="button" disabled={character.currentAP < 1 || character.manaPoints < 1 + wildGrowthExtraMP} onClick={() => domainAction('Wild Growth')} className="rounded-lg bg-teal-700 px-2 py-2 text-xs font-bold text-white">Wild Growth • 1 AP + {1 + wildGrowthExtraMP} MP</button></div>{character.level >= 5 && <div className="mt-2 flex items-center gap-2"><button type="button" disabled={wildGrowthExtraMP <= 0} onClick={() => setCounter(DRUID_WILD_GROWTH_EXTRA_MP, wildGrowthExtraMP - 1)} className="h-7 w-7 rounded bg-slate-800 disabled:opacity-35">−</button><span className="text-[10px] text-slate-400">Wild Growth extra MP: {wildGrowthExtraMP} • +{Math.floor(wildGrowthExtraMP / 2)} healing</span><button type="button" disabled={wildGrowthExtraMP >= Math.max(0, manaSpendLimit - 1)} onClick={() => setCounter(DRUID_WILD_GROWTH_EXTRA_MP, wildGrowthExtraMP + 1)} className="h-7 w-7 rounded bg-teal-700 disabled:opacity-35">+</button></div>}<button type="button" onClick={() => updateBuild({ sheetFeatureStates: { ...states, [DRUID_DOMAIN_ACTIVE]: false } })} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">End Domain</button>{character.subclass === 'Phoenix' && <p className="mt-2 text-xs leading-5 text-orange-200">Phoenix: MP healing can cleanse a Basic Poison, Basic Disease, Impaired, Dazed, or Burning; chosen creatures take 1 Fire damage for each Space moved within the Domain or when starting there.</p>}{character.subclass === 'Rampant Growth' && <p className="mt-2 text-xs leading-5 text-emerald-200">Rampant Growth: chosen creatures in the Domain gain 1/2 Cover; a failed Nature’s Grasp Save also causes Bleeding.</p>}</>}</div>{character.level >= 2 && <div className="rounded-xl border border-sky-400/20 bg-slate-950/55 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black text-sky-200">Nature’s Torrent</h3><p className="mt-1 text-xs text-slate-500">Reaction within {character.level >= 5 ? 15 : 10} Spaces • 1 minute</p></div>{torrentActive && <span className="rounded-full bg-sky-500/15 px-2 py-1 text-[10px] font-black uppercase text-sky-200">Active</span>}</div>{hasNaturesVortex && <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => setTorrentMode('Reaction')} className={`rounded-lg px-3 py-2 text-xs font-black disabled:opacity-35 ${torrentMode === 'Reaction' ? 'bg-sky-700 text-white' : 'bg-slate-800 text-slate-300'}`}>Triggered Reaction • 1 AP</button><button type="button" onClick={() => setTorrentMode('Vortex')} className={`rounded-lg px-3 py-2 text-xs font-black disabled:opacity-35 ${torrentMode === 'Vortex' ? 'bg-sky-700 text-white' : 'bg-slate-800 text-slate-300'}`}>Nature’s Vortex • 2 AP</button></div>}<label className="mt-3 block text-xs font-bold text-slate-400">Elemental damage type<select value={torrentDamage} onChange={(event) => setSelection(DRUID_TORRENT_DAMAGE, event.target.value)} className={`${fieldClass} mt-1`}><option>Cold</option><option>Corrosion</option><option>Fire</option><option>Lightning</option><option>Poison</option></select></label>{character.level >= 5 && <div className="mt-3 grid grid-cols-2 gap-2"><label className="text-[10px] font-bold text-slate-400">Vulnerability MP<input type="number" min={0} step={2} max={manaSpendLimit} value={torrentVulnerabilityMP} onChange={(event) => setCounter(DRUID_TORRENT_VULNERABILITY_MP, Math.min(manaSpendLimit, Math.max(0, Math.trunc(Number(event.target.value) / 2) * 2)))} className={`${fieldClass} mt-1`} /></label><label className="text-[10px] font-bold text-slate-400">Area MP<input type="number" min={0} max={manaSpendLimit} value={torrentAreaMP} onChange={(event) => setCounter(DRUID_TORRENT_AREA_MP, Math.min(manaSpendLimit, Math.max(0, Number(event.target.value))))} className={`${fieldClass} mt-1`} /></label></div>}{hasNaturesVortex && <label className="mt-3 flex items-start gap-2 rounded-lg bg-slate-900/70 p-2 text-xs text-slate-300"><input type="checkbox" checked={vortexBoost} onChange={(event) => setVortexBoost(event.target.checked)} /><span><strong>Nature’s Vortex enhancement:</strong> +1 Space Diameter and Ranged Attacks made against creatures within the area have DisADV; chosen creatures are immune.</span></label>}<p className="mt-2 text-xs leading-5 text-sky-100">{3 + torrentAreaMP + Number(hasNaturesVortex && vortexBoost)} Space Diameter • Vulnerability ({1 + Math.floor(torrentVulnerabilityMP / 2)}) • DisADV to resist movement or Prone{hasNaturesVortex ? ' • chosen creatures immune' : ''}</p><button type="button" disabled={character.currentAP < (hasNaturesVortex && torrentMode === 'Vortex' ? 2 : 1) || character.manaPoints < torrentEnhancementMP || torrentEnhancementMP > manaSpendLimit} onClick={useTorrent} className="mt-3 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{hasNaturesVortex && torrentMode === 'Vortex' ? 'Create Nature’s Vortex • 2 AP' : 'Trigger Nature’s Torrent • 1 AP'}{torrentEnhancementMP ? ` + ${torrentEnhancementMP} MP` : ''}</button>{torrentActive && <button type="button" onClick={() => updateBuild({ sheetFeatureStates: { ...states, [DRUID_NATURE_TORRENT_ACTIVE]: false } })} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">End Torrent (Free)</button>}</div>}{wildSpeech && <div className="rounded-xl border border-violet-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-violet-200">Wild Speech • {wildSpeech}</h3><p className="mt-2 text-xs leading-5 text-slate-400">Druidcraft is included in Spells & Maneuvers. {wildSpeech === 'Weather' ? 'Commune with Nature can be cast as a Ritual once per Long Rest.' : `You can communicate with ${wildSpeech === 'Animals' ? 'Beasts' : 'Plants'} in the limited manner described by Wild Speech.`}</p>{wildSpeech === 'Weather' && <button type="button" disabled={Boolean(states[DRUID_WEATHER_USED])} onClick={useWeather} className="mt-3 w-full rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[DRUID_WEATHER_USED] ? 'Commune with Nature used' : 'Cast Commune with Nature Ritual'}</button>}</div>}</div></div></section>;
+}
+
 const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit, onCharacterChange }) => {
   const characterRef = useRef(character);
   useEffect(() => { characterRef.current = character; }, [character]);
@@ -1054,7 +1482,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const isBard = character.class === 'Bard';
   const isChampion = character.class === 'Champion';
   const isCommander = character.class === 'Commander';
-  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander;
+  const isDruid = character.class === 'Druid';
+  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid;
   const isRaging = isBarbarian && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
   const hasUnfathomableStrength = (build?.selectedTalents ?? []).includes('Unfathomable Strength');
   const battlecryShout = featureSelections[BARBARIAN_BATTLECRY_SELECTION] || 'Fortitude Shout';
@@ -1089,10 +1518,19 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
           duration: 'See trait',
           description: `${ancestryGrant.traitDescription}\n\nThe Beta source names this power but does not include it in the published spell catalog.`,
         });
+        else if (grantedSpells.includes(name)) result.push({
+          id: `class-spell|${character.class}|${name}`,
+          name,
+          source: 'Class Feature',
+          school: 'Cantrip / class-granted power',
+          range: 'See class feature',
+          duration: 'See class feature',
+          description: `${character.class === 'Druid' && name === 'Druidcraft' ? 'Wild Speech grants you the Druidcraft Cantrip.' : `${character.class} grants this power.`}\n\nThe Beta source names this power but does not include it in the published spell catalog.`,
+        });
       }
     }
     return result;
-  }, [ancestryGrantedSpells, character.spells, grantedSpells, spellCatalog]);
+  }, [ancestryGrantedSpells, character.class, character.spells, grantedSpells, spellCatalog]);
   const knownManeuvers = useMemo(() => {
     const result = [...character.maneuvers];
     for (const name of grantedManeuvers) {
@@ -1298,6 +1736,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         {isRogue && <RogueControls character={character} onChange={update} onRoll={roll} stealthModifier={skillModifier('Stealth', character.skillMasteries.Stealth ?? 'Untrained')} />}
         {isWarlock && <WarlockControls character={character} onChange={update} />}
         {isCleric && <ClericControls character={character} onChange={update} onRoll={roll} />}
+        {isDruid && <DruidControls character={character} beastTraits={(reference?.ancestryTraits ?? []).filter(({ ancestry, cost }) => ancestry === 'Beastborn' && cost > 0)} onChange={update} onRoll={roll} />}
           </div>
         </details>}
 

@@ -81,6 +81,145 @@ export function talentSlots(className: string, level: number, subclass?: string)
 
 export const BARBARIAN_RAGE_STATE = 'barbarian.rage';
 export const BARD_PERFORMANCE_STATE = 'bard.performance.active';
+export const DRUID_DOMAIN_ACTIVE = 'druid.domain.active';
+export const DRUID_WILD_FORM_ACTIVE = 'druid.wildForm.active';
+export const DRUID_WILD_FORM_FREE_USED = 'druid.wildForm.freeUsed';
+export const DRUID_WILD_FORM_EXPANSION_USED = 'druid.wildForm.expansionUsed';
+export const DRUID_WILD_FORM_EXPANSION_ACTIVE = 'druid.wildForm.expansionActive';
+export const DRUID_WILD_FORM_TRAITS = 'druid.wildForm.activeTraits';
+export const DRUID_WILD_FORM_SKILLS = 'druid.wildForm.skillfulSkills';
+export const DRUID_WILD_FORM_SIZE = 'druid.wildForm.size';
+export const DRUID_WILD_FORM_TYPE = 'druid.wildForm.type';
+export const DRUID_WILD_FORM_DAMAGE = 'druid.wildForm.damage';
+export const DRUID_WILD_FORM_HP = 'druid.wildForm.hp';
+export const DRUID_WILD_FORM_EXTRA_MP = 'druid.wildForm.extraMP';
+export const DRUID_WILD_FORM_ID = 'druid.wildForm.id';
+export const DRUID_WILD_FORM_NAME = 'druid.wildForm.name';
+export const DRUID_NATURE_TORRENT_ACTIVE = 'druid.naturesTorrent.active';
+export const DRUID_BEAST_TRAIT_PREFIX = 'Beast Trait';
+
+export function druidBeastTraitSelection(name: string, cost: number): string {
+  return `${DRUID_BEAST_TRAIT_PREFIX} (${cost}) — ${name}`;
+}
+
+export function druidBeastTraitName(selection: string): string | null {
+  const match = selection.match(/^Beast Trait \((\d+)\) — (.+)$/);
+  return match?.[2] ?? null;
+}
+
+export function druidWildFormTraitCost(selection: string): number {
+  const dedicated = DRUID_WILD_FORM_TRAIT_OPTIONS.find(({ name }) => name === selection);
+  if (dedicated) return dedicated.cost;
+  const match = selection.match(/^Beast Trait \((\d+)\) — .+$/);
+  return match ? Number(match[1]) : 0;
+}
+
+export const DRUID_WILD_FORM_TRAIT_OPTIONS: Array<{
+  name: string;
+  cost: number;
+  description: string;
+  repeatable?: boolean;
+  maximumCount?: number;
+}> = [
+  { name: 'Size — Tiny', cost: 2, description: 'Your size changes to Tiny.' },
+  { name: 'Size — Large', cost: 2, description: 'Your size changes to Large.' },
+  { name: 'Attribute Increase — Might', cost: 1, repeatable: true, description: 'You gain +2 to Might, up to your Attribute Limit.' },
+  { name: 'Attribute Increase — Agility', cost: 1, repeatable: true, description: 'You gain +2 to Agility, up to your Attribute Limit.' },
+  { name: 'Defensive — PD', cost: 1, repeatable: true, description: 'Your PD increases by 2.' },
+  { name: 'Defensive — AD', cost: 1, repeatable: true, description: 'Your AD increases by 2.' },
+  { name: 'Healthy', cost: 1, repeatable: true, description: 'You gain +2 maximum HP.' },
+  ...['Bludgeoning', 'Piercing', 'Slashing', 'Cold', 'Corrosion', 'Fire', 'Lightning', 'Poison'].map((damage) => ({
+    name: `Resistance — ${damage}`,
+    cost: 1,
+    repeatable: true,
+    description: `You gain Resistance (1) to ${damage} damage.`,
+  })),
+  { name: 'Skillful', cost: 1, repeatable: true, description: 'You gain Skill Mastery in 2 eligible Skills, up to your Skill Mastery Cap. A Skill already at the cap gains ADV instead.' },
+  { name: 'Swift', cost: 1, repeatable: true, maximumCount: 5, description: 'Your Speed is increased by 1 Space.' },
+];
+
+export const DRUID_WILD_FORM_SKILL_OPTIONS = [
+  'Acrobatics', 'Animal', 'Athletics', 'Awareness', 'Intimidation', 'Stealth', 'Survival',
+];
+
+export interface DruidWildFormProfile {
+  active: boolean;
+  traitPointBudget: number;
+  traitPointsSpent: number;
+  maximumHP: number;
+  currentHP: number;
+  physicalDefense: number;
+  areaDefense: number;
+  speed: number;
+  size: string;
+  creatureType: string;
+  might: number;
+  agility: number;
+  naturalWeaponDamageType: string;
+  damageTypes: string[];
+  resistances: string[];
+  skillMasteries: string[];
+  beastTraits: string[];
+  physicalDamageReduction: boolean;
+  elementalDamageReduction: boolean;
+  shellRetreatAvailable: boolean;
+  shellRetreatActive: boolean;
+  bleedingImmune: boolean;
+}
+
+/** Live Wild Form statistics; the selected traits are chosen when the Druid transforms. */
+export function druidWildFormProfile(character: Pick<Character, 'class' | 'level' | 'primeModifier' | 'combatMastery' | 'subclass' | 'build'>): DruidWildFormProfile {
+  const build = character.build;
+  const selections = build?.classFeatureSelections?.[DRUID_WILD_FORM_TRAITS] ?? [];
+  const count = (name: string) => selections.filter((selection) => selection === name).length;
+  const beastTraits = selections.map(druidBeastTraitName).filter((name): name is string => Boolean(name));
+  const beastCount = (name: string) => beastTraits.filter((trait) => trait === name).length;
+  const shellRetreatAvailable = beastCount('Shell Retreat') > 0;
+  const shellRetreatActive = shellRetreatAvailable && Boolean(build?.sheetFeatureStates?.['ancestry.shellRetreat.active']);
+  const extraMP = Math.max(0, Math.trunc(build?.sheetFeatureCounters?.[DRUID_WILD_FORM_EXTRA_MP] ?? 0));
+  const expansion = Number(Boolean(build?.sheetFeatureStates?.[DRUID_WILD_FORM_EXPANSION_ACTIVE]));
+  const traitPointBudget = 3 + Number(character.level >= 5) + extraMP * 2 + expansion * 2;
+  const traitPointsSpent = selections.reduce((total, selection) => (
+    total + druidWildFormTraitCost(selection)
+  ), 0);
+  const maximumHP = 3 + Number(character.level >= 5) + count('Healthy') * 2 + beastCount('Tough');
+  const baseSize = build?.sheetFeatureSelections?.[DRUID_WILD_FORM_SIZE] ?? 'Medium';
+  const size = count('Size — Tiny') > 0 ? 'Tiny' : count('Size — Large') > 0 ? 'Large' : baseSize;
+  const creatureType = build?.sheetFeatureSelections?.[DRUID_WILD_FORM_TYPE] ?? 'Beast';
+  const selectedDamage = build?.sheetFeatureSelections?.[DRUID_WILD_FORM_DAMAGE] ?? 'Bludgeoning';
+  const resistances = selections.filter((selection) => selection.startsWith('Resistance — '))
+    .map((selection) => `${selection.slice('Resistance — '.length)} (1)`);
+  if (beastCount('Cold Resistance')) resistances.push('Cold Resistance (Half)');
+  if (beastCount('Fire Resistance')) resistances.push('Fire Resistance (Half)');
+  if (beastCount('Toxic Fortitude')) resistances.push('Poison Resistance (Half)');
+  if (character.subclass === 'Phoenix' && creatureType === 'Elemental (Fire)') resistances.push('Fire (1)');
+  return {
+    active: character.class === 'Druid' && Boolean(build?.sheetFeatureStates?.[DRUID_WILD_FORM_ACTIVE]),
+    traitPointBudget,
+    traitPointsSpent,
+    maximumHP,
+    currentHP: Math.min(maximumHP, Math.max(0, Math.trunc(build?.sheetFeatureCounters?.[DRUID_WILD_FORM_HP] ?? maximumHP))),
+    physicalDefense: 8 + character.combatMastery + character.primeModifier + count('Defensive — PD') * 2
+      + beastCount('Quick Reactions') + Number(shellRetreatActive) * 5,
+    areaDefense: 8 + character.combatMastery + character.primeModifier + count('Defensive — AD') * 2
+      + beastCount('Thick-Skinned') + beastCount('Hard Shell') + Number(shellRetreatActive) * 5,
+    speed: shellRetreatActive ? 0 : Math.max(0, 5 + count('Swift') + beastCount('Speed Increase') - beastCount('Hard Shell')),
+    size,
+    creatureType,
+    might: Math.min(attributeCap(character.level), 1 + count('Attribute Increase — Might') * 2),
+    agility: Math.min(attributeCap(character.level), 1 + count('Attribute Increase — Agility') * 2),
+    naturalWeaponDamageType: selectedDamage,
+    damageTypes: Array.from(new Set(['Bludgeoning', 'Piercing', 'Slashing', ...(character.subclass === 'Phoenix' ? ['Fire'] : []), ...(character.subclass === 'Rampant Growth' ? ['Poison'] : [])])),
+    resistances: Array.from(new Set(resistances)),
+    skillMasteries: (build?.classFeatureSelections?.[DRUID_WILD_FORM_SKILLS] ?? []).slice(0, count('Skillful') * 2),
+    beastTraits,
+    physicalDamageReduction: beastCount('Natural Armor') > 0 || shellRetreatActive,
+    elementalDamageReduction: shellRetreatActive,
+    shellRetreatAvailable,
+    shellRetreatActive,
+    bleedingImmune: character.subclass === 'Rampant Growth' && creatureType === 'Plant',
+  };
+}
 
 export interface CharacterSheetEffects {
   physicalDefense: number;
@@ -304,6 +443,7 @@ export function grantedClassSpellNames(character: Pick<Character, 'class' | 'lev
     const magicDomains = (choices['cleric.domains'] ?? []).filter((domain) => domain === 'Magic').length;
     return Array.from(new Set((choices['cleric.magicDomainSpells'] ?? []).slice(0, magicDomains).filter(Boolean)));
   }
+  if (character.class === 'Druid') return ['Druidcraft'];
   if (character.class !== 'Summoner') return [];
   const groups = [
     'summoner.bondedSummon',
@@ -487,12 +627,23 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
   let restPoints = Math.min(character.maxHealthPoints, available - spent + flameRuneRecovery);
   let sheetFeatureStates = { ...build.sheetFeatureStates };
   let sheetFeatureCounters = { ...build.sheetFeatureCounters };
+  let sheetFeatureSelections = { ...build.sheetFeatureSelections };
+  let classFeatureSelections = { ...build.classFeatureSelections };
   const sheetConditionLevels = { ...build.sheetConditionLevels };
 
   if (type === 'Long') {
     restPoints = character.maxHealthPoints;
     sheetFeatureStates = Object.fromEntries(Object.keys(sheetFeatureStates).map((key) => [key, false]));
     sheetFeatureCounters = {};
+    if (character.class === 'Druid') {
+      classFeatureSelections = { ...classFeatureSelections, [DRUID_WILD_FORM_TRAITS]: [], [DRUID_WILD_FORM_SKILLS]: [] };
+      sheetFeatureSelections = { ...sheetFeatureSelections };
+      delete sheetFeatureSelections[DRUID_WILD_FORM_SIZE];
+      delete sheetFeatureSelections[DRUID_WILD_FORM_TYPE];
+      delete sheetFeatureSelections[DRUID_WILD_FORM_DAMAGE];
+      delete sheetFeatureSelections[DRUID_WILD_FORM_ID];
+      delete sheetFeatureSelections[DRUID_WILD_FORM_NAME];
+    }
     delete sheetConditionLevels.Doomed;
   }
 
@@ -510,6 +661,9 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
       sheetConditionLevels,
       sheetFeatureStates,
       sheetFeatureCounters,
+      sheetFeatureSelections,
+      classFeatureSelections,
+      druidWildForms: type === 'Long' && character.class === 'Druid' ? [] : build.druidWildForms,
     },
   };
 }
@@ -1060,6 +1214,7 @@ export function defaultBuild(): CharacterBuildData {
     sheetFeatureCounters: {},
     characterNotes: [],
     sheetCompanions: [],
+    druidWildForms: [],
     rollAdjustment: 0,
     isFinalized: false,
   };

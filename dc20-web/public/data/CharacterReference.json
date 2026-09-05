@@ -4096,135 +4096,6 @@
           ],
           "prompt" : "You learn the Druidcraft Cantrip. Choose 1 Wild Speech option.",
           "title" : "Connection to Nature"
-        },
-        {
-          "feature" : "Wild Form",
-          "id" : "druid.wildFormTraits",
-          "level" : 1,
-          "limit" : 4,
-          "options" : [
-            {
-              "description" : "Unique Trait. Your size changes to Tiny or Large (your choice).",
-              "isRepeatable" : false,
-              "name" : "Size",
-              "pointCost" : 2
-            },
-            {
-              "description" : "You gain +2 to Might, up to your Attribute Limit.",
-              "isRepeatable" : true,
-              "name" : "Attribute Increase — Might",
-              "pointCost" : 1
-            },
-            {
-              "description" : "You gain +2 to Agility, up to your Attribute Limit.",
-              "isRepeatable" : true,
-              "name" : "Attribute Increase — Agility",
-              "pointCost" : 1
-            },
-            {
-              "description" : "Your PD increases by 2.",
-              "isRepeatable" : true,
-              "name" : "Defensive — PD",
-              "pointCost" : 1
-            },
-            {
-              "description" : "Your AD increases by 2.",
-              "isRepeatable" : true,
-              "name" : "Defensive — AD",
-              "pointCost" : 1
-            },
-            {
-              "description" : "You gain +2 maximum HP.",
-              "isRepeatable" : true,
-              "name" : "Healthy",
-              "pointCost" : 1
-            },
-            {
-              "description" : "You gain Resistance (1) to Bludgeoning damage.",
-              "isRepeatable" : true,
-              "name" : "Resistance — Bludgeoning",
-              "pointCost" : 1
-            },
-            {
-              "description" : "You gain Resistance (1) to Piercing damage.",
-              "isRepeatable" : true,
-              "name" : "Resistance — Piercing",
-              "pointCost" : 1
-            },
-            {
-              "description" : "You gain Resistance (1) to Slashing damage.",
-              "isRepeatable" : true,
-              "name" : "Resistance — Slashing",
-              "pointCost" : 1
-            },
-            {
-              "description" : "You gain Resistance (1) to Cold damage.",
-              "isRepeatable" : true,
-              "name" : "Resistance — Cold",
-              "pointCost" : 1
-            },
-            {
-              "description" : "You gain Resistance (1) to Corrosion damage.",
-              "isRepeatable" : true,
-              "name" : "Resistance — Corrosion",
-              "pointCost" : 1
-            },
-            {
-              "description" : "You gain Resistance (1) to Fire damage.",
-              "isRepeatable" : true,
-              "name" : "Resistance — Fire",
-              "pointCost" : 1
-            },
-            {
-              "description" : "You gain Resistance (1) to Lightning damage.",
-              "isRepeatable" : true,
-              "name" : "Resistance — Lightning",
-              "pointCost" : 1
-            },
-            {
-              "description" : "You gain Resistance (1) to Poison damage.",
-              "isRepeatable" : true,
-              "name" : "Resistance — Poison",
-              "pointCost" : 1
-            },
-            {
-              "description" : "You gain Skill Mastery in 2 of the listed Skills, up to your Skill Mastery Cap. If a chosen Skill is already at the cap, you instead gain ADV on the Check.",
-              "isRepeatable" : true,
-              "name" : "Skillful",
-              "pointCost" : 1
-            },
-            {
-              "description" : "Your Speed is increased by 1 Space.",
-              "isRepeatable" : true,
-              "maximumCount" : 5,
-              "name" : "Swift",
-              "pointCost" : 1
-            }
-          ],
-          "prompt" : "Spend your Wild Form’s 4 baseline Trait Points. Expert Druid grants the fourth point; MP enhancements and Wild Form Expansion are chosen when you transform.",
-          "title" : "Baseline Wild Form Traits"
-        },
-        {
-          "feature" : "Wild Form",
-          "id" : "druid.wildFormSize",
-          "level" : 1,
-          "limit" : 1,
-          "options" : [
-            {
-              "description" : "Your Wild Form is Small.",
-              "isRepeatable" : false,
-              "name" : "Small",
-              "pointCost" : 1
-            },
-            {
-              "description" : "Your Wild Form is Medium.",
-              "isRepeatable" : false,
-              "name" : "Medium",
-              "pointCost" : 1
-            }
-          ],
-          "prompt" : "The Wild Form Stat Block is Small or Medium (your choice).",
-          "title" : "Wild Form Size"
         }
       ],
       "description" : "Druids tap into the power of nature, drawing upon the energies that flow through the world and creatures around them. and connect to plants, animals, and the plane itself. They can channel both the restorative and destructive forces of nature and shapeshift into wild beasts.\n\nSource of Power: A Druid’s connection to nature can come from a deep respect, love, and appreciation of the natural world. Some Druids are blessed by a god or spirit of nature, granting them innate magical abilities. Others immerse themselves in nature by living in the wild, communing with the land and creatures to gain power and insight. They can sense and connect to nature and use its magic as their own.",
@@ -4393,42 +4264,51 @@
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ],
         "Phoenix" : [
           {
             "description" : "You wield the power of fire to lay destruction to what exists and foster new life. You gain the following benefits:\n\nFiery Form: When you use your Wild Form, you can choose for your creature type to become Elemental (Fire) instead of Beast. Additionally, your Wild Forms gain Fire Resistance (1) and you can choose Fire as the damage type of your Wild Form’s Natural Weapon.\n\nCleansing Flames: When a creature within your Druid Domain is Healed by one of your MP effects, you can cure it of a Basic Poison or Basic Disease ailing it or remove one of the following Conditions from it: Impaired, Dazed, or Burning.\n\nRolling Wild Fire: Creatures of your choice take 1 Fire damage for each Space they move within your Druid Domain, or if they start their turn within your Domain.",
+            "level" : 3,
             "name" : "Flames of Rebirth"
           },
           {
             "description" : "You are unaffected by cold weather conditions and can bring a gallon (4 liters) of liquid to a boil after making physical contact with it or its container for 1 minutes.",
+            "level" : 3,
             "name" : "Fire Within (Flavor Feature)"
           }
         ],
         "Rampant Growth" : [
           {
             "description" : "You gain the following benefits:\n\nPlant Form: When you use your Wild Form, you can choose for your creature type to become Plant instead of Beast. Additionally, your Wild Forms become immune to Bleeding and you can choose Poison as the damage type of your Wild Form’s Natural Weapon.\n\nVineguard: Plant-life in your Domain swirls to protect and support you. Creatures of your choice within your Domain gain the benefits of 1/2 Cover.\n\nThorny Grasp: When a creature fails a Save against your Nature’s Grasp, it begins Bleeding.",
+            "level" : 3,
             "name" : "Overgrowth"
           },
           {
             "description" : "You can magically produce the seeds of any mundane plant that you’ve ever touched.",
+            "level" : 3,
             "name" : "Seed Vault (Flavor Feature)"
           }
         ]

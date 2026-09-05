@@ -247,6 +247,64 @@ function fluencySpent(values: Record<string, LanguageFluency>, freeNames: string
   return Object.entries(values).reduce((sum, [name, value]) => sum + (free.has(name) ? 0 : fluencyRank(value)), 0);
 }
 
+function trimMasteriesToBudget(
+  values: Record<string, MasteryLevel>,
+  budget: number,
+  displayOrder: string[],
+): Record<string, MasteryLevel> {
+  const next = { ...values };
+  let spent = masterySpent(next);
+  const removalOrder = [...displayOrder].reverse();
+  while (spent > Math.max(0, budget)) {
+    const name = removalOrder.find((candidate) => masteryRank(next[candidate]) > 0);
+    if (!name) break;
+    const rank = masteryRank(next[name]);
+    next[name] = masteryTitle(rank - 1);
+    spent -= 1;
+  }
+  return next;
+}
+
+function trimLanguagesToBudget(
+  values: Record<string, LanguageFluency>,
+  budget: number,
+  freeNames: string[],
+  displayOrder: string[],
+): Record<string, LanguageFluency> {
+  const next = { ...values };
+  const free = new Set(freeNames);
+  let spent = fluencySpent(next, freeNames);
+  const removalOrder = [...displayOrder].reverse();
+  while (spent > Math.max(0, budget)) {
+    const name = removalOrder.find((candidate) => !free.has(candidate) && fluencyRank(next[candidate] ?? 'Untrained') > 0);
+    if (!name) break;
+    const rank = fluencyRank(next[name]);
+    next[name] = LANGUAGE_FLUENCIES[rank - 1] ?? 'Untrained';
+    spent -= 1;
+  }
+  return next;
+}
+
+function ConversionStepper({
+  label,
+  value,
+  description,
+  decrementDisabled,
+  incrementDisabled,
+  onDecrement,
+  onIncrement,
+}: {
+  label: string;
+  value: number;
+  description: string;
+  decrementDisabled: boolean;
+  incrementDisabled: boolean;
+  onDecrement: () => void;
+  onIncrement: () => void;
+}) {
+  return <div className="rounded-xl border border-white/10 bg-slate-950/50 p-3"><div className="text-sm font-bold text-slate-300">{label}</div><div className="mt-3 flex items-center justify-between gap-3"><button type="button" aria-label={`Decrease ${label}`} disabled={decrementDisabled} onClick={onDecrement} className="h-10 w-10 rounded-lg bg-slate-800 text-lg font-black text-slate-100 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-35">−</button><span className="min-w-10 text-center text-2xl font-black text-violet-200" aria-live="polite">{value}</span><button type="button" aria-label={`Increase ${label}`} disabled={incrementDisabled} onClick={onIncrement} className="h-10 w-10 rounded-lg bg-violet-700 text-lg font-black text-white hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-35">+</button></div><span className="mt-2 block text-xs leading-5 text-slate-500">{description}</span></div>;
+}
+
 function assignedAttributes(
   pool: number[],
   assignments: Array<DC20Attribute | null>,
@@ -492,6 +550,51 @@ const CharacterBuilderView: React.FC<{
     setPathChoices((current) => Object.fromEntries(Object.entries(current).filter(([pathLevel]) => validPathLevels.has(pathLevel))));
   };
   const setLevel = changeLevel;
+
+  const adjustSkillConversion = (direction: -1 | 1) => {
+    if (!derived || !reference) return;
+    if (direction > 0) {
+      if (skillSpent >= derived.skillPointBudget) return;
+      setSkillConversion((current) => current + 1);
+      return;
+    }
+    if (skillConversion <= 0) return;
+
+    const nextSkillConversion = skillConversion - 1;
+    const nextTradePoolBeforeConversion = Math.max(0, derived.tradePointBudget + tradeConversion - 2);
+    const nextTradeConversion = Math.min(tradeConversion, nextTradePoolBeforeConversion);
+    const nextTradeBudget = Math.max(0, nextTradePoolBeforeConversion - nextTradeConversion);
+    setSkillConversion(nextSkillConversion);
+    setTradeConversion(nextTradeConversion);
+    setTradeMasteries((current) => trimMasteriesToBudget(current, nextTradeBudget, reference.trades.map(({ name: tradeName }) => tradeName)));
+    if (nextTradeConversion < tradeConversion) {
+      setLanguageFluencies((current) => trimLanguagesToBudget(
+        current,
+        2 + nextTradeConversion * 2,
+        ['Common', ...grantedLanguages],
+        reference.languages.map(({ name: languageName }) => languageName),
+      ));
+    }
+  };
+
+  const adjustTradeConversion = (direction: -1 | 1) => {
+    if (!derived || !reference) return;
+    if (direction > 0) {
+      if (tradeSpent >= derived.tradePointBudget) return;
+      setTradeConversion((current) => current + 1);
+      return;
+    }
+    if (tradeConversion <= 0) return;
+
+    const nextTradeConversion = tradeConversion - 1;
+    setTradeConversion(nextTradeConversion);
+    setLanguageFluencies((current) => trimLanguagesToBudget(
+      current,
+      Math.max(0, derived.languagePointBudget - 2),
+      ['Common', ...grantedLanguages],
+      reference.languages.map(({ name: languageName }) => languageName),
+    ));
+  };
 
   const choosePathProgression = (pathLevel: number, path: CharacterPathChoice) => {
     const next = { ...pathChoices, [String(pathLevel)]: path };
@@ -1006,7 +1109,7 @@ const CharacterBuilderView: React.FC<{
             {className === 'Rogue' && <div className="mb-6 rounded-xl border border-violet-400/25 bg-violet-500/10 p-4 text-sm leading-6 text-violet-100"><strong>Roguish Finesse — Skill Expertise:</strong> your Skill Mastery Limit is {masteryTitle(skillMasteryMaximum)} (+{skillMasteryMaximum * 2}), one stage above the normal level cap. Trade Mastery remains capped at {masteryTitle(tradeMasteryMaximum)} (+{tradeMasteryMaximum * 2}).</div>}
             {clericHasKnowledgeDomain && <div className="mb-6 rounded-xl border border-amber-400/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100"><strong>Knowledge Domain:</strong> you have 2 additional Skill Points, and the Mastery Limit of every Knowledge Trade is one stage higher. It does not stack with another Feature that raises the same Trade’s limit.</div>}
             <div className="mb-6 grid gap-4 lg:grid-cols-2"><label className="text-sm font-bold text-slate-300">Background Name<input value={backgroundName} onChange={(event) => setBackgroundName(event.target.value)} className={`${fieldClass} mt-2`} placeholder="Scholar, sailor, artisan…" /></label><label className="text-sm font-bold text-slate-300">Background Story<textarea value={backgroundStory} onChange={(event) => setBackgroundStory(event.target.value)} rows={3} className={`${fieldClass} mt-2`} placeholder="Where did this character come from?" /></label></div>
-            <div className="mb-6 grid gap-3 sm:grid-cols-3"><label className="rounded-xl border border-white/10 bg-slate-950/50 p-3 text-sm text-slate-400">Skill → Trade conversions<input type="number" min={0} max={derived?.skillPointBudget ?? 0} value={skillConversion} onChange={(event) => setSkillConversion(Math.max(0, Number(event.target.value)))} className={`${fieldClass} mt-2`} /><span className="mt-2 block text-xs">Each Skill Point becomes 2 Trade Points.</span></label><label className="rounded-xl border border-white/10 bg-slate-950/50 p-3 text-sm text-slate-400">Trade → Language conversions<input type="number" min={0} value={tradeConversion} onChange={(event) => setTradeConversion(Math.max(0, Number(event.target.value)))} className={`${fieldClass} mt-2`} /><span className="mt-2 block text-xs">Each Trade Point becomes 2 Language Points.</span></label><div className="grid grid-cols-3 gap-2"><Metric label="Skills" value={`${skillSpent}/${derived?.skillPointBudget ?? 0}`} /><Metric label="Trades" value={`${tradeSpent}/${derived?.tradePointBudget ?? 0}`} /><Metric label="Languages" value={`${languageSpent}/${derived?.languagePointBudget ?? 0}`} /></div></div>
+            <div className="mb-6 grid gap-3 sm:grid-cols-3"><ConversionStepper label="Skill → Trade conversions" value={skillConversion} description="Each Skill Point becomes 2 Trade Points. Decreasing this automatically releases Trade selections that no longer fit." decrementDisabled={skillConversion <= 0} incrementDisabled={!derived || skillSpent >= derived.skillPointBudget} onDecrement={() => adjustSkillConversion(-1)} onIncrement={() => adjustSkillConversion(1)} /><ConversionStepper label="Trade → Language conversions" value={tradeConversion} description="Each Trade Point becomes 2 Language Points. Decreasing this automatically releases Language fluency that no longer fits." decrementDisabled={tradeConversion <= 0} incrementDisabled={!derived || tradeSpent >= derived.tradePointBudget} onDecrement={() => adjustTradeConversion(-1)} onIncrement={() => adjustTradeConversion(1)} /><div className="grid grid-cols-3 gap-2"><Metric label="Skills" value={`${skillSpent}/${derived?.skillPointBudget ?? 0}`} /><Metric label="Trades" value={`${tradeSpent}/${derived?.tradePointBudget ?? 0}`} /><Metric label="Languages" value={`${languageSpent}/${derived?.languagePointBudget ?? 0}`} /></div></div>
             <div className="space-y-5">{reference.skillGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-violet-300">{group.name} Skills</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((skillName) => { const item = reference.skills.find(({ name: candidate }) => candidate === skillName)!; const value = skillMasteries[skillName] ?? 'Untrained'; const pointsAvailable = Math.max(0, (derived?.skillPointBudget ?? 0) - skillSpent + masteryRank(value)); return <InfoDetails key={skillName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span>{skillName}</span><span onClick={(event) => event.stopPropagation()}><MasteryPicker value={value} maximum={Math.min(5, skillMasteryMaximum + (expertise.skills[skillName] ?? 0))} bonus={expertise.skills[skillName] ?? 0} pointsAvailable={pointsAvailable} onChange={(next) => setSkillMasteries((current) => ({ ...current, [skillName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-violet-300">{item.attribute}</p>{item.description}</InfoDetails>; })}</div></div>)}
               {reference.tradeGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-fuchsia-300">{group.name} Trades</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((tradeName) => { const item = reference.trades.find(({ name: candidate }) => candidate === tradeName)!; const value = tradeMasteries[tradeName] ?? 'Untrained'; const pointsAvailable = Math.max(0, (derived?.tradePointBudget ?? 0) - tradeSpent + masteryRank(value)); return <InfoDetails key={tradeName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span className="flex flex-wrap items-center gap-2">{tradeName}<span className="rounded-full bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-fuchsia-300">{item.attribute}</span></span><span onClick={(event) => event.stopPropagation()}><MasteryPicker value={value} maximum={Math.min(5, tradeMasteryMaximum + Math.max(expertise.trades[tradeName] ?? 0, clericHasKnowledgeDomain && group.name === 'Knowledge' ? 1 : 0))} bonus={expertise.trades[tradeName] ?? 0} pointsAvailable={pointsAvailable} onChange={(next) => setTradeMasteries((current) => ({ ...current, [tradeName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-fuchsia-300">{item.attribute} • {item.tool}</p>{item.description}</InfoDetails>; })}</div></div>)}
               {reference.languageGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-sky-300">{group.name} Languages</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((languageName) => { const item = reference.languages.find(({ name: candidate }) => candidate === languageName)!; const value = effectiveLanguageFluencies[languageName] ?? 'Untrained'; const isClassGranted = grantedLanguages.includes(languageName); const isFree = languageName === 'Common' || isClassGranted; const pointsAvailable = Math.max(0, (derived?.languagePointBudget ?? 0) - languageSpent + (isFree ? 0 : fluencyRank(value))); const classGrantName = className === 'Rogue' ? 'Cypher Speech' : className === 'Warlock' ? 'Alien Comprehension' : 'Class Feature'; return <InfoDetails key={languageName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span>{languageName}{isFree && <span className="ml-2 text-xs text-emerald-300">Free • Fluent{isClassGranted ? ` • ${classGrantName}` : ''}</span>}</span><span onClick={(event) => event.stopPropagation()}><LanguageFluencyPicker value={isFree ? 'Fluent' : value} pointsAvailable={pointsAvailable} isFree={isFree} onChange={(next) => setLanguageFluencies((current) => ({ ...current, [languageName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-sky-300">Typical speakers: {item.typicalSpeakers}</p><p className="mb-2 text-xs text-slate-500">Limited speakers make a Language Check when precise understanding or communication matters. Fluent speakers read, write, and speak without that check.</p>{item.description}</InfoDetails>; })}</div></div>)}

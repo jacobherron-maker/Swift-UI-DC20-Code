@@ -255,6 +255,20 @@ export interface CharacterCompanion {
   notes: string;
 }
 
+/** A Druid Wild Form remains available with its own HP and Traits until it reaches 0 HP or the Druid Long Rests. */
+export interface DruidWildFormRecord {
+  id: string;
+  name: string;
+  size: string;
+  creatureType: string;
+  naturalWeaponDamageType: string;
+  traits: string[];
+  skillMasteries: string[];
+  currentHP: number;
+  extraMP: number;
+  expansionApplied: boolean;
+}
+
 export interface CharacterBuildData {
   attributeMethod: AttributeSelectionMethod;
   rolledAttributeResults: number[];
@@ -300,6 +314,8 @@ export interface CharacterBuildData {
   sheetFeatureCounters: Record<string, number>;
   characterNotes: CampaignNote[];
   sheetCompanions?: CharacterCompanion[];
+  /** Persistent, independently damaged Wild Forms currently available to a Druid. */
+  druidWildForms?: DruidWildFormRecord[];
   rollAdjustment: number;
   isFinalized: boolean;
 }
