@@ -5129,7 +5129,7 @@
           "feature" : "Monk Training",
           "id" : "monk.ironPalm",
           "level" : 1,
-          "limit" : 2,
+          "limit" : 1,
           "options" : [
             {
               "description" : "Iron Palm can perform the Axe Weapon Enhancement: Bleed — the target makes a Repeated Physical Save; on a failure, it begins Bleeding.",
@@ -5180,14 +5180,14 @@
               "pointCost" : 1
             }
           ],
-          "prompt" : "Choose the Melee Weapon Style your Natural Weapons can perform.",
+          "prompt" : "Choose 1 Melee Weapon Style at level 1. Expert Monk grants 1 additional style at level 5.",
           "title" : "Iron Palm Weapon Style"
         },
         {
           "feature" : "Monk Stance",
           "id" : "monk.stances",
           "level" : 1,
-          "limit" : 3,
+          "limit" : 2,
           "options" : [
             {
               "description" : "• You deal +1 damage on Heavy Hits (or higher) and Critical Hits on Martial Attacks made using Unarmed Strikes or Melee Weapons.\n• When you Miss using a Melee Martial Attack, you gain ADV on the next Melee Martial Attack you make before the end of your turn. You can only gain this benefit once on each of your turns.",
@@ -5441,43 +5441,52 @@
       "subclassFeatures" : {
         "Astral Self" : [
           {
-            "description" : "Astral Damage: When you gain this feature, choose a Mystical damage type. This damage type is your Astral Damage. During Combat, you can spend 1 AP and 1 SP to manifest a portion of your astral self for 1 minute. For the duration, you gain the following benefits:\n• Astral Arms: You manifest 2 astral arms that can only be used to make Unarmed Strikes. They can’t otherwise interact with creatures or objects. Attacks made using these Astral Arms have the Reach property, deal Astral Damage instead of the normal damage type, and can target PD or AD (choose for each Attack).\n• Astral Deflection: You can now use Deflect Attack on Ranged Attacks that miss any target within 2 Spaces. Ending Early: The effect ends early if you fall Unconscious, die, or choose to end it for free.",
+            "description" : "Astral Damage: When you gain this feature, choose a Mystical damage type. This damage type is your Astral Damage.\n\nDuring Combat, you can spend 1 AP and 1 SP to manifest a portion of your astral self for 1 minute. For the duration, you gain the following benefits:\n• Astral Arms: You manifest 2 astral arms that can only be used to make Unarmed Strikes. They can’t otherwise interact with creatures or objects. Attacks made using these Astral Arms have the Reach property, deal Astral Damage instead of the normal damage type, and can target PD or AD (choose for each Attack).\n• Astral Deflection: You can now use Deflect Attack on Ranged Attacks that miss any target within 2 Spaces.\n\nEnding Early: The effect ends early if you fall Unconscious, die, or choose to end it for free.",
+            "level" : 3,
             "name" : "Astral Awakening"
           },
           {
             "description" : "While Unconscious, your astral self remains aware of your surroundings. You can hold conversations with nearby creatures as if you were awake. While sleeping normally, you can choose to wake yourself up at any time.",
+            "level" : 3,
             "name" : "Astral Watch (Flavor Feature)"
           }
         ],
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ],
         "Shifting Tide" : [
           {
             "description" : "You gain the following benefits:\n\nEbb: When you enter a new Monk Stance, you gain 2 Spaces of movement.\n\nFlow: When you use your Uncanny Dodge against a Melee Attack, you can spend 1 AP to make an Opportunity Attack against the Attacker, provided they’re within range.\n\nChanging Tides: You can use your Deflect Attack on Melee Martial Attacks from Large or smaller creatures. When you do, you can redirect the Attack to another target within 1 Space of you.",
+            "level" : 3,
             "name" : "Ebb and Flow"
           },
           {
             "description" : "You can move through Spaces as if you were one size Smaller.",
+            "level" : 3,
             "name" : "Fluid Movement (Flavor Feature)"
           }
         ]

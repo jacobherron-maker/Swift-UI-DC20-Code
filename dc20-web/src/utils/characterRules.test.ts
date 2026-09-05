@@ -12,6 +12,7 @@ import {
   ancestryTraitRulesTags,
   ancestryTraitSelectionCount,
   ancestryTraitSource,
+  applyMonkStaminaSpendRecovery,
   applyDerivedCharacter,
   attributeCap,
   barbarianStaminaRegenAmount,
@@ -53,6 +54,18 @@ import {
   hunterFavoredTerrainNames,
   hunterStaminaRegenAmount,
   masteryCap,
+  MONK_ACTIVE_STANCE,
+  MONK_COBRA_REVENGE,
+  MONK_FLURRY_USED,
+  MONK_KI_CURRENT,
+  MONK_MEDITATION_PENDING,
+  MONK_MEDITATION_SKILL,
+  MONK_MONGOOSE_FLANKED,
+  MONK_STANCE_ACTIVE,
+  monkKiMaximum,
+  monkKiRecoveryAmount,
+  monkMeleeHeavyHitDamageBonus,
+  monkStaminaRegenAmount,
   rogueCheapShotDamage,
   rogueStaminaRegenAmount,
   resetCharacterTurn,
@@ -74,6 +87,7 @@ const warlock = reference.classes.find(({ name }) => name === 'Warlock')!;
 const cleric = reference.classes.find(({ name }) => name === 'Cleric')!;
 const druid = reference.classes.find(({ name }) => name === 'Druid')!;
 const hunter = reference.classes.find(({ name }) => name === 'Hunter')!;
+const monk = reference.classes.find(({ name }) => name === 'Monk')!;
 const wizard = reference.classes.find(({ name }) => name === 'Wizard')!;
 const equipmentCatalog = equipmentDocument as EquipmentCatalogItem[];
 
@@ -1655,5 +1669,142 @@ describe('Hunter Beta 0.10.5 source audit', () => {
       ['Expert Paragon', 7],
       ['Master Paragon', 10],
     ]);
+  });
+});
+
+describe('Monk Beta 0.10.5 source audit', () => {
+  const feature = (level: number, name: string) => monk.features
+    .find((entry) => entry.level === level)?.features.find((entry) => entry.name === name)?.description;
+
+  it('matches every row of the published Monk class table', () => {
+    expect(monk.tableRows.map((row) => ({
+      level: row.level,
+      health: row.health,
+      attribute: row.attribute,
+      skill: row.skill,
+      trade: row.trade,
+      stamina: row.stamina,
+      maneuvers: row.maneuvers,
+      features: row.features,
+    }))).toEqual([
+      { level: 1, health: 8, attribute: undefined, skill: undefined, trade: undefined, stamina: 2, maneuvers: 2, features: 'Class Features' },
+      { level: 2, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Class Feature, Talent, Path Progression' },
+      { level: 3, health: 2, attribute: 1, skill: 1, trade: 1, stamina: 1, maneuvers: 1, features: 'Subclass Feature' },
+      { level: 4, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 5, health: 2, attribute: 1, skill: 2, trade: 1, stamina: undefined, maneuvers: 1, features: 'Class Feature' },
+      { level: 6, health: 2, attribute: undefined, skill: 1, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Talent, Path Progression' },
+      { level: 7, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: 1, maneuvers: 1, features: 'Subclass Expert Feature' },
+      { level: 8, health: 2, attribute: 1, skill: 1, trade: 1, stamina: undefined, maneuvers: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 9, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: 1, maneuvers: 1, features: 'Class Capstone Feature' },
+      { level: 10, health: 2, attribute: 1, skill: 2, trade: 1, stamina: 1, maneuvers: 1, features: 'Subclass Capstone Feature' },
+    ]);
+  });
+
+  it('preserves the complete published Monk Training, Spiritual Balance, and Expert Monk wording', () => {
+    expect(feature(1, 'Monk Training')).toBe('Your martial arts training grants you greater offense, defense, and movement.\n\nIron Palm: Choose a Melee Weapon Style when you gain this Feature. Your limbs are considered Natural Weapons that deal 2 Bludgeoning damage and can perform the Weapon Enhancement of the chosen Weapon Style.\n\nDC Tip: Your hands are Natural Weapons that count as Melee Weapons Weapons for the purposes of Dual Wielding and abilities that require a Melee Weapon.\n\nPatient Defense: While you aren’t wearing Armor, you gain +2 PD.\n\nStep of the Wind: You gain the following benefits:\n• You gain +1 Speed and Jump Distance.\n• You can move a number of Spaces up to your Speed along vertical surfaces and across liquids without falling during your move.\n• You can use your Prime Modifier instead of Agility to determine your Jump Distance and the damage you take from Falling.');
+    expect(feature(2, 'Spiritual Balance')).toBe('You gain the power to harness your inner spirit as a counterbalance against your physical energy.\n\nKi Points\nYou have a maximum number of Ki Points equal to your Stamina Points. When your Stamina Point maximum increases, your Ki Point maximum increases equally.\n\nRegaining Ki: When you spend a Stamina Point on your turn, you regain a Ki Point. You regain all spent Ki Points when Combat ends.\n\nKi Actions\nYou can spend Ki Points to perform the Reactions listed below:\n\nDeflect Attack: When a creature misses you with a Ranged Martial Attack that targets your PD, you can spend 1 or more Ki Points and use a free hand to redirect the Attack at a different creature you can see within 5 Spaces. Make an Attack Check against the new target’s PD. Hit: The new target takes an amount of damage equal to the Ki Points spent. The damage type is the same as the triggering Attack.\n\nDC Tip: Remember that the original target is who makes the Save against any effects from the attack, so Deflect Attack doesn’t protect them from that.\n\nSlow Fall: When you take damage from falling, you can spend 1 or more Ki Points to reduce the damage by an amount equal to the Ki Points spent.\n\nUncanny Dodge: When a creature makes an Attack against you, you can spend 1 Ki Point to impose DisADV on the attack.');
+    expect(feature(5, 'Expert Monk')).toBe('You gain the following benefits for your Monk Class Features.\n\nMonk Training\nIron Palm: Choose an additional Melee Weapon Style. When you make an Attack with an Unarmed Strike, you can use both Weapon Enhancements.\n\nStep of the Wind: You gain an additional +1 Speed and Jump Distance.\n\nMonk Stances\nYou learn 1 additional Monk Stance.\n\nSpiritual Balance\nYour Ki Point maximum increases by 1. Whenever you regain Ki Points, you regain half of your maximum Ki instead.');
+  });
+
+  it('preserves Monk training, starting equipment, stance catalog, and every published class Talent', () => {
+    expect(monk.pathDetails).toBe('Combat Training: Weapons, Light Armor\n\nManeuvers: The number of Maneuvers you know increases as shown in the Maneuvers Known column of the Monk Class Table.\n\nStamina Points: Your maximum number of Stamina Points increases as shown in the Stamina Points column of the Monk Class Table.\n\nStamina Regen: Once per Round, you can regain up to half your maximum SP when you succeed on an Athletics Check, Acrobatics Check, or Hit on a Martial Attack.');
+    expect(monk.startingEquipment.description).toBe('Arsenal: 2 Weapons.\nArmor: 1 set of Light Armor.\nTrade Tools: Choose 2 of any of the following items:\nBrewer’s Supplies, Calligrapher’s Supplies, Cooking Utensils, or Weaver’s Tools.\nAdventuring Pack: Choose 1 of the following packs:\n(Adventuring Packs Coming Soon).');
+    expect(monk.choiceGroups.find(({ id }) => id === 'monk.stances')?.options.map(({ name }) => name)).toEqual([
+      'Bear Stance', 'Bull Stance', 'Cobra Stance', 'Gazelle Stance', 'Mantis Stance', 'Mongoose Stance', 'Scorpion Stance', 'Turtle Stance', 'Wolf Stance',
+    ]);
+    expect(monk.talents.slice(-3).map(({ name, minimumLevel }) => [name, minimumLevel])).toEqual([
+      ['Expanded Stances', 1],
+      ['Internal Damage', 3],
+      ['Steel Fist', 3],
+    ]);
+  });
+
+  it('scales Iron Palm and Monk Stance choices at the correct levels and from Expanded Stances', () => {
+    const ironPalm = monk.choiceGroups.find(({ id }) => id === 'monk.ironPalm')!;
+    const stances = monk.choiceGroups.find(({ id }) => id === 'monk.stances')!;
+    const hero = character('Monk');
+    expect(classChoiceSelectionLimit(ironPalm, hero)).toBe(1);
+    expect(classChoiceSelectionLimit(stances, hero)).toBe(2);
+    hero.level = 5;
+    hero.build = { ...defaultBuild(), selectedTalents: ['Expanded Stances', 'Expanded Stances'] };
+    expect(classChoiceSelectionLimit(ironPalm, hero)).toBe(2);
+    expect(classChoiceSelectionLimit(stances, hero)).toBe(7);
+  });
+
+  it('routes Patient Defense, Step of the Wind, active Stances, and Expert scaling to calculations', () => {
+    const hero = character('Monk');
+    const novice = deriveCharacter(hero, monk, reference.ancestryTraits, equipmentCatalog);
+    expect(novice.physicalDefense).toBe(12);
+    expect(novice.speed).toBe(6);
+    hero.level = 5;
+    const expert = deriveCharacter(hero, monk, reference.ancestryTraits, equipmentCatalog);
+    expect(expert.speed).toBe(7);
+    hero.speed = expert.speed;
+    hero.build = {
+      ...defaultBuild(),
+      sheetFeatureStates: { [MONK_STANCE_ACTIVE]: true },
+      sheetFeatureSelections: { [MONK_ACTIVE_STANCE]: 'Gazelle Stance' },
+    };
+    expect(characterSheetEffects(hero)).toMatchObject({ speed: 8, saveAdvantage: { Agility: 1 } });
+    hero.build.sheetFeatureSelections[MONK_ACTIVE_STANCE] = 'Turtle Stance';
+    expect(characterSheetEffects(hero)).toMatchObject({ speed: 1, saveAdvantage: { Might: 1 } });
+    expect(characterSheetEffects(hero).resistances).toEqual(['Physical (Half)', 'Elemental (Half)', 'Mystical (Half)']);
+    hero.build.sheetFeatureSelections[MONK_ACTIVE_STANCE] = 'Bear Stance';
+    expect(monkMeleeHeavyHitDamageBonus(hero)).toBe(1);
+    hero.build.sheetFeatureSelections[MONK_ACTIVE_STANCE] = 'Cobra Stance';
+    hero.build.sheetFeatureStates[MONK_COBRA_REVENGE] = true;
+    expect(characterSheetEffects(hero).martialMeleeDamageBonus).toBe(1);
+    hero.build.sheetFeatureSelections[MONK_ACTIVE_STANCE] = 'Mongoose Stance';
+    hero.build.sheetFeatureStates[MONK_MONGOOSE_FLANKED] = true;
+    expect(characterSheetEffects(hero).martialMeleeDamageBonus).toBe(1);
+  });
+
+  it('uses the audited Stamina and Ki formulas and resets turn-limited Monk benefits', () => {
+    expect(monkStaminaRegenAmount(5)).toBe(3);
+    expect(monkKiMaximum(3, 1)).toBe(3);
+    expect(monkKiMaximum(3, 5)).toBe(4);
+    expect(monkKiRecoveryAmount(3, 2)).toBe(1);
+    expect(monkKiRecoveryAmount(5, 5)).toBe(3);
+    const hero = character('Monk');
+    hero.level = 2;
+    hero.stamina = 1;
+    hero.maxStamina = 2;
+    hero.build = { ...defaultBuild(), sheetFeatureStates: { [MONK_FLURRY_USED]: true }, sheetFeatureCounters: { [MONK_KI_CURRENT]: 0 } };
+    expect(applyMonkStaminaSpendRecovery(hero, 2).build?.sheetFeatureCounters[MONK_KI_CURRENT]).toBe(1);
+    hero.level = 5;
+    hero.maxStamina = 4;
+    hero.build.sheetFeatureCounters[MONK_KI_CURRENT] = 0;
+    expect(applyMonkStaminaSpendRecovery(hero, 2).build?.sheetFeatureCounters[MONK_KI_CURRENT]).toBe(3);
+    expect(resetCharacterTurn(hero).build?.sheetFeatureStates[MONK_FLURRY_USED]).toBe(false);
+  });
+
+  it('applies a pending Meditation choice only after a Short or Long Rest', () => {
+    const hero = character('Monk');
+    hero.build = { ...defaultBuild(), sheetFeatureSelections: { [MONK_MEDITATION_PENDING]: 'Medicine' } };
+    expect(completeCharacterRest(hero, 'Quick', 0).build?.sheetFeatureSelections[MONK_MEDITATION_SKILL]).toBeUndefined();
+    expect(completeCharacterRest(hero, 'Short', 0).build?.sheetFeatureSelections[MONK_MEDITATION_SKILL]).toBe('Medicine');
+    expect(completeCharacterRest(hero, 'Long', 0).build?.sheetFeatureSelections[MONK_MEDITATION_SKILL]).toBe('Medicine');
+  });
+
+  it('includes every published Monk subclass option with level-gated metadata', () => {
+    expect(monk.subclasses).toEqual(['Astral Self', 'Shifting Tide', 'Paragon']);
+    expect(monk.choiceGroups.find(({ id }) => id === 'monk.astralDamage')).toMatchObject({ level: 3, requiredSubclass: 'Astral Self', limit: 1 });
+    expect(monk.subclassFeatures['Astral Self'].map(({ name, level }) => [name, level])).toEqual([
+      ['Astral Awakening', 3],
+      ['Astral Watch (Flavor Feature)', 3],
+    ]);
+    expect(monk.subclassFeatures['Shifting Tide'].map(({ name, level }) => [name, level])).toEqual([
+      ['Ebb and Flow', 3],
+      ['Fluid Movement (Flavor Feature)', 3],
+    ]);
+    expect(monk.subclassFeatures.Paragon.map(({ name, level }) => [name, level])).toEqual([
+      ['Paragon Subclass', 3],
+      ['Novice Paragon', 3],
+      ['Jack of one Trade (Flavor Feature)', 3],
+      ['Expert Paragon', 7],
+      ['Master Paragon', 10],
+    ]);
+    expect(monk.subclassFeatures['Astral Self'][0].description).toBe('Astral Damage: When you gain this feature, choose a Mystical damage type. This damage type is your Astral Damage.\n\nDuring Combat, you can spend 1 AP and 1 SP to manifest a portion of your astral self for 1 minute. For the duration, you gain the following benefits:\n• Astral Arms: You manifest 2 astral arms that can only be used to make Unarmed Strikes. They can’t otherwise interact with creatures or objects. Attacks made using these Astral Arms have the Reach property, deal Astral Damage instead of the normal damage type, and can target PD or AD (choose for each Attack).\n• Astral Deflection: You can now use Deflect Attack on Ranged Attacks that miss any target within 2 Spaces.\n\nEnding Early: The effect ends early if you fall Unconscious, die, or choose to end it for free.');
+    expect(monk.subclassFeatures['Shifting Tide'][0].description).toBe('You gain the following benefits:\n\nEbb: When you enter a new Monk Stance, you gain 2 Spaces of movement.\n\nFlow: When you use your Uncanny Dodge against a Melee Attack, you can spend 1 AP to make an Opportunity Attack against the Attacker, provided they’re within range.\n\nChanging Tides: You can use your Deflect Attack on Melee Martial Attacks from Large or smaller creatures. When you do, you can redirect the Attack to another target within 1 Space of you.');
   });
 });

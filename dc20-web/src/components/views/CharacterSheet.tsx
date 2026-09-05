@@ -31,7 +31,20 @@ import {
   HUNTER_MARK_FIRST_ATTACK_USED,
   HUNTER_STAMINA_REGEN_USED,
   HUNTER_TRAPS_AVAILABLE,
+  MONK_ACTIVE_STANCE,
+  MONK_ASTRAL_SELF_ACTIVE,
+  MONK_BEAR_ADVANTAGE,
+  MONK_COBRA_REVENGE,
+  MONK_EXPANDED_STANCE_USED,
+  MONK_KI_CURRENT,
+  MONK_MANTIS_GRAPPLE_AP,
+  MONK_MEDITATION_PENDING,
+  MONK_MEDITATION_SKILL,
+  MONK_MONGOOSE_FLANKED,
+  MONK_STAMINA_REGEN_USED,
+  MONK_STANCE_ACTIVE,
   ancestryGrantedSpellNames,
+  applyMonkStaminaSpendRecovery,
   applyDerivedCharacter,
   barbarianStaminaRegenAmount,
   bardHelpDieSize,
@@ -55,6 +68,9 @@ import {
   masteryBonus,
   masteryRank,
   masteryTitle,
+  monkKiMaximum,
+  monkKiRecoveryAmount,
+  monkStaminaRegenAmount,
   rogueCheapShotDamage,
   rogueStaminaRegenAmount,
   selectedAncestryTraits,
@@ -1633,6 +1649,96 @@ function HunterControls({ character, onChange, onRoll, awarenessModifier, invest
   </section>;
 }
 
+function MonkControls({ character, onChange, onRoll }: {
+  character: Character;
+  onChange: (values: Partial<Character>) => void;
+  onRoll: (label: string, modifier: number, extraAdjustment?: number) => unknown;
+}) {
+  const [notice, setNotice] = useState('');
+  const [kiSpend, setKiSpend] = useState(1);
+  const build = character.build;
+  if (!build) return null;
+  const states = build.sheetFeatureStates;
+  const selections = build.sheetFeatureSelections;
+  const counters = build.sheetFeatureCounters;
+  const knownStances = build.classFeatureSelections['monk.stances'] ?? [];
+  const activeStance = states[MONK_STANCE_ACTIVE] ? selections[MONK_ACTIVE_STANCE] : '';
+  const hasExpandedStances = build.selectedTalents.includes('Expanded Stances');
+  const maximumKi = monkKiMaximum(character.maxStamina, character.level);
+  const currentKi = Math.min(maximumKi, Math.max(0, counters[MONK_KI_CURRENT] ?? maximumKi));
+  const selectedKiSpend = Math.min(currentKi, Math.max(1, kiSpend));
+  const martialCheck = character.primeModifier + character.combatMastery;
+  const meditationSkills = ['Animal', 'Insight', 'Influence', 'Investigation', 'Medicine', 'Survival'];
+  const pendingMeditation = selections[MONK_MEDITATION_PENDING] ?? selections[MONK_MEDITATION_SKILL] ?? 'Animal';
+  const setState = (key: string, value: boolean) => onChange({ build: { ...build, sheetFeatureStates: { ...states, [key]: value } } });
+  const setSelection = (key: string, value: string) => onChange({ build: { ...build, sheetFeatureSelections: { ...selections, [key]: value } } });
+  const spendKi = (amount: number, message: string) => {
+    if (currentKi < amount) return false;
+    onChange({ build: { ...build, sheetFeatureCounters: { ...counters, [MONK_KI_CURRENT]: currentKi - amount } } });
+    setNotice(message);
+    return true;
+  };
+  const enterStance = (mode: 'Start' | 'Expanded' | 'AP' | 'SP') => {
+    const nextStance = selections[MONK_ACTIVE_STANCE] || knownStances[0];
+    if (!nextStance || !knownStances.includes(nextStance)) return;
+    if (mode === 'Expanded' && (!hasExpandedStances || states[MONK_EXPANDED_STANCE_USED])) return;
+    if (mode === 'AP' && character.currentAP < 1) return;
+    if (mode === 'SP' && character.stamina < 1) return;
+    const regainedKi = mode === 'SP' && character.level >= 2 ? monkKiRecoveryAmount(maximumKi, character.level) : 0;
+    onChange({
+      ...(mode === 'AP' ? { currentAP: character.currentAP - 1 } : {}),
+      ...(mode === 'SP' ? { stamina: character.stamina - 1 } : {}),
+      build: {
+        ...build,
+        sheetFeatureStates: { ...states, [MONK_STANCE_ACTIVE]: true, ...(mode === 'Expanded' ? { [MONK_EXPANDED_STANCE_USED]: true } : {}) },
+        sheetFeatureSelections: { ...selections, [MONK_ACTIVE_STANCE]: nextStance },
+      },
+    });
+    setNotice(`${nextStance} entered${character.subclass === 'Shifting Tide' ? '; Ebb grants 2 Spaces of movement' : ''}${regainedKi ? `; regained ${regainedKi} Ki` : ''}.`);
+  };
+  const regainStamina = () => {
+    if (states[MONK_STAMINA_REGEN_USED]) return;
+    const amount = monkStaminaRegenAmount(character.maxStamina);
+    onChange({ stamina: Math.min(character.maxStamina, character.stamina + amount), build: { ...build, sheetFeatureStates: { ...states, [MONK_STAMINA_REGEN_USED]: true } } });
+    setNotice(`Monk Martial Path restored up to ${amount} SP.`);
+  };
+  const activateUncannyDodge = (flow = false) => {
+    if (currentKi < 1 || (flow && (character.subclass !== 'Shifting Tide' || character.currentAP < 1))) return;
+    onChange({
+      ...(flow ? { currentAP: character.currentAP - 1 } : {}),
+      build: { ...build, sheetFeatureCounters: { ...counters, [MONK_KI_CURRENT]: currentKi - 1 } },
+    });
+    setNotice(`Uncanny Dodge imposes DisADV on the triggering Attack${flow ? '; Flow also makes an Opportunity Attack against the melee attacker' : ''}.`);
+    if (flow) onRoll('Shifting Tide Flow — Melee Opportunity Martial Attack', martialCheck);
+  };
+  const astralActive = character.subclass === 'Astral Self' && Boolean(states[MONK_ASTRAL_SELF_ACTIVE]);
+  const toggleAstralSelf = () => {
+    if (astralActive) { setState(MONK_ASTRAL_SELF_ACTIVE, false); setNotice('Astral Awakening ended freely.'); return; }
+    if (character.currentAP < 1 || character.stamina < 1) return;
+    const recovery = monkKiRecoveryAmount(maximumKi, character.level);
+    onChange({
+      currentAP: character.currentAP - 1,
+      stamina: character.stamina - 1,
+      build: { ...build, sheetFeatureStates: { ...states, [MONK_ASTRAL_SELF_ACTIVE]: true } },
+    });
+    setNotice(`Astral Awakening active for 1 minute; spending SP regained ${recovery} Ki.`);
+  };
+
+  return <section className="rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-cyan-950/35 via-violet-950/25 to-slate-950/75 p-4 sm:p-5">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Live Class Features</p><h2 className="text-xl font-black text-white">Monk Controls</h2></div><button type="button" onClick={() => { setState(MONK_STAMINA_REGEN_USED, false); setNotice('A new Round began; Stamina Regen is ready.'); }} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-slate-200">Start Next Round</button></div>
+    {notice && <p role="status" className="mb-4 rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100">{notice}</p>}
+    {activeStance === 'Cobra Stance' && <label className="mb-4 block rounded-xl border border-orange-400/20 bg-orange-500/10 p-3 text-xs leading-5 text-orange-100"><span className="font-black">Cobra Stance:</span><span className="ml-2 inline-flex items-start gap-2"><input type="checkbox" checked={Boolean(states[MONK_COBRA_REVENGE])} onChange={(event) => setState(MONK_COBRA_REVENGE, event.target.checked)} />Target damaged me since the start of my last turn • +1 melee/unarmed damage.</span></label>}
+    {activeStance === 'Mongoose Stance' && <label className="mb-4 block rounded-xl border border-orange-400/20 bg-orange-500/10 p-3 text-xs leading-5 text-orange-100"><span className="font-black">Mongoose Stance:</span><span className="ml-2 inline-flex items-start gap-2"><input type="checkbox" checked={Boolean(states[MONK_MONGOOSE_FLANKED])} onChange={(event) => setState(MONK_MONGOOSE_FLANKED, event.target.checked)} />I am Flanked • +1 melee/unarmed damage; the Attack Check can target a second creature in Melee Range.</span></label>}
+    <div className="grid gap-4 xl:grid-cols-2">
+      <div className="rounded-xl border border-violet-400/20 bg-slate-950/55 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black text-violet-200">Monk Stance</h3><p className="mt-1 text-xs text-slate-500">At the start of your turn: free • otherwise: 1 AP or 1 SP</p></div>{activeStance && <span className="rounded-full bg-violet-500/15 px-2 py-1 text-[10px] font-black uppercase text-violet-200">Active</span>}</div><label className="mt-3 block text-xs font-bold text-slate-400">Known stance<select value={selections[MONK_ACTIVE_STANCE] ?? knownStances[0] ?? ''} onChange={(event) => setSelection(MONK_ACTIVE_STANCE, event.target.value)} className={`${fieldClass} mt-1`}><option value="">Choose a learned stance…</option>{knownStances.map((stance) => <option key={stance}>{stance}</option>)}</select></label><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" disabled={knownStances.length === 0} onClick={() => enterStance('Start')} className="rounded-lg bg-violet-700 px-2 py-2 text-xs font-black text-white disabled:opacity-35">Start of Turn • Free</button>{hasExpandedStances && <button type="button" disabled={Boolean(states[MONK_EXPANDED_STANCE_USED])} onClick={() => enterStance('Expanded')} className="rounded-lg bg-fuchsia-700 px-2 py-2 text-xs font-black text-white disabled:opacity-35">Expanded Stances • Free</button>}<button type="button" disabled={character.currentAP < 1} onClick={() => enterStance('AP')} className="rounded-lg bg-slate-700 px-2 py-2 text-xs font-bold text-white disabled:opacity-35">Enter / Shift • 1 AP</button><button type="button" disabled={character.stamina < 1} onClick={() => enterStance('SP')} className="rounded-lg bg-sky-700 px-2 py-2 text-xs font-bold text-white disabled:opacity-35">Enter / Shift • 1 SP</button></div><button type="button" disabled={!activeStance} onClick={() => setState(MONK_STANCE_ACTIVE, false)} className="mt-2 w-full rounded-lg bg-slate-800 px-2 py-2 text-xs font-bold text-slate-300 disabled:opacity-35">Exit Stance • Free</button>{activeStance && <p className="mt-3 rounded-lg bg-violet-500/10 p-3 text-xs leading-5 text-violet-100"><strong>{activeStance}:</strong> {knownStances.includes(activeStance) ? 'Active benefits are reflected in Checks, Saves, Speed, Resistances, and Iron Palm controls where applicable.' : 'This stance is not currently among the learned stances.'}</p>}{activeStance === 'Bear Stance' && <button type="button" disabled={Boolean(states[MONK_BEAR_ADVANTAGE])} onClick={() => setState(MONK_BEAR_ADVANTAGE, true)} className="mt-2 w-full rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Record Melee Miss • Ready ADV</button>}{activeStance === 'Mantis Stance' && <div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={() => onRoll('Mantis Stance — Grapple Physical Check', martialCheck, 1)} className="rounded-lg bg-emerald-700 px-2 py-2 text-xs font-black text-white">Grapple Check • ADV</button><button type="button" disabled={Boolean(states[MONK_MANTIS_GRAPPLE_AP])} onClick={() => setState(MONK_MANTIS_GRAPPLE_AP, true)} className="rounded-lg bg-emerald-800 px-2 py-2 text-xs font-black text-white disabled:opacity-35">Start Turn Grappling • +1 Grapple AP</button></div>}{states[MONK_MANTIS_GRAPPLE_AP] && <p className="mt-2 text-xs font-bold text-emerald-200">1 restricted AP is ready for a Grapple Maneuver this turn.</p>}{activeStance === 'Wolf Stance' && <button type="button" onClick={() => onRoll('Wolf Stance — Opportunity Martial Attack', martialCheck, 1)} className="mt-2 w-full rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white">Roll Opportunity Attack • ADV</button>}</div>
+      <div className="rounded-xl border border-sky-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-sky-200">Monk Martial Path</h3><p className="mt-2 text-xs leading-5 text-slate-400">Once per Round, after succeeding on Athletics, Acrobatics, or hitting with a Martial Attack, regain up to half your maximum SP.</p><p className="mt-2 text-xs font-bold text-sky-300">Recovery: up to {monkStaminaRegenAmount(character.maxStamina)} SP</p><button type="button" disabled={Boolean(states[MONK_STAMINA_REGEN_USED]) || character.stamina >= character.maxStamina} onClick={regainStamina} className="mt-3 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[MONK_STAMINA_REGEN_USED] ? 'Used This Round' : 'Qualifying Trigger • Regain SP'}</button></div>
+      <div className="rounded-xl border border-cyan-400/20 bg-slate-950/55 p-4"><div className="flex items-center justify-between gap-3"><div><h3 className="font-black text-cyan-200">Spiritual Balance</h3><p className="mt-1 text-xs text-slate-500">Ki {currentKi} / {maximumKi}{character.level >= 5 ? ' • Expert recovery' : ''}</p></div><div className="flex gap-1"><button type="button" onClick={() => onChange({ build: { ...build, sheetFeatureCounters: { ...counters, [MONK_KI_CURRENT]: Math.max(0, currentKi - 1) } } })} className="h-8 w-8 rounded bg-slate-800">−</button><button type="button" onClick={() => onChange({ build: { ...build, sheetFeatureCounters: { ...counters, [MONK_KI_CURRENT]: Math.min(maximumKi, currentKi + 1) } } })} className="h-8 w-8 rounded bg-cyan-800">+</button></div></div>{character.level < 2 ? <p className="mt-3 text-xs text-slate-500">Spiritual Balance becomes available at level 2.</p> : <><label className="mt-3 block text-xs font-bold text-slate-400">Ki to spend<input type="number" min={1} max={Math.max(1, currentKi)} value={selectedKiSpend} onChange={(event) => setKiSpend(Math.min(Math.max(1, currentKi), Math.max(1, Number(event.target.value))))} className={`${fieldClass} mt-1`} /></label><div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" disabled={currentKi < 1} onClick={() => { if (spendKi(selectedKiSpend, `Deflect Attack redirects the missed Attack for ${selectedKiSpend} damage of the triggering type.`)) onRoll(`Deflect Attack • ${selectedKiSpend} triggering-type damage vs PD`, martialCheck); }} className="rounded-lg bg-cyan-700 px-2 py-2 text-xs font-black text-white disabled:opacity-35">Deflect Attack • {selectedKiSpend} Ki</button><button type="button" disabled={currentKi < 1} onClick={() => spendKi(selectedKiSpend, `Slow Fall reduces falling damage by ${selectedKiSpend}.`)} className="rounded-lg bg-sky-800 px-2 py-2 text-xs font-black text-white disabled:opacity-35">Slow Fall • {selectedKiSpend} Ki</button><button type="button" disabled={currentKi < 1} onClick={() => activateUncannyDodge(false)} className="rounded-lg bg-violet-700 px-2 py-2 text-xs font-black text-white disabled:opacity-35">Uncanny Dodge • 1 Ki</button>{character.subclass === 'Shifting Tide' && <button type="button" disabled={currentKi < 1 || character.currentAP < 1} onClick={() => activateUncannyDodge(true)} className="rounded-lg bg-fuchsia-700 px-2 py-2 text-xs font-black text-white disabled:opacity-35">Uncanny Dodge + Flow • 1 Ki + 1 AP</button>}</div><button type="button" disabled={currentKi >= maximumKi} onClick={() => onChange({ build: { ...build, sheetFeatureCounters: { ...counters, [MONK_KI_CURRENT]: maximumKi } } })} className="mt-2 w-full rounded-lg bg-slate-800 px-2 py-2 text-xs font-bold text-slate-300 disabled:opacity-35">Combat Ends • Restore All Ki</button><p className="mt-2 text-[10px] leading-4 text-slate-500">Deflect Attack requires a free hand. {character.subclass === 'Astral Self' ? 'Astral Deflection also works when a Ranged Attack misses any target within 2 Spaces. ' : ''}{character.subclass === 'Shifting Tide' ? 'Changing Tides also permits Large-or-smaller melee Martial Attacks and redirects within 1 Space.' : ''}</p></>}</div>
+      <div className="rounded-xl border border-emerald-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-emerald-200">Meditation</h3><p className="mt-2 text-xs leading-5 text-slate-400">Choose a Charisma or Intelligence Skill. After completing the next Short or Long Rest, its Mastery increases by 1 up to your cap until another qualifying Rest.</p><label className="mt-3 block text-xs font-bold text-slate-400">Next meditation skill<select value={pendingMeditation} onChange={(event) => setSelection(MONK_MEDITATION_PENDING, event.target.value)} className={`${fieldClass} mt-1`}>{meditationSkills.map((skill) => <option key={skill}>{skill}</option>)}</select></label><p className="mt-2 text-xs font-bold text-emerald-200">Active: {selections[MONK_MEDITATION_SKILL] ?? 'Complete a Short or Long Rest'}</p></div>
+      {character.subclass === 'Astral Self' && <div className="rounded-xl border border-fuchsia-400/20 bg-slate-950/55 p-4 xl:col-span-2"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-black text-fuchsia-200">Astral Awakening</h3><p className="mt-1 text-xs text-slate-500">1 minute • {(build.classFeatureSelections['monk.astralDamage']?.[0] ?? 'Choose')} damage</p></div><button type="button" disabled={!astralActive && (character.currentAP < 1 || character.stamina < 1)} onClick={toggleAstralSelf} className={`rounded-lg px-4 py-2 text-xs font-black text-white disabled:opacity-35 ${astralActive ? 'bg-slate-700' : 'bg-fuchsia-700'}`}>{astralActive ? 'End • Free' : 'Manifest • 1 AP + 1 SP'}</button></div>{astralActive && <p className="mt-3 rounded-lg bg-fuchsia-500/10 p-3 text-xs leading-5 text-fuchsia-100">Astral Arms are active: Reach, Astral damage, and each Attack can target PD or AD. Astral Deflection is enabled.</p>}</div>}
+    </div>
+  </section>;
+}
+
 const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit, onCharacterChange }) => {
   const characterRef = useRef(character);
   useEffect(() => { characterRef.current = character; }, [character]);
@@ -1665,7 +1771,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const isCommander = character.class === 'Commander';
   const isDruid = character.class === 'Druid';
   const isHunter = character.class === 'Hunter';
-  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter;
+  const isMonk = character.class === 'Monk';
+  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter || isMonk;
   const isRaging = isBarbarian && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
   const hasUnfathomableStrength = (build?.selectedTalents ?? []).includes('Unfathomable Strength');
   const battlecryShout = featureSelections[BARBARIAN_BATTLECRY_SELECTION] || 'Fortitude Shout';
@@ -1724,7 +1831,9 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   }, [character.maneuvers, grantedManeuvers, maneuverCatalog]);
 
   const update = (values: Partial<Character>) => {
-    let next = { ...characterRef.current, ...values };
+    const previous = characterRef.current;
+    let next = { ...previous, ...values };
+    next = applyMonkStaminaSpendRecovery(next, previous.stamina);
     if (values.inventoryItems && classReference && reference && equipmentCatalog.length > 0) {
       next = applyDerivedCharacter(next, deriveCharacter(next, classReference, reference.ancestryTraits, equipmentCatalog));
     }
@@ -1732,8 +1841,9 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     onCharacterChange?.(next);
   };
   const updateBuild = (values: Partial<NonNullable<Character['build']>>) => {
-    if (!build) return;
-    update({ build: { ...build, ...values } });
+    const currentBuild = characterRef.current.build;
+    if (!currentBuild) return;
+    update({ build: { ...currentBuild, ...values } });
   };
 
   const roll = (label: string, modifier: number, extraAdjustment = 0): RollOutcome => {
@@ -1773,10 +1883,10 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       && (label === 'Charisma Save' || label === 'Intelligence Save' || label.includes('Analyze Creature')))
       + Number(hunterConcoction === 'Deathweed' && label.includes('Death Save'));
     const hunterStrikeApplies = isHunter && Boolean(featureStates[HUNTER_STRIKE_READY]) && label.includes('Martial Attack');
-    const featureAdjustment = (label === 'Might Save' ? (sheetEffects.saveAdvantage.Might ?? 0) : 0)
-      + warlockAdvantage + Number(clericChaosApplies) + Number(championReadinessApplies) + Number(fastReflexesApplies)
+    const monkBearApplies = isMonk && Boolean(featureStates[MONK_BEAR_ADVANTAGE]) && label.includes('Melee Martial Attack');
+    const featureAdjustment = warlockAdvantage + Number(clericChaosApplies) + Number(championReadinessApplies) + Number(fastReflexesApplies)
       + Number(hunterMarkAttackApplies) + hunterTerrainAdvantage + Number(hunterBigGameApplies) + hunterConcoctionAdvantage;
-    const totalAdjustment = Math.max(-5, Math.min(5, rollAdjustment + featureAdjustment + extraAdjustment));
+    const totalAdjustment = Math.max(-5, Math.min(5, rollAdjustment + featureAdjustment + Number(monkBearApplies) + extraAdjustment));
     const dice = Array.from({ length: 1 + Math.abs(totalAdjustment) }, () => Math.floor(Math.random() * 20) + 1);
     const chosen = totalAdjustment > 0 ? Math.max(...dice) : totalAdjustment < 0 ? Math.min(...dice) : dice[0];
     const effectiveModifier = modifier + (championAdrenalineApplies ? 5 : 0);
@@ -1801,7 +1911,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     };
     setLastRoll(result);
     if (inspirationDie) setInspirationDie(null);
-    const nextFeatureStates = { ...featureStates };
+    const nextFeatureStates = { ...(characterRef.current.build?.sheetFeatureStates ?? featureStates) };
     if (warlockAdvantage) {
       nextFeatureStates[WARLOCK_HASTY_ACTIVE] = false;
       nextFeatureStates[WARLOCK_LIFE_TAP_ADV] = false;
@@ -1812,7 +1922,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     if (fastReflexesApplies) nextFeatureStates['ancestry.fastReflexes.firstAttackUsed'] = true;
     if (hunterMarkAttackApplies) nextFeatureStates[HUNTER_MARK_FIRST_ATTACK_USED] = true;
     if (hunterStrikeApplies) nextFeatureStates[HUNTER_STRIKE_READY] = false;
-    if (warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies || hunterMarkAttackApplies || hunterStrikeApplies) {
+    if (monkBearApplies) nextFeatureStates[MONK_BEAR_ADVANTAGE] = false;
+    if (warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies || hunterMarkAttackApplies || hunterStrikeApplies || monkBearApplies) {
       updateBuild({ sheetFeatureStates: nextFeatureStates });
     }
     return result;
@@ -1959,6 +2070,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         {isCleric && <ClericControls character={character} onChange={update} onRoll={roll} />}
         {isDruid && <DruidControls character={character} beastTraits={(reference?.ancestryTraits ?? []).filter(({ ancestry, cost }) => ancestry === 'Beastborn' && cost > 0)} onChange={update} onRoll={roll} />}
         {isHunter && <HunterControls character={character} onChange={update} onRoll={roll} awarenessModifier={hunterAwarenessModifier} investigationModifier={hunterInvestigationModifier} />}
+        {isMonk && <MonkControls character={character} onChange={update} onRoll={roll} />}
           </div>
         </details>}
 

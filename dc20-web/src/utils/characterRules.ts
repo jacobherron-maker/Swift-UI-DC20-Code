@@ -102,6 +102,19 @@ export const HUNTER_MARK_FIRST_ATTACK_USED = 'hunter.mark.firstAttackUsed';
 export const HUNTER_STAMINA_REGEN_USED = 'hunter.staminaRegen.used';
 export const HUNTER_CONCOCTION_ACTIVE = 'hunter.concoction.active';
 export const HUNTER_TRAPS_AVAILABLE = 'hunter.traps.available';
+export const MONK_STANCE_ACTIVE = 'monk.stance.active';
+export const MONK_ACTIVE_STANCE = 'monk.stance.name';
+export const MONK_STAMINA_REGEN_USED = 'monk.staminaRegen.used';
+export const MONK_KI_CURRENT = 'monk.ki.current';
+export const MONK_ASTRAL_SELF_ACTIVE = 'monk.astralSelf.active';
+export const MONK_MEDITATION_SKILL = 'monk.meditation.skill';
+export const MONK_MEDITATION_PENDING = 'monk.meditation.pendingSkill';
+export const MONK_EXPANDED_STANCE_USED = 'monk.expandedStances.usedThisTurn';
+export const MONK_BEAR_ADVANTAGE = 'monk.bear.nextAttackAdvantage';
+export const MONK_MANTIS_GRAPPLE_AP = 'monk.mantis.grappleAP';
+export const MONK_FLURRY_USED = 'monk.flurry.usedThisTurn';
+export const MONK_COBRA_REVENGE = 'monk.cobra.damagedByTarget';
+export const MONK_MONGOOSE_FLANKED = 'monk.mongoose.flanked';
 
 export function druidBeastTraitSelection(name: string, cost: number): string {
   return `${DRUID_BEAST_TRAIT_PREFIX} (${cost}) — ${name}`;
@@ -295,12 +308,22 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
     hunterConcoction === 'Deathweed' && 'Umbral (Half)',
     hunterConcoction === 'Divine Water' && 'Radiant (Half)',
   ].filter((entry): entry is string => Boolean(entry));
+  const monkStance = character.class === 'Monk' && character.build?.sheetFeatureStates?.[MONK_STANCE_ACTIVE]
+    ? character.build?.sheetFeatureSelections?.[MONK_ACTIVE_STANCE] : undefined;
+  const monkCobraDamage = monkStance === 'Cobra Stance' && Boolean(character.build?.sheetFeatureStates?.[MONK_COBRA_REVENGE]);
+  const monkMongooseDamage = monkStance === 'Mongoose Stance' && Boolean(character.build?.sheetFeatureStates?.[MONK_MONGOOSE_FLANKED]);
+  const saveAdvantage: Partial<Record<DC20Attribute, number>> = {};
+  if (isRaging || monkStance === 'Turtle Stance') saveAdvantage.Might = 1;
+  if (monkStance === 'Gazelle Stance') saveAdvantage.Agility = 1;
+  const activeSpeed = character.speed
+    + (activeRune === 'Lightning Rune' ? 1 : 0)
+    + (bardPerformanceAppliesToSelf && bardPerformance === 'Fast Tempo' ? (bardPerformanceEnhanced ? 2 : 1) : 0)
+    + Number(monkStance === 'Gazelle Stance');
   return {
     physicalDefense: character.physicalDefense - (isRaging ? 5 : 0),
-    speed: character.speed + (activeRune === 'Lightning Rune' ? 1 : 0)
-      + (bardPerformanceAppliesToSelf && bardPerformance === 'Fast Tempo' ? (bardPerformanceEnhanced ? 2 : 1) : 0),
-    saveAdvantage: isRaging ? { Might: 1 } : {},
-    martialMeleeDamageBonus: isRaging ? 1 : 0,
+    speed: monkStance === 'Turtle Stance' ? Math.min(character.speed, 1) : activeSpeed,
+    saveAdvantage,
+    martialMeleeDamageBonus: Number(isRaging) + Number(monkCobraDamage) + Number(monkMongooseDamage),
     resistances: [
       ...(isRaging ? ['Elemental (Half)', 'Physical (Half)'] : []),
       ...(adaptiveDamage ? [`${adaptiveDamage} (1)`] : []),
@@ -310,6 +333,7 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
       ...bardResistances,
       ...commanderResistances,
       ...hunterResistances,
+      ...(monkStance === 'Turtle Stance' ? ['Physical (Half)', 'Elemental (Half)', 'Mystical (Half)'] : []),
     ],
   };
 }
@@ -327,6 +351,45 @@ export function barbarianStaminaRegenAmount(maximumStamina: number): number {
 /** A Champion can recover up to half maximum SP after performing a Maneuver once per Round. */
 export function championStaminaRegenAmount(maximumStamina: number): number {
   return Math.max(0, Math.ceil(maximumStamina / 2));
+}
+
+/** Monk Martial Path recovery follows the universal round-up rule for half maximum SP. */
+export function monkStaminaRegenAmount(maximumStamina: number): number {
+  return Math.max(0, Math.ceil(maximumStamina / 2));
+}
+
+/** Spiritual Balance matches maximum SP, then Expert Monk increases the maximum by 1. */
+export function monkKiMaximum(maximumStamina: number, level: number): number {
+  return Math.max(0, maximumStamina) + Number(level >= 5);
+}
+
+/** Before Expert Monk, spending SP regains 1 Ki; Expert Monk instead regains half maximum Ki. */
+export function monkKiRecoveryAmount(maximumKi: number, level: number): number {
+  return level >= 5 ? Math.max(0, Math.ceil(maximumKi / 2)) : Number(maximumKi > 0);
+}
+
+/** Bear Stance adds damage only to Heavy-or-higher melee Martial Attack results. */
+export function monkMeleeHeavyHitDamageBonus(character: Pick<Character, 'class' | 'build'>): number {
+  return Number(character.class === 'Monk'
+    && character.build?.sheetFeatureStates?.[MONK_STANCE_ACTIVE]
+    && character.build?.sheetFeatureSelections?.[MONK_ACTIVE_STANCE] === 'Bear Stance');
+}
+
+/** Applies Spiritual Balance once for a sheet action that spends one or more SP. */
+export function applyMonkStaminaSpendRecovery(character: Character, previousStamina: number): Character {
+  if (character.class !== 'Monk' || character.level < 2 || character.stamina >= previousStamina || !character.build) return character;
+  const maximumKi = monkKiMaximum(character.maxStamina, character.level);
+  const currentKi = Math.min(maximumKi, Math.max(0, character.build.sheetFeatureCounters[MONK_KI_CURRENT] ?? maximumKi));
+  return {
+    ...character,
+    build: {
+      ...character.build,
+      sheetFeatureCounters: {
+        ...character.build.sheetFeatureCounters,
+        [MONK_KI_CURRENT]: Math.min(maximumKi, currentKi + monkKiRecoveryAmount(maximumKi, character.level)),
+      },
+    },
+  };
 }
 
 /** Adaptive Tactics begins with a d8 Tactical Die and improves with Expert Champion. */
@@ -416,6 +479,13 @@ export function classChoiceSelectionLimit(
   }
   if (group.id === 'hunter.terrain' && character.class === 'Hunter') {
     const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Terrains').length;
+    return Math.min(group.options.length, 2 + expanded * 2 + Number(character.level >= 5));
+  }
+  if (group.id === 'monk.ironPalm' && character.class === 'Monk') {
+    return Math.min(group.options.length, 1 + Number(character.level >= 5));
+  }
+  if (group.id === 'monk.stances' && character.class === 'Monk') {
+    const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Stances').length;
     return Math.min(group.options.length, 2 + expanded * 2 + Number(character.level >= 5));
   }
   if (group.id !== 'spellblade.disciplines' || character.class !== 'Spellblade') return group.limit;
@@ -627,6 +697,10 @@ const TURN_STATE_KEYS = new Set([
   'cleric.order.used',
   HUNTER_MARK_FIRST_ATTACK_USED,
   'hunter.plantFibers.usedThisTurn',
+  MONK_EXPANDED_STANCE_USED,
+  MONK_BEAR_ADVANTAGE,
+  MONK_MANTIS_GRAPPLE_AP,
+  MONK_FLURRY_USED,
 ]);
 
 /** Starts a fresh turn without incorrectly resetting round-, combat-, or rest-limited features. */
@@ -689,6 +763,10 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
     const maximumTraps = Math.max(0, character.primeModifier);
     const availableTraps = Math.max(0, sheetFeatureCounters[HUNTER_TRAPS_AVAILABLE] ?? maximumTraps);
     sheetFeatureCounters[HUNTER_TRAPS_AVAILABLE] = Math.min(maximumTraps, availableTraps + 1);
+  }
+
+  if (type !== 'Quick' && character.class === 'Monk' && sheetFeatureSelections[MONK_MEDITATION_PENDING]) {
+    sheetFeatureSelections[MONK_MEDITATION_SKILL] = sheetFeatureSelections[MONK_MEDITATION_PENDING];
   }
 
   return {
