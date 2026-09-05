@@ -5009,9 +5009,9 @@
     {
       "characterClass" : "Psion",
       "id" : "Classes|Psion|Psion",
-      "keywords" : "Psion Stamina Psionic Mind Telekinesis Telepathy (Flavor Feature) Mind Sense Talent Subclass Feature — Not Yet Developed Talent Ancestry Points Class Feature — Not Yet Developed Subclass Feature — Not Yet Developed Talent Ancestry Points Class Capstone Feature — Not Yet Developed Subclass Capstone Feature — Not Yet Developed Epic Boon Talent",
+      "keywords" : "Psion Psion Stamina Psionic Mind Psi Bolt Psionic Spell Daze Disruption Telekinesis Grapple Shove Telepathy Mind Sense Invade Mind Read Emotions Read Thoughts Talent",
       "kind" : "Class",
-      "page" : "PSION v2 • BETA 0.9 • PAGE 3",
+      "page" : "DC20 Magazine 01 — Psion v2 pp. 3–4",
       "section" : "Classes",
       "subsection" : "Psion",
       "summary" : "Psionic • A psychic spellcaster who commands telekinesis and telepathy.",

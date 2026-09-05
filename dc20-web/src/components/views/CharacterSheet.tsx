@@ -43,6 +43,12 @@ import {
   MONK_MONGOOSE_FLANKED,
   MONK_STAMINA_REGEN_USED,
   MONK_STANCE_ACTIVE,
+  PSION_AP_ENHANCEMENT_SP,
+  PSION_COMPONENTLESS_PENDING,
+  PSION_DAZE_PENDING,
+  PSION_DISRUPTION_PENDING,
+  PSION_INVASION_ACTIVE,
+  PSION_MIND_SENSE_ACTIVE,
   SORCERER_CELESTIAL_LIGHT_ACTIVE,
   SORCERER_CELESTIAL_OVERLOAD_USED,
   SORCERER_META_ACTIVE,
@@ -95,6 +101,7 @@ import {
   monkKiMaximum,
   monkKiRecoveryAmount,
   monkStaminaRegenAmount,
+  psionStaminaAfterMentalSaveFailure,
   rogueCheapShotDamage,
   rogueStaminaRegenAmount,
   selectedAncestryTraits,
@@ -1879,6 +1886,96 @@ function SorcererControls({ character, onChange, onRoll }: {
   </section>;
 }
 
+function PsionControls({ character, onChange, onRoll }: {
+  character: Character;
+  onChange: (values: Partial<Character>) => void;
+  onRoll: (label: string, modifier: number, extraAdjustment?: number) => unknown;
+}) {
+  const build = character.build;
+  const [mentalSave, setMentalSave] = useState<'Intelligence' | 'Charisma'>('Intelligence');
+  const [enhancementResource, setEnhancementResource] = useState<'AP' | 'SP'>('AP');
+  const [notice, setNotice] = useState('');
+  if (!build) return null;
+  const states = build.sheetFeatureStates;
+  const selections = build.sheetFeatureSelections;
+  const counters = build.sheetFeatureCounters;
+  const mindSenseActive = Boolean(states[PSION_MIND_SENSE_ACTIVE]);
+  const invasion = selections[PSION_INVASION_ACTIVE] ?? '';
+  const spellCheck = character.primeModifier + character.combatMastery;
+  const pendingEnhancements = [
+    states[PSION_DAZE_PENDING] && 'Daze',
+    states[PSION_DISRUPTION_PENDING] && 'Disruption',
+    states[PSION_COMPONENTLESS_PENDING] && 'Psionic',
+  ].filter(Boolean);
+  const convertedEnhancementSP = Math.max(0, counters[PSION_AP_ENHANCEMENT_SP] ?? 0);
+  const updateBuild = (nextStates = states, nextSelections = selections, values: Partial<Character> = {}, nextCounters = counters) => onChange({
+    ...values,
+    build: { ...build, sheetFeatureStates: nextStates, sheetFeatureSelections: nextSelections, sheetFeatureCounters: nextCounters },
+  });
+  const recordMentalFailure = () => {
+    const stamina = psionStaminaAfterMentalSaveFailure(character.stamina, character.maxStamina);
+    onChange({ stamina });
+    setNotice(stamina > character.stamina ? 'Psion Stamina restored 1 SP.' : 'Psion Stamina triggered, but SP was already full.');
+  };
+  const substituteMentalSave = () => {
+    if (character.stamina < 1) return;
+    onRoll(`${mentalSave} Mental Save`, character.attributes[mentalSave].modifier + character.combatMastery);
+    onChange({ stamina: character.stamina - 1 });
+    setNotice(`Spent 1 SP to make a ${mentalSave} Mental Save instead of the Physical Save.`);
+  };
+  const armEnhancement = (key: string, name: string, resource: 'AP' | 'SP' | 'MP') => {
+    if (states[key] || (resource === 'AP' ? character.currentAP < 1 : resource === 'SP' ? character.stamina < 1 : character.manaPoints < 1)) return;
+    updateBuild({ ...states, [key]: true }, selections, resource === 'AP'
+      ? { currentAP: character.currentAP - 1 }
+      : resource === 'SP' ? { stamina: character.stamina - 1 } : { manaPoints: character.manaPoints - 1 });
+    setNotice(`${name} is armed for the next Spell you cast.`);
+  };
+  const convertStaminaForEnhancement = () => {
+    if (character.stamina < 1) return;
+    updateBuild(states, selections, { stamina: character.stamina - 1 }, { ...counters, [PSION_AP_ENHANCEMENT_SP]: convertedEnhancementSP + 1 });
+    setNotice('1 SP is reserved to pay 1 AP of another enhancement on the next Spell you cast.');
+  };
+  const rollTelekinesis = (action: string) => {
+    onRoll(`Telekinesis — ${action}`, spellCheck);
+    setNotice(`${action} uses your Spell Check. Telekinesis is Medium Size, has a 5-Space range, and can affect one creature or object at a time.`);
+  };
+  const startMindSense = () => {
+    if (character.currentAP < 1 || character.manaPoints < 1) return;
+    updateBuild({ ...states, [PSION_MIND_SENSE_ACTIVE]: true }, selections, {
+      currentAP: character.currentAP - 1,
+      manaPoints: character.manaPoints - 1,
+    });
+    setNotice('Mind Sense is active for 1 minute: detect qualifying creatures within 10 Spaces, treat them as seen, and deal +1 Psychic damage to them.');
+  };
+  const endMindSense = () => {
+    const nextSelections = { ...selections };
+    delete nextSelections[PSION_INVASION_ACTIVE];
+    updateBuild({ ...states, [PSION_MIND_SENSE_ACTIVE]: false }, nextSelections);
+    setNotice('Mind Sense and its Invade Mind effect ended.');
+  };
+  const invadeMind = (option: 'Read Emotions' | 'Read Thoughts') => {
+    if (!mindSenseActive || character.currentAP < 1 || character.stamina < 1) return;
+    onRoll(`Invade Mind — ${option} Check`, spellCheck);
+    updateBuild(states, { ...selections, [PSION_INVASION_ACTIVE]: option }, {
+      currentAP: character.currentAP - 1,
+      stamina: character.stamina - 1,
+    });
+    setNotice(`${option} rolled and marked active. Clear it if the contested Check failed or the target leaves Mind Sense range.`);
+  };
+
+  return <section className="rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-cyan-950/45 via-violet-950/35 to-slate-950/75 p-4 sm:p-5">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Live Class Features</p><h2 className="text-xl font-black text-white">Psion Controls</h2></div><span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-black text-cyan-200">Psi Bolt granted</span></div>
+    {notice && <p role="status" className="mb-4 rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-bold leading-5 text-cyan-100">{notice}</p>}
+    <div className="grid gap-4 xl:grid-cols-2">
+      <div className="rounded-xl border border-sky-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-sky-200">Psion Stamina</h3><p className="mt-1 text-xs leading-5 text-slate-500">Regain 1 SP when at least one creature fails a Mental Save you impose. The trigger has no published once-per-round limit.</p><button type="button" disabled={character.stamina >= character.maxStamina} onClick={recordMentalFailure} className="mt-3 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Record failed Mental Save • +1 SP</button></div>
+      <div className="rounded-xl border border-violet-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-violet-200">Psionic Mind</h3><p className="mt-1 text-xs leading-5 text-slate-500">Spend 1 SP when making a Physical Save to make a Mental Save instead.</p><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]"><select value={mentalSave} onChange={(event) => setMentalSave(event.target.value as 'Intelligence' | 'Charisma')} className={fieldClass}><option>Intelligence</option><option>Charisma</option></select><button type="button" disabled={character.stamina < 1} onClick={substituteMentalSave} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Roll • 1 SP</button></div><button type="button" disabled={character.stamina < 1} onClick={convertStaminaForEnhancement} className="mt-2 w-full rounded-lg bg-sky-800 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Pay 1 SP toward another AP Enhancement{convertedEnhancementSP ? ` • ${convertedEnhancementSP} reserved` : ''}</button></div>
+      <div className="rounded-xl border border-fuchsia-400/20 bg-slate-950/55 p-4 xl:col-span-2"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-black text-fuchsia-200">Psionic Spell Enhancements</h3><p className="mt-1 text-xs leading-5 text-slate-500">Arm one or more enhancements, then cast a Spell. Each armed option is recorded on that Spell roll and cleared automatically.</p></div><label className="text-xs font-bold text-slate-400">Daze / Disruption cost<select value={enhancementResource} onChange={(event) => setEnhancementResource(event.target.value as 'AP' | 'SP')} className="ml-2 rounded border border-slate-600 bg-slate-950 px-2 py-1"><option value="AP">1 AP</option><option value="SP">1 SP</option></select></label></div><div className="mt-3 grid gap-2 md:grid-cols-3"><button type="button" disabled={Boolean(states[PSION_DAZE_PENDING]) || (enhancementResource === 'AP' ? character.currentAP < 1 : character.stamina < 1)} onClick={() => armEnhancement(PSION_DAZE_PENDING, 'Daze', enhancementResource)} className="rounded-lg bg-fuchsia-800 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Daze • 1 {enhancementResource}</button><button type="button" disabled={Boolean(states[PSION_DISRUPTION_PENDING]) || (enhancementResource === 'AP' ? character.currentAP < 1 : character.stamina < 1)} onClick={() => armEnhancement(PSION_DISRUPTION_PENDING, 'Disruption', enhancementResource)} className="rounded-lg bg-fuchsia-800 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Disruption • 1 {enhancementResource}</button><button type="button" disabled={Boolean(states[PSION_COMPONENTLESS_PENDING]) || character.manaPoints < 1} onClick={() => armEnhancement(PSION_COMPONENTLESS_PENDING, 'Psionic', 'MP')} className="rounded-lg bg-violet-800 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Psionic • 1 MP</button></div>{pendingEnhancements.length > 0 && <p className="mt-3 rounded-lg bg-fuchsia-500/10 p-2 text-xs font-bold text-fuchsia-100">Armed: {pendingEnhancements.join(' + ')}</p>}<div className="mt-3 grid gap-2 text-xs text-slate-400 md:grid-cols-3"><p><strong className="text-slate-200">Daze:</strong> Mental Save; failure causes Dazed on the next Mental Check before the end of your next turn.</p><p><strong className="text-slate-200">Disruption:</strong> Mental Save; failure ends Concentration.</p><p><strong className="text-slate-200">Psionic:</strong> removes Verbal and Somatic Components.</p></div></div>
+      <div className="rounded-xl border border-cyan-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-cyan-200">Telekinesis</h3><p className="mt-1 text-xs leading-5 text-slate-500">5 Spaces • 1 target • Medium Size • unheld, unsecured objects up to 100lbs (45kg).</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => rollTelekinesis('Object Action')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Object</button><button type="button" onClick={() => rollTelekinesis('Shove')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Shove</button><button type="button" onClick={() => rollTelekinesis('Grapple')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Grapple</button><button type="button" onClick={() => rollTelekinesis('Grapple Maneuver')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Grapple Maneuver</button></div><p className="mt-3 text-xs leading-5 text-slate-400">Vertical Shoves halve distance. Body Block requires you or the attacker within 1 Space. Throw uses Prime Modifier instead of Might and starts from the target’s Space.</p></div>
+      {character.level >= 2 && <div className="rounded-xl border border-indigo-400/20 bg-slate-950/55 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black text-indigo-200">Mind Sense</h3><p className="mt-1 text-xs leading-5 text-slate-500">1 AP + 1 MP • 10 Spaces • 1 minute</p></div>{mindSenseActive && <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-black uppercase text-emerald-200">Active</span>}</div>{mindSenseActive ? <><p className="mt-3 rounded-lg bg-indigo-500/10 p-2 text-xs text-indigo-100">Qualifying creatures are detected through Full Cover, considered seen, and take +1 Psychic damage from you.</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" disabled={character.currentAP < 1 || character.stamina < 1} onClick={() => invadeMind('Read Emotions')} className="rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Read Emotions • 1 AP + 1 SP</button><button type="button" disabled={character.currentAP < 1 || character.stamina < 1} onClick={() => invadeMind('Read Thoughts')} className="rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Read Thoughts • 1 AP + 1 SP</button></div>{invasion && <div className="mt-3 rounded-lg bg-violet-500/10 p-2 text-xs text-violet-100"><strong>{invasion} active:</strong> {invasion === 'Read Emotions' ? 'ADV on Charisma Checks against the target is applied automatically.' : 'The target has DisADV on Attacks against you.'}<button type="button" onClick={() => { const next = { ...selections }; delete next[PSION_INVASION_ACTIVE]; updateBuild(states, next); }} className="ml-2 font-black text-rose-300">Clear</button></div>}<button type="button" onClick={endMindSense} className="mt-3 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">End Mind Sense</button></> : <button type="button" disabled={character.currentAP < 1 || character.manaPoints < 1} onClick={startMindSense} className="mt-3 w-full rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Open Mind • 1 AP + 1 MP</button>}</div>}
+    </div>
+  </section>;
+}
+
 function WizardControls({ character, spellCatalog, knownSpells, onChange, onRoll }: {
   character: Character;
   spellCatalog: SpellReference[];
@@ -2017,8 +2114,9 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const isHunter = character.class === 'Hunter';
   const isMonk = character.class === 'Monk';
   const isSorcerer = character.class === 'Sorcerer';
+  const isPsion = character.class === 'Psion';
   const isWizard = character.class === 'Wizard';
-  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter || isMonk || isSorcerer || isWizard;
+  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter || isMonk || isSorcerer || isPsion || isWizard;
   const isRaging = isBarbarian && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
   const hasUnfathomableStrength = (build?.selectedTalents ?? []).includes('Unfathomable Strength');
   const battlecryShout = featureSelections[BARBARIAN_BATTLECRY_SELECTION] || 'Fortitude Shout';
@@ -2038,7 +2136,12 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     && !featureStates['ancestry.fastReflexes.firstAttackUsed'];
   const knownSpells = useMemo(() => {
     const result = [...character.spells];
-    for (const name of [...grantedSpells, ...ancestryGrantedSpells.map((entry) => entry.name)]) {
+    for (const name of [
+      ...(character.build?.selectedSpells ?? []),
+      ...(character.build?.selectedCantrips ?? []),
+      ...grantedSpells,
+      ...ancestryGrantedSpells.map((entry) => entry.name),
+    ]) {
       if (result.some((spell) => spell.name === name)) continue;
       const spell = spellCatalog.find((entry) => entry.name === name);
       if (spell) result.push({ id: `spell|${spell.name}`, ...spell });
@@ -2065,7 +2168,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       }
     }
     return result;
-  }, [ancestryGrantedSpells, character.class, character.spells, grantedSpells, spellCatalog]);
+  }, [ancestryGrantedSpells, character.build?.selectedCantrips, character.build?.selectedSpells, character.class, character.spells, grantedSpells, spellCatalog]);
   const knownManeuvers = useMemo(() => {
     const result = [...character.maneuvers];
     for (const name of grantedManeuvers) {
@@ -2134,6 +2237,17 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     const monkBearApplies = isMonk && Boolean(featureStates[MONK_BEAR_ADVANTAGE]) && label.includes('Melee Martial Attack');
     const sorcererNextSpellAdvantage = Number(isSorcerer && isSpellRoll && featureStates[SORCERER_WILD_NEXT_ADVANTAGE]);
     const sorcererWildAdjustment = isSorcerer && isCheckOrSave ? sorcererWildEffects.allCheckSaveAdjustment : 0;
+    const psionCharismaCheck = label === 'Charisma Check'
+      || Boolean(reference?.skills.some(({ name, attribute }) => attribute === 'Charisma' && label === `${name} Check`))
+      || Boolean(reference?.trades.some(({ name, attribute }) => attribute?.split(/, | or /).includes('Charisma') && label === `${name} Trade Check`));
+    const psionReadEmotionsAdvantage = Number(isPsion && featureSelections[PSION_INVASION_ACTIVE] === 'Read Emotions' && psionCharismaCheck);
+    const psionSpell = isPsion && isSpellRoll ? spellCatalog.find(({ name }) => name === pactSpellName) : undefined;
+    const psionSpellTags = (psionSpell?.tags ?? '').split(',').map((tag) => tag.trim());
+    const psionMindSenseDamageApplies = Boolean(psionSpell && featureStates[PSION_MIND_SENSE_ACTIVE] && psionSpellTags.includes('Psychic'));
+    const psionDazeApplies = Boolean(isPsion && isSpellRoll && featureStates[PSION_DAZE_PENDING]);
+    const psionDisruptionApplies = Boolean(isPsion && isSpellRoll && featureStates[PSION_DISRUPTION_PENDING]);
+    const psionComponentlessApplies = Boolean(isPsion && isSpellRoll && featureStates[PSION_COMPONENTLESS_PENDING]);
+    const psionConvertedEnhancementSP = isPsion && isSpellRoll ? Math.max(0, featureCounters[PSION_AP_ENHANCEMENT_SP] ?? 0) : 0;
     const wizardSpell = isWizard && isSpellRoll ? spellCatalog.find(({ name }) => name === pactSpellName) : undefined;
     const wizardSpellTags = (wizardSpell?.tags ?? '').split(',').map((tag) => tag.trim());
     const wizardPreparedSpells = (featureSelections[WIZARD_PREPARED_ACTIVE]
@@ -2157,7 +2271,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       + Number(wizardManaLimitBreakApplies && (build?.selectedTalents ?? []).includes('Overly Prepared Spellcaster'));
     const featureAdjustment = warlockAdvantage + Number(clericChaosApplies) + Number(championReadinessApplies) + Number(fastReflexesApplies)
       + Number(hunterMarkAttackApplies) + hunterTerrainAdvantage + Number(hunterBigGameApplies) + hunterConcoctionAdvantage
-      + sorcererNextSpellAdvantage + sorcererWildAdjustment + wizardFeatureAdjustment;
+      + sorcererNextSpellAdvantage + sorcererWildAdjustment + psionReadEmotionsAdvantage + wizardFeatureAdjustment;
     const totalAdjustment = Math.max(-5, Math.min(5, rollAdjustment + featureAdjustment + Number(monkBearApplies) + extraAdjustment));
     const dice = Array.from({ length: 1 + Math.abs(totalAdjustment) }, () => Math.floor(Math.random() * 20) + 1);
     const chosen = totalAdjustment > 0 ? Math.max(...dice) : totalAdjustment < 0 ? Math.min(...dice) : dice[0];
@@ -2187,6 +2301,14 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       sorcererWildDie !== 0 && `Wild Magic d4: ${sorcererWildDie > 0 ? '+' : ''}${sorcererWildDie}`,
       wildSurgeOutcome > 0 && `Wild Magic ${wildSurgeDice.join(', ')} → ${wildSurgeOutcome}: ${sorcererWildMagicOutcome(wildSurgeOutcome)}`,
     ].filter(Boolean);
+    const psionRollNotes = [
+      psionMindSenseDamageApplies && 'Mind Sense: +1 Psychic damage against a detected target',
+      psionDazeApplies && 'Daze: target makes a Mental Save; failure causes Dazed on its next Mental Check before the end of your next turn',
+      psionDisruptionApplies && 'Disruption: target makes a Mental Save; failure ends its Concentration',
+      psionComponentlessApplies && 'Psionic: no Verbal or Somatic Components',
+      psionConvertedEnhancementSP > 0 && `Psionic Mind: ${psionConvertedEnhancementSP} SP paid toward AP Enhancements`,
+      psionReadEmotionsAdvantage && 'Read Emotions: ADV on this Charisma Check against the invaded target',
+    ].filter(Boolean);
     const wizardRollNotes = [
       wizardSignatureApplies && `Signature ${wizardSignatureSchool}: −${character.level >= 5 ? 2 : 1} MP (unreduced cost must fit the Mana Spend Limit)`,
       wizardSigilMatches && 'Arcane Sigil: ADV',
@@ -2195,7 +2317,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       wizardManaLimitBreakApplies && 'Mana Limit Break: +1 Mana Spend Limit for this casting',
       wizardHex && `${wizardHex}: 1 target makes a Repeated Charisma Save; failure applies the Hex for 1 minute`,
     ].filter(Boolean);
-    const allRollNotes = [...hunterRollNotes, ...sorcererRollNotes, ...wizardRollNotes];
+    const allRollNotes = [...hunterRollNotes, ...sorcererRollNotes, ...psionRollNotes, ...wizardRollNotes];
     const result = {
       label: allRollNotes.length > 0 ? `${label} • ${allRollNotes.join(' • ')}` : label,
       dice,
@@ -2219,6 +2341,9 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     if (hunterStrikeApplies) nextFeatureStates[HUNTER_STRIKE_READY] = false;
     if (monkBearApplies) nextFeatureStates[MONK_BEAR_ADVANTAGE] = false;
     if (sorcererNextSpellAdvantage) nextFeatureStates[SORCERER_WILD_NEXT_ADVANTAGE] = false;
+    if (psionDazeApplies) nextFeatureStates[PSION_DAZE_PENDING] = false;
+    if (psionDisruptionApplies) nextFeatureStates[PSION_DISRUPTION_PENDING] = false;
+    if (psionComponentlessApplies) nextFeatureStates[PSION_COMPONENTLESS_PENDING] = false;
     const nextFeatureSelections = { ...(characterRef.current.build?.sheetFeatureSelections ?? featureSelections) };
     if (preparedMeta.length > 0) delete nextFeatureSelections[SORCERER_META_ACTIVE];
     if (wizardSignatureApplies) {
@@ -2231,14 +2356,16 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     }
     if (wizardPreparedDuelApplies) nextFeatureStates[WIZARD_PREPARED_DUEL_ACTIVE] = false;
     if (wizardHex) nextFeatureStates[WIZARD_HEX_PENDING] = false;
-    const sheetStateChanged = warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies || hunterMarkAttackApplies || hunterStrikeApplies || monkBearApplies || sorcererNextSpellAdvantage || preparedMeta.length > 0 || wizardSignatureApplies || wizardManaLimitBreakApplies || wizardPreparedDuelApplies || Boolean(wizardHex);
+    const nextFeatureCounters = { ...(characterRef.current.build?.sheetFeatureCounters ?? featureCounters) };
+    if (psionConvertedEnhancementSP > 0) delete nextFeatureCounters[PSION_AP_ENHANCEMENT_SP];
+    const sheetStateChanged = warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies || hunterMarkAttackApplies || hunterStrikeApplies || monkBearApplies || sorcererNextSpellAdvantage || psionDazeApplies || psionDisruptionApplies || psionComponentlessApplies || psionConvertedEnhancementSP > 0 || preparedMeta.length > 0 || wizardSignatureApplies || wizardManaLimitBreakApplies || wizardPreparedDuelApplies || Boolean(wizardHex);
     if (wildSurgeOutcome > 0 && characterRef.current.build) {
       update(applySorcererWildMagic({
         ...characterRef.current,
         build: { ...characterRef.current.build, sheetFeatureStates: nextFeatureStates, sheetFeatureSelections: nextFeatureSelections },
       }, wildSurgeOutcome));
     } else if (sheetStateChanged) {
-      updateBuild({ sheetFeatureStates: nextFeatureStates, sheetFeatureSelections: nextFeatureSelections });
+      updateBuild({ sheetFeatureStates: nextFeatureStates, sheetFeatureSelections: nextFeatureSelections, sheetFeatureCounters: nextFeatureCounters });
     }
     return result;
   };
@@ -2386,6 +2513,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         {isHunter && <HunterControls character={character} onChange={update} onRoll={roll} awarenessModifier={hunterAwarenessModifier} investigationModifier={hunterInvestigationModifier} />}
         {isMonk && <MonkControls character={character} onChange={update} onRoll={roll} />}
         {isSorcerer && <SorcererControls character={character} onChange={update} onRoll={roll} />}
+        {isPsion && <PsionControls character={character} onChange={update} onRoll={roll} />}
         {isWizard && <WizardControls character={character} spellCatalog={spellCatalog} knownSpells={knownSpells} onChange={update} onRoll={roll} />}
           </div>
         </details>}

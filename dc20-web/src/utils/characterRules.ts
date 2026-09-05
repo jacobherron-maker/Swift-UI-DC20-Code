@@ -79,6 +79,12 @@ export function talentSlots(className: string, level: number, subclass?: string)
   return progression.filter((entry) => entry <= level).length + paragon;
 }
 
+/** Psion v2 lists Talents at 2/4/7/10, but never grants Character Path Progression. */
+export function classPathProgressionLevels(className: string, level: number): number[] {
+  if (className === 'Psion') return [];
+  return [2, 4, 6, 8].filter((entry) => entry <= level);
+}
+
 export const BARBARIAN_RAGE_STATE = 'barbarian.rage';
 export const BARD_PERFORMANCE_STATE = 'bard.performance.active';
 export const DRUID_DOMAIN_ACTIVE = 'druid.domain.active';
@@ -124,6 +130,12 @@ export const SORCERER_META_FREE_USED = 'sorcerer.metaMagic.freeUsed';
 export const SORCERER_META_ACTIVE = 'sorcerer.metaMagic.active';
 export const SORCERER_CELESTIAL_LIGHT_ACTIVE = 'sorcerer.celestialLight.active';
 export const SORCERER_CELESTIAL_OVERLOAD_USED = 'sorcerer.celestialOverload.used';
+export const PSION_MIND_SENSE_ACTIVE = 'psion.mindSense.active';
+export const PSION_INVASION_ACTIVE = 'psion.invadeMind.active';
+export const PSION_AP_ENHANCEMENT_SP = 'psion.psionicMind.apEnhancementSP';
+export const PSION_DAZE_PENDING = 'psion.psionicSpell.daze';
+export const PSION_DISRUPTION_PENDING = 'psion.psionicSpell.disruption';
+export const PSION_COMPONENTLESS_PENDING = 'psion.psionicSpell.componentless';
 export const WIZARD_SIGNATURE_ACTIVE = 'wizard.signature.activeSchool';
 export const WIZARD_SIGNATURE_USED_PREFIX = 'wizard.signature.used.';
 export const WIZARD_MANA_LIMIT_BREAK_READY = 'wizard.manaLimitBreak.ready';
@@ -592,6 +604,11 @@ export function rogueStaminaRegenAmount(maximumStamina: number): number {
   return Math.max(0, Math.ceil(maximumStamina / 2));
 }
 
+/** Psion Stamina restores exactly 1 SP whenever at least one creature fails an imposed Mental Save. */
+export function psionStaminaAfterMentalSaveFailure(currentStamina: number, maximumStamina: number): number {
+  return Math.min(Math.max(0, maximumStamina), Math.max(0, currentStamina) + 1);
+}
+
 /** Languages granted directly by Class Features are Fluent without spending Language Points. */
 export function grantedClassLanguageNames(character: Pick<Character, 'class' | 'subclass' | 'build'>): string[] {
   if (character.class === 'Rogue') {
@@ -715,6 +732,7 @@ export function grantedClassManeuverNames(character: Pick<Character, 'class' | '
 export function grantedClassSpellNames(character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>): string[] {
   const choices = character.build?.classFeatureSelections ?? {};
   const talents = new Set(character.build?.selectedTalents ?? []);
+  if (character.class === 'Psion') return ['Psi Bolt'];
   if (character.class === 'Bard') {
     return Array.from(new Set([
       ...(choices['bard.magicalSecrets'] ?? []).slice(0, 2),
@@ -769,6 +787,31 @@ export function ancestryPointBudget(character: Pick<Character, 'level' | 'class'
     && character.level >= 3 && ['Angelic', 'Draconic'].includes(character.subclass ?? '') ? 2 : 0;
   const startingPoints = character.ancestry === 'Custom' ? 4 : 5;
   return startingPoints + advancement + talentPoints + clericAncestralDomain + sorcererOriginPoints;
+}
+
+/** Whether one additional copy of a Trait fits both the total ancestry budget and any origin-restricted bonus. */
+export function canAddAncestryTraitCopy(
+  character: Pick<Character, 'level' | 'class' | 'subclass' | 'ancestry' | 'build'>,
+  selectedTraits: AncestryTrait[],
+  trait: AncestryTrait,
+): boolean {
+  if (trait.cost <= 0) return true;
+  const budget = ancestryPointBudget(character);
+  const spent = ancestryTraitPointTotals(character, selectedTraits).spent;
+  if (spent + trait.cost > budget) return false;
+
+  const restrictedAncestry = character.class === 'Sorcerer' && character.level >= 3
+    ? character.subclass === 'Angelic' ? 'Angelborn'
+      : character.subclass === 'Draconic' ? 'Dragonborn' : ''
+    : '';
+  if (!restrictedAncestry || trait.ancestry === restrictedAncestry) return true;
+  const unrestrictedBudget = budget - 2;
+  const spentOutsideOrigin = selectedTraits
+    .filter(({ ancestry }) => ancestry !== restrictedAncestry)
+    .reduce((sum, selectedTrait) => (
+      sum + selectedTrait.cost * ancestryTraitSelectionCount(character, selectedTrait)
+    ), 0);
+  return spentOutsideOrigin + trait.cost <= unrestrictedBudget;
 }
 
 /** Number of paid copies of a selected trait; old saves implicitly contain one. */
@@ -980,6 +1023,14 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
       }
       delete sheetFeatureSelections[WIZARD_PREPARED_ACTIVE];
     }
+  }
+  if (character.class === 'Psion') {
+    sheetFeatureStates[PSION_MIND_SENSE_ACTIVE] = false;
+    sheetFeatureStates[PSION_DAZE_PENDING] = false;
+    sheetFeatureStates[PSION_DISRUPTION_PENDING] = false;
+    sheetFeatureStates[PSION_COMPONENTLESS_PENDING] = false;
+    delete sheetFeatureSelections[PSION_INVASION_ACTIVE];
+    delete sheetFeatureCounters[PSION_AP_ENHANCEMENT_SP];
   }
 
   if (type === 'Long') {
@@ -1455,7 +1506,9 @@ export function deriveCharacter(
   const training = characterCombatTraining(character, classReference, allTraits);
   const equipment = equipmentBonuses(character, equipmentCatalog, training);
   const totals = classTableTotals(classReference, character.level);
-  const paths = Object.values(character.build?.pathProgressionChoices ?? {});
+  // Ignore stale Psion path choices from older saves. Psion v2 grants Talents at
+  // 2/4/7/10, not the Martial or Spellcaster Path Progression benefit.
+  const paths = character.class === 'Psion' ? [] : Object.values(character.build?.pathProgressionChoices ?? {});
   const martialPaths = paths.filter((path) => path === 'Martial').length;
   const spellcasterPaths = paths.filter((path) => path === 'Spellcaster').length;
   const manaTraits = traitCount(character, chosenTraits, 'Mana Increase');

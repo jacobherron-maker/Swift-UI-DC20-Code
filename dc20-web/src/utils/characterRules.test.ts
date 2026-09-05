@@ -19,6 +19,7 @@ import {
   attributeCap,
   barbarianStaminaRegenAmount,
   bardHelpDieSize,
+  canAddAncestryTraitCopy,
   championStaminaRegenAmount,
   championTacticalDieSize,
   commanderHelpDieSize,
@@ -26,6 +27,8 @@ import {
   commanderRallyAmount,
   commanderStaminaRegenAmount,
   classChoiceSelectionLimit,
+  classPathProgressionLevels,
+  classTableTotals,
   characterCombatTraining,
   characterRestPoints,
   characterSheetEffects,
@@ -69,6 +72,13 @@ import {
   monkKiRecoveryAmount,
   monkMeleeHeavyHitDamageBonus,
   monkStaminaRegenAmount,
+  PSION_AP_ENHANCEMENT_SP,
+  PSION_COMPONENTLESS_PENDING,
+  PSION_DAZE_PENDING,
+  PSION_DISRUPTION_PENDING,
+  PSION_INVASION_ACTIVE,
+  PSION_MIND_SENSE_ACTIVE,
+  psionStaminaAfterMentalSaveFailure,
   rogueCheapShotDamage,
   rogueStaminaRegenAmount,
   resetCharacterTurn,
@@ -76,6 +86,7 @@ import {
   skillMasteryCap,
   spellbladeDisciplineNames,
   spellIsAvailableToClass,
+  talentSlots,
   SORCERER_OVERLOAD_ACTIVE,
   SORCERER_OVERLOAD_EXHAUSTION,
   SORCERER_WILD_FORM_HP,
@@ -116,6 +127,7 @@ const hunter = reference.classes.find(({ name }) => name === 'Hunter')!;
 const monk = reference.classes.find(({ name }) => name === 'Monk')!;
 const sorcerer = reference.classes.find(({ name }) => name === 'Sorcerer')!;
 const wizard = reference.classes.find(({ name }) => name === 'Wizard')!;
+const psion = reference.classes.find(({ name }) => name === 'Psion')!;
 const equipmentCatalog = equipmentDocument as EquipmentCatalogItem[];
 
 function character(className = 'Barbarian'): Character {
@@ -219,6 +231,44 @@ describe('DC20 character calculations', () => {
     expect([1, 4, 7].map((level) => ancestryPointBudget({ ...hero, level }))).toEqual([5, 7, 9]);
     hero.ancestry = 'Custom';
     expect([1, 4, 7].map((level) => ancestryPointBudget({ ...hero, level }))).toEqual([4, 6, 8]);
+  });
+
+  it('prevents adding a Trait copy that exceeds the available ancestry-point budget', () => {
+    const hero = character();
+    const selectedNames = ['Attribute Increase', 'Skill Expertise', 'Human Resolve'];
+    const selectedIDs = reference.ancestryTraits
+      .filter(({ ancestry, name }) => ancestry === 'Human' && selectedNames.includes(name))
+      .map(({ id }) => id);
+    hero.build = { ...defaultBuild(), selectedAncestryTraitIDs: selectedIDs };
+    const selected = selectedAncestryTraits(hero, reference.ancestryTraits);
+    const additionalPositive = reference.ancestryTraits.find(({ ancestry, name }) => ancestry === 'Human' && name === 'Trade Expertise')!;
+    const negative = reference.ancestryTraits.find(({ ancestry, name }) => ancestry === 'Human' && name === 'Attribute Decrease')!;
+    expect(ancestryTraitPointTotals(hero, selected).spent).toBe(5);
+    expect(canAddAncestryTraitCopy(hero, selected, additionalPositive)).toBe(false);
+    expect(canAddAncestryTraitCopy(hero, selected, negative)).toBe(true);
+
+    hero.build = { ...hero.build!, selectedAncestryTraitIDs: [...selectedIDs, negative.id] };
+    const withNegative = selectedAncestryTraits(hero, reference.ancestryTraits);
+    expect(canAddAncestryTraitCopy(hero, withNegative, additionalPositive)).toBe(true);
+  });
+
+  it('reserves a Sorcerer origin bonus for the matching ancestry Trait list', () => {
+    const hero = character('Sorcerer');
+    hero.level = 3;
+    hero.subclass = 'Angelic';
+    const selectedNames = ['Attribute Increase', 'Skill Expertise', 'Human Resolve'];
+    hero.build = {
+      ...defaultBuild(),
+      selectedAncestryTraitIDs: reference.ancestryTraits
+        .filter(({ ancestry, name }) => ancestry === 'Human' && selectedNames.includes(name))
+        .map(({ id }) => id),
+    };
+    const selected = selectedAncestryTraits(hero, reference.ancestryTraits);
+    const humanTrait = reference.ancestryTraits.find(({ ancestry, name }) => ancestry === 'Human' && name === 'Trade Expertise')!;
+    const angelbornTrait = reference.ancestryTraits.find(({ ancestry, cost }) => ancestry === 'Angelborn' && cost > 0)!;
+    expect(ancestryPointBudget(hero)).toBe(7);
+    expect(canAddAncestryTraitCopy(hero, selected, humanTrait)).toBe(false);
+    expect(canAddAncestryTraitCopy(hero, selected, angelbornTrait)).toBe(true);
   });
 
   it('automatically applies required ancestry origins without spending the Minor Trait slot', () => {
@@ -2074,5 +2124,108 @@ describe('Wizard Beta 0.10.5 source audit', () => {
     expect(wizard.subclassFeatures.Paragon.map(({ name, level }) => [name, level])).toEqual([
       ['Paragon Subclass', 3], ['Novice Paragon', 3], ['Jack of one Trade (Flavor Feature)', 3], ['Expert Paragon', 7], ['Master Paragon', 10],
     ]);
+  });
+});
+
+describe('Psion v2 Beta 0.9 source audit', () => {
+  const feature = (level: number, name: string) => psion.features.find((entry) => entry.level === level)?.features.find((entry) => entry.name === name)?.description;
+
+  it('matches every published value in the level 1-10 Psion Class Table', () => {
+    expect(psion.tableRows).toEqual([
+      { level: 1, stamina: 1, mana: 3, cantrips: 2, spells: 3, features: 'Class Features' },
+      { level: 2, attribute: 1, features: 'Class Feature, Talent' },
+      { level: 3, skill: 1, mana: 1, spells: 1, features: 'Subclass Feature' },
+      { level: 4, attribute: 1, features: 'Talent, 2 Ancestry Points' },
+      { level: 5, attribute: 1, skill: 2, mana: 1, cantrips: 1, features: 'Class Feature' },
+      { level: 6, skill: 1, stamina: 1, mana: 1, spells: 1, features: 'Subclass Feature' },
+      { level: 7, attribute: 1, features: 'Talent, 2 Ancestry Points' },
+      { level: 8, skill: 1, mana: 1, cantrips: 1, features: 'Class Capstone Feature' },
+      { level: 9, attribute: 1, mana: 1, spells: 1, features: 'Subclass Capstone Feature' },
+      { level: 10, attribute: 1, skill: 2, features: 'Epic Boon, Talent' },
+    ]);
+    expect(classTableTotals(psion, 10)).toEqual({
+      attribute: 6, skill: 7, trade: 0, stamina: 2, mana: 8, spells: 6, cantrips: 4, maneuvers: 0,
+    });
+    expect(talentSlots('Psion', 10)).toBe(4);
+    expect(classPathProgressionLevels('Psion', 10)).toEqual([]);
+  });
+
+  it('preserves the published spellcasting, equipment, and complete level 1-2 wording', () => {
+    expect(psion.pathDetails).toBe('Combat Training: Light Armor\n\nSpell List: When you learn a new Spell, you can choose any Spell with the Psychic or Gravity Spell Tags, or from the following Schools of Magic: Divination, Enchantment, Illusion, or Protection.\n\nCantrips Known: The number of Cantrips you know increases as shown in the Cantrips Known column of the Psion Class Table. Cantrips are Spells with the Cantrip Spell Tag.\n\nSpells Known: The number of Spells you know increases as shown in the Spells Known column of the Psion Class Table. These can be Spells with or without the Cantrip Spell Tag.\n\nMana Points: Your maximum number of Mana Points increases as shown in the Mana Points column of the Psion Class Table.\n\nStamina Points: Your maximum number of Stamina Points increases as shown in the Stamina Points column of the Psion Class Table.');
+    expect(psion.startingEquipment.description).toBe('• 1 Light Weapon\n• 1 set of Novice Light Armor\n• X or Y “Packs” (Adventure Packs Coming Soon)');
+    expect(feature(1, 'Psion Stamina')).toBe('You regain 1 SP when at least 1 creature fails a Mental Save you impose.');
+    expect(feature(1, 'Psionic Mind')).toBe('Your training in the Psionic arts have granted you the following benefits:\n• You learn the Psi Bolt Cantrip.\n• You can spend SP on AP Enhancements.\n• When you make a Physical Save, you can spend 1 SP to make a Mental Save instead.\n\nPsionic Spell\nYou gain the following Spell Enhancements which you can use on any Spell you cast.\n• Daze: (1 AP) Mental Save. Failure: The target becomes Dazed (DisADV on Mental Checks) on the next Mental Check it makes before the end of your next turn.\n• Disruption: (1 AP) Mental Save. Failure: The target loses their Concentration.\n• Psionic: (1 MP) The Spell doesn’t require Verbal or Somatic Components.');
+    expect(feature(1, 'Telekinesis')).toBe('You gain Telekinesis which grants you the ability to interact with things using only your mind. Your Telekinesis has a range of 5 Spaces. You can only interact with 1 object or creature using Telekinesis at a time, and the effect ends on a target when it’s beyond your range.\n\nYou can perform any Action with your Telekinesis that you could normally perform using a hand, such as the Object, Shove, and Grapple Actions. When you perform an Action using your Telekinesis, your Size is considered Medium and you make a Spell Check instead of the normal Check for the Action.\n\nObject: You can use your Telekinesis to pick up and hold an unheld and unsecured object that weighs up to 100lbs (45kg). Once on each of your turns, you can freely move an object held by your Telekinesis to another Space within range.\n\nShove: You can Shove another creature in any direction of your choice. If you Shove a creature vertically, the distance is halved.\n\nGrapple: When you perform a Grapple using Telekinesis, you can move normally while maintaining the Grapple, but the target doesn’t move with you unless you choose to drag it (following the normal rules for dragging a Grappled creature).\n\nGrapple Maneuvers: You can perform any Grapple Maneuver of your choice using Telekinesis, even if you don’t know it. When you do, they’re subjected to the following changes:\n\n• Body Block Maneuver: You, or the attacker, must be within 1 Space of the target.\n• Throw Maneuver: You can use your Prime Modifier instead of Might to determine the distance thrown, and the creature is thrown from its Space instead of yours.');
+    expect(feature(1, 'Telepathy (Flavor Feature)')).toBe('You can communicate telepathically with any creature you can see within 10 Spaces. If it understands at least 1 Language it can respond to you telepathically.');
+    expect(feature(2, 'Mind Sense')).toContain('For 1 minute, you know the location of any creature with an Intelligence of -3 or higher within range (even through Full Cover) and Psychic damage you deal to them increases by 1.');
+    expect(feature(2, 'Mind Sense')).toContain('Read Emotions: Make a Spell Check contested by the target’s Charisma Save.');
+    expect(feature(2, 'Mind Sense')).toContain('Read Thoughts: Make a Spell Check contested by the target’s Intelligence Save.');
+    expect(feature(2, 'Talent')).toBe('You gain 1 Talent of your choice. If the Talent has any prerequisites, you must meet those prerequisites to choose that Talent.');
+  });
+
+  it('maps the legacy spell list to the current catalog without requiring a Spell Source', () => {
+    const spell = (school: string, tags = '', source = 'Arcane') => ({ school, tags, source });
+    expect(spellIsAvailableToClass('Psion', spell('Elemental', 'Psychic', 'Divine'))).toBe(true);
+    expect(spellIsAvailableToClass('Psion', spell('Astromancy', 'Gravity', 'Primal'))).toBe(true);
+    expect(spellIsAvailableToClass('Psion', spell('Divination', '', 'Divine'))).toBe(true);
+    expect(spellIsAvailableToClass('Psion', spell('Enchantment', '', 'Primal'))).toBe(true);
+    expect(spellIsAvailableToClass('Psion', spell('Conjuration', 'Illusion', 'Primal'))).toBe(true);
+    expect(spellIsAvailableToClass('Psion', spell('Nullification', '', 'Arcane'))).toBe(true);
+    expect(spellIsAvailableToClass('Psion', spell('Elemental', 'Fire', 'Arcane'))).toBe(false);
+  });
+
+  it('grants Psi Bolt separately and ignores stale Path Progression from older saves', () => {
+    const hero = character('Psion');
+    hero.level = 2;
+    hero.build = { ...defaultBuild(), pathProgressionChoices: { 2: 'Spellcaster' } };
+    expect(grantedClassSpellNames(hero)).toEqual(['Psi Bolt']);
+    expect(characterCombatTraining(hero, psion, reference.ancestryTraits)).toMatchObject({
+      categories: ['Light Armor'],
+      weaponTraining: false,
+      spellFocusTraining: false,
+      lightArmorTraining: true,
+      heavyArmorTraining: false,
+      lightShieldTraining: false,
+      heavyShieldTraining: false,
+    });
+    const derived = deriveCharacter(hero, psion, reference.ancestryTraits, []);
+    expect(derived.maxStamina).toBe(1);
+    expect(derived.maxMana).toBe(3);
+    expect(derived.spellLimit).toBe(3);
+    expect(derived.cantripLimit).toBe(2);
+  });
+
+  it('routes Psion Stamina and clears minute-long or pending live effects on rest', () => {
+    expect(psionStaminaAfterMentalSaveFailure(0, 2)).toBe(1);
+    expect(psionStaminaAfterMentalSaveFailure(2, 2)).toBe(2);
+    const hero = character('Psion');
+    hero.build = {
+      ...defaultBuild(),
+      sheetFeatureStates: {
+        [PSION_MIND_SENSE_ACTIVE]: true,
+        [PSION_DAZE_PENDING]: true,
+        [PSION_DISRUPTION_PENDING]: true,
+        [PSION_COMPONENTLESS_PENDING]: true,
+      },
+      sheetFeatureSelections: { [PSION_INVASION_ACTIVE]: 'Read Emotions' },
+      sheetFeatureCounters: { [PSION_AP_ENHANCEMENT_SP]: 2 },
+    };
+    const rested = completeCharacterRest(hero, 'Quick', 0);
+    expect(rested.build?.sheetFeatureStates).toMatchObject({
+      [PSION_MIND_SENSE_ACTIVE]: false,
+      [PSION_DAZE_PENDING]: false,
+      [PSION_DISRUPTION_PENDING]: false,
+      [PSION_COMPONENTLESS_PENDING]: false,
+    });
+    expect(rested.build?.sheetFeatureSelections[PSION_INVASION_ACTIVE]).toBeUndefined();
+    expect(rested.build?.sheetFeatureCounters[PSION_AP_ENHANCEMENT_SP]).toBeUndefined();
+  });
+
+  it('keeps unpublished level 3-10 class and subclass rules explicitly marked as undeveloped', () => {
+    expect(psion.subclasses).toEqual([]);
+    expect(psion.features.find(({ level }) => level === 3)?.features[0].name).toBe('Subclass Feature — Not Yet Developed');
+    expect(psion.features.find(({ level }) => level === 5)?.features[0].name).toBe('Class Feature — Not Yet Developed');
+    expect(psion.features.find(({ level }) => level === 8)?.features[0].name).toBe('Class Capstone Feature — Not Yet Developed');
+    expect(psion.features.find(({ level }) => level === 9)?.features[0].name).toBe('Subclass Capstone Feature — Not Yet Developed');
   });
 });

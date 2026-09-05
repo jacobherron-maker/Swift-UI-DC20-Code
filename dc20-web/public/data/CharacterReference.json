@@ -5635,7 +5635,7 @@
       "choiceGroups" : [
 
       ],
-      "description" : "Psions are masters of telekinesis and telepathy whose minds have ascended, allowing them to affect the world and creatures around them with their thoughts alone. They can use telekinesis to move creatures and objects, and they can telepathically assault the minds of others. Source of Power: Psions have achieved a mental state of being where they can turn their own thoughts into reality as well as reach out to the minds of others. Their origins vary wildly, stemming from being born with a mental connection to the world around them, having a strange psychic interaction, or undergoing years of training and mental strain. Psion v2 was written for DC20 Beta 0.9 and only develops class features through level 2.",
+      "description" : "Psions are masters of telekinesis and telepathy whose minds have ascended, allowing them to affect the world and creatures around them with their thoughts alone. They can use telekinesis to move creatures and objects, and they can telepathically assault the minds of others.\n\nSource of Power: Psions have achieved a mental state of being where they can turn their own thoughts into reality as well as reach out to the minds of others. Their origins vary wildly, stemming from being born with a mental connection to the world around them, having a strange psychic interaction, or undergoing years of training and mental strain.\n\nCompatibility Note: Psion v2 was written for DC20 Beta 0.9. Its Class Table outlines levels 1–10, but the supplement only publishes Class Feature rules through level 2 and does not publish Psion subclasses. Because the supplement leaves its Bonus HP column blank, this app uses the Beta 0.10.5 spellcaster HP progression; the class step separately labels how legacy Cantrip, Illusion, and Protection terminology maps to the current catalog.",
       "features" : [
         {
           "features" : [
@@ -5644,15 +5644,15 @@
               "name" : "Psion Stamina"
             },
             {
-              "description" : "You learn the Psi Bolt Cantrip and can spend SP on AP Enhancements. When you make a Physical Save, you can spend 1 SP to make a Mental Save instead.\n\nYou can use the following Psionic Spell Enhancements on any Spell:\n\n• Daze (1 AP): One target of the Spell makes a Mental Save. Failure: The target becomes Dazed (DisADV on Mental Checks) on the next Mental Check it makes before the end of your next turn.\n• Disruption (1 AP): One target of the Spell makes a Mental Save. Failure: The target loses Concentration.\n• Psionic (1 MP): The Spell doesn't require Verbal or Somatic Components.",
+              "description" : "Your training in the Psionic arts have granted you the following benefits:\n• You learn the Psi Bolt Cantrip.\n• You can spend SP on AP Enhancements.\n• When you make a Physical Save, you can spend 1 SP to make a Mental Save instead.\n\nPsionic Spell\nYou gain the following Spell Enhancements which you can use on any Spell you cast.\n• Daze: (1 AP) Mental Save. Failure: The target becomes Dazed (DisADV on Mental Checks) on the next Mental Check it makes before the end of your next turn.\n• Disruption: (1 AP) Mental Save. Failure: The target loses their Concentration.\n• Psionic: (1 MP) The Spell doesn’t require Verbal or Somatic Components.",
               "name" : "Psionic Mind"
             },
             {
-              "description" : "You can manipulate creatures and objects with your mind. Your Telekinesis has a range of 5 Spaces, and you can interact with 1 target at a time. The effect ends if the target moves beyond this range.\n\nYou can use Telekinesis to take any Action that can normally be performed with a hand, including the Object, Shove, and Grapple Actions. You can target a creature of Medium Size and use your Spell Check in place of the Check normally required.\n\nObject: You can target an object that isn't being held or secured and weighs up to 100 pounds (45 kilograms). Once per turn, you can freely move an object held with Telekinesis to another Space within range.\n\nShove: You can Shove a target in any direction. The distance is halved when moving the target vertically.\n\nGrapple: You can move normally while maintaining the Grapple, but the target doesn't move with you unless you Drag it.\n\nGrapple Maneuvers: You can perform any Grapple Maneuver, even if you don't know it. Body Block requires you or the Attacker to be within 1 Space of the Grappled target. Throw uses your Prime Modifier instead of Might, and the target is thrown from its own Space.",
+              "description" : "You gain Telekinesis which grants you the ability to interact with things using only your mind. Your Telekinesis has a range of 5 Spaces. You can only interact with 1 object or creature using Telekinesis at a time, and the effect ends on a target when it’s beyond your range.\n\nYou can perform any Action with your Telekinesis that you could normally perform using a hand, such as the Object, Shove, and Grapple Actions. When you perform an Action using your Telekinesis, your Size is considered Medium and you make a Spell Check instead of the normal Check for the Action.\n\nObject: You can use your Telekinesis to pick up and hold an unheld and unsecured object that weighs up to 100lbs (45kg). Once on each of your turns, you can freely move an object held by your Telekinesis to another Space within range.\n\nShove: You can Shove another creature in any direction of your choice. If you Shove a creature vertically, the distance is halved.\n\nGrapple: When you perform a Grapple using Telekinesis, you can move normally while maintaining the Grapple, but the target doesn’t move with you unless you choose to drag it (following the normal rules for dragging a Grappled creature).\n\nGrapple Maneuvers: You can perform any Grapple Maneuver of your choice using Telekinesis, even if you don’t know it. When you do, they’re subjected to the following changes:\n\n• Body Block Maneuver: You, or the attacker, must be within 1 Space of the target.\n• Throw Maneuver: You can use your Prime Modifier instead of Might to determine the distance thrown, and the creature is thrown from its Space instead of yours.",
               "name" : "Telekinesis"
             },
             {
-              "description" : "You can communicate telepathically with a creature you can see within 10 Spaces. If the creature knows at least 1 Language, it can communicate telepathically with you in return.",
+              "description" : "You can communicate telepathically with any creature you can see within 10 Spaces. If it understands at least 1 Language it can respond to you telepathically.",
               "name" : "Telepathy (Flavor Feature)"
             }
           ],
@@ -5661,11 +5661,11 @@
         {
           "features" : [
             {
-              "description" : "You can spend 1 AP and 1 MP to detect creatures within 10 Spaces for 1 minute. You know the location of every creature with an Intelligence of -3 or higher in range, even if it has Full Cover from you. Your Psychic damage increases by 1 against a creature detected this way, and you treat it as Seen. The effect ends early if you fall Unconscious or die.\n\nInvade Mind: While a creature is detected by Mind Sense, you can spend 1 AP and 1 SP to choose one of the following options. The option lasts for the duration of Mind Sense or until the creature leaves its range.\n\n• Read Emotions: Make a Spell Check against the target's Charisma Save. Success: You know its emotional state and have ADV on Charisma Checks against it.\n• Read Thoughts: Make a Spell Check against the target's Intelligence Save. Success: You know its surface thoughts, and the target has DisADV on Attacks against you.",
+              "description" : "You can spend 1 AP and 1 MP to open your mind and detect the presence of other creatures within 10 Spaces. For 1 minute, you know the location of any creature with an Intelligence of -3 or higher within range (even through Full Cover) and Psychic damage you deal to them increases by 1. A creature you can detect in this way is considered seen by you. This effect ends early if you fall Unconscious or die.\n\nInvade Mind\nWhile you can detect a creature with Mind Sense, you can spend 1 AP and 1 SP to subject it to 1 of the options listed below for the duration or until they leave its range.\n\n• Read Emotions: Make a Spell Check contested by the target’s Charisma Save. Success: You know their emotional state and have ADV on Charisma Checks against them.\n• Read Thoughts: Make a Spell Check contested by the target’s Intelligence Save. Success: You know the surface level thoughts they’re thinking of at the moment and the target has DisADV on Attacks made against you.",
               "name" : "Mind Sense"
             },
             {
-              "description" : "You gain 1 Talent of your choice that you meet the prerequisites for.",
+              "description" : "You gain 1 Talent of your choice. If the Talent has any prerequisites, you must meet those prerequisites to choose that Talent.",
               "name" : "Talent"
             }
           ],
@@ -5760,7 +5760,7 @@
       "maneuversKnownAtLevel1" : 0,
       "name" : "Psion",
       "path" : "Psionic",
-      "pathDetails" : "Combat Training: Light Armor.\nSpell List: Any Spell with the Psychic or Gravity Tag, or from the Divination, Enchantment, Illusion, or Protection Spell Schools.\nCantrips Known: You learn the number of Cantrips shown in the Psion Class Table. Cantrips are Spells with the Cantrip Tag.\nSpells Known: You learn the number of Spells shown in the Psion Class Table; they can be Spells with or without the Cantrip Tag.\nMana and Stamina: Your maximum MP and SP increase as shown in the Psion Class Table.\n\nBeta 0.10.5 compatibility: the current catalog represents old Illusion and Protection categories as the Illusion Tag and Nullification School. Because the current catalog no longer marks a Cantrip Tag, this builder presents eligible 0-MP Spells as Psion cantrip choices. The supplement's Bonus HP column is blank at every level, so final HP uses the current spellcaster HP progression as a conservative compatibility baseline.",
+      "pathDetails" : "Combat Training: Light Armor\n\nSpell List: When you learn a new Spell, you can choose any Spell with the Psychic or Gravity Spell Tags, or from the following Schools of Magic: Divination, Enchantment, Illusion, or Protection.\n\nCantrips Known: The number of Cantrips you know increases as shown in the Cantrips Known column of the Psion Class Table. Cantrips are Spells with the Cantrip Spell Tag.\n\nSpells Known: The number of Spells you know increases as shown in the Spells Known column of the Psion Class Table. These can be Spells with or without the Cantrip Spell Tag.\n\nMana Points: Your maximum number of Mana Points increases as shown in the Mana Points column of the Psion Class Table.\n\nStamina Points: Your maximum number of Stamina Points increases as shown in the Stamina Points column of the Psion Class Table.",
       "pathTitle" : "Psion Spellcasting Mastery",
       "schoolChoiceCount" : 0,
       "spellsKnownAtLevel1" : 3,
@@ -5774,7 +5774,7 @@
           "Light Weapon"
         ],
         "arsenalCount" : 1,
-        "description" : "Psion v2 (Beta 0.9) grants 1 Light Weapon and 1 set of Novice Light Armor. This builder maps that armor to the current light-armor choices used by Beta 0.10.5.",
+        "description" : "• 1 Light Weapon\n• 1 set of Novice Light Armor\n• X or Y “Packs” (Adventure Packs Coming Soon)",
         "tradeToolCount" : 0,
         "tradeTools" : [
 
