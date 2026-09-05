@@ -99,6 +99,7 @@ export interface CampaignData {
   combats: SavedCombat[];
   campaigns: CampaignRecord[];
   customMonsters: Monster[];
+  customEquipment: EquipmentCatalogItem[];
   encounters: Encounter[];
 }
 

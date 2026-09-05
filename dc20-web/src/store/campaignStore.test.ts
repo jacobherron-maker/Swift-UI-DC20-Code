@@ -113,4 +113,26 @@ describe('campaign persistence migration', () => {
     expect(migrated.campaignData.title).toBe('DC20 Hub');
     expect(migrated.characters[0].build?.languageFluencies).toEqual({ Common: 'Fluent', Elvish: 'Limited' });
   });
+
+  it('persists custom equipment as carried standard items', () => {
+    const migrated = migratePersistedState({
+      campaignData: {
+        customEquipment: [{
+          id: 'custom-equipment-lucky-charm',
+          name: 'Lucky Charm',
+          summary: 'A keepsake from home.',
+          mechanics: 'A keepsake from home.',
+        }],
+      },
+    });
+
+    expect(migrated.campaignData.customEquipment).toEqual([expect.objectContaining({
+      id: 'custom-equipment-lucky-charm',
+      name: 'Lucky Charm',
+      category: 'Adventuring Supplies',
+      subtype: 'Custom Item',
+      slot: 'Carried',
+      mechanics: 'A keepsake from home.',
+    })]);
+  });
 });

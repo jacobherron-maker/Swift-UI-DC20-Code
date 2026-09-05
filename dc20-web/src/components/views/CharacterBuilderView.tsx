@@ -1349,7 +1349,7 @@ const CharacterBuilderView: React.FC<{
   const tradeMasteryMaximum = masteryCap(level);
   const visibleTraits = reference.ancestryTraits.filter((trait) => accessibleAncestries.has(trait.ancestry));
   return (
-    <div className="min-h-full bg-[radial-gradient(circle_at_top,#4c1d95_0%,#111827_42%,#020617_100%)] p-4 lg:p-7">
+    <div className="character-builder min-h-full p-4 lg:p-7">
       <div className="mx-auto max-w-[1500px]">
         <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
           <div><p className="text-xs font-bold uppercase tracking-[0.3em] text-violet-300">DC20 Beta 0.10.5</p><h1 className="mt-1 text-3xl font-black text-white lg:text-4xl">{editingCharacter ? `Edit ${editingCharacter.name}` : 'Build a Character'}</h1></div>

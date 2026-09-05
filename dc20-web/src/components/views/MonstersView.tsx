@@ -379,6 +379,7 @@ export default function MonstersView() {
   const { monsters: sourceMonsters, isLoading, error } = useSourceMonsters();
   const [search, setSearch] = useState('');
   const [customMonstersExpanded, setCustomMonstersExpanded] = useState(true);
+  const [monsterWorkspaceExpanded, setMonsterWorkspaceExpanded] = useState(true);
   const customMonsters = campaignData.customMonsters;
   const selected = sourceMonsters.find(({ id }) => id === selectedMonsterId)
     ?? customMonsters.find(({ id }) => id === selectedMonsterId)
@@ -401,8 +402,16 @@ export default function MonstersView() {
   const duplicate = (monster: Monster) => {
     const copy = cloneMonsterAsCustom(monster);
     addCustomMonster(copy);
+    setMonsterWorkspaceExpanded(true);
   };
-  const createMonster = () => addCustomMonster(createCustomMonster());
+  const createMonster = () => {
+    addCustomMonster(createCustomMonster());
+    setMonsterWorkspaceExpanded(true);
+  };
+  const openMonster = (id: string) => {
+    selectMonster(id);
+    setMonsterWorkspaceExpanded(true);
+  };
 
   return (
     <div className="flex min-h-full flex-col bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)] lg:h-full lg:flex-row lg:overflow-hidden">
@@ -430,7 +439,7 @@ export default function MonstersView() {
             {isLoading && <p className="rounded-xl border border-white/5 p-3 text-sm text-slate-500">Loading audited library…</p>}
             {error && <p className="rounded-xl border border-red-400/20 bg-red-500/5 p-3 text-sm text-red-300">{error}</p>}
             <div className="max-h-44 space-y-2 overflow-y-auto pr-1 lg:max-h-[42vh]">
-              {filteredSources.map((monster) => <MonsterListButton key={monster.id} monster={monster} active={monster.id === selectedMonsterId} onClick={() => selectMonster(monster.id)} />)}
+              {filteredSources.map((monster) => <MonsterListButton key={monster.id} monster={monster} active={monster.id === selectedMonsterId} onClick={() => openMonster(monster.id)} />)}
             </div>
           </section>
           <section>
@@ -440,7 +449,7 @@ export default function MonstersView() {
             </button>
             {customMonstersExpanded && <div className="max-h-40 space-y-2 overflow-y-auto pr-1 lg:max-h-[32vh]">
               {filteredCustom.length === 0 && <button type="button" onClick={createMonster} className="w-full rounded-xl border border-dashed border-white/10 p-4 text-sm text-slate-500 hover:border-violet-400/30 hover:text-violet-300">Create your first custom monster</button>}
-              {filteredCustom.map((monster) => <MonsterListButton key={monster.id} monster={monster} active={monster.id === selectedMonsterId} onClick={() => selectMonster(monster.id)} />)}
+              {filteredCustom.map((monster) => <MonsterListButton key={monster.id} monster={monster} active={monster.id === selectedMonsterId} onClick={() => openMonster(monster.id)} />)}
             </div>}
           </section>
         </div>
@@ -448,19 +457,25 @@ export default function MonstersView() {
 
       <main className="min-w-0 flex-1 lg:overflow-y-auto">
         {!selected && <div className="grid min-h-full place-items-center p-8 text-center text-slate-500">Select a monster or create a custom one.</div>}
-        {selected && !isCustom && <SourceMonsterDetail monster={selected} onDuplicate={() => duplicate(selected)} />}
-        {selected && isCustom && (
-          <CustomMonsterEditor
-            monster={selected}
-            onChange={updateCustomMonster}
-            onDuplicate={() => duplicate(selected)}
-            onDelete={() => {
-              if (window.confirm(`Delete ${selected.name}? Existing encounter and combat snapshots will remain available.`)) {
-                removeCustomMonster(selected.id);
-              }
-            }}
-          />
-        )}
+        {selected && <section className="min-h-full">
+          <button type="button" onClick={() => setMonsterWorkspaceExpanded((expanded) => !expanded)} aria-expanded={monsterWorkspaceExpanded} className="sticky top-0 z-20 flex min-h-14 w-full items-center justify-between gap-4 border-b border-white/10 bg-slate-950/90 px-4 py-3 text-left shadow-lg backdrop-blur sm:px-6 lg:px-8">
+            <span className="min-w-0"><span className="block text-[10px] font-black uppercase tracking-[0.18em] text-violet-300">{isCustom ? 'Custom Monster Builder' : 'Monster Stat Block'}</span><span className="block truncate font-black text-white">{selected.name || 'Unnamed Monster'}</span></span>
+            <span className="shrink-0 rounded-lg bg-violet-500/10 px-3 py-2 text-xs font-black text-violet-200">{monsterWorkspaceExpanded ? 'Collapse' : 'Expand'} <span aria-hidden="true">{monsterWorkspaceExpanded ? '▴' : '▾'}</span></span>
+          </button>
+          {monsterWorkspaceExpanded && <>
+            {!isCustom && <SourceMonsterDetail monster={selected} onDuplicate={() => duplicate(selected)} />}
+            {isCustom && <CustomMonsterEditor
+              monster={selected}
+              onChange={updateCustomMonster}
+              onDuplicate={() => duplicate(selected)}
+              onDelete={() => {
+                if (window.confirm(`Delete ${selected.name}? Existing encounter and combat snapshots will remain available.`)) {
+                  removeCustomMonster(selected.id);
+                }
+              }}
+            />}
+          </>}
+        </section>}
       </main>
     </div>
   );

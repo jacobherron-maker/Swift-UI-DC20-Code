@@ -8,6 +8,7 @@ import type {
   Combatant,
   CombatantTeam,
   Encounter,
+  EquipmentCatalogItem,
   HubSection,
   HubState,
   Monster,
@@ -20,6 +21,8 @@ import type {
 import {
   CombatantTeamValues,
   DC20Attributes,
+  EquipmentCategoryValues,
+  EquipmentSlotValues,
   HubSectionValues,
   MonsterAbilityKindValues,
   MonsterRoleValues,
@@ -35,7 +38,7 @@ import {
 import { generateUUID } from '../utils/gameUtils';
 import { DEFAULT_PALETTE_ID, themePalette } from '../data/themePalettes';
 
-const STORE_VERSION = 6;
+const STORE_VERSION = 7;
 
 export const defaultCampaignData: CampaignData = {
   title: 'DC20 Hub',
@@ -43,6 +46,7 @@ export const defaultCampaignData: CampaignData = {
   combats: [],
   campaigns: [],
   customMonsters: [],
+  customEquipment: [],
   encounters: [],
 };
 
@@ -76,6 +80,9 @@ interface CampaignStore extends HubState {
   addCustomMonster: (monster: Monster) => void;
   updateCustomMonster: (monster: Monster) => void;
   removeCustomMonster: (id: string) => void;
+  addCustomEquipment: (item: EquipmentCatalogItem) => void;
+  updateCustomEquipment: (item: EquipmentCatalogItem) => void;
+  removeCustomEquipment: (id: string) => void;
 }
 
 type PersistedCampaignState = Pick<
@@ -143,6 +150,31 @@ function normalizeAbility(value: unknown): MonsterAbility | null {
       ? item.details
       : typeof item.description === 'string' ? item.description : '',
     traitValue,
+  };
+}
+
+function normalizeCustomEquipment(value: unknown): EquipmentCatalogItem | null {
+  if (!value || typeof value !== 'object') return null;
+  const item = value as Record<string, unknown>;
+  const name = typeof item.name === 'string' ? item.name.trim() : '';
+  if (!name) return null;
+  const description = typeof item.mechanics === 'string'
+    ? item.mechanics
+    : typeof item.summary === 'string' ? item.summary : '';
+  return {
+    id: typeof item.id === 'string' ? item.id : `custom-equipment-${generateUUID()}`,
+    name,
+    category: Object.values(EquipmentCategoryValues).includes(item.category as EquipmentCatalogItem['category'])
+      ? item.category as EquipmentCatalogItem['category']
+      : EquipmentCategoryValues.ADVENTURING_SUPPLIES,
+    subtype: 'Custom Item',
+    summary: typeof item.summary === 'string' ? item.summary : description,
+    mechanics: description,
+    properties: Array.isArray(item.properties) ? item.properties.filter((entry): entry is string => typeof entry === 'string') : [],
+    slot: Object.values(EquipmentSlotValues).includes(item.slot as EquipmentCatalogItem['slot'])
+      ? item.slot as EquipmentCatalogItem['slot']
+      : EquipmentSlotValues.CARRIED,
+    sourcePage: 'Custom Item',
   };
 }
 
@@ -432,6 +464,9 @@ export function migratePersistedState(value: unknown): PersistedCampaignState {
       customMonsters: Array.isArray(rawCampaignData.customMonsters)
         ? rawCampaignData.customMonsters.map(normalizeMonster)
         : [],
+      customEquipment: Array.isArray(rawCampaignData.customEquipment)
+        ? rawCampaignData.customEquipment.map(normalizeCustomEquipment).filter((item): item is EquipmentCatalogItem => item !== null)
+        : [],
       encounters: Array.isArray(rawCampaignData.encounters)
         ? rawCampaignData.encounters.map(normalizeEncounter)
         : [],
@@ -604,6 +639,25 @@ export const useCampaignStore = create<CampaignStore>()(
       removeCustomMonster: (id) => set((state) => ({
         campaignData: { ...state.campaignData, customMonsters: state.campaignData.customMonsters.filter((monster) => monster.id !== id) },
         selectedMonsterId: state.selectedMonsterId === id ? null : state.selectedMonsterId,
+      })),
+      addCustomEquipment: (item) => set((state) => ({
+        campaignData: { ...state.campaignData, customEquipment: [...state.campaignData.customEquipment, item] },
+      })),
+      updateCustomEquipment: (item) => set((state) => ({
+        campaignData: {
+          ...state.campaignData,
+          customEquipment: state.campaignData.customEquipment.map((existing) => existing.id === item.id ? item : existing),
+        },
+      })),
+      removeCustomEquipment: (id) => set((state) => ({
+        campaignData: {
+          ...state.campaignData,
+          customEquipment: state.campaignData.customEquipment.filter((item) => item.id !== id),
+        },
+        characters: state.characters.map((character) => ({
+          ...character,
+          inventoryItems: (character.inventoryItems ?? []).filter(({ equipmentID }) => equipmentID !== id),
+        })),
       })),
     }),
     {

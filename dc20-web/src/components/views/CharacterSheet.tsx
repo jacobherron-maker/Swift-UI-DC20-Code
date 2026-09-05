@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useCharacterReference } from '../../hooks/useCharacterReference';
 import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { usePowerCatalog, type SpellReference } from '../../hooks/usePowerCatalog';
+import { useCampaignStore } from '../../store/campaignStore';
 import { CharacterAvatarEditor } from '../character/CharacterAvatar';
 import { CharacterRestControls, CharacterSheetTabContent, type RedesignedSheetTab } from '../character/CharacterSheetTabs';
 import type { AncestryTrait, CampaignNote, Character, CharacterInventoryItem, DC20Attribute, DruidWildFormRecord, EquipmentCatalogItem, MasteryLevel, Spell } from '../../types/models';
@@ -2100,7 +2101,12 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const [conditionToAdd, setConditionToAdd] = useState('Bleeding');
   const [expandedSkills, setExpandedSkills] = useState(true);
   const [expandedTrades, setExpandedTrades] = useState(false);
-  const { equipment: equipmentCatalog } = useEquipmentCatalog();
+  const { equipment: standardEquipmentCatalog } = useEquipmentCatalog();
+  const customEquipmentCatalog = useCampaignStore(({ campaignData }) => campaignData.customEquipment);
+  const equipmentCatalog = useMemo(
+    () => [...standardEquipmentCatalog, ...customEquipmentCatalog],
+    [customEquipmentCatalog, standardEquipmentCatalog],
+  );
   const { spells: spellCatalog, maneuvers: maneuverCatalog } = usePowerCatalog();
   const { reference } = useCharacterReference();
   const classReference = reference?.classes.find(({ name }) => name === character.class);

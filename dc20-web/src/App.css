@@ -83,6 +83,11 @@ button,
 
 .btn-primary:hover { filter: brightness(1.1); }
 
+.theme-primary-button {
+  background: linear-gradient(90deg, var(--theme-accent), color-mix(in srgb, var(--theme-accent) 68%, #312e81));
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--theme-accent) 20%, transparent);
+}
+
 /* Sidebar modern */
 .sidebar {
   background: linear-gradient(180deg, color-mix(in srgb, var(--theme-bg-secondary) 78%, #0f172a), color-mix(in srgb, var(--theme-bg) 88%, #020617));
@@ -143,6 +148,42 @@ button,
   border-color: var(--theme-accent) !important;
 }
 
+/* The builder has many translucent violet utility classes. Keep its semantic
+   class colors, but route its shared chrome through the selected palette. */
+.character-builder {
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--theme-accent) 38%, transparent) 0%, transparent 45%),
+    linear-gradient(160deg, color-mix(in srgb, var(--theme-bg-secondary) 82%, #111827), var(--theme-bg) 52%, #020617);
+}
+
+.character-builder :is([class*="text-violet-"], [class*="text-purple-"]) {
+  color: var(--theme-highlight) !important;
+}
+
+.character-builder :is([class*="border-violet-"], [class*="border-purple-"]) {
+  border-color: color-mix(in srgb, var(--theme-accent) 52%, transparent) !important;
+}
+
+.character-builder :is([class*="bg-violet-500/"], [class*="bg-purple-500/"], [class*="bg-violet-950/"], [class*="bg-purple-950/"]) {
+  background-color: color-mix(in srgb, var(--theme-accent) 14%, transparent) !important;
+}
+
+.character-builder :is(.bg-violet-600, .bg-violet-700, .bg-purple-600, .bg-purple-700) {
+  background-color: var(--theme-accent) !important;
+}
+
+.character-builder :is([class*="from-violet-"], [class*="from-purple-"]) {
+  --tw-gradient-from: color-mix(in srgb, var(--theme-accent) 32%, var(--theme-bg-secondary)) !important;
+}
+
+.character-builder :is([class*="via-violet-"], [class*="via-purple-"]) {
+  --tw-gradient-via: color-mix(in srgb, var(--theme-accent) 12%, #0f172a) !important;
+}
+
+.character-builder :is([class*="ring-violet-"], [class*="ring-purple-"]) {
+  --tw-ring-color: color-mix(in srgb, var(--theme-accent) 35%, transparent) !important;
+}
+
 @media (max-width: 1023px) {
   .header-modern {
     padding-top: max(0.75rem, env(safe-area-inset-top));
@@ -155,6 +196,15 @@ button,
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
     padding-left: env(safe-area-inset-left);
     scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Netlify's fixed deployment badge occupies the lower-right corner. Reserve
+     a final scroll row so bottom actions and editor fields remain reachable. */
+  .app-main {
+    padding-bottom: 5.5rem;
+    scroll-padding-bottom: 6rem;
   }
 }
 
