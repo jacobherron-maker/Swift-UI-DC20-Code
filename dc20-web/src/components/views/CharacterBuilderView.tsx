@@ -42,16 +42,30 @@ import {
   masteryCap,
   masteryRank,
   masteryTitle,
+  ordinaryTalentSlots,
+  paragonTalentSlotClasses,
   skillMasteryCap,
   selectedAncestryTraits,
   isAutomaticAncestryTrait,
+  sorcererOriginAncestryBonuses,
   spellIsAvailableToClass,
-  talentSlots,
   wizardSchoolSpellGrantLimit,
   wizardSchoolSpellSelectionKey,
 } from '../../utils/characterRules';
 import { toggleInventoryEquipped } from '../../utils/equipmentRules';
 import { generateUUID } from '../../utils/gameUtils';
+import {
+  MULTICLASS_SELECTION_KEYS,
+  isMulticlassTalentName,
+  multiclassChoiceIsValid,
+  multiclassTalentOptions,
+  ownedClassFeatures,
+  talentByName,
+  talentDefinitions,
+  talentEligibility,
+  type MulticlassTalentName,
+  type TalentDefinition,
+} from '../../utils/talentRules';
 
 type BuilderStep = 'attributes' | 'skills' | 'ancestry' | 'class' | 'equipment' | 'summary';
 const STEPS: Array<{ id: BuilderStep; title: string }> = [
@@ -72,6 +86,10 @@ const DEFAULT_ATTRIBUTES: Record<DC20Attribute, number> = {
 const EMPTY_ATTRIBUTES: Record<DC20Attribute, number> = { Might: 0, Agility: 0, Charisma: 0, Intelligence: 0 };
 const STANDARD_ARRAY = [3, 1, 0, -2];
 const LANGUAGE_FLUENCIES: LanguageFluency[] = ['Untrained', 'Limited', 'Fluent'];
+const MARTIAL_EXPANSION_REGEN = 'talent.martialExpansion.staminaRegen';
+const SPELLCASTING_EXPANSION_MODE = 'talent.spellcastingExpansion.mode';
+const SPELLCASTING_EXPANSION_SOURCE = 'talent.spellcastingExpansion.source';
+const SPELLCASTING_EXPANSION_SCHOOLS = 'talent.spellcastingExpansion.schools';
 
 const fieldClass = 'w-full rounded-lg border border-slate-600 bg-slate-950/70 px-3 py-2 text-slate-100 outline-none focus:border-violet-400';
 const panelClass = 'rounded-2xl border border-white/10 bg-slate-900/65 p-5 shadow-xl shadow-black/10';
@@ -495,6 +513,15 @@ const CharacterBuilderView: React.FC<{
     notes,
     build,
   };
+  const ownedFeatures = reference ? ownedClassFeatures(draft, reference) : [];
+  const ownsClassFeature = (owner: string, feature: string) => ownedFeatures.some(({ className: featureClass, name: featureName }) => (
+    featureClass === owner && featureName === feature
+  ));
+  const allTalentDefinitions = reference ? talentDefinitions(reference) : [];
+  const talentClassNames = new Set(ownedFeatures.map(({ className: owner }) => owner));
+  const presentedTalents = allTalentDefinitions.filter((talent) => (
+    talent.category !== 'Class' || talent.className === className || talentClassNames.has(talent.className ?? '')
+  ));
   const derived = classReference && reference ? deriveCharacter(draft, classReference, reference.ancestryTraits, equipment) : null;
   const classTotals = classReference ? classTableTotals(classReference, level) : null;
   const expertise = reference ? ancestryExpertise(draft, reference.ancestryTraits) : { skills: {}, trades: {} };
@@ -506,11 +533,18 @@ const CharacterBuilderView: React.FC<{
   const ancestrySpent = ancestryTotals.spent;
   const negativePoints = ancestryTotals.negativePoints;
   const minorTraits = ancestryTotals.zeroPointTraits;
-  const sorcererRestrictedAncestry = className === 'Sorcerer' && subclass === 'Angelic' ? 'Angelborn'
-    : className === 'Sorcerer' && subclass === 'Draconic' ? 'Dragonborn' : '';
-  const ancestrySpentOutsideSorcererOrigin = selectedTraits
-    .filter(({ ancestry: traitAncestry }) => traitAncestry !== sorcererRestrictedAncestry)
-    .reduce((sum, trait) => sum + trait.cost * ancestryTraitSelectionCount(draft, trait), 0);
+  const sorcererOriginBonuses = sorcererOriginAncestryBonuses(draft);
+  const sorcererRestrictedAncestries = Object.entries(sorcererOriginBonuses)
+    .filter(([, points]) => points > 0)
+    .map(([traitAncestry]) => traitAncestry);
+  const sorcererOriginBonusTotal = Object.values(sorcererOriginBonuses).reduce((sum, points) => sum + points, 0);
+  const ancestrySpentByList = selectedTraits.reduce<Record<string, number>>((totals, trait) => ({
+    ...totals,
+    [trait.ancestry]: (totals[trait.ancestry] ?? 0) + trait.cost * ancestryTraitSelectionCount(draft, trait),
+  }), {});
+  const sorcererOriginBonusUsed = Object.entries(sorcererOriginBonuses).reduce((sum, [traitAncestry, points]) => (
+    sum + Math.min(points, Math.max(0, ancestrySpentByList[traitAncestry] ?? 0))
+  ), 0);
   const skillSpent = masterySpent(skillMasteries);
   const tradeSpent = masterySpent(tradeMasteries);
   const grantedLanguages = grantedClassLanguageNames(draft);
@@ -522,28 +556,44 @@ const CharacterBuilderView: React.FC<{
   const pointBuySpent = Object.values(attributes).reduce((sum, value) => sum + value, 0);
   const usesAttributePool = attributeMethod !== 'Point Buy';
   const currentStepIndex = STEPS.findIndex(({ id }) => id === currentStep);
-  const availableTalentSlots = talentSlots(className, level, subclass);
+  const paragonTalentClasses = paragonTalentSlotClasses(draft);
+  const availableTalentSlots = ordinaryTalentSlots(className, level) + paragonTalentClasses.length;
   const attributePool = attributeMethod === 'Standard Array' ? STANDARD_ARRAY : rolledResults;
   const assignedCount = new Set(attributeAssignments.filter(Boolean)).size;
   const previewClassReference = reference?.classes.find((entry) => entry.name === classPreviewName) ?? null;
-  const wizardSchools = className === 'Wizard' ? featureChoices['wizard.school'] ?? [] : [];
-  const wizardSchoolSpellLimit = wizardSchoolSpellGrantLimit(level);
+  const wizardSchools = ownsClassFeature('Wizard', 'Spell School Initiate') ? featureChoices['wizard.school'] ?? [] : [];
+  const wizardSchoolSpellLimit = ownsClassFeature('Wizard', 'Expert Wizard') ? 3 : wizardSchoolSpellGrantLimit(level);
   const wizardSchoolSpellGroups = wizardSchools.map((school) => [
     wizardSchoolSpellSelectionKey(school),
     featureChoices[wizardSchoolSpellSelectionKey(school)] ?? [],
   ] as const);
-  const wizardCovenSpell = className === 'Wizard' && level >= 3 && subclass === 'Witch'
+  const wizardCovenSpell = ownedFeatures.some(({ className: owner, name: feature }) => owner === 'Wizard' && feature === 'Coven’s Gift')
     ? featureChoices['wizard.witchCurseSpell'] ?? [] : [];
   const wizardFeatureSpellNames = wizardSchoolSpellGroups.flatMap(([, names]) => names).concat(wizardCovenSpell);
   const wizardKnownSpellNames = new Set([...selectedSpells, ...wizardFeatureSpellNames]);
-  const wizardPreparedLimit = level >= 5 ? 2 : 1;
-  const featureChoiceGroups = (classReference?.choiceGroups.filter((group) => (
-    group.level <= level
-    && (!group.requiredSubclass || group.requiredSubclass === subclass)
-    && (!group.requiredTalent || talents.includes(group.requiredTalent))
-    && (group.id !== 'hunter.forestSkills' || (featureChoices['hunter.terrain'] ?? []).includes('Forest'))
-    && (group.id !== 'hunter.urbanSkills' || (featureChoices['hunter.terrain'] ?? []).includes('Urban'))
-  )) ?? []).map((group) => {
+  const wizardPreparedLimit = ownsClassFeature('Wizard', 'Expert Wizard') ? 2 : 1;
+  const featureChoiceGroups = (reference?.classes.flatMap((ownerReference) => ownerReference.choiceGroups
+    .filter((group) => {
+      const nativeFeature = ownerReference.name === className && group.level <= level;
+      const grantedFeature = ownedFeatures.some(({ className: owner, name: feature, subclass: featureSubclass }) => (
+        owner === ownerReference.name
+        && feature === group.feature
+        && (!group.requiredSubclass || featureSubclass === group.requiredSubclass)
+      ));
+      const talentFeature = Boolean(group.requiredTalent && talents.includes(group.requiredTalent)
+        && talentClassNames.has(ownerReference.name));
+      // Multiclass rules require choosing a referenced damage type even when the
+      // Feature that normally establishes it was not also gained (Beta p.191).
+      const referencedMulticlassChoice = group.id === 'cleric.divineDamage'
+        && ownsClassFeature('Cleric', 'Channel Divinity');
+      return (nativeFeature || grantedFeature || talentFeature || referencedMulticlassChoice)
+        && (!group.requiredSubclass || group.requiredSubclass === subclass
+          || ownedFeatures.some(({ className: owner, subclass: ownedSubclass }) => owner === ownerReference.name && ownedSubclass === group.requiredSubclass))
+        && (!group.requiredTalent || talents.includes(group.requiredTalent))
+        && (group.id !== 'hunter.forestSkills' || (featureChoices['hunter.terrain'] ?? []).includes('Forest'))
+        && (group.id !== 'hunter.urbanSkills' || (featureChoices['hunter.terrain'] ?? []).includes('Urban'));
+    })
+    .map((group) => ({ group, ownerReference }))) ?? []).map(({ group, ownerReference }) => {
     const options: ClassChoiceGroupReference['options'] = group.id === 'wizard.preparedSpells'
       ? Array.from(wizardKnownSpellNames).sort().flatMap((name) => {
         const spell = spells.find(({ name: candidate }) => candidate === name);
@@ -555,7 +605,7 @@ const CharacterBuilderView: React.FC<{
         }] : [];
       })
       : group.optionsFromGroup
-      ? classReference?.choiceGroups.find(({ id }) => id === group.optionsFromGroup)?.options ?? []
+      ? ownerReference.choiceGroups.find(({ id }) => id === group.optionsFromGroup)?.options ?? []
       : group.options;
     const resolved = { ...group, options };
     const limit = classChoiceSelectionLimit(resolved, draft);
@@ -585,7 +635,13 @@ const CharacterBuilderView: React.FC<{
     }
     if (next < 3) setSubclass('');
     if (classReference) {
-      setTalents((current) => current.filter((talent) => classReference.talents.some((option) => option.name === talent && option.minimumLevel <= next)).slice(0, talentSlots(classReference.name, next, next >= 3 ? subclass : '')));
+      setTalents((current) => current.filter((talent) => (
+        allTalentDefinitions.some((option) => option.name === talent && option.minimumLevel <= next)
+      )).slice(0, ordinaryTalentSlots(classReference.name, next) + paragonTalentSlotClasses({
+        ...draft,
+        level: next,
+        subclass: next >= 3 ? subclass : undefined,
+      }).length));
     }
     const validPathLevels = new Set(classPathProgressionLevels(className, next).map(String));
     setPathChoices((current) => Object.fromEntries(Object.entries(current).filter(([pathLevel]) => validPathLevels.has(pathLevel))));
@@ -769,14 +825,42 @@ const CharacterBuilderView: React.FC<{
     setter(values.includes(value) ? values.filter((entry) => entry !== value) : values.length < limit ? [...values, value] : values);
   };
 
-  const adjustTalent = (name: string, direction: -1 | 1, isRepeatable: boolean) => {
+  const adjustTalent = (talent: TalentDefinition, direction: -1 | 1) => {
+    const name = talent.name;
+    if (direction > 0 && reference && !talentEligibility(talent, draft, reference).available) return;
+    if (direction < 0 && isMulticlassTalentName(name)) {
+      const key = MULTICLASS_SELECTION_KEYS[name];
+      const nextCount = Math.max(0, talents.filter((candidate) => candidate === name).length - 1);
+      setFeatureChoices((current) => ({ ...current, [key]: (current[key] ?? []).slice(0, nextCount) }));
+    }
+    if (direction < 0 && name === 'Martial Expansion') {
+      setFeatureChoices((current) => { const next = { ...current }; delete next[MARTIAL_EXPANSION_REGEN]; return next; });
+    }
+    if (direction < 0 && name === 'Spellcasting Expansion') {
+      setFeatureChoices((current) => {
+        const next = { ...current };
+        delete next[SPELLCASTING_EXPANSION_MODE];
+        delete next[SPELLCASTING_EXPANSION_SOURCE];
+        delete next[SPELLCASTING_EXPANSION_SCHOOLS];
+        return next;
+      });
+    }
     setTalents((current) => {
       if (direction < 0) {
         const index = current.lastIndexOf(name);
         return index < 0 ? current : current.filter((_, candidate) => candidate !== index);
       }
-      if (current.length >= availableTalentSlots || (!isRepeatable && current.includes(name))) return current;
+      if (current.length >= availableTalentSlots || (!talent.isRepeatable && current.includes(name))) return current;
       return [...current, name];
+    });
+  };
+
+  const setMulticlassChoice = (talentName: MulticlassTalentName, index: number, choice: string) => {
+    const key = MULTICLASS_SELECTION_KEYS[talentName];
+    setFeatureChoices((current) => {
+      const next = [...(current[key] ?? [])];
+      next[index] = choice;
+      return { ...current, [key]: next };
     });
   };
 
@@ -788,7 +872,7 @@ const CharacterBuilderView: React.FC<{
         ? selected.filter((entry) => entry !== option)
         : group.limit === 1 ? [option] : selected.length < group.limit ? [...selected, option] : selected;
       const next = { ...current, [group.id]: updated };
-      if (group.id === 'spellblade.disciplines' && subclass === 'Paladin') {
+      if (group.id === 'spellblade.disciplines' && ownedFeatures.some(({ className: owner, name: feature }) => owner === 'Spellblade' && feature === 'Holy Warrior')) {
         const paladinChoice = next['spellblade.paladinDiscipline'] ?? [];
         if (!updated.includes('Acolyte')) next['spellblade.paladinDiscipline'] = ['Acolyte'];
         else if (paladinChoice[0] === 'Acolyte' || updated.includes(paladinChoice[0])) next['spellblade.paladinDiscipline'] = [];
@@ -856,22 +940,22 @@ const CharacterBuilderView: React.FC<{
 
   const summonerSpellGrantGroups = new Set([
     'summoner.bondedSummon',
-    ...(subclass === 'Chimera' ? ['summoner.chimeraSummons'] : []),
-    ...(subclass === 'Dread Lord' ? ['summoner.dreadLordSummon'] : []),
+    ...(ownedFeatures.some(({ className: owner, name: feature }) => owner === 'Summoner' && feature === 'Summon Chimera') ? ['summoner.chimeraSummons'] : []),
+    ...(ownedFeatures.some(({ className: owner, name: feature }) => owner === 'Summoner' && feature === 'Unending March') ? ['summoner.dreadLordSummon'] : []),
     ...(talents.includes('Horde Summoner') ? ['summoner.hordeSummons'] : []),
   ]);
   const classChoiceOptionDisabled = (group: ClassChoiceGroupReference, option: string): boolean => {
-    if (className === 'Spellblade' && group.id === 'spellblade.paladinDiscipline') {
+    if (group.id === 'spellblade.paladinDiscipline') {
       const baseDisciplines = featureChoices['spellblade.disciplines'] ?? [];
       return baseDisciplines.includes('Acolyte')
         ? option === 'Acolyte' || baseDisciplines.includes(option)
         : option !== 'Acolyte';
     }
-    if (className === 'Wizard' && group.id === 'wizard.witchCurseSpell') {
+    if (group.id === 'wizard.witchCurseSpell') {
       return selectedSpells.includes(option)
         || wizardSchoolSpellGroups.some(([, names]) => names.includes(option));
     }
-    if (className !== 'Summoner' || !group.id.startsWith('summoner.')) return false;
+    if (!group.id.startsWith('summoner.')) return false;
     const knownOutsideGroup = new Set([
       ...selectedSpells,
       ...Array.from(summonerSpellGrantGroups)
@@ -887,16 +971,32 @@ const CharacterBuilderView: React.FC<{
   };
 
   const hasSpells = (derived?.spellLimit ?? 0) > 0 || (derived?.cantripLimit ?? 0) > 0;
+  const hasMartialExpansion = talents.includes('Martial Expansion');
+  const hasSpellcastingExpansion = talents.includes('Spellcasting Expansion');
+  const spellcastingExpansionMode = featureChoices[SPELLCASTING_EXPANSION_MODE]?.[0] ?? '';
+  const spellcastingExpansionSource = featureChoices[SPELLCASTING_EXPANSION_SOURCE]?.[0] ?? '';
+  const spellcastingExpansionSchools = featureChoices[SPELLCASTING_EXPANSION_SCHOOLS] ?? [];
+  const martialExpansionRegenOptions = [
+    ...(reference?.classes.filter(({ pathDetails }) => pathDetails.includes('Stamina Regen:')).map(({ name: option }) => option) ?? []),
+    'Spellcaster Path',
+  ];
+  const martialExpansionRegen = featureChoices[MARTIAL_EXPANSION_REGEN]?.[0] ?? '';
+  const martialExpansionRegenText = martialExpansionRegen === 'Spellcaster Path'
+    ? 'Once per round, you regain up to half your maximum SP when you use a Spell Enhancement.'
+    : reference?.classes.find(({ name: option }) => option === martialExpansionRegen)?.pathDetails.split('Stamina Regen:')[1]?.trim() ?? '';
   const spellcasterPathCount = Object.values(pathChoices).filter((path) => path === 'Spellcaster').length;
   const lacksStartingSpellList = (classTotals?.spells ?? 0) + (classTotals?.cantrips ?? 0) === 0;
   const needsBorrowedSpellList = hasSpells && lacksStartingSpellList && spellcasterPathCount > 0;
   const spellListClasses = reference?.classes.filter((entry) => entry.tableRows.some((row) => (row.spells ?? 0) > 0 || (row.cantrips ?? 0) > 0)) ?? [];
   const spellAccessClassName = needsBorrowedSpellList ? spellListClass : className;
   const spellAccessReference = reference?.classes.find((entry) => entry.name === spellAccessClassName) ?? null;
-  const canChooseSpellSource = hasSpells && Boolean(spellAccessReference) && !spellAccessReference?.fixedSpellSource
+  const spellAccessHasPublishedList = Boolean(needsBorrowedSpellList || spellAccessReference?.tableRows.some((row) => (
+    (row.spells ?? 0) > 0 || (row.cantrips ?? 0) > 0
+  )));
+  const canChooseSpellSource = hasSpells && spellAccessHasPublishedList && Boolean(spellAccessReference) && !spellAccessReference?.fixedSpellSource
     && !['Bard', 'Psion', 'Spellblade', 'Summoner', 'Warlock'].includes(spellAccessClassName);
   const spellSchoolChoiceCount = spellAccessReference?.schoolChoiceCount ?? 0;
-  const clericDomains = className === 'Cleric' ? featureChoices['cleric.domains'] ?? [] : [];
+  const clericDomains = ownsClassFeature('Cleric', 'Cleric Order') ? featureChoices['cleric.domains'] ?? [] : [];
   const clericMagicDomainCount = clericDomains.filter((domain) => domain === 'Magic').length;
   const clericMagicDomainTags = (featureChoices['cleric.magicDomainTags'] ?? []).slice(0, clericMagicDomainCount);
   const clericMagicDomainSpells = (featureChoices['cleric.magicDomainSpells'] ?? []).slice(0, clericMagicDomainCount);
@@ -908,30 +1008,36 @@ const CharacterBuilderView: React.FC<{
   const clericDefenseManeuvers = maneuvers.filter(({ category }) => category === 'Defense');
   const allowedSpells = (() => {
     if (!spellAccessReference || !hasSpells) return [];
-    return spells.filter((spell) => spellIsAvailableToClass(
-      spellAccessClassName,
-      spell,
-      spellAccessReference.fixedSpellSource,
-      spellSource,
-      selectedSpellSchools,
-      subclass,
-      clericMagicDomainTags,
-    ));
+    return spells.filter((spell) => {
+      const classSpell = spellAccessHasPublishedList && spellIsAvailableToClass(
+        spellAccessClassName,
+        spell,
+        spellAccessReference.fixedSpellSource,
+        spellSource,
+        selectedSpellSchools,
+        subclass,
+        clericMagicDomainTags,
+      );
+      const expansionSpell = hasSpellcastingExpansion && (spellcastingExpansionMode === 'Source'
+        ? spell.source.split(', ').includes(spellcastingExpansionSource)
+        : spellcastingExpansionMode === 'Schools' && spellcastingExpansionSchools.includes(spell.school));
+      return classSpell || expansionSpell;
+    });
   })();
   const psionCantripOptions = className === 'Psion'
     ? allowedSpells.filter(({ cost }) => cost.includes('0 MP') || !cost.includes('MP'))
     : [];
   const hasManeuvers = (derived?.maneuverLimit ?? 0) > 0 || grantedManeuvers.length > 0;
-  const warlockBoons = new Set(className === 'Warlock' ? featureChoices['warlock.boon'] ?? [] : []);
+  const warlockBoons = new Set(ownsClassFeature('Warlock', 'Pact Boon') ? featureChoices['warlock.boon'] ?? [] : []);
   const hasPactWeapon = warlockBoons.has('Pact Weapon');
   const hasPactArmor = warlockBoons.has('Pact Armor');
   const hasPactSpell = warlockBoons.has('Pact Spell');
-  const warlockGrantedManeuverLimit = level >= 5 ? 3 : 2;
+  const warlockGrantedManeuverLimit = ownsClassFeature('Warlock', 'Expert Warlock') ? 3 : 2;
   const warlockAttackManeuvers = maneuvers.filter(({ category }) => category === 'Attack');
   const warlockDefenseManeuvers = maneuvers.filter(({ category }) => category === 'Defense');
   const warlockExpertSpells = featureChoices['warlock.expertSpells'] ?? [];
   const warlockPactSpells = featureChoices['warlock.pactSpells'] ?? [];
-  const warlockPactSpellLimit = level >= 5 ? 2 : 1;
+  const warlockPactSpellLimit = ownsClassFeature('Warlock', 'Expert Warlock') ? 2 : 1;
   const pactBaneCount = talents.filter((talent) => talent === 'Pact Bane').length;
   const pactBaneSpells = featureChoices['warlock.pactBaneSpells'] ?? [];
   const baneKnownOutsideTalent = selectedSpells.includes('Bane')
@@ -943,18 +1049,19 @@ const CharacterBuilderView: React.FC<{
   ]);
   const pactBaneOptions = Array.from(new Set(['Bane', ...allowedSpells.map(({ name }) => name)]))
     .flatMap((name) => spells.filter((spell) => spell.name === name));
-  const bardMagicalSecrets = className === 'Bard' ? featureChoices['bard.magicalSecrets'] ?? [] : [];
-  const bardExpertSecrets = className === 'Bard' && level >= 5 ? featureChoices['bard.expertSecrets'] ?? [] : [];
-  const bardExpandedSecrets = className === 'Bard' && level >= 3 && talents.includes('Expanded Repertoire')
+  const bardMagicalSecrets = ownsClassFeature('Bard', 'Remarkable Repertoire') ? featureChoices['bard.magicalSecrets'] ?? [] : [];
+  const bardExpertSecrets = ownsClassFeature('Bard', 'Expert Bard') ? featureChoices['bard.expertSecrets'] ?? [] : [];
+  const bardExpandedSecrets = ownsClassFeature('Bard', 'Remarkable Repertoire') && talents.includes('Expanded Repertoire')
     ? featureChoices['bard.expandedRepertoireSpells'] ?? [] : [];
-  const bardEnthrallSpell = className === 'Bard' && level >= 3 && subclass === 'Eloquence'
+  const bardHasEloquence = ownedFeatures.some(({ className: owner, name: feature }) => owner === 'Bard' && feature === 'Beguiling Presence');
+  const bardEnthrallSpell = bardHasEloquence
     ? featureChoices['bard.enthrallSpell'] ?? [] : [];
   const bardFeatureSpellGroups = [
     ['bard.magicalSecrets', bardMagicalSecrets],
-    ...(level >= 5 ? [['bard.expertSecrets', bardExpertSecrets] as const] : []),
-    ...(level >= 3 && talents.includes('Expanded Repertoire')
+    ...(ownsClassFeature('Bard', 'Expert Bard') ? [['bard.expertSecrets', bardExpertSecrets] as const] : []),
+    ...(talents.includes('Expanded Repertoire')
       ? [['bard.expandedRepertoireSpells', bardExpandedSecrets] as const] : []),
-    ...(level >= 3 && subclass === 'Eloquence' ? [['bard.enthrallSpell', bardEnthrallSpell] as const] : []),
+    ...(bardHasEloquence ? [['bard.enthrallSpell', bardEnthrallSpell] as const] : []),
   ] as Array<readonly [string, string[]]>;
   const bardKnownOutside = (groupID: string) => new Set([
     ...selectedSpells,
@@ -964,9 +1071,9 @@ const CharacterBuilderView: React.FC<{
   const bardEnthrallOptions = bardKnownBeforeEnthrall.has('Charm')
     ? spells.filter(({ name, tags }) => name !== 'Charm' && (tags ?? '').split(',').some((tag) => tag.trim().toLowerCase() === 'charmed'))
     : spells.filter(({ name }) => name === 'Charm');
-  const championMasterAtArmsManeuver = className === 'Champion'
+  const championMasterAtArmsManeuver = ownsClassFeature('Champion', 'Master-at-Arms')
     ? featureChoices['champion.masterAtArmsManeuver'] ?? [] : [];
-  const championExpertManeuvers = className === 'Champion' && level >= 5
+  const championExpertManeuvers = ownsClassFeature('Champion', 'Expert Champion')
     ? featureChoices['champion.expertManeuvers'] ?? [] : [];
   const championKnownOutside = (groupID: string) => new Set([
     ...selectedManeuvers,
@@ -1028,8 +1135,9 @@ const CharacterBuilderView: React.FC<{
       ? `Spend all Ancestry Points (${derived.ancestryPointBudget - ancestrySpent} remaining).`
       : `Ancestry traits exceed the available Ancestry Points by ${ancestrySpent - derived.ancestryPointBudget}.`);
     if (negativePoints > 2) issues.push('Negative ancestry traits can grant at most 2 points.');
-    if (sorcererRestrictedAncestry && derived && ancestrySpentOutsideSorcererOrigin > derived.ancestryPointBudget - 2) {
-      issues.push(`Celestial or Draconic Origin’s 2 bonus Ancestry Points must be spent on ${sorcererRestrictedAncestry} Traits.`);
+    if (sorcererOriginBonusTotal > 0 && derived
+      && ancestrySpent - sorcererOriginBonusUsed > derived.ancestryPointBudget - sorcererOriginBonusTotal) {
+      issues.push(`Sorcerous Origin bonus Ancestry Points must be spent on ${sorcererRestrictedAncestries.join(' and ')} Traits.`);
     }
     if (minorTraits > 1) issues.push('Choose at most one 0-point minor ancestry trait.');
     const duplicateTraitNames = selectedTraits.filter((trait, index) => !trait.isRepeatable && selectedTraits.findIndex(({ name }) => name === trait.name) !== index).map(({ name }) => name);
@@ -1050,8 +1158,48 @@ const CharacterBuilderView: React.FC<{
         if (count > additionalCount) issues.push('Capable Limb can only be selected once per Additional Limb.');
       }
     });
-    if (className === 'Rogue' && selectedTraits.some(({ name }) => name === 'Skill Expertise')) issues.push('Roguish Finesse already increases every Skill Mastery Limit; replace the Skill Expertise ancestry trait because these increases cannot stack.');
+    if (ownsClassFeature('Rogue', 'Roguish Finesse') && selectedTraits.some(({ name }) => name === 'Skill Expertise')) issues.push('Roguish Finesse already increases every Skill Mastery Limit; replace the Skill Expertise ancestry trait because these increases cannot stack.');
     if (talents.length > availableTalentSlots) issues.push('Too many Talents are selected.');
+    const paragonSlotsByClass = paragonTalentClasses.reduce<Record<string, number>>((counts, talentClass) => ({
+      ...counts,
+      [talentClass]: (counts[talentClass] ?? 0) + 1,
+    }), {});
+    const paragonCoveredTalents = reference ? Object.entries(paragonSlotsByClass).reduce((covered, [talentClass, slots]) => {
+      const matching = talents.filter((name) => talentByName(reference, name)?.category === 'Class'
+        && talentByName(reference, name)?.className === talentClass).length;
+      return covered + Math.min(slots, matching);
+    }, 0) : 0;
+    if (reference && talents.length - paragonCoveredTalents > ordinaryTalentSlots(className, level)) {
+      issues.push('Each Paragon Talent slot must be used for a Class Talent from the Class that granted that Paragon Feature.');
+    }
+    for (const talentName of new Set(talents)) {
+      const talent = reference ? talentByName(reference, talentName) : undefined;
+      if (!talent) {
+        issues.push(`${talentName} is not present in the audited Talent catalog.`);
+        continue;
+      }
+      const eligibility = talentEligibility(talent, draft, reference!);
+      if (!eligibility.available) issues.push(`${talentName}: ${eligibility.reason}`);
+      if (!talent.isRepeatable && talents.filter((name) => name === talentName).length > 1) {
+        issues.push(`${talentName} can only be gained once.`);
+      }
+      if (isMulticlassTalentName(talentName)) {
+        const choices = featureChoices[MULTICLASS_SELECTION_KEYS[talentName]] ?? [];
+        const count = talents.filter((name) => name === talentName).length;
+        if (choices.slice(0, count).filter(Boolean).length !== count) issues.push(`Choose the Class Feature granted by every copy of ${talentName}.`);
+        choices.slice(0, count).forEach((choice) => {
+          if (!multiclassChoiceIsValid(talentName, choice, draft, reference!)) issues.push(`Replace an invalid or duplicate ${talentName} Feature choice.`);
+        });
+      }
+    }
+    if (hasMartialExpansion && !martialExpansionRegenOptions.includes(martialExpansionRegen)) {
+      issues.push('Choose the Stamina Regen granted by Martial Expansion.');
+    }
+    if (hasSpellcastingExpansion) {
+      if (!['Source', 'Schools'].includes(spellcastingExpansionMode)) issues.push('Choose whether Spellcasting Expansion adds 1 Spell Source or 3 Spell Schools.');
+      if (spellcastingExpansionMode === 'Source' && !spellcastingExpansionSource) issues.push('Choose the Spell Source granted by Spellcasting Expansion.');
+      if (spellcastingExpansionMode === 'Schools' && spellcastingExpansionSchools.length !== 3) issues.push('Choose exactly 3 Spell Schools for Spellcasting Expansion.');
+    }
     if (level >= 3 && classReference?.subclasses.length && !subclass) issues.push('Choose a subclass.');
     if (!classConfirmed) issues.push('Review and confirm a class.');
     if (needsBorrowedSpellList && !spellListClass) issues.push('Choose the Class Spell List granted by Spellcaster Path progression.');
@@ -1085,23 +1233,23 @@ const CharacterBuilderView: React.FC<{
         }
       }
     }
-    if (className === 'Bard') {
+    if (ownsClassFeature('Bard', 'Remarkable Repertoire')) {
       if (bardMagicalSecrets.length !== 2) issues.push('Choose the 2 Spells from any Spell List granted by Magical Secrets.');
-      if (level >= 5 && bardExpertSecrets.length !== 2) issues.push('Choose the 2 additional Spells from any Spell List granted by Expert Bard.');
-      if (level >= 3 && talents.includes('Expanded Repertoire') && bardExpandedSecrets.length !== 2) issues.push('Choose the 2 Spells from any Spell List granted by Expanded Repertoire.');
-      if (level >= 3 && subclass === 'Eloquence' && bardEnthrallOptions.length > 0 && bardEnthrallSpell.length !== 1) issues.push('Choose the Spell granted by Enthrall.');
+      if (ownsClassFeature('Bard', 'Expert Bard') && bardExpertSecrets.length !== 2) issues.push('Choose the 2 additional Spells from any Spell List granted by Expert Bard.');
+      if (talents.includes('Expanded Repertoire') && bardExpandedSecrets.length !== 2) issues.push('Choose the 2 Spells from any Spell List granted by Expanded Repertoire.');
+      if (bardHasEloquence && bardEnthrallOptions.length > 0 && bardEnthrallSpell.length !== 1) issues.push('Choose the Spell granted by Enthrall.');
       if (!bardKnownBeforeEnthrall.has('Charm') && bardEnthrallSpell[0] && bardEnthrallSpell[0] !== 'Charm') issues.push('Enthrall grants Charm unless it is already known.');
       const allBardSpells = [...selectedSpells, ...bardFeatureSpellGroups.flatMap(([, names]) => names)];
       if (new Set(allBardSpells).size !== allBardSpells.length) issues.push('A Bard Spell can only be learned once across the class table and Repertoire Features.');
       if (selectedSpells.some((spell) => !allowedSpells.some(({ name }) => name === spell))) issues.push('Remove Spells that are no longer on the Bard Spell List.');
     }
-    if (className === 'Champion') {
+    if (ownsClassFeature('Champion', 'Master-at-Arms')) {
       if (championMasterAtArmsManeuver.length !== 1) issues.push('Choose the Maneuver granted by Master-at-Arms.');
-      if (level >= 5 && championExpertManeuvers.length !== 2) issues.push('Choose the 2 additional Maneuvers granted by Expert Champion.');
+      if (ownsClassFeature('Champion', 'Expert Champion') && championExpertManeuvers.length !== 2) issues.push('Choose the 2 additional Maneuvers granted by Expert Champion.');
       const allChampionManeuvers = [...selectedManeuvers, ...championMasterAtArmsManeuver, ...championExpertManeuvers];
       if (new Set(allChampionManeuvers).size !== allChampionManeuvers.length) issues.push('A Champion Maneuver can only be learned once across the class table and Master-at-Arms.');
     }
-    if (className === 'Cleric') {
+    if (ownsClassFeature('Cleric', 'Cleric Order')) {
       const warManeuvers = featureChoices['cleric.warManeuver'] ?? [];
       const peaceManeuvers = featureChoices['cleric.peaceManeuver'] ?? [];
       if (clericHasWarDomain && warManeuvers.length !== 1) issues.push('Choose the Attack Maneuver granted by the War Domain.');
@@ -1137,9 +1285,9 @@ const CharacterBuilderView: React.FC<{
         }
       }
     }
-    if (className === 'Wizard') {
-      if (derived && selectedSpells.length !== derived.spellLimit) issues.push(`Choose exactly ${derived.spellLimit} Wizard Class Table Spells.`);
-      if (selectedSpells.some((spell) => !allowedSpells.some(({ name }) => name === spell))) issues.push('Remove Spells that are no longer on the Wizard Spell List.');
+    if (ownsClassFeature('Wizard', 'Spell School Initiate')) {
+      if (className === 'Wizard' && derived && selectedSpells.length !== derived.spellLimit) issues.push(`Choose exactly ${derived.spellLimit} Wizard Class Table Spells.`);
+      if (className === 'Wizard' && selectedSpells.some((spell) => !allowedSpells.some(({ name }) => name === spell))) issues.push('Remove Spells that are no longer on the Wizard Spell List.');
       for (const [groupID, schoolSpells] of wizardSchoolSpellGroups) {
         const school = groupID.slice('wizard.schoolSpells.'.length);
         if (schoolSpells.length !== wizardSchoolSpellLimit) issues.push(`Choose ${wizardSchoolSpellLimit} Arcane ${school} Spells granted by Spell School Initiate.`);
@@ -1151,10 +1299,10 @@ const CharacterBuilderView: React.FC<{
       const allWizardSpells = [...selectedSpells, ...wizardFeatureSpellNames];
       if (new Set(allWizardSpells).size !== allWizardSpells.length) issues.push('A Wizard Spell can only be learned once across the Class Table, School Magic, and Coven’s Gift.');
       const preparedSpells = featureChoices['wizard.preparedSpells'] ?? [];
-      if (level >= 2 && preparedSpells.length !== wizardPreparedLimit) issues.push(`Choose ${wizardPreparedLimit} Prepared Spell${wizardPreparedLimit === 1 ? '' : 's'}.`);
+      if (ownsClassFeature('Wizard', 'Prepared Spell') && preparedSpells.length !== wizardPreparedLimit) issues.push(`Choose ${wizardPreparedLimit} Prepared Spell${wizardPreparedLimit === 1 ? '' : 's'}.`);
       if (preparedSpells.some((spell) => !wizardKnownSpellNames.has(spell))) issues.push('Every Prepared Spell must be a Spell you know.');
     }
-    if (className === 'Warlock') {
+    if (ownsClassFeature('Warlock', 'Pact Boon')) {
       const weaponManeuvers = featureChoices['warlock.pactWeaponManeuvers'] ?? [];
       const armorManeuvers = featureChoices['warlock.pactArmorManeuvers'] ?? [];
       if (hasPactWeapon && weaponManeuvers.length !== warlockGrantedManeuverLimit) issues.push(`Choose ${warlockGrantedManeuverLimit} Pact Weapon Attack Maneuvers.`);
@@ -1162,8 +1310,8 @@ const CharacterBuilderView: React.FC<{
       if (weaponManeuvers.some((maneuver) => armorManeuvers.includes(maneuver))) issues.push('A Maneuver can only be learned once across your Pact Boons.');
       if (hasPactSpell && warlockPactSpells.length !== warlockPactSpellLimit) issues.push(`Choose ${warlockPactSpellLimit} known Pact ${warlockPactSpellLimit === 1 ? 'Spell' : 'Spells'}.`);
       if (hasPactSpell && warlockPactSpells.some((spell) => !warlockKnownSpellNames.has(spell))) issues.push('Every Pact Spell must be a Spell you know.');
-      if (hasPactSpell && level >= 5 && warlockExpertSpells.length !== 2) issues.push('Choose the 2 Spells from any Spell Source granted by Expert Warlock.');
-      if (hasPactSpell && level >= 5 && warlockExpertSpells.some((spell) => selectedSpells.includes(spell))) issues.push('Expert Warlock must grant Spells you do not already know.');
+      if (hasPactSpell && ownsClassFeature('Warlock', 'Expert Warlock') && warlockExpertSpells.length !== 2) issues.push('Choose the 2 Spells from any Spell Source granted by Expert Warlock.');
+      if (hasPactSpell && ownsClassFeature('Warlock', 'Expert Warlock') && warlockExpertSpells.some((spell) => selectedSpells.includes(spell))) issues.push('Expert Warlock must grant Spells you do not already know.');
       if (pactBaneCount > 0 && pactBaneSpells.length !== pactBaneCount) issues.push(`Choose ${pactBaneCount} Spell${pactBaneCount === 1 ? '' : 's'} granted by Pact Bane.`);
       if (pactBaneCount > 0 && !baneKnownOutsideTalent && !pactBaneSpells.includes('Bane')) issues.push('Pact Bane must grant Bane unless you already know it.');
     }
@@ -1261,7 +1409,7 @@ const CharacterBuilderView: React.FC<{
               const totalPointLimitReached = ancestryPointLimitReached && ancestrySpent + trait.cost > (derived?.ancestryPointBudget ?? 5);
               const requirement = !sourcePrerequisiteMet ? sourceRequirement
                 : totalPointLimitReached ? `${trait.cost} available Ancestry Point${trait.cost === 1 ? '' : 's'}`
-                  : ancestryPointLimitReached ? `the remaining bonus points to be spent on ${sorcererRestrictedAncestry} Traits`
+                  : ancestryPointLimitReached ? `the remaining Sorcerous Origin bonus points to be spent on ${sorcererRestrictedAncestries.join(' and ')} Traits`
                     : sourceRequirement;
               const prerequisiteMet = sourcePrerequisiteMet && !ancestryPointLimitReached;
               const unavailable = !prerequisiteMet || duplicateSelected || negativeLimitReached || minorLimitReached || ancestryPointLimitReached;
@@ -1283,14 +1431,28 @@ const CharacterBuilderView: React.FC<{
               <div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Features Gained at Level {level}</h3><div className="space-y-3">{classReference.features.filter((entry) => entry.level === level).map((entry) => <div key={entry.level}><div className="space-y-2">{entry.features.map((feature) => <InfoDetails key={`${entry.level}-${feature.name}`} summary={feature.name}>{feature.description}</InfoDetails>)}</div></div>)}{!classReference.features.some((entry) => entry.level === level) && <p className="text-sm text-slate-500">No new class features are listed at this level.</p>}</div></div>
               {availableTalentSlots > 0 && <div className={panelClass}>
                 <h3 className="mb-1 font-black text-violet-200">Talents ({talents.length}/{availableTalentSlots})</h3>
-                <p className="mb-3 text-sm text-slate-500">Only talents whose level prerequisites are met are shown. Talents can be taken multiple times unless their rules say otherwise.</p>
-                <div className="grid gap-2 lg:grid-cols-2">{classReference.talents.filter((talent) => talent.minimumLevel <= level).map((talent) => {
+                <p className="mb-3 text-sm text-slate-500">General, eligible Class, and Multiclass Talents are checked against every published requirement. Locked choices show what is still required.</p>
+                {paragonTalentClasses.length > 0 && <p className="mb-3 rounded-lg border border-amber-400/20 bg-amber-500/10 p-3 text-xs leading-5 text-amber-100"><strong>Paragon Talent {paragonTalentClasses.length === 1 ? 'slot' : 'slots'}:</strong> {paragonTalentClasses.join(', ')}. Each of these bonus slots must contain a Class Talent from the named Class.</p>}
+                <div className="grid gap-2 lg:grid-cols-2">{presentedTalents.map((talent) => {
                   const count = talents.filter((name) => name === talent.name).length;
-                  return <div key={talent.name} className={`rounded-xl border p-3 ${count > 0 ? 'border-violet-400/50 bg-violet-500/10' : 'border-white/10 bg-slate-950/45'}`}>
-                    <div className="flex items-center justify-between gap-2"><span className="font-bold text-slate-200">{talent.name}{count > 0 && <span className="ml-2 text-xs text-violet-300">×{count}</span>}</span><div className="flex items-center gap-1"><button type="button" disabled={count === 0} onClick={() => adjustTalent(talent.name, -1, talent.isRepeatable)} className="h-8 w-8 rounded bg-slate-800 text-sm font-black text-slate-200 disabled:opacity-30">−</button><button type="button" disabled={talents.length >= availableTalentSlots || (!talent.isRepeatable && count > 0)} onClick={() => adjustTalent(talent.name, 1, talent.isRepeatable)} className="h-8 w-8 rounded bg-violet-600 text-sm font-black text-white disabled:opacity-30">+</button></div></div>
-                    <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-400">{talent.description}</p>
+                  const eligibility = reference ? talentEligibility(talent, draft, reference) : { available: false, reason: 'Reference data is loading.' };
+                  const locked = !eligibility.available;
+                  const multiclassTalentName = isMulticlassTalentName(talent.name) ? talent.name : null;
+                  return <div key={talent.name} className={`rounded-xl border p-3 ${count > 0 ? 'border-violet-400/50 bg-violet-500/10' : locked ? 'border-white/5 bg-slate-950/30 opacity-60' : 'border-white/10 bg-slate-950/45'}`}>
+                    <div className="flex items-center justify-between gap-2"><span className="font-bold text-slate-200">{talent.name}{talent.className && <span className="ml-2 text-[10px] font-black uppercase tracking-wider text-slate-500">{talent.className}</span>}{count > 0 && <span className="ml-2 text-xs text-violet-300">×{count}</span>}</span><div className="flex items-center gap-1"><button type="button" disabled={count === 0} onClick={() => adjustTalent(talent, -1)} className="h-8 w-8 rounded bg-slate-800 text-sm font-black text-slate-200 disabled:opacity-30">−</button><button type="button" disabled={locked || talents.length >= availableTalentSlots || (!talent.isRepeatable && count > 0)} onClick={() => adjustTalent(talent, 1)} className="h-8 w-8 rounded bg-violet-600 text-sm font-black text-white disabled:opacity-30">+</button></div></div>
+                    <p className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-violet-300">{talent.category} Talent • {talent.isRepeatable ? 'Repeatable' : 'Once only'}</p>
+                    {locked && <p className="mt-2 text-xs font-bold text-amber-300">{eligibility.reason}</p>}
+                    <details className="mt-3 rounded-lg border border-white/5 bg-slate-950/35 p-3"><summary className="cursor-pointer text-xs font-black text-slate-300">Full Talent text</summary><p className="mt-3 whitespace-pre-wrap text-xs leading-5 text-slate-400">{talent.description}</p></details>
+                    {reference && multiclassTalentName && count > 0 && <div className="mt-3 space-y-3 border-t border-white/5 pt-3">{Array.from({ length: count }, (_, index) => {
+                      const key = MULTICLASS_SELECTION_KEYS[multiclassTalentName];
+                      const currentChoice = featureChoices[key]?.[index] ?? '';
+                      const options = multiclassTalentOptions(multiclassTalentName, draft, reference, currentChoice);
+                      const selectedOption = options.find(({ id }) => id === currentChoice);
+                      return <label key={`${talent.name}-${index}`} className="block text-xs font-bold text-slate-400">Granted Feature {index + 1}<select value={currentChoice} onChange={(event) => setMulticlassChoice(multiclassTalentName, index, event.target.value)} className={`${fieldClass} mt-1 text-xs`}><option value="">Choose a published option…</option>{options.map((choice) => <option key={choice.id} value={choice.id}>{choice.title}</option>)}</select>{selectedOption && <InfoDetails summary={`Review ${selectedOption.title}`}>{selectedOption.description}</InfoDetails>}</label>;
+                    })}</div>}
                   </div>;
                 })}</div>
+                {(hasMartialExpansion || hasSpellcastingExpansion) && <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 lg:grid-cols-2">{hasMartialExpansion && <div className="rounded-xl border border-amber-400/20 bg-amber-950/15 p-4"><h4 className="font-black text-amber-200">Martial Expansion Configuration</h4><p className="mt-1 text-xs leading-5 text-slate-500">Weapon, Heavy Armor, all Shield training, and 2 Maneuvers are applied automatically. Choose the single Stamina Regen you can trigger once per Round.</p><select value={martialExpansionRegen} onChange={(event) => setFeatureChoices((current) => ({ ...current, [MARTIAL_EXPANSION_REGEN]: [event.target.value] }))} className={`${fieldClass} mt-3 text-xs`}><option value="">Choose Stamina Regen…</option>{martialExpansionRegenOptions.map((option) => <option key={option}>{option}</option>)}</select>{martialExpansionRegenText && <InfoDetails summary={`Review ${martialExpansionRegen} Stamina Regen`}>{martialExpansionRegenText}</InfoDetails>}</div>}{hasSpellcastingExpansion && <div className="rounded-xl border border-fuchsia-400/20 bg-fuchsia-950/15 p-4"><h4 className="font-black text-fuchsia-200">Spellcasting Expansion Configuration</h4><p className="mt-1 text-xs leading-5 text-slate-500">Spell Focus training and 3 Spells Known are applied automatically. Add either 1 Spell Source or 3 Spell Schools to your Spell List.</p><div className="mt-3 grid grid-cols-2 gap-2">{(['Source', 'Schools'] as const).map((mode) => <button type="button" key={mode} onClick={() => setFeatureChoices((current) => ({ ...current, [SPELLCASTING_EXPANSION_MODE]: [mode], [SPELLCASTING_EXPANSION_SOURCE]: [], [SPELLCASTING_EXPANSION_SCHOOLS]: [] }))} className={`rounded-lg px-3 py-2 text-xs font-black ${spellcastingExpansionMode === mode ? 'bg-fuchsia-700 text-white' : 'bg-slate-800 text-slate-400'}`}>{mode === 'Source' ? '1 Spell Source' : '3 Spell Schools'}</button>)}</div>{spellcastingExpansionMode === 'Source' && <select value={spellcastingExpansionSource} onChange={(event) => { setFeatureChoices((current) => ({ ...current, [SPELLCASTING_EXPANSION_SOURCE]: [event.target.value] })); setSelectedSpells([]); }} className={`${fieldClass} mt-3 text-xs`}><option value="">Choose Spell Source…</option>{Array.from(new Set(spells.flatMap((spell) => spell.source.split(', ')))).sort().map((source) => <option key={source}>{source}</option>)}</select>}{spellcastingExpansionMode === 'Schools' && <div className="mt-3 flex flex-wrap gap-2">{Array.from(new Set(spells.map(({ school }) => school))).sort().map((school) => { const selected = spellcastingExpansionSchools.includes(school); return <button type="button" key={school} disabled={!selected && spellcastingExpansionSchools.length >= 3} onClick={() => { setFeatureChoices((current) => ({ ...current, [SPELLCASTING_EXPANSION_SCHOOLS]: selected ? spellcastingExpansionSchools.filter((entry) => entry !== school) : [...spellcastingExpansionSchools, school] })); setSelectedSpells([]); }} className={`rounded-full border px-3 py-1.5 text-xs font-bold ${selected ? 'border-fuchsia-400 bg-fuchsia-500/15 text-fuchsia-200' : 'border-slate-700 text-slate-400 disabled:opacity-30'}`}>{school}</button>; })}</div>}</div>}</div>}
               </div>}
               {featureChoiceGroups.length > 0 && <div className={panelClass}>
                 <h3 className="mb-3 font-black text-violet-200">Class Feature Options</h3>
@@ -1311,7 +1473,7 @@ const CharacterBuilderView: React.FC<{
                   </div>;
                 })}</div>
               </div>}
-              {className === 'Wizard' && wizardSchools.length > 0 && <div className={panelClass}>
+              {wizardSchools.length > 0 && <div className={panelClass}>
                 <div className="mb-4"><h3 className="font-black text-fuchsia-200">Spell School Initiate</h3><p className="mt-1 text-sm leading-6 text-slate-500">Each chosen School grants 2 Arcane Spells in addition to the Wizard Class Table. Expert Wizard grants 1 more Spell from every chosen School and improves each Signature School reduction from 1 MP to 2 MP.</p></div>
                 <div className="space-y-4">{wizardSchoolSpellGroups.map(([groupID, schoolSpells]) => {
                   const school = groupID.slice('wizard.schoolSpells.'.length);
@@ -1326,24 +1488,24 @@ const CharacterBuilderView: React.FC<{
               </div>}
               {className === 'Hunter' && <div className={panelClass}><h3 className="font-black text-emerald-200">Favored Terrain Benefits</h3><p className="mt-2 text-sm leading-6 text-slate-400">The selected terrain benefits are routed into the character: Grassland raises Speed by 1; Forest and Urban each add 2 restricted Skill Points. Use the matching allocation choices above, then raise those Skills on the Skills step. The character sheet lists every resistance, movement, sense, and situational benefit for the selected terrains.</p><div className="mt-3 flex flex-wrap gap-2">{(featureChoices['hunter.terrain'] ?? []).map((terrain) => <span key={terrain} className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-200">{terrain}</span>)}</div></div>}
               {className === 'Monk' && <div className={panelClass}><h3 className="font-black text-amber-200">Monk Training & Stances</h3><p className="mt-2 text-sm leading-6 text-slate-400">Iron Palm starts with 1 Melee Weapon Style and Monk Stance starts with 2 Stances. Expert Monk adds 1 of each at level 5, while each Expanded Stances Talent adds 2 Stances. Patient Defense and Step of the Wind are calculated automatically; Ki, Stances, Reactions, subclass actions, and Monk Talents are available in the live character-sheet controls.</p><div className="mt-3 flex flex-wrap gap-2">{(featureChoices['monk.stances'] ?? []).map((stance) => <span key={stance} className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-black text-amber-200">{stance}</span>)}</div></div>}
-              {className === 'Champion' && <div className={panelClass}>
+              {ownsClassFeature('Champion', 'Master-at-Arms') && <div className={panelClass}>
                 <div className="mb-4"><h3 className="font-black text-amber-200">Master-at-Arms Maneuvers</h3><p className="mt-1 text-sm leading-6 text-slate-500">Maneuver Master grants Maneuvers in addition to the Champion Class Table. They are kept separate here so the table allowance remains accurate.</p></div>
                 <div className="space-y-4">
                   <FeatureManeuverPicker title="Maneuver Master" description="At level 1, learn 1 Maneuver of your choice. Once per Round when you perform a Maneuver, you can reduce its SP cost by 1." selected={championMasterAtArmsManeuver} limit={1} options={maneuvers} knownOutside={championKnownOutside('champion.masterAtArmsManeuver')} onToggle={(maneuver) => toggleStoredFeatureChoice('champion.masterAtArmsManeuver', maneuver, 1)} />
-                  {level >= 5 && <FeatureManeuverPicker title="Expert Champion — Master-at-Arms" description="Learn 2 additional Maneuvers of your choice." selected={championExpertManeuvers} limit={2} options={maneuvers} knownOutside={championKnownOutside('champion.expertManeuvers')} onToggle={(maneuver) => toggleStoredFeatureChoice('champion.expertManeuvers', maneuver, 2)} />}
+                  {ownsClassFeature('Champion', 'Expert Champion') && <FeatureManeuverPicker title="Expert Champion — Master-at-Arms" description="Learn 2 additional Maneuvers of your choice." selected={championExpertManeuvers} limit={2} options={maneuvers} knownOutside={championKnownOutside('champion.expertManeuvers')} onToggle={(maneuver) => toggleStoredFeatureChoice('champion.expertManeuvers', maneuver, 2)} />}
                 </div>
               </div>}
-              {className === 'Bard' && <div className={panelClass}>
+              {ownsClassFeature('Bard', 'Remarkable Repertoire') && <div className={panelClass}>
                 <div className="mb-4"><h3 className="font-black text-fuchsia-200">Remarkable Repertoire</h3><p className="mt-1 text-sm leading-6 text-slate-500">Magical Secrets and its upgrades grant Spells separately from the Bard Class Table. These pickers use the entire published spell catalog, while the ordinary Spells picker remains limited to the Bard Spell List.</p></div>
                 <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"><div className="rounded-xl bg-violet-500/10 p-3 text-xs leading-5 text-violet-100"><strong>Jack of All Trades:</strong> +2 Skill Points{level >= 5 ? ', plus +2 from Expert Bard' : ''}.</div>{talents.includes('Expanded Repertoire') && <div className="rounded-xl bg-fuchsia-500/10 p-3 text-xs leading-5 text-fuchsia-100"><strong>Expanded Repertoire:</strong> +2 Skill Points, 2 any-list Spells, and both manners of Magical Expression.</div>}<div className="rounded-xl bg-sky-500/10 p-3 text-xs leading-5 text-sky-100"><strong>Magical Expression:</strong> {(featureChoices['bard.expression'] ?? []).join(' and ') || 'choose above'}.</div></div>
                 <div className="space-y-4">
                   <FeatureSpellPicker title="Magical Secrets" description="Learn any 2 Spells of your choice from any Spell List." selected={bardMagicalSecrets} limit={2} options={spells} knownOutside={bardKnownOutside('bard.magicalSecrets')} onToggle={(spell) => toggleStoredFeatureChoice('bard.magicalSecrets', spell, 2)} />
-                  {level >= 5 && <FeatureSpellPicker title="Expert Bard — Magical Secrets" description="Remarkable Repertoire grants 2 additional Spells of your choice from any Spell List." selected={bardExpertSecrets} limit={2} options={spells} knownOutside={bardKnownOutside('bard.expertSecrets')} onToggle={(spell) => toggleStoredFeatureChoice('bard.expertSecrets', spell, 2)} />}
-                  {level >= 3 && talents.includes('Expanded Repertoire') && <FeatureSpellPicker title="Expanded Repertoire Spells" description="Learn 2 additional Spells of your choice from any Spell List. The Talent also grants both manners of Magical Expression." selected={bardExpandedSecrets} limit={2} options={spells} knownOutside={bardKnownOutside('bard.expandedRepertoireSpells')} onToggle={(spell) => toggleStoredFeatureChoice('bard.expandedRepertoireSpells', spell, 2)} />}
-                  {level >= 3 && subclass === 'Eloquence' && <FeatureSpellPicker title="Enthrall" description={bardKnownBeforeEnthrall.has('Charm') ? 'Because Charm is already known, Enthrall grants another Spell with the Charmed Tag. The current Beta catalog does not publish an alternate if none appears below.' : 'Learn Charm. When cast through Enthrall, it does not end as a result of the target taking damage.'} selected={bardEnthrallSpell} limit={1} options={bardEnthrallOptions} knownOutside={bardKnownBeforeEnthrall} onToggle={(spell) => toggleStoredFeatureChoice('bard.enthrallSpell', spell, 1)} />}
+                  {ownsClassFeature('Bard', 'Expert Bard') && <FeatureSpellPicker title="Expert Bard — Magical Secrets" description="Remarkable Repertoire grants 2 additional Spells of your choice from any Spell List." selected={bardExpertSecrets} limit={2} options={spells} knownOutside={bardKnownOutside('bard.expertSecrets')} onToggle={(spell) => toggleStoredFeatureChoice('bard.expertSecrets', spell, 2)} />}
+                  {talents.includes('Expanded Repertoire') && <FeatureSpellPicker title="Expanded Repertoire Spells" description="Learn 2 additional Spells of your choice from any Spell List. The Talent also grants both manners of Magical Expression." selected={bardExpandedSecrets} limit={2} options={spells} knownOutside={bardKnownOutside('bard.expandedRepertoireSpells')} onToggle={(spell) => toggleStoredFeatureChoice('bard.expandedRepertoireSpells', spell, 2)} />}
+                  {bardHasEloquence && <FeatureSpellPicker title="Enthrall" description={bardKnownBeforeEnthrall.has('Charm') ? 'Because Charm is already known, Enthrall grants another Spell with the Charmed Tag. The current Beta catalog does not publish an alternate if none appears below.' : 'Learn Charm. When cast through Enthrall, it does not end as a result of the target taking damage.'} selected={bardEnthrallSpell} limit={1} options={bardEnthrallOptions} knownOutside={bardKnownBeforeEnthrall} onToggle={(spell) => toggleStoredFeatureChoice('bard.enthrallSpell', spell, 1)} />}
                 </div>
               </div>}
-              {className === 'Cleric' && clericDomains.length > 0 && <div className={panelClass}>
+              {clericDomains.length > 0 && <div className={panelClass}>
                 <div className="mb-4"><h3 className="font-black text-amber-200">Divine Domain Configuration</h3><p className="mt-1 text-sm text-slate-500">Domain-granted Spells and Maneuvers are added separately from the Cleric Class Table allowances.</p></div>
                 <div className="space-y-4">
                   {clericMagicDomainCount > 0 && <details open className="rounded-xl border border-violet-400/20 bg-violet-950/20 p-4"><summary className="cursor-pointer font-black text-violet-200">Magic Domain Choices ({clericMagicDomainCount})</summary><div className="mt-4 space-y-3">{Array.from({ length: clericMagicDomainCount }, (_, index) => { const selectedTag = clericMagicDomainTags[index] ?? ''; const selectedSpell = clericMagicDomainSpells[index] ?? ''; const spellOptions = selectedTag ? spells.filter(({ tags }) => (tags ?? '').split(',').some((tag) => tag.trim().toLowerCase() === selectedTag.toLowerCase())) : []; const spell = spells.find(({ name }) => name === selectedSpell); return <div key={index} className="rounded-xl border border-white/10 bg-slate-950/45 p-4"><h4 className="font-black text-slate-200">Magic Domain {index + 1}</h4><div className="mt-3 grid gap-3 md:grid-cols-2"><label className="text-xs font-bold uppercase tracking-wider text-slate-500">Spell Tag<select value={selectedTag} onChange={(event) => { setClericMagicDomainTag(index, event.target.value); setSelectedSpells([]); }} className={`${fieldClass} mt-2 normal-case tracking-normal`}><option value="">Choose a Spell Tag…</option>{clericSpellTags.map((tag) => <option key={tag}>{tag}</option>)}</select></label><label className="text-xs font-bold uppercase tracking-wider text-slate-500">Granted Spell<select value={selectedSpell} disabled={!selectedTag} onChange={(event) => setStoredFeatureChoiceAtIndex('cleric.magicDomainSpells', index, event.target.value)} className={`${fieldClass} mt-2 normal-case tracking-normal disabled:opacity-40`}><option value="">Choose a matching Spell…</option>{spellOptions.map(({ name }) => <option key={name} disabled={selectedSpells.includes(name) || clericMagicDomainSpells.some((chosen, chosenIndex) => chosenIndex !== index && chosen === name)}>{name}</option>)}</select></label></div>{spell && <div className="mt-3"><InfoDetails summary={`View ${spell.name}`}><p className="mb-2 text-xs font-bold text-violet-300">{spell.source} • {spell.school} • {spell.cost} • {spell.range} • {spell.duration}</p>{spell.description}{spell.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{spell.enhancements}</p></>}</InfoDetails></div>}<p className="mt-3 text-xs text-violet-100">+1 maximum MP. This tag is also added to your Spell List.</p></div>; })}</div></details>}
@@ -1352,7 +1514,7 @@ const CharacterBuilderView: React.FC<{
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{clericHasKnowledgeDomain && <div className="rounded-xl bg-fuchsia-500/10 p-3 text-xs leading-5 text-fuchsia-100"><strong>Knowledge:</strong> +2 Skill Points and +1 Knowledge Trade Mastery Limit.</div>}{clericDomains.includes('Ancestral') && <div className="rounded-xl bg-emerald-500/10 p-3 text-xs leading-5 text-emerald-100"><strong>Ancestral:</strong> +2 Ancestry Points usable on Traits from any Ancestry.</div>}{clericDomains.includes('Divine Damage Expansion') && <div className="rounded-xl bg-amber-500/10 p-3 text-xs leading-5 text-amber-100"><strong>Divine Damage Expansion:</strong> Resistance (1) to your selected Divine Damage.</div>}</div>
                 </div>
               </div>}
-              {className === 'Warlock' && (hasPactWeapon || hasPactArmor || hasPactSpell || pactBaneCount > 0 || warlockBoons.has('Pact Familiar')) && <div className={panelClass}><div className="mb-4"><h3 className="font-black text-violet-200">Pact Configuration</h3><p className="mt-1 text-sm text-slate-500">These choices are granted by the selected Pact Boons and do not consume the normal Spells Known or Maneuvers Known allowances.</p></div><div className="space-y-4">
+              {(hasPactWeapon || hasPactArmor || hasPactSpell || pactBaneCount > 0 || warlockBoons.has('Pact Familiar')) && <div className={panelClass}><div className="mb-4"><h3 className="font-black text-violet-200">Pact Configuration</h3><p className="mt-1 text-sm text-slate-500">These choices are granted by the selected Pact Boons and do not consume the normal Spells Known or Maneuvers Known allowances.</p></div><div className="space-y-4">
                 {hasPactWeapon && <details className="rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="cursor-pointer font-black text-rose-200">Pact Weapon Maneuvers ({(featureChoices['warlock.pactWeaponManeuvers'] ?? []).length}/{warlockGrantedManeuverLimit})</summary><p className="mt-3 text-sm text-slate-500">Learn {warlockGrantedManeuverLimit} Attack Maneuvers{level >= 5 ? ', including the additional Maneuver from Expert Warlock' : ''}.</p><div className="mt-3 grid max-h-[520px] gap-2 overflow-y-auto pr-2 md:grid-cols-2">{warlockAttackManeuvers.map((maneuver) => { const selected = (featureChoices['warlock.pactWeaponManeuvers'] ?? []).includes(maneuver.name); const learnedElsewhere = selectedManeuvers.includes(maneuver.name) || (featureChoices['warlock.pactArmorManeuvers'] ?? []).includes(maneuver.name); const disabled = !selected && (learnedElsewhere || (featureChoices['warlock.pactWeaponManeuvers'] ?? []).length >= warlockGrantedManeuverLimit); return <InfoDetails key={maneuver.name} summary={<label className={`flex flex-1 items-center gap-2 ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`} onClick={(event) => event.stopPropagation()}><input type="checkbox" disabled={disabled} checked={selected} onChange={() => toggleStoredFeatureChoice('warlock.pactWeaponManeuvers', maneuver.name, warlockGrantedManeuverLimit)} />{maneuver.name}<span className="ml-auto text-xs text-slate-500">{maneuver.cost}</span></label>}><p className="mb-2 text-xs font-bold text-rose-300">{maneuver.category} • {maneuver.range}</p>{maneuver.description}{maneuver.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{maneuver.enhancements}</p></>}</InfoDetails>; })}</div></details>}
                 {hasPactArmor && <details className="rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="cursor-pointer font-black text-sky-200">Pact Armor Maneuvers ({(featureChoices['warlock.pactArmorManeuvers'] ?? []).length}/{warlockGrantedManeuverLimit})</summary><p className="mt-3 text-sm text-slate-500">Learn {warlockGrantedManeuverLimit} Defensive Maneuvers{level >= 5 ? ', including the additional Maneuver from Expert Warlock' : ''}. Mystical Armor’s +1 AD and MDR apply while your Pact Armor is equipped.</p><div className="mt-3 grid max-h-[520px] gap-2 overflow-y-auto pr-2 md:grid-cols-2">{warlockDefenseManeuvers.map((maneuver) => { const selected = (featureChoices['warlock.pactArmorManeuvers'] ?? []).includes(maneuver.name); const learnedElsewhere = selectedManeuvers.includes(maneuver.name) || (featureChoices['warlock.pactWeaponManeuvers'] ?? []).includes(maneuver.name); const disabled = !selected && (learnedElsewhere || (featureChoices['warlock.pactArmorManeuvers'] ?? []).length >= warlockGrantedManeuverLimit); return <InfoDetails key={maneuver.name} summary={<label className={`flex flex-1 items-center gap-2 ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`} onClick={(event) => event.stopPropagation()}><input type="checkbox" disabled={disabled} checked={selected} onChange={() => toggleStoredFeatureChoice('warlock.pactArmorManeuvers', maneuver.name, warlockGrantedManeuverLimit)} />{maneuver.name}<span className="ml-auto text-xs text-slate-500">{maneuver.cost}</span></label>}><p className="mb-2 text-xs font-bold text-sky-300">{maneuver.category} • {maneuver.range}</p>{maneuver.description}{maneuver.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{maneuver.enhancements}</p></>}</InfoDetails>; })}</div></details>}
                 {warlockBoons.has('Pact Familiar') && <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4"><h4 className="font-black text-emerald-200">Pact Familiar</h4><p className="mt-2 text-sm leading-6 text-emerald-50/80">Call Familiar is learned automatically. Its Familiar gains 3 additional Familiar Traits for free, increased by another 3 points of Familiar or Beast Traits at level 5.</p></div>}

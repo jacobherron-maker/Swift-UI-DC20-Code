@@ -8256,25 +8256,25 @@
         },
         {
           "description" : "Requires: Bonded Summons\n\nChoose 1 of the Spells in Bonded Summons that you know. When you cast the chosen Spell, you can grant 3 points worth of Summon Traits as if you used the Additional Traits Enhancement. You can cast the Spell in this way once per Long Rest, but you regain the ability to do so again when you roll for Initiative.",
-          "isRepeatable" : false,
+          "isRepeatable" : true,
           "minimumLevel" : 1,
           "name" : "Creature Specialist"
         },
         {
           "description" : "Requires: Bonded Summons\n\nYou gain the following benefits:\n\nVersatile Summoner: You learn 2 of the Spells of your choice listed in Bonded Summons.\n\nSplit Summon: When you cast a Spell listed in Bonded Summons, you can use the Additional Creatures Enhancement once for free (doesn’t count against your Mana Spend Limit). When you do, the additional creature summoned shares the HP of the first creature summoned by the Spell. If both creatures take damage from the same source, they only take 1 instance of that damage.\n\nYou can use this ability once per Long Rest, but you regain the ability to use it when you roll for Initiative.\n\nCombo Summon: When you cast a Spell listed in Bonded Summons and use the Additional Creature Enhancement, you can summon a creature from a different Summon Spell you know.\n\nExample: A Summoner knows the Summon Fiend and Summon Fey Spells. When they cast either of those Spells, they can use the Additional Creature Enhancement to summon 1 more creature. That creature can be either a Fiend or Fey, regardless of which of those two Spells they cast.",
-          "isRepeatable" : false,
+          "isRepeatable" : true,
           "minimumLevel" : 1,
           "name" : "Horde Summoner"
         },
         {
           "description" : "Requires: Personal Demiplane\n\nOnce per Combat when you use Personal Demiplane, each creature you’ve summoned that exits the demiplane appears in an unoccupied Space within 5 Spaces of the portal and can immediately make an Unarmed Strike for free against a target of your choice within its range.",
-          "isRepeatable" : false,
+          "isRepeatable" : true,
           "minimumLevel" : 1,
           "name" : "Grand Entrance"
         },
         {
           "description" : "Requires: Personal Demiplane\n\nOnce per Combat, when you use your Personal Demiplane, each creature of your choice within 1 Space of the portal must make a Might Save against your Save DC. Save Failure: The creature enters your demiplane and is unable to leave for 1 Round.",
-          "isRepeatable" : false,
+          "isRepeatable" : true,
           "minimumLevel" : 1,
           "name" : "Reverse Summoning"
         }

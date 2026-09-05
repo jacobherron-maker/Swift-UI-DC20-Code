@@ -113,6 +113,7 @@ import {
 } from '../../utils/characterRules';
 import { enforceEquipmentHandCapacity, isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped as toggleInventoryEquippedBase } from '../../utils/equipmentRules';
 import { generateUUID, rollDice } from '../../utils/gameUtils';
+import { ownedClassFeatures, talentByName } from '../../utils/talentRules';
 
 interface CharacterSheetProps {
   character: Character;
@@ -144,6 +145,8 @@ const SUMMONER_GRAND_ENTRANCE_USED = 'summoner.grandEntrance.used';
 const SUMMONER_REVERSE_SUMMONING_USED = 'summoner.reverseSummoning.used';
 const SUMMONER_UNDYING_MP = 'summoner.undying.mp';
 const SUMMONER_UNDYING_LAST_HP = 'summoner.undying.lastHP';
+const MARTIAL_EXPANSION_REGEN = 'talent.martialExpansion.staminaRegen';
+const MARTIAL_EXPANSION_REGEN_USED = 'talent.martialExpansion.staminaRegen.used';
 const SPELLBLADE_REGEN_USED = 'spellblade.staminaRegen.used';
 const SPELLBLADE_SMITE_SP = 'spellblade.smite.sp';
 const SPELLBLADE_ACOLYTE_MP = 'spellblade.acolyte.mp';
@@ -706,6 +709,7 @@ function SummonerControls({ character, onChange }: { character: Character; onCha
     onChange({ currentAP: character.currentAP - 1, build: { ...build, sheetFeatureStates: { ...states, [SUMMONER_DEMIPLANE_OPEN]: true } } });
   };
   const selectedUndyingMP = Math.min(Math.max(1, counters[SUMMONER_UNDYING_MP] ?? 1), Math.max(1, character.manaPoints));
+  const talentCount = (name: string) => (build.selectedTalents ?? []).filter((talent) => talent === name).length;
   const setUndyingMP = (mana: number) => onChange({ build: { ...build, sheetFeatureCounters: { ...counters, [SUMMONER_UNDYING_MP]: Math.max(1, mana) } } });
   const useUndying = () => {
     if (character.subclass !== 'Dread Lord' || character.currentAP < 1 || character.manaPoints < 1) return;
@@ -715,7 +719,15 @@ function SummonerControls({ character, onChange }: { character: Character; onCha
       build: { ...build, sheetFeatureCounters: { ...counters, [SUMMONER_UNDYING_MP]: selectedUndyingMP, [SUMMONER_UNDYING_LAST_HP]: selectedUndyingMP * 2 } },
     });
   };
-  const trackedUse = (key: string, activeLabel: string, availableLabel: string, resetLabel: string, disabled = false) => <><button type="button" disabled={Boolean(states[key]) || disabled} onClick={() => setState(key, true)} className="mt-3 w-full rounded-lg bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[key] ? activeLabel : availableLabel}</button>{states[key] && <button type="button" onClick={() => setState(key, false)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">{resetLabel}</button>}</>;
+  const trackedTalentUses = (key: string, limit: number, availableLabel: string, resetLabel: string, disabled = false) => {
+    const used = Math.min(limit, Math.max(counters[key] ?? 0, states[key] ? 1 : 0));
+    const setUsed = (value: number) => onChange({ build: {
+      ...build,
+      sheetFeatureStates: { ...states, [key]: value > 0 },
+      sheetFeatureCounters: { ...counters, [key]: Math.max(0, Math.min(limit, value)) },
+    } });
+    return <><button type="button" disabled={used >= limit || disabled} onClick={() => setUsed(used + 1)} className="mt-3 w-full rounded-lg bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{used >= limit ? `All ${limit} uses spent` : `${availableLabel} • ${used}/${limit} used`}</button>{used > 0 && <button type="button" onClick={() => setUsed(0)} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">{resetLabel}</button>}</>;
+  };
 
   return <section className="mb-5 rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-cyan-950/45 via-violet-950/40 to-slate-950/70 p-4 sm:p-5">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Live Class Features</p><h2 className="text-xl font-black text-white">Summoner Controls</h2></div><span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-xs font-black text-cyan-100">{grantedSpells.length} feature-granted {grantedSpells.length === 1 ? 'spell' : 'spells'}</span></div>
@@ -725,10 +737,10 @@ function SummonerControls({ character, onChange }: { character: Character; onCha
       {character.level >= 2 && <div className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><h3 className="font-black text-fuchsia-200">Summon Exchange</h3><p className="mt-2 text-xs leading-5 text-slate-400">Switch places with a summoned creature within 10 Spaces.</p>{character.level >= 5 && <p className="mt-2 text-xs leading-5 text-violet-100"><strong>Summon Translocation:</strong> instead switch the places of two summoned creatures in range.</p>}<button type="button" disabled={character.currentAP < 1} onClick={spendAP} className="mt-3 w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-35">Use Exchange • 1 AP</button>{character.level >= 5 && <p className="mt-3 text-xs leading-5 text-cyan-100"><strong>Summon Conduit:</strong> cast Spells from a summoned creature’s Space while it is within 10 Spaces.</p>}</div>}
       {character.subclass === 'Chimera' && <div className="rounded-xl border border-emerald-400/20 bg-emerald-950/25 p-4 lg:col-span-2"><h3 className="font-black text-emerald-200">Summon Chimera</h3><p className="mt-2 text-xs leading-5 text-slate-300">The first creature summoned by a listed Spell also gains the Base Summon Traits of another listed Spell you know. Additional Traits can use another known listed Spell’s Expanded Summon Traits, and each contributed Creature Type is added.</p><div className="mt-3 flex flex-wrap gap-1.5">{(build.classFeatureSelections['summoner.chimeraSummons'] ?? []).map((spell) => <span key={spell} className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-100">{spell}</span>)}</div></div>}
       {character.subclass === 'Dread Lord' && <div className="rounded-xl border border-red-400/20 bg-red-950/20 p-4 lg:col-span-2"><h3 className="font-black text-red-200">Unending March</h3><p className="mt-2 text-xs leading-5 text-slate-300"><strong>Life Steal:</strong> a listed summoned creature regains 1 HP when its Unarmed Strike hits. <strong>Undying:</strong> revive one as a Reaction with 2 HP per MP spent.</p><div className="mt-3 grid items-end gap-3 sm:grid-cols-[150px_1fr]"><label className="text-xs font-bold text-slate-400">Mana to spend<input type="number" min={1} max={Math.max(1, character.manaPoints)} value={selectedUndyingMP} onChange={(event) => setUndyingMP(Number(event.target.value))} className={`${fieldClass} mt-1`} /></label><button type="button" disabled={character.currentAP < 1 || character.manaPoints < 1} onClick={useUndying} className="rounded-lg bg-red-800 px-3 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-35">Use Undying • 1 AP + {selectedUndyingMP} MP</button></div>{(counters[SUMMONER_UNDYING_LAST_HP] ?? 0) > 0 && <p className="mt-3 rounded-lg bg-red-500/10 p-2 text-xs text-red-100">Last creature revived with <strong>{counters[SUMMONER_UNDYING_LAST_HP]} HP</strong>.</p>}</div>}
-      {talents.has('Creature Specialist') && <div className="rounded-xl border border-amber-400/20 bg-amber-950/20 p-4"><h3 className="font-black text-amber-200">Creature Specialist</h3><p className="mt-2 text-xs leading-5 text-slate-300">Chosen Spell: <strong>{build.classFeatureSelections['summoner.creatureSpecialistSpell']?.[0] ?? 'Choose in Builder'}</strong></p>{trackedUse(SUMMONER_CREATURE_SPECIALIST_USED, 'Used', 'Use 3-point Traits benefit', 'Reset on Initiative / Long Rest')}</div>}
-      {talents.has('Horde Summoner') && <div className="rounded-xl border border-sky-400/20 bg-sky-950/20 p-4"><h3 className="font-black text-sky-200">Horde Summoner</h3><p className="mt-2 text-xs leading-5 text-slate-300">Use Additional Creatures once for free; the additional creature shares the first creature’s HP. Combo Summon can use a different known listed Spell.</p>{trackedUse(SUMMONER_HORDE_USED, 'Split Summon used', 'Use free Split Summon', 'Reset on Initiative / Long Rest')}</div>}
-      {talents.has('Grand Entrance') && <div className="rounded-xl border border-orange-400/20 bg-orange-950/20 p-4"><h3 className="font-black text-orange-200">Grand Entrance</h3><p className="mt-2 text-xs leading-5 text-slate-300">Once per Combat when using Personal Demiplane, each summoned creature exiting can appear within 5 Spaces and make a free Unarmed Strike.</p>{trackedUse(SUMMONER_GRAND_ENTRANCE_USED, 'Used this Combat', states[SUMMONER_DEMIPLANE_OPEN] ? 'Apply Grand Entrance' : 'Open the portal first', 'Reset Combat use', !states[SUMMONER_DEMIPLANE_OPEN])}</div>}
-      {talents.has('Reverse Summoning') && <div className="rounded-xl border border-purple-400/20 bg-purple-950/20 p-4"><h3 className="font-black text-purple-200">Reverse Summoning</h3><p className="mt-2 text-xs leading-5 text-slate-300">Once per Combat when using Personal Demiplane, chosen creatures within 1 Space make a Might Save against DC <strong>{saveDC}</strong>. Failure: trapped for 1 Round.</p>{trackedUse(SUMMONER_REVERSE_SUMMONING_USED, 'Used this Combat', states[SUMMONER_DEMIPLANE_OPEN] ? 'Apply Reverse Summoning' : 'Open the portal first', 'Reset Combat use', !states[SUMMONER_DEMIPLANE_OPEN])}</div>}
+      {talents.has('Creature Specialist') && <div className="rounded-xl border border-amber-400/20 bg-amber-950/20 p-4"><h3 className="font-black text-amber-200">Creature Specialist</h3><p className="mt-2 text-xs leading-5 text-slate-300">Chosen Spells: <strong>{build.classFeatureSelections['summoner.creatureSpecialistSpell']?.join(', ') || 'Choose in Builder'}</strong></p>{trackedTalentUses(SUMMONER_CREATURE_SPECIALIST_USED, talentCount('Creature Specialist'), 'Use a chosen Spell’s 3-point Traits benefit', 'Reset on Initiative / Long Rest')}</div>}
+      {talents.has('Horde Summoner') && <div className="rounded-xl border border-sky-400/20 bg-sky-950/20 p-4"><h3 className="font-black text-sky-200">Horde Summoner</h3><p className="mt-2 text-xs leading-5 text-slate-300">Each copy teaches 2 listed Spells and provides one free use of Additional Creatures; the additional creature shares the first creature’s HP. Combo Summon can use a different known listed Spell.</p>{trackedTalentUses(SUMMONER_HORDE_USED, talentCount('Horde Summoner'), 'Use free Split Summon', 'Reset on Initiative / Long Rest')}</div>}
+      {talents.has('Grand Entrance') && <div className="rounded-xl border border-orange-400/20 bg-orange-950/20 p-4"><h3 className="font-black text-orange-200">Grand Entrance</h3><p className="mt-2 text-xs leading-5 text-slate-300">Once per Combat for each copy when using Personal Demiplane, each summoned creature exiting can appear within 5 Spaces and make a free Unarmed Strike.</p>{trackedTalentUses(SUMMONER_GRAND_ENTRANCE_USED, talentCount('Grand Entrance'), states[SUMMONER_DEMIPLANE_OPEN] ? 'Apply Grand Entrance' : 'Open the portal first', 'Reset Combat uses', !states[SUMMONER_DEMIPLANE_OPEN])}</div>}
+      {talents.has('Reverse Summoning') && <div className="rounded-xl border border-purple-400/20 bg-purple-950/20 p-4"><h3 className="font-black text-purple-200">Reverse Summoning</h3><p className="mt-2 text-xs leading-5 text-slate-300">Once per Combat for each copy when using Personal Demiplane, chosen creatures within 1 Space make a Might Save against DC <strong>{saveDC}</strong>. Failure: trapped for 1 Round.</p>{trackedTalentUses(SUMMONER_REVERSE_SUMMONING_USED, talentCount('Reverse Summoning'), states[SUMMONER_DEMIPLANE_OPEN] ? 'Apply Reverse Summoning' : 'Open the portal first', 'Reset Combat uses', !states[SUMMONER_DEMIPLANE_OPEN])}</div>}
     </div>
   </section>;
 }
@@ -2092,6 +2104,11 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const { spells: spellCatalog, maneuvers: maneuverCatalog } = usePowerCatalog();
   const { reference } = useCharacterReference();
   const classReference = reference?.classes.find(({ name }) => name === character.class);
+  const allOwnedClassFeatures = useMemo(
+    () => reference ? ownedClassFeatures(character, reference) : [],
+    [character, reference],
+  );
+  const multiclassFeatures = allOwnedClassFeatures.filter(({ source }) => source !== 'Class');
   const build = character.build;
   const rollAdjustment = build?.rollAdjustment ?? 0;
   const conditionLevels = build?.sheetConditionLevels ?? {};
@@ -2116,8 +2133,13 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const isSorcerer = character.class === 'Sorcerer';
   const isPsion = character.class === 'Psion';
   const isWizard = character.class === 'Wizard';
-  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter || isMonk || isSorcerer || isPsion || isWizard;
-  const isRaging = isBarbarian && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
+  const hasRageFeature = isBarbarian || allOwnedClassFeatures.some(({ className, name }) => className === 'Barbarian' && name === 'Rage');
+  const hasMartialExpansion = (build?.selectedTalents ?? []).includes('Martial Expansion');
+  const martialExpansionRegen = build?.classFeatureSelections[MARTIAL_EXPANSION_REGEN]?.[0] ?? 'Choose in Builder';
+  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter || isMonk || isSorcerer || isPsion || isWizard || multiclassFeatures.length > 0 || hasMartialExpansion;
+  const isRaging = hasRageFeature && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
+  const isOverloaded = Boolean(featureStates[SORCERER_OVERLOAD_ACTIVE]);
+  const hasExpertSorcererFeature = allOwnedClassFeatures.some(({ className, name }) => className === 'Sorcerer' && name === 'Expert Sorcerer');
   const hasUnfathomableStrength = (build?.selectedTalents ?? []).includes('Unfathomable Strength');
   const battlecryShout = featureSelections[BARBARIAN_BATTLECRY_SELECTION] || 'Fortitude Shout';
   const storedBattlecryEnhancement = character.level >= 5 ? Math.max(0, featureCounters[BARBARIAN_BATTLECRY_ENHANCEMENT] ?? 0) : 0;
@@ -2373,7 +2395,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const setFeatureState = (key: string, value: boolean) => updateBuild({ sheetFeatureStates: { ...featureStates, [key]: value } });
 
   const enterRage = (free = false) => {
-    if (!build || !isBarbarian || isRaging || (!free && (character.currentAP < 1 || character.stamina < 1))) return;
+    if (!build || !hasRageFeature || isRaging || (!free && (character.currentAP < 1 || character.stamina < 1))) return;
     update({
       currentAP: free ? character.currentAP : character.currentAP - 1,
       stamina: free ? character.stamina : character.stamina - 1,
@@ -2386,6 +2408,26 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     update({
       inventoryItems: enforceEquipmentHandCapacity(character.inventoryItems ?? [], equipmentCatalog),
       build: { ...build, sheetFeatureStates: { ...featureStates, [BARBARIAN_RAGE_STATE]: false } },
+    });
+  };
+
+  const activateMulticlassOverload = () => {
+    if (!build || isOverloaded || character.currentAP < 1 || character.manaPoints < 1) return;
+    update({
+      currentAP: character.currentAP - 1,
+      manaPoints: character.manaPoints - 1,
+      build: { ...build, sheetFeatureStates: { ...featureStates, [SORCERER_OVERLOAD_ACTIVE]: true } },
+    });
+  };
+
+  const recordMulticlassOverloadFailure = () => {
+    if (!build || !isOverloaded) return;
+    updateBuild({
+      sheetConditionLevels: { ...conditionLevels, Exhaustion: (conditionLevels.Exhaustion ?? 0) + 1 },
+      sheetFeatureCounters: {
+        ...featureCounters,
+        [SORCERER_OVERLOAD_EXHAUSTION]: (featureCounters[SORCERER_OVERLOAD_EXHAUSTION] ?? 0) + 1,
+      },
     });
   };
 
@@ -2466,8 +2508,9 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const hunterInvestigationModifier = skillModifier('Investigation', character.skillMasteries.Investigation ?? 'Untrained');
 
   const updateNote = (note: CampaignNote) => updateBuild({ characterNotes: notes.map((entry) => entry.id === note.id ? note : entry) });
-  const featureDescription = (name: string, description: string): string => {
-    const selections = (classReference?.choiceGroups ?? [])
+  const featureDescription = (name: string, description: string, ownerClass = character.class): string => {
+    const ownerReference = reference?.classes.find(({ name: candidate }) => candidate === ownerClass);
+    const selections = (ownerReference?.choiceGroups ?? [])
       .filter((group) => group.feature === name)
       .flatMap((group) => (build?.classFeatureSelections[group.id] ?? []).map((choice) => `${group.title}: ${choice}`));
     return selections.length > 0 ? `${description}\n\nSelected Options\n• ${selections.join('\n• ')}` : description;
@@ -2515,6 +2558,27 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         {isSorcerer && <SorcererControls character={character} onChange={update} onRoll={roll} />}
         {isPsion && <PsionControls character={character} onChange={update} onRoll={roll} />}
         {isWizard && <WizardControls character={character} spellCatalog={spellCatalog} knownSpells={knownSpells} onChange={update} onRoll={roll} />}
+        {multiclassFeatures.length > 0 && <section className="rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-cyan-950/35 to-slate-950/75 p-4 sm:p-5">
+          <div className="mb-4"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Multiclass Talents</p><h2 className="text-xl font-black text-white">Granted Class Features</h2><p className="mt-1 text-xs leading-5 text-slate-500">Passive bonuses, training, Skills, Spells, Maneuvers, and limits are routed into the sheet automatically. Active Features include their applicable rolls and trackers here.</p></div>
+          <div className="grid gap-3 lg:grid-cols-2">{multiclassFeatures.map((feature) => <Details key={`${feature.className}-${feature.subclass ?? ''}-${feature.name}`} title={feature.name} subtitle={`${feature.className}${feature.subclass ? ` • ${feature.subclass}` : ''} • Level ${feature.level} • ${feature.source}`}>
+            <p>{featureDescription(feature.name, feature.description, feature.className)}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {feature.className === 'Barbarian' && feature.name === 'Rage' && (isRaging ? <button type="button" onClick={endRage} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-slate-200">End Rage • free</button> : <button type="button" disabled={character.currentAP < 1 || character.stamina < 1} onClick={() => enterRage(false)} className="rounded-lg bg-orange-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Enter Rage • 1 AP + 1 SP</button>)}
+              {feature.className === 'Sorcerer' && feature.name === 'Overload Magic' && <>
+                {isOverloaded
+                  ? <button type="button" onClick={() => setFeatureState(SORCERER_OVERLOAD_ACTIVE, false)} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-slate-200">End Overload • free</button>
+                  : <button type="button" disabled={character.currentAP < 1 || character.manaPoints < 1} onClick={activateMulticlassOverload} className="rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Activate • 1 AP + 1 MP</button>}
+                {isOverloaded && ATTRIBUTE_NAMES.map((attribute) => <button type="button" key={`overload-${attribute}`} onClick={() => roll(`Overload Magic — ${attribute} Save vs DC ${10 + character.primeModifier + character.combatMastery}`, character.attributes[attribute].modifier + character.combatMastery)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white">{attribute} Save</button>)}
+                {isOverloaded && <button type="button" onClick={recordMulticlassOverloadFailure} className="rounded-lg bg-rose-800 px-3 py-2 text-xs font-black text-white">Record Save Failure</button>}
+                <span className="basis-full text-[10px] leading-4 text-slate-500">{hasExpertSorcererFeature ? 'Expert Sorcerer skips the activation Save; make a Save at the start of each turn.' : 'After activation and at the start of each turn, choose any Attribute Save. A failure adds 1 Exhaustion.'}</span>
+              </>}
+              {/Spell Check/i.test(feature.description) && <button type="button" onClick={() => roll(`${feature.name} Spell Check`, character.primeModifier + character.combatMastery)} className="rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white">Roll Spell Check</button>}
+              {/(Martial Check|Martial Attack)/i.test(feature.description) && <button type="button" onClick={() => roll(`${feature.name} Martial Check`, character.primeModifier + character.combatMastery)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white">Roll Martial Check</button>}
+              {/Save DC/i.test(feature.description) && <span className="rounded-lg bg-sky-500/10 px-3 py-2 text-xs font-black text-sky-200">Class Save DC {10 + character.primeModifier + character.combatMastery}</span>}
+            </div>
+          </Details>)}</div>
+        </section>}
+        {hasMartialExpansion && <section className="rounded-2xl border border-amber-400/25 bg-amber-950/15 p-4 sm:p-5"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">General Talent</p><h2 className="text-xl font-black text-white">Martial Expansion</h2><p className="mt-2 text-sm text-slate-300">Stamina Regen: <strong className="text-amber-200">{martialExpansionRegen}</strong> • regain up to half your maximum SP when its published trigger occurs • once per Round.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={Boolean(featureStates[MARTIAL_EXPANSION_REGEN_USED]) || character.stamina >= character.maxStamina} onClick={() => { update({ stamina: Math.min(character.maxStamina, character.stamina + Math.ceil(character.maxStamina / 2)), build: { ...build!, sheetFeatureStates: { ...featureStates, [MARTIAL_EXPANSION_REGEN_USED]: true } } }); }} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Trigger Regen • up to {Math.ceil(character.maxStamina / 2)} SP</button>{featureStates[MARTIAL_EXPANSION_REGEN_USED] && <button type="button" onClick={() => updateBuild({ sheetFeatureStates: { ...featureStates, [MARTIAL_EXPANSION_REGEN_USED]: false } })} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-slate-300">Start New Round</button>}</div></section>}
           </div>
         </details>}
 
@@ -2547,7 +2611,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
 
           {selectedTab === 'powers' && <div><div className="mb-5 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Martial Check</div><div className="text-2xl font-black text-violet-200">+{character.primeModifier + character.combatMastery}</div></div><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Spell Check</div><div className="text-2xl font-black text-fuchsia-200">+{character.primeModifier + character.combatMastery}</div></div><div className="rounded-xl bg-slate-950/55 p-3"><div className="text-xs text-slate-500">Class Save DC</div><div className="text-2xl font-black text-sky-200">{10 + character.primeModifier + character.combatMastery}</div></div></div><div className="grid gap-5 lg:grid-cols-2"><section><h2 className="mb-3 font-black text-fuchsia-200">Spells</h2><div className="space-y-2">{knownSpells.length === 0 ? <p className="text-slate-500">No spells known.</p> : knownSpells.map((spell) => <Details key={spell.id} title={spell.name} subtitle={[spell.source, spell.school, spell.cost, spell.range, grantedSpells.includes(spell.name) ? 'Granted by class feature' : ''].filter(Boolean).join(' • ')}>{spell.description}{spell.enhancements && <><h4 className="mt-4 font-black text-slate-300">Enhancements</h4><p>{spell.enhancements}</p></>}<button type="button" onClick={() => roll(`${spell.name} Spell Check`, character.primeModifier + character.combatMastery)} className="mt-4 w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white">Roll Spell Check</button></Details>)}</div></section><section><h2 className="mb-3 font-black text-violet-200">Maneuvers</h2><div className="space-y-2">{knownManeuvers.length === 0 ? <p className="text-slate-500">No maneuvers known.</p> : knownManeuvers.map((maneuver) => <Details key={maneuver.id} title={maneuver.name} subtitle={[maneuver.category ?? maneuver.type, maneuver.cost, maneuver.range, grantedManeuvers.includes(maneuver.name) ? 'Granted by class feature' : ''].filter(Boolean).join(' • ')}>{maneuver.description}{maneuver.enhancements && <><h4 className="mt-4 font-black text-slate-300">Enhancements</h4><p>{maneuver.enhancements}</p></>}</Details>)}</div></section></div></div>}
 
-          {selectedTab === 'features' && <div className="grid gap-5 lg:grid-cols-3"><section><h2 className="mb-3 font-black text-violet-200">Class Features</h2><div className="space-y-3">{classFeatures.map((entry) => <div key={entry.level}><h3 className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Level {entry.level}</h3><div className="space-y-2">{entry.features.map((feature) => <Details key={`${entry.level}-${feature.name}`} title={feature.name}>{featureDescription(feature.name, feature.description)}</Details>)}</div></div>)}{character.subclass && (classReference?.subclassFeatures[character.subclass] ?? []).filter((feature) => feature.level === undefined || feature.level <= character.level).map((feature) => <Details key={`subclass-${feature.name}`} title={feature.name} subtitle={`${character.subclass}${feature.level !== undefined ? ` • Level ${feature.level}` : ''}`}>{featureDescription(feature.name, feature.description)}</Details>)}</div></section><section><h2 className="mb-3 font-black text-fuchsia-200">Talents</h2><div className="space-y-2">{selectedTalentCounts.length === 0 ? <p className="text-slate-500">No talents selected.</p> : selectedTalentCounts.map(([name, count]) => { const talent = classReference?.talents.find(({ name: candidate }) => candidate === name); const description = talent?.description ?? 'Talent details are unavailable.'; return <Details key={name} title={`${name}${count > 1 ? ` ×${count}` : ''}`}>{featureDescription(name, description)}</Details>; })}</div></section><section><h2 className="mb-3 font-black text-emerald-200">Ancestry Traits</h2><div className="space-y-2">{ancestryTraits.length === 0 ? <p className="text-slate-500">No ancestry traits selected.</p> : ancestryTraits.map((trait) => <Details key={trait.id} title={trait.name} subtitle={`${trait.ancestry} • ${trait.cost > 0 ? '+' : ''}${trait.cost} AP`}>{trait.description}{build?.ancestryTraitChoices[trait.id]?.length ? `\n\nChoice: ${build.ancestryTraitChoices[trait.id].join(', ')}` : ''}</Details>)}</div></section></div>}
+          {selectedTab === 'features' && <div className="grid gap-5 lg:grid-cols-3"><section><h2 className="mb-3 font-black text-violet-200">Class Features</h2><div className="space-y-3">{classFeatures.map((entry) => <div key={entry.level}><h3 className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Level {entry.level}</h3><div className="space-y-2">{entry.features.map((feature) => <Details key={`${entry.level}-${feature.name}`} title={feature.name}>{featureDescription(feature.name, feature.description)}</Details>)}</div></div>)}{character.subclass && (classReference?.subclassFeatures[character.subclass] ?? []).filter((feature) => feature.level === undefined || feature.level <= character.level).map((feature) => <Details key={`subclass-${feature.name}`} title={feature.name} subtitle={`${character.subclass}${feature.level !== undefined ? ` • Level ${feature.level}` : ''}`}>{featureDescription(feature.name, feature.description)}</Details>)}{multiclassFeatures.length > 0 && <div><h3 className="mb-2 mt-4 text-xs font-black uppercase tracking-wider text-cyan-300">Multiclass Features</h3><div className="space-y-2">{multiclassFeatures.map((feature) => <Details key={`multiclass-${feature.className}-${feature.subclass ?? ''}-${feature.name}`} title={feature.name} subtitle={`${feature.className}${feature.subclass ? ` • ${feature.subclass}` : ''} • Level ${feature.level} • ${feature.source}`}>{featureDescription(feature.name, feature.description, feature.className)}</Details>)}</div></div>}</div></section><section><h2 className="mb-3 font-black text-fuchsia-200">Talents</h2><div className="space-y-2">{selectedTalentCounts.length === 0 ? <p className="text-slate-500">No talents selected.</p> : selectedTalentCounts.map(([name, count]) => { const talent = reference ? talentByName(reference, name) : undefined; const description = talent?.description ?? 'Talent details are unavailable.'; return <Details key={name} title={`${name}${count > 1 ? ` ×${count}` : ''}`} subtitle={talent ? `${talent.category}${talent.className ? ` • ${talent.className}` : ''}` : undefined}>{featureDescription(name, description, talent?.className)}</Details>; })}</div></section><section><h2 className="mb-3 font-black text-emerald-200">Ancestry Traits</h2><div className="space-y-2">{ancestryTraits.length === 0 ? <p className="text-slate-500">No ancestry traits selected.</p> : ancestryTraits.map((trait) => <Details key={trait.id} title={trait.name} subtitle={`${trait.ancestry} • ${trait.cost > 0 ? '+' : ''}${trait.cost} AP`}>{trait.description}{build?.ancestryTraitChoices[trait.id]?.length ? `\n\nChoice: ${build.ancestryTraitChoices[trait.id].join(', ')}` : ''}</Details>)}</div></section></div>}
 
           {selectedTab === 'equipment' && <div><div className="mb-6"><h2 className="font-black text-violet-200">Inventory & Equipped Gear</h2><p className="mt-1 text-sm text-slate-500">Add equipment from the main Equipment tab. Armor and hand limits are enforced when equipping.</p></div>{(character.inventoryItems?.length ?? 0) + character.equipment.length > 0 ? <div className="space-y-2">{(character.inventoryItems ?? []).map((inventory) => { const item = equipmentCatalog.find(({ id }) => id === inventory.equipmentID); if (!item) return <div key={inventory.id} className="rounded-lg border border-amber-400/20 bg-amber-500/5 p-3 text-amber-200">Missing catalog item: {inventory.equipmentID}</div>; return <Details key={inventory.id} title={item.name} subtitle={`${item.category} • ${item.subtype} • ${item.slot}${inventory.isEquipped ? ' • Equipped' : ''}`}><p className="font-semibold text-violet-200">{item.summary}</p><p className="mt-3">{item.mechanics}</p><div className="mt-4 flex flex-wrap items-center gap-2"><button type="button" onClick={() => update({ inventoryItems: setInventoryQuantity(character.inventoryItems ?? [], inventory.id, inventory.quantity - 1) })} className="h-8 w-8 rounded bg-slate-800">−</button><span className="font-black text-slate-200">Quantity {inventory.quantity}</span><button type="button" onClick={() => update({ inventoryItems: setInventoryQuantity(character.inventoryItems ?? [], inventory.id, inventory.quantity + 1) })} className="h-8 w-8 rounded bg-slate-800">+</button>{isEquipmentEquippable(item) && <button type="button" onClick={() => update({ inventoryItems: toggleInventoryEquipped(character.inventoryItems ?? [], inventory.id, equipmentCatalog) })} className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white">{inventory.isEquipped ? 'Stow' : 'Equip'}</button>}<button type="button" onClick={() => update({ inventoryItems: (character.inventoryItems ?? []).filter(({ id }) => id !== inventory.id) })} className="rounded-lg px-3 py-2 text-xs font-bold text-red-300">Remove</button></div></Details>; })}{character.equipment.map((item) => <div key={item.id} className="rounded-lg bg-slate-950/45 p-3 text-slate-300">{item.name} ×{item.quantity} <span className="text-xs text-slate-500">legacy item</span></div>)}</div> : <p className="text-slate-500">No equipment in inventory.</p>}</div>}
 

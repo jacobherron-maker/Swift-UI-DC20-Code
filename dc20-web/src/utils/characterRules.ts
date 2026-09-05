@@ -10,6 +10,7 @@ import type {
   Spell,
 } from '../types/models';
 import { defensiveEquipmentProfile } from './equipmentRules';
+import { hasAutomaticMulticlassFlavor, hasDirectMulticlassFeature, hasMulticlassSubclass, multiclassParagonTalentSlotClasses, multiclassSubclassCount } from './talentRules';
 
 export const ATTRIBUTE_NAMES: DC20Attribute[] = ['Might', 'Agility', 'Charisma', 'Intelligence'];
 export const MASTERY_TITLES: MasteryLevel[] = [
@@ -25,8 +26,10 @@ export function masteryCap(level: number): number {
 }
 
 /** Roguish Finesse raises only the Skill Mastery Limit, not the Trade Mastery Limit. */
-export function skillMasteryCap(character: Pick<Character, 'class' | 'level'>): number {
-  return Math.min(5, masteryCap(character.level) + Number(character.class === 'Rogue'));
+export function skillMasteryCap(character: Pick<Character, 'class' | 'level'> & Partial<Pick<Character, 'build'>>): number {
+  const hasRoguishFinesse = character.class === 'Rogue'
+    || hasDirectMulticlassFeature(character, 'Rogue', 'Roguish Finesse');
+  return Math.min(5, masteryCap(character.level) + Number(hasRoguishFinesse));
 }
 
 export function combatMastery(level: number): number {
@@ -73,10 +76,24 @@ export function classTableTotals(reference: ClassReference, level: number) {
   };
 }
 
-export function talentSlots(className: string, level: number, subclass?: string): number {
+export function ordinaryTalentSlots(className: string, level: number): number {
   const progression = className === 'Psion' ? [2, 4, 7, 10] : [2, 4, 6, 8];
+  return progression.filter((entry) => entry <= level).length;
+}
+
+export function talentSlots(className: string, level: number, subclass?: string): number {
   const paragon = subclass === 'Paragon' ? [3, 7, 10].filter((entry) => entry <= level).length : 0;
-  return progression.filter((entry) => entry <= level).length + paragon;
+  return ordinaryTalentSlots(className, level) + paragon;
+}
+
+/** Every Paragon slot is restricted to a Class Talent from its granting Class. */
+export function paragonTalentSlotClasses(
+  character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>,
+): string[] {
+  const native = character.subclass === 'Paragon'
+    ? [3, 7, 10].filter((entry) => entry <= character.level).map(() => character.class)
+    : [];
+  return [...native, ...multiclassParagonTalentSlotClasses(character)];
 }
 
 /** Psion v2 lists Talents at 2/4/7/10, but never grants Character Path Progression. */
@@ -231,6 +248,13 @@ export interface DruidWildFormProfile {
 /** Live Wild Form statistics; the selected traits are chosen when the Druid transforms. */
 export function druidWildFormProfile(character: Pick<Character, 'class' | 'level' | 'primeModifier' | 'combatMastery' | 'subclass' | 'build'>): DruidWildFormProfile {
   const build = character.build;
+  const ownsWildForm = character.class === 'Druid' || hasDirectMulticlassFeature(character, 'Druid', 'Wild Form');
+  const expertDruid = (character.class === 'Druid' && character.level >= 5)
+    || hasDirectMulticlassFeature(character, 'Druid', 'Expert Druid');
+  const phoenix = (character.class === 'Druid' && character.subclass === 'Phoenix')
+    || hasMulticlassSubclass(character, 'Druid', 'Phoenix');
+  const rampantGrowth = (character.class === 'Druid' && character.subclass === 'Rampant Growth')
+    || hasMulticlassSubclass(character, 'Druid', 'Rampant Growth');
   const selections = build?.classFeatureSelections?.[DRUID_WILD_FORM_TRAITS] ?? [];
   const count = (name: string) => selections.filter((selection) => selection === name).length;
   const beastTraits = selections.map(druidBeastTraitName).filter((name): name is string => Boolean(name));
@@ -239,11 +263,11 @@ export function druidWildFormProfile(character: Pick<Character, 'class' | 'level
   const shellRetreatActive = shellRetreatAvailable && Boolean(build?.sheetFeatureStates?.['ancestry.shellRetreat.active']);
   const extraMP = Math.max(0, Math.trunc(build?.sheetFeatureCounters?.[DRUID_WILD_FORM_EXTRA_MP] ?? 0));
   const expansion = Number(Boolean(build?.sheetFeatureStates?.[DRUID_WILD_FORM_EXPANSION_ACTIVE]));
-  const traitPointBudget = 3 + Number(character.level >= 5) + extraMP * 2 + expansion * 2;
+  const traitPointBudget = 3 + Number(expertDruid) + extraMP * 2 + expansion * 2;
   const traitPointsSpent = selections.reduce((total, selection) => (
     total + druidWildFormTraitCost(selection)
   ), 0);
-  const maximumHP = 3 + Number(character.level >= 5) + count('Healthy') * 2 + beastCount('Tough');
+  const maximumHP = 3 + Number(expertDruid) + count('Healthy') * 2 + beastCount('Tough');
   const baseSize = build?.sheetFeatureSelections?.[DRUID_WILD_FORM_SIZE] ?? 'Medium';
   const size = count('Size — Tiny') > 0 ? 'Tiny' : count('Size — Large') > 0 ? 'Large' : baseSize;
   const creatureType = build?.sheetFeatureSelections?.[DRUID_WILD_FORM_TYPE] ?? 'Beast';
@@ -253,9 +277,9 @@ export function druidWildFormProfile(character: Pick<Character, 'class' | 'level
   if (beastCount('Cold Resistance')) resistances.push('Cold Resistance (Half)');
   if (beastCount('Fire Resistance')) resistances.push('Fire Resistance (Half)');
   if (beastCount('Toxic Fortitude')) resistances.push('Poison Resistance (Half)');
-  if (character.subclass === 'Phoenix' && creatureType === 'Elemental (Fire)') resistances.push('Fire (1)');
+  if (phoenix && creatureType === 'Elemental (Fire)') resistances.push('Fire (1)');
   return {
-    active: character.class === 'Druid' && Boolean(build?.sheetFeatureStates?.[DRUID_WILD_FORM_ACTIVE]),
+    active: ownsWildForm && Boolean(build?.sheetFeatureStates?.[DRUID_WILD_FORM_ACTIVE]),
     traitPointBudget,
     traitPointsSpent,
     maximumHP,
@@ -270,7 +294,7 @@ export function druidWildFormProfile(character: Pick<Character, 'class' | 'level
     might: Math.min(attributeCap(character.level), 1 + count('Attribute Increase — Might') * 2),
     agility: Math.min(attributeCap(character.level), 1 + count('Attribute Increase — Agility') * 2),
     naturalWeaponDamageType: selectedDamage,
-    damageTypes: Array.from(new Set(['Bludgeoning', 'Piercing', 'Slashing', ...(character.subclass === 'Phoenix' ? ['Fire'] : []), ...(character.subclass === 'Rampant Growth' ? ['Poison'] : [])])),
+    damageTypes: Array.from(new Set(['Bludgeoning', 'Piercing', 'Slashing', ...(phoenix ? ['Fire'] : []), ...(rampantGrowth ? ['Poison'] : [])])),
     resistances: Array.from(new Set(resistances)),
     skillMasteries: (build?.classFeatureSelections?.[DRUID_WILD_FORM_SKILLS] ?? []).slice(0, count('Skillful') * 2),
     beastTraits,
@@ -278,7 +302,7 @@ export function druidWildFormProfile(character: Pick<Character, 'class' | 'level
     elementalDamageReduction: shellRetreatActive,
     shellRetreatAvailable,
     shellRetreatActive,
-    bleedingImmune: character.subclass === 'Rampant Growth' && creatureType === 'Plant',
+    bleedingImmune: rampantGrowth && creatureType === 'Plant',
   };
 }
 
@@ -322,7 +346,9 @@ export function sorcererDraconicDamageType(
   character: Pick<Character, 'class' | 'subclass' | 'ancestry' | 'build'>,
   traits: AncestryTrait[] = [],
 ): string | undefined {
-  if (character.class !== 'Sorcerer' || character.subclass !== 'Draconic') return undefined;
+  const draconic = (character.class === 'Sorcerer' && character.subclass === 'Draconic')
+    || hasMulticlassSubclass(character, 'Sorcerer', 'Draconic');
+  if (!draconic) return undefined;
   const ancestryOrigin = selectedAncestryTraits(character, traits).find(({ ancestry, name }) => ancestry === 'Dragonborn' && name === 'Draconic Origin');
   return (ancestryOrigin ? character.build?.ancestryTraitChoices?.[ancestryOrigin.id]?.[0] : undefined)
     ?? character.build?.ancestryTraitChoices?.['Dragonborn|Draconic Origin']?.[0]
@@ -402,38 +428,39 @@ export function applySorcererWildMagic(character: Character, outcome: number): C
 
 /** Sheet-facing effects that must change live rather than being baked into a character's base statistics. */
 export function characterSheetEffects(character: Character): CharacterSheetEffects {
-  const isRaging = character.class === 'Barbarian'
+  const isRaging = (character.class === 'Barbarian' || hasDirectMulticlassFeature(character, 'Barbarian', 'Rage'))
     && Boolean(character.build?.sheetFeatureStates?.[BARBARIAN_RAGE_STATE]);
-  const selectedRune = character.class === 'Spellblade'
+  const selectedRune = ((character.class === 'Spellblade' && character.subclass === 'Rune Knight')
+    || hasMulticlassSubclass(character, 'Spellblade', 'Rune Knight'))
     ? character.build?.sheetFeatureSelections?.['spellblade.rune.active']
     : undefined;
   const activeRune = selectedRune && character.build?.classFeatureSelections?.['spellblade.runes']?.includes(selectedRune)
     ? selectedRune : undefined;
   const spellbladeDisciplines = new Set(spellbladeDisciplineNames(character));
-  const spellWarderActive = character.class === 'Spellblade'
-    && spellbladeDisciplines.has('Spell Warder')
+  const spellWarderActive = spellbladeDisciplines.has('Spell Warder')
     && Boolean(character.build?.sheetFeatureStates?.['spellblade.spellWarder.active']);
   const spellWarderDamage = character.build?.sheetFeatureSelections?.['spellblade.spellWarder.damage'];
   const spellWarderHalf = (character.build?.sheetFeatureCounters?.['spellblade.spellWarder.half'] ?? 0) > 0;
-  const adaptiveDamage = character.class === 'Spellblade'
-    && (character.build?.selectedTalents ?? []).includes('Adaptive Bond')
+  const adaptiveDamage = (character.build?.selectedTalents ?? []).includes('Adaptive Bond')
     ? character.build?.sheetFeatureSelections?.['spellblade.boundDamage.current']
       ?? character.build?.classFeatureSelections?.['spellblade.boundDamage']?.[0]
     : undefined;
-  const clericDomains = new Set(character.class === 'Cleric'
+  const clericDomains = new Set(character.class === 'Cleric' || hasDirectMulticlassFeature(character, 'Cleric', 'Cleric Order')
     ? character.build?.classFeatureSelections?.['cleric.domains'] ?? []
     : []);
-  const clericDivineDamage = character.class === 'Cleric'
+  const clericDivineDamage = character.class === 'Cleric' || hasDirectMulticlassFeature(character, 'Cleric', 'Cleric Order')
     ? character.build?.classFeatureSelections?.['cleric.divineDamage']?.[0]
     : undefined;
-  const inquisitorResistances = character.class === 'Cleric' && character.subclass === 'Inquisitor'
+  const inquisitorResistances = ((character.class === 'Cleric' && character.subclass === 'Inquisitor')
+    || hasMulticlassSubclass(character, 'Cleric', 'Inquisitor'))
     ? ['Charmed Condition', 'Intimidated Condition', 'Taunted Condition']
     : [];
-  const bardPerformanceActive = character.class === 'Bard'
+  const bardPerformanceActive = (character.class === 'Bard' || hasDirectMulticlassFeature(character, 'Bard', 'Bardic Performance'))
     && Boolean(character.build?.sheetFeatureStates?.[BARD_PERFORMANCE_STATE]);
   const bardPerformanceAppliesToSelf = bardPerformanceActive
     && Boolean(character.build?.sheetFeatureStates?.['bard.performance.selfIncluded']);
-  const bardPerformanceEnhanced = character.level >= 5
+  const bardPerformanceEnhanced = ((character.class === 'Bard' && character.level >= 5)
+    || hasDirectMulticlassFeature(character, 'Bard', 'Expert Bard'))
     && Boolean(character.build?.sheetFeatureStates?.['bard.performance.enhanced']);
   const bardPerformance = character.build?.sheetFeatureSelections?.['bard.performance.activeChoice'];
   const bardEmotionalCondition = character.build?.sheetFeatureSelections?.['bard.performance.condition'];
@@ -442,11 +469,12 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
       ? ['Charmed Condition', 'Frightened Condition', 'Intimidated Condition', 'Taunted Condition']
       : bardEmotionalCondition ? [`${bardEmotionalCondition} Condition`] : []
     : [];
-  const commanderResistances = character.class === 'Commander' && character.subclass === 'Crusader'
+  const commanderResistances = ((character.class === 'Commander' && character.subclass === 'Crusader')
+    || hasMulticlassSubclass(character, 'Commander', 'Crusader'))
     ? ['Frightened Condition', 'Intimidated Condition'] : [];
   const hunterTerrains = new Set(hunterFavoredTerrainNames(character));
-  const hunterConcoctionActive = character.class === 'Hunter'
-    && character.subclass === 'Monster Slayer'
+  const hunterConcoctionActive = ((character.class === 'Hunter' && character.subclass === 'Monster Slayer')
+    || hasMulticlassSubclass(character, 'Hunter', 'Monster Slayer'))
     && Boolean(character.build?.sheetFeatureStates?.[HUNTER_CONCOCTION_ACTIVE]);
   const hunterConcoction = hunterConcoctionActive
     ? character.build?.sheetFeatureSelections?.['hunter.concoction.name'] : undefined;
@@ -461,21 +489,19 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
     hunterConcoction === 'Deathweed' && 'Umbral (Half)',
     hunterConcoction === 'Divine Water' && 'Radiant (Half)',
   ].filter((entry): entry is string => Boolean(entry));
-  const monkStance = character.class === 'Monk' && character.build?.sheetFeatureStates?.[MONK_STANCE_ACTIVE]
+  const monkStance = (character.class === 'Monk' || hasDirectMulticlassFeature(character, 'Monk', 'Monk Stance')) && character.build?.sheetFeatureStates?.[MONK_STANCE_ACTIVE]
     ? character.build?.sheetFeatureSelections?.[MONK_ACTIVE_STANCE] : undefined;
   const monkCobraDamage = monkStance === 'Cobra Stance' && Boolean(character.build?.sheetFeatureStates?.[MONK_COBRA_REVENGE]);
   const monkMongooseDamage = monkStance === 'Mongoose Stance' && Boolean(character.build?.sheetFeatureStates?.[MONK_MONGOOSE_FLANKED]);
-  const sorcererOrigins = new Set(character.class === 'Sorcerer'
+  const sorcererOrigins = new Set(character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Innate Power')
     ? character.build?.classFeatureSelections?.['sorcerer.origin'] ?? [] : []);
-  const sorcererOverloaded = character.class === 'Sorcerer'
+  const sorcererOverloaded = (character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Overload Magic'))
     && Boolean(character.build?.sheetFeatureStates?.[SORCERER_OVERLOAD_ACTIVE]);
   const sorcererDraconicDamage = sorcererDraconicDamageType(character);
-  const wizardCrownedSigil = character.class === 'Wizard'
-    && (character.build?.selectedTalents ?? []).includes('Crowned Sigil')
+  const wizardCrownedSigil = (character.build?.selectedTalents ?? []).includes('Crowned Sigil')
     && Boolean(character.build?.sheetFeatureStates?.[WIZARD_SIGIL_ACTIVE])
     && Boolean(character.build?.sheetFeatureStates?.[WIZARD_SIGIL_BOUND_SELF]);
-  const wizardOverlyPrepared = character.class === 'Wizard'
-    && (character.build?.selectedTalents ?? []).includes('Overly Prepared Spellcaster');
+  const wizardOverlyPrepared = (character.build?.selectedTalents ?? []).includes('Overly Prepared Spellcaster');
   const saveAdvantage: Partial<Record<DC20Attribute, number>> = {};
   if (isRaging || monkStance === 'Turtle Stance') saveAdvantage.Might = 1;
   if (monkStance === 'Gazelle Stance') saveAdvantage.Agility = 1;
@@ -501,7 +527,8 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
       ...hunterResistances,
       ...(monkStance === 'Turtle Stance' ? ['Physical (Half)', 'Elemental (Half)', 'Mystical (Half)'] : []),
       ...(sorcererOrigins.has('Resilient Magic') ? ['Dazed Condition'] : []),
-      ...(sorcererOverloaded && character.subclass === 'Draconic'
+      ...(sorcererOverloaded && ((character.class === 'Sorcerer' && character.subclass === 'Draconic')
+        || hasMulticlassSubclass(character, 'Sorcerer', 'Draconic'))
         ? ['Physical (1)', ...(sorcererDraconicDamage ? [`${sorcererDraconicDamage} (1)`] : [])] : []),
       ...(wizardOverlyPrepared ? ['Dazed Condition'] : []),
     ],
@@ -540,7 +567,7 @@ export function monkKiRecoveryAmount(maximumKi: number, level: number): number {
 
 /** Bear Stance adds damage only to Heavy-or-higher melee Martial Attack results. */
 export function monkMeleeHeavyHitDamageBonus(character: Pick<Character, 'class' | 'build'>): number {
-  return Number(character.class === 'Monk'
+  return Number((character.class === 'Monk' || hasDirectMulticlassFeature(character, 'Monk', 'Monk Stance'))
     && character.build?.sheetFeatureStates?.[MONK_STANCE_ACTIVE]
     && character.build?.sheetFeatureSelections?.[MONK_ACTIVE_STANCE] === 'Bear Stance');
 }
@@ -595,7 +622,7 @@ export function hunterStaminaRegenAmount(maximumStamina: number): number {
 
 /** Favored Terrains currently selected through the Hunter class feature. */
 export function hunterFavoredTerrainNames(character: Pick<Character, 'class' | 'build'>): string[] {
-  if (character.class !== 'Hunter') return [];
+  if (character.class !== 'Hunter' && !hasDirectMulticlassFeature(character, 'Hunter', 'Favored Terrain')) return [];
   return Array.from(new Set(character.build?.classFeatureSelections?.['hunter.terrain'] ?? []));
 }
 
@@ -611,10 +638,11 @@ export function psionStaminaAfterMentalSaveFailure(currentStamina: number, maxim
 
 /** Languages granted directly by Class Features are Fluent without spending Language Points. */
 export function grantedClassLanguageNames(character: Pick<Character, 'class' | 'subclass' | 'build'>): string[] {
-  if (character.class === 'Rogue') {
+  if (character.class === 'Rogue' || hasAutomaticMulticlassFlavor(character, 'Rogue')) {
     return (character.build?.classFeatureSelections?.['rogue.language'] ?? []).slice(0, 1);
   }
-  if (character.class === 'Warlock' && character.subclass === 'Eldritch') {
+  if ((character.class === 'Warlock' && character.subclass === 'Eldritch')
+    || hasMulticlassSubclass(character, 'Warlock', 'Eldritch')) {
     return ['Deep Speech'];
   }
   return [];
@@ -622,11 +650,18 @@ export function grantedClassLanguageNames(character: Pick<Character, 'class' | '
 
 /** Class Features that increase a Language by one stage instead of granting full Fluency. */
 export function grantedClassLanguageLevels(character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>): Record<string, number> {
-  if (character.class !== 'Sorcerer' || character.level < 3) return {};
-  const group = character.subclass === 'Angelic' ? 'sorcerer.celestialLanguage'
-    : character.subclass === 'Draconic' ? 'sorcerer.draconicLanguage' : '';
-  const language = group ? character.build?.classFeatureSelections?.[group]?.[0] : undefined;
-  return language ? { [language]: 1 } : {};
+  const angelic = (character.class === 'Sorcerer' && character.level >= 3 && character.subclass === 'Angelic')
+    || hasMulticlassSubclass(character, 'Sorcerer', 'Angelic');
+  const draconic = (character.class === 'Sorcerer' && character.level >= 3 && character.subclass === 'Draconic')
+    || hasMulticlassSubclass(character, 'Sorcerer', 'Draconic');
+  const languages = [
+    angelic ? character.build?.classFeatureSelections?.['sorcerer.celestialLanguage']?.[0] : undefined,
+    draconic ? character.build?.classFeatureSelections?.['sorcerer.draconicLanguage']?.[0] : undefined,
+  ].filter((language): language is string => Boolean(language));
+  return languages.reduce<Record<string, number>>((levels, language) => ({
+    ...levels,
+    [language]: (levels[language] ?? 0) + 1,
+  }), {});
 }
 
 /** Cheap Shot improves at Expert Rogue; each Sinister Shot adds damage per Condition beyond the first. */
@@ -637,7 +672,7 @@ export function rogueCheapShotDamage(level: number, distinctConditions: number, 
 
 /** Every Spellblade Discipline known from the base feature or Holy Warrior. */
 export function spellbladeDisciplineNames(character: Pick<Character, 'class' | 'build'>): string[] {
-  if (character.class !== 'Spellblade') return [];
+  if (character.class !== 'Spellblade' && !hasDirectMulticlassFeature(character, 'Spellblade', 'Spellblade Disciplines')) return [];
   const choices = character.build?.classFeatureSelections ?? {};
   return Array.from(new Set([
     ...(choices['spellblade.disciplines'] ?? []),
@@ -650,130 +685,175 @@ export function classChoiceSelectionLimit(
   group: ClassChoiceGroupReference,
   character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>,
 ): number {
-  if (group.id === 'bard.expression' && character.class === 'Bard') {
+  const owns = (className: string, feature: string, nativeLevel: number) => (
+    (character.class === className && character.level >= nativeLevel)
+    || hasDirectMulticlassFeature(character, className, feature)
+  );
+  if (group.id === 'bard.expression' && owns('Bard', 'Remarkable Repertoire', 1)) {
     return (character.build?.selectedTalents ?? []).includes('Expanded Repertoire') ? 2 : 1;
   }
-  if (group.id === 'cleric.domains' && character.class === 'Cleric') {
+  if (group.id === 'cleric.domains' && owns('Cleric', 'Cleric Order', 1)) {
     const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Order').length;
-    return 2 + expanded * 2 + Number(character.level >= 5);
+    return 2 + expanded * 2 + Number(owns('Cleric', 'Expert Cleric', 5));
   }
-  if (group.id === 'warlock.boon' && character.class === 'Warlock') {
+  if (group.id === 'warlock.boon' && owns('Warlock', 'Pact Boon', 1)) {
     const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Boon').length;
     return Math.min(group.options.length, 1 + expanded);
   }
-  if (group.id === 'hunter.terrain' && character.class === 'Hunter') {
+  if (group.id === 'hunter.terrain' && owns('Hunter', 'Favored Terrain', 1)) {
     const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Terrains').length;
-    return Math.min(group.options.length, 2 + expanded * 2 + Number(character.level >= 5));
+    return Math.min(group.options.length, 2 + expanded * 2 + Number(owns('Hunter', 'Expert Hunter', 5)));
   }
-  if (group.id === 'monk.ironPalm' && character.class === 'Monk') {
-    return Math.min(group.options.length, 1 + Number(character.level >= 5));
+  if (group.id === 'monk.ironPalm' && owns('Monk', 'Monk Training', 1)) {
+    return Math.min(group.options.length, 1 + Number(owns('Monk', 'Expert Monk', 5)));
   }
-  if (group.id === 'monk.stances' && character.class === 'Monk') {
+  if (group.id === 'monk.stances' && owns('Monk', 'Monk Stance', 1)) {
     const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Stances').length;
-    return Math.min(group.options.length, 2 + expanded * 2 + Number(character.level >= 5));
+    return Math.min(group.options.length, 2 + expanded * 2 + Number(owns('Monk', 'Expert Monk', 5)));
   }
-  if (group.id === 'sorcerer.origin' && character.class === 'Sorcerer') {
+  if (group.id === 'sorcerer.origin' && owns('Sorcerer', 'Innate Power', 1)) {
     const greater = (character.build?.selectedTalents ?? []).filter((name) => name === 'Greater Innate Power').length;
     return Math.min(group.options.length, 1 + greater);
   }
-  if (group.id === 'sorcerer.focus' && character.class === 'Sorcerer') {
+  if (group.id === 'sorcerer.focus' && owns('Sorcerer', 'Innate Power', 1)) {
     const greater = (character.build?.selectedTalents ?? []).filter((name) => name === 'Greater Innate Power').length;
-    return Math.min(group.options.length, 1 + greater + Number(character.level >= 5));
+    return Math.min(group.options.length, 1 + greater + Number(owns('Sorcerer', 'Expert Sorcerer', 5)));
   }
-  if (group.id === 'sorcerer.metaMagic' && character.class === 'Sorcerer') {
+  if (group.id === 'sorcerer.metaMagic' && owns('Sorcerer', 'Meta Magic', 2)) {
     const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Meta Magic').length;
-    const subclassGrant = Number(character.level >= 3 && ['Angelic', 'Draconic'].includes(character.subclass ?? ''));
-    return Math.min(group.options.length, 2 + expanded * 2 + Number(character.level >= 5) + subclassGrant);
+    const nativeSubclassGrant = Number(character.class === 'Sorcerer' && character.level >= 3
+      && ['Angelic', 'Draconic'].includes(character.subclass ?? ''));
+    const subclassGrant = nativeSubclassGrant
+      + multiclassSubclassCount(character, 'Angelic')
+      + multiclassSubclassCount(character, 'Draconic');
+    return Math.min(group.options.length, 2 + expanded * 2 + Number(owns('Sorcerer', 'Expert Sorcerer', 5)) + subclassGrant);
   }
-  if (group.id === 'wizard.school' && character.class === 'Wizard') {
+  if (group.id === 'wizard.school' && owns('Wizard', 'Spell School Initiate', 1)) {
     const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Spell School').length;
     return Math.min(group.options.length, 1 + expanded);
   }
-  if (group.id === 'wizard.preparedSpells' && character.class === 'Wizard') {
-    return character.level >= 5 ? 2 : 1;
+  if (group.id === 'wizard.preparedSpells' && owns('Wizard', 'Prepared Spell', 2)) {
+    return owns('Wizard', 'Expert Wizard', 5) ? 2 : 1;
   }
-  if (group.id !== 'spellblade.disciplines' || character.class !== 'Spellblade') return group.limit;
+  if (group.id === 'summoner.creatureSpecialistSpell' && owns('Summoner', 'Bonded Summons', 1)) {
+    const copies = (character.build?.selectedTalents ?? []).filter((name) => name === 'Creature Specialist').length;
+    return group.options.length > 0 ? Math.min(group.options.length, copies) : copies;
+  }
+  if (group.id === 'summoner.hordeSummons' && owns('Summoner', 'Bonded Summons', 1)) {
+    const copies = (character.build?.selectedTalents ?? []).filter((name) => name === 'Horde Summoner').length;
+    return group.options.length > 0 ? Math.min(group.options.length, copies * 2) : copies * 2;
+  }
+  if (group.id !== 'spellblade.disciplines' || !owns('Spellblade', 'Spellblade Disciplines', 1)) return group.limit;
   const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Disciplines').length;
-  const paladinReserve = character.subclass === 'Paladin' ? 1 : 0;
-  return Math.min(Math.max(0, group.options.length - paladinReserve), 2 + expanded * 2 + (character.level >= 5 ? 1 : 0));
+  const paladinReserve = character.subclass === 'Paladin' || hasMulticlassSubclass(character, 'Spellblade', 'Paladin') ? 1 : 0;
+  return Math.min(Math.max(0, group.options.length - paladinReserve), 2 + expanded * 2 + Number(owns('Spellblade', 'Expert Spellblade', 5)));
 }
 
 /** Maneuvers granted by a class feature do not consume the class-table Maneuvers Known allowance. */
 export function grantedClassManeuverNames(character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>): string[] {
   const choices = character.build?.classFeatureSelections ?? {};
-  if (character.class === 'Champion') {
-    return Array.from(new Set([
+  const granted: string[] = [];
+  const owns = (className: string, feature: string, nativeLevel: number) => (
+    (character.class === className && character.level >= nativeLevel)
+    || hasDirectMulticlassFeature(character, className, feature)
+  );
+  if (owns('Champion', 'Master-at-Arms', 1)) {
+    granted.push(
       ...(choices['champion.masterAtArmsManeuver'] ?? []).slice(0, 1),
-      ...(character.level >= 5 ? (choices['champion.expertManeuvers'] ?? []).slice(0, 2) : []),
-    ].filter(Boolean)));
+      ...(owns('Champion', 'Expert Champion', 5) ? (choices['champion.expertManeuvers'] ?? []).slice(0, 2) : []),
+    );
   }
-  if (character.class === 'Barbarian' && character.subclass === 'Spirit Guardian') {
-    return (choices['barbarian.guardianManeuver'] ?? []).slice(0, 1);
+  if ((character.class === 'Barbarian' && character.subclass === 'Spirit Guardian')
+    || hasMulticlassSubclass(character, 'Barbarian', 'Spirit Guardian')) {
+    granted.push(...(choices['barbarian.guardianManeuver'] ?? []).slice(0, 1));
   }
-  if (character.class === 'Warlock') {
+  if (owns('Warlock', 'Pact Boon', 1)) {
     const boons = new Set(choices['warlock.boon'] ?? []);
-    const maneuverLimit = character.level >= 5 ? 3 : 2;
-    return Array.from(new Set([
+    const maneuverLimit = owns('Warlock', 'Expert Warlock', 5) ? 3 : 2;
+    granted.push(
       ...(boons.has('Pact Weapon') ? (choices['warlock.pactWeaponManeuvers'] ?? []).slice(0, maneuverLimit) : []),
       ...(boons.has('Pact Armor') ? (choices['warlock.pactArmorManeuvers'] ?? []).slice(0, maneuverLimit) : []),
-    ]));
+    );
   }
-  if (character.class === 'Cleric') {
+  if (owns('Cleric', 'Cleric Order', 1)) {
     const domains = new Set(choices['cleric.domains'] ?? []);
-    return Array.from(new Set([
+    granted.push(
       ...(domains.has('War') ? (choices['cleric.warManeuver'] ?? []).slice(0, 1) : []),
       ...(domains.has('Peace') ? (choices['cleric.peaceManeuver'] ?? []).slice(0, 1) : []),
-    ]));
+    );
   }
-  return [];
+  return Array.from(new Set(granted.filter(Boolean)));
 }
 
 /** Spells explicitly learned from class features are additional to the class-table Spells Known. */
 export function grantedClassSpellNames(character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>): string[] {
   const choices = character.build?.classFeatureSelections ?? {};
   const talents = new Set(character.build?.selectedTalents ?? []);
-  if (character.class === 'Psion') return ['Psi Bolt'];
-  if (character.class === 'Bard') {
-    return Array.from(new Set([
+  const granted: string[] = [];
+  const owns = (className: string, feature: string, nativeLevel: number) => (
+    (character.class === className && character.level >= nativeLevel)
+    || hasDirectMulticlassFeature(character, className, feature)
+  );
+  if (owns('Psion', 'Psionic Mind', 1)) granted.push('Psi Bolt');
+  if (owns('Bard', 'Remarkable Repertoire', 1)) {
+    granted.push(
       ...(choices['bard.magicalSecrets'] ?? []).slice(0, 2),
-      ...(character.level >= 5 ? (choices['bard.expertSecrets'] ?? []).slice(0, 2) : []),
-      ...(character.level >= 3 && talents.has('Expanded Repertoire')
+      ...(owns('Bard', 'Expert Bard', 5) ? (choices['bard.expertSecrets'] ?? []).slice(0, 2) : []),
+      ...(talents.has('Expanded Repertoire')
         ? (choices['bard.expandedRepertoireSpells'] ?? []).slice(0, 2) : []),
-      ...(character.level >= 3 && character.subclass === 'Eloquence'
+      ...(((character.class === 'Bard' && character.level >= 3 && character.subclass === 'Eloquence')
+        || hasMulticlassSubclass(character, 'Bard', 'Eloquence'))
         ? (choices['bard.enthrallSpell'] ?? []).slice(0, 1) : []),
-    ].filter(Boolean)));
+    );
   }
-  if (character.class === 'Warlock') {
+  if (owns('Warlock', 'Pact Boon', 1)) {
     const boons = new Set(choices['warlock.boon'] ?? []);
-    return Array.from(new Set([
+    granted.push(
       ...(boons.has('Pact Familiar') ? ['Call Familiar'] : []),
-      ...(character.level >= 3 && character.subclass === 'Eldritch' ? choices['warlock.psychicSpell'] ?? [] : []),
-      ...(character.level >= 5 && boons.has('Pact Spell') ? (choices['warlock.expertSpells'] ?? []).slice(0, 2) : []),
-      ...(character.level >= 3 && talents.has('Pact Bane') ? choices['warlock.pactBaneSpells'] ?? [] : []),
-    ]));
+      ...(((character.class === 'Warlock' && character.level >= 3 && character.subclass === 'Eldritch')
+        || hasMulticlassSubclass(character, 'Warlock', 'Eldritch')) ? choices['warlock.psychicSpell'] ?? [] : []),
+      ...(owns('Warlock', 'Expert Warlock', 5) && boons.has('Pact Spell') ? (choices['warlock.expertSpells'] ?? []).slice(0, 2) : []),
+      ...(talents.has('Pact Bane') ? choices['warlock.pactBaneSpells'] ?? [] : []),
+    );
   }
-  if (character.class === 'Cleric') {
+  if (owns('Cleric', 'Cleric Order', 1)) {
     const magicDomains = (choices['cleric.domains'] ?? []).filter((domain) => domain === 'Magic').length;
-    return Array.from(new Set((choices['cleric.magicDomainSpells'] ?? []).slice(0, magicDomains).filter(Boolean)));
+    granted.push(...(choices['cleric.magicDomainSpells'] ?? []).slice(0, magicDomains).filter(Boolean));
   }
-  if (character.class === 'Sorcerer') return ['Sorcery'];
-  if (character.class === 'Druid') return ['Druidcraft'];
-  if (character.class === 'Wizard') {
+  if (character.class === 'Sorcerer' || hasAutomaticMulticlassFlavor(character, 'Sorcerer')) granted.push('Sorcery');
+  if (owns('Druid', 'Druid Domain', 1)) granted.push('Druidcraft');
+  if (owns('Wizard', 'Spell School Initiate', 1)) {
     const schools = choices['wizard.school'] ?? [];
-    const schoolSpellLimit = wizardSchoolSpellGrantLimit(character.level);
-    return Array.from(new Set([
+    const schoolSpellLimit = owns('Wizard', 'Expert Wizard', 5) ? 3 : 2;
+    granted.push(
       ...schools.flatMap((school) => (choices[wizardSchoolSpellSelectionKey(school)] ?? []).slice(0, schoolSpellLimit)),
-      ...(character.level >= 3 && character.subclass === 'Witch' ? (choices['wizard.witchCurseSpell'] ?? []).slice(0, 1) : []),
-    ].filter(Boolean)));
+      ...(((character.class === 'Wizard' && character.level >= 3 && character.subclass === 'Witch')
+        || hasMulticlassSubclass(character, 'Wizard', 'Witch')) ? (choices['wizard.witchCurseSpell'] ?? []).slice(0, 1) : []),
+    );
   }
-  if (character.class !== 'Summoner') return [];
-  const groups = [
-    'summoner.bondedSummon',
-    ...(character.subclass === 'Chimera' ? ['summoner.chimeraSummons'] : []),
-    ...(character.subclass === 'Dread Lord' ? ['summoner.dreadLordSummon'] : []),
-    ...(talents.has('Horde Summoner') ? ['summoner.hordeSummons'] : []),
-  ];
-  return Array.from(new Set(groups.flatMap((group) => choices[group] ?? [])));
+  if (owns('Summoner', 'Bonded Summons', 1)) {
+    const groups = [
+      'summoner.bondedSummon',
+      ...(((character.class === 'Summoner' && character.subclass === 'Chimera')
+        || hasMulticlassSubclass(character, 'Summoner', 'Chimera')) ? ['summoner.chimeraSummons'] : []),
+      ...(((character.class === 'Summoner' && character.subclass === 'Dread Lord')
+        || hasMulticlassSubclass(character, 'Summoner', 'Dread Lord')) ? ['summoner.dreadLordSummon'] : []),
+      ...(talents.has('Horde Summoner') ? ['summoner.hordeSummons'] : []),
+    ];
+    granted.push(...groups.flatMap((group) => choices[group] ?? []));
+  }
+  return Array.from(new Set(granted.filter(Boolean)));
+}
+
+export function sorcererOriginAncestryBonuses(
+  character: Pick<Character, 'level' | 'class' | 'subclass' | 'build'>,
+): Record<'Angelborn' | 'Dragonborn', number> {
+  const nativeAngelic = Number(character.class === 'Sorcerer' && character.level >= 3 && character.subclass === 'Angelic');
+  const nativeDraconic = Number(character.class === 'Sorcerer' && character.level >= 3 && character.subclass === 'Draconic');
+  return {
+    Angelborn: (nativeAngelic + multiclassSubclassCount(character, 'Angelic')) * 2,
+    Dragonborn: (nativeDraconic + multiclassSubclassCount(character, 'Draconic')) * 2,
+  };
 }
 
 export function ancestryPointBudget(character: Pick<Character, 'level' | 'class' | 'subclass' | 'ancestry' | 'build'>): number {
@@ -781,10 +861,9 @@ export function ancestryPointBudget(character: Pick<Character, 'level' | 'class'
   // ancestries use the p.196 variant's lower 4-point starting budget.
   const advancement = (character.level >= 4 ? 2 : 0) + (character.level >= 7 ? 2 : 0);
   const talentPoints = (character.build?.selectedTalents ?? []).filter((name) => name === 'Ancestry Increase').length * 4;
-  const clericAncestralDomain = character.class === 'Cleric'
+  const clericAncestralDomain = (character.class === 'Cleric' || hasDirectMulticlassFeature(character, 'Cleric', 'Cleric Order'))
     && (character.build?.classFeatureSelections?.['cleric.domains'] ?? []).includes('Ancestral') ? 2 : 0;
-  const sorcererOriginPoints = character.class === 'Sorcerer'
-    && character.level >= 3 && ['Angelic', 'Draconic'].includes(character.subclass ?? '') ? 2 : 0;
+  const sorcererOriginPoints = Object.values(sorcererOriginAncestryBonuses(character)).reduce((sum, points) => sum + points, 0);
   const startingPoints = character.ancestry === 'Custom' ? 4 : 5;
   return startingPoints + advancement + talentPoints + clericAncestralDomain + sorcererOriginPoints;
 }
@@ -800,18 +879,21 @@ export function canAddAncestryTraitCopy(
   const spent = ancestryTraitPointTotals(character, selectedTraits).spent;
   if (spent + trait.cost > budget) return false;
 
-  const restrictedAncestry = character.class === 'Sorcerer' && character.level >= 3
-    ? character.subclass === 'Angelic' ? 'Angelborn'
-      : character.subclass === 'Draconic' ? 'Dragonborn' : ''
-    : '';
-  if (!restrictedAncestry || trait.ancestry === restrictedAncestry) return true;
-  const unrestrictedBudget = budget - 2;
-  const spentOutsideOrigin = selectedTraits
-    .filter(({ ancestry }) => ancestry !== restrictedAncestry)
-    .reduce((sum, selectedTrait) => (
-      sum + selectedTrait.cost * ancestryTraitSelectionCount(character, selectedTrait)
-    ), 0);
-  return spentOutsideOrigin + trait.cost <= unrestrictedBudget;
+  const originBonuses = sorcererOriginAncestryBonuses(character);
+  const bonusTotal = Object.values(originBonuses).reduce((sum, points) => sum + points, 0);
+  if (bonusTotal === 0) return true;
+  const spentByAncestry = selectedTraits.reduce<Record<string, number>>((totals, selectedTrait) => ({
+    ...totals,
+    [selectedTrait.ancestry]: (totals[selectedTrait.ancestry] ?? 0)
+      + selectedTrait.cost * ancestryTraitSelectionCount(character, selectedTrait),
+  }), {});
+  spentByAncestry[trait.ancestry] = (spentByAncestry[trait.ancestry] ?? 0) + trait.cost;
+  const candidateSpent = Object.values(spentByAncestry).reduce((sum, points) => sum + points, 0);
+  const originBonusUsed = Object.entries(originBonuses).reduce((sum, [ancestry, points]) => (
+    sum + Math.min(points, Math.max(0, spentByAncestry[ancestry] ?? 0))
+  ), 0);
+  const basePointsRequired = candidateSpent - originBonusUsed;
+  return basePointsRequired <= budget - bonusTotal;
 }
 
 /** Number of paid copies of a selected trait; old saves implicitly contain one. */
@@ -863,8 +945,10 @@ export function accessibleAncestryNames(
   const selected = selectedAncestryTraits(character, traits);
   if (selected.some(({ name }) => name === 'Fallen')) result.add('Fiendborn');
   if (selected.some(({ name }) => name === 'Redeemed')) result.add('Angelborn');
-  if (character.class === 'Sorcerer' && character.level >= 3 && character.subclass === 'Angelic') result.add('Angelborn');
-  if (character.class === 'Sorcerer' && character.level >= 3 && character.subclass === 'Draconic') result.add('Dragonborn');
+  if ((character.class === 'Sorcerer' && character.level >= 3 && character.subclass === 'Angelic')
+    || hasMulticlassSubclass(character, 'Sorcerer', 'Angelic')) result.add('Angelborn');
+  if ((character.class === 'Sorcerer' && character.level >= 3 && character.subclass === 'Draconic')
+    || hasMulticlassSubclass(character, 'Sorcerer', 'Draconic')) result.add('Dragonborn');
   return result;
 }
 
@@ -988,7 +1072,7 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
   let classFeatureSelections = { ...build.classFeatureSelections };
   const sheetConditionLevels = { ...build.sheetConditionLevels };
 
-  if (character.class === 'Sorcerer') {
+  if (character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Overload Magic')) {
     sheetFeatureStates[SORCERER_OVERLOAD_ACTIVE] = false;
     delete sheetFeatureSelections[SORCERER_META_ACTIVE];
     delete sheetFeatureCounters[SORCERER_WILD_OUTCOME];
@@ -1037,7 +1121,7 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
     restPoints = character.maxHealthPoints;
     sheetFeatureStates = Object.fromEntries(Object.keys(sheetFeatureStates).map((key) => [key, false]));
     sheetFeatureCounters = {};
-    if (character.class === 'Druid') {
+    if (character.class === 'Druid' || hasDirectMulticlassFeature(character, 'Druid', 'Wild Form')) {
       classFeatureSelections = { ...classFeatureSelections, [DRUID_WILD_FORM_TRAITS]: [], [DRUID_WILD_FORM_SKILLS]: [] };
       sheetFeatureSelections = { ...sheetFeatureSelections };
       delete sheetFeatureSelections[DRUID_WILD_FORM_SIZE];
@@ -1047,13 +1131,14 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
       delete sheetFeatureSelections[DRUID_WILD_FORM_NAME];
     }
     delete sheetConditionLevels.Doomed;
-  } else if (type === 'Short' && character.class === 'Hunter' && character.subclass === 'Trapper') {
+  } else if (type === 'Short' && ((character.class === 'Hunter' && character.subclass === 'Trapper')
+    || hasMulticlassSubclass(character, 'Hunter', 'Trapper'))) {
     const maximumTraps = Math.max(0, character.primeModifier);
     const availableTraps = Math.max(0, sheetFeatureCounters[HUNTER_TRAPS_AVAILABLE] ?? maximumTraps);
     sheetFeatureCounters[HUNTER_TRAPS_AVAILABLE] = Math.min(maximumTraps, availableTraps + 1);
   }
 
-  if (type !== 'Quick' && character.class === 'Monk' && sheetFeatureSelections[MONK_MEDITATION_PENDING]) {
+  if (type !== 'Quick' && (character.class === 'Monk' || hasAutomaticMulticlassFlavor(character, 'Monk')) && sheetFeatureSelections[MONK_MEDITATION_PENDING]) {
     sheetFeatureSelections[MONK_MEDITATION_SKILL] = sheetFeatureSelections[MONK_MEDITATION_PENDING];
   }
 
@@ -1073,7 +1158,7 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
       sheetFeatureCounters,
       sheetFeatureSelections,
       classFeatureSelections,
-      druidWildForms: type === 'Long' && character.class === 'Druid' ? [] : build.druidWildForms,
+      druidWildForms: type === 'Long' && (character.class === 'Druid' || hasDirectMulticlassFeature(character, 'Druid', 'Wild Form')) ? [] : build.druidWildForms,
     },
   };
 }
@@ -1305,9 +1390,9 @@ export function characterCombatTraining(
   const path = classReference.pathDetails;
   const talents = new Set(character.build?.selectedTalents ?? []);
   const choices = character.build?.classFeatureSelections ?? {};
-  const domains = new Set(character.class === 'Cleric' ? choices['cleric.domains'] ?? [] : []);
-  const disciplines = new Set(character.class === 'Spellblade' ? spellbladeDisciplineNames(character) : []);
-  const pactBoons = new Set(character.class === 'Warlock' ? choices['warlock.boon'] ?? [] : []);
+  const domains = new Set(character.class === 'Cleric' || hasDirectMulticlassFeature(character, 'Cleric', 'Cleric Order') ? choices['cleric.domains'] ?? [] : []);
+  const disciplines = new Set(spellbladeDisciplineNames(character));
+  const pactBoons = new Set(character.class === 'Warlock' || hasDirectMulticlassFeature(character, 'Warlock', 'Pact Boon') ? choices['warlock.boon'] ?? [] : []);
   const naturalCombatant = allTraits.length > 0
     && selectedAncestryTraits(character, allTraits).some(({ name }) => name === 'Natural Combatant');
   const martialExpansion = talents.has('Martial Expansion');
@@ -1388,16 +1473,16 @@ export function equippedCombatModifiers(
     ?? equippedShields.reduce<(typeof equippedShields)[number] | undefined>((best, candidate) => (
       !best || candidate.profile.physicalDefense + candidate.profile.areaDefense > best.profile.physicalDefense + best.profile.areaDefense ? candidate : best
     ), undefined);
-  const hasPactArmor = character.class === 'Warlock'
+  const hasPactArmor = (character.class === 'Warlock' || hasDirectMulticlassFeature(character, 'Warlock', 'Pact Boon'))
     && (character.build?.classFeatureSelections?.['warlock.boon'] ?? []).includes('Pact Armor')
     && Boolean(equippedArmor);
-  const innateFocusProperties = character.class === 'Sorcerer'
+  const innateFocusProperties = character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Innate Power')
     ? character.build?.classFeatureSelections?.['sorcerer.focus'] ?? [] : [];
   const focusProperties = Array.from(new Set([
     ...focuses.flatMap(({ properties }) => properties.filter((property) => property !== 'Two-Handed')),
     ...innateFocusProperties,
   ]));
-  const overloaded = character.class === 'Sorcerer'
+  const overloaded = (character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Overload Magic'))
     && Boolean(character.build?.sheetFeatureStates?.[SORCERER_OVERLOAD_ACTIVE]);
   const wildMagic = sorcererWildMagicProfile(character);
   return {
@@ -1441,7 +1526,7 @@ function equipmentBonuses(character: Character, catalog: EquipmentCatalogItem[],
     ? equipped.filter((item) => item.category === 'Spell Focuses' && item.properties.includes('Protective')).length : 0;
   const focusMDR = training.spellFocusTraining
     && equipped.some((item) => item.category === 'Spell Focuses' && item.properties.includes('Warded')) ? 1 : 0;
-  const innateFocusProperties = character.class === 'Sorcerer'
+  const innateFocusProperties = character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Innate Power')
     ? character.build?.classFeatureSelections?.['sorcerer.focus'] ?? [] : [];
   const weaponPD = equipped.filter((item) => item.category === 'Weapons' && item.properties.includes('Guard')).length;
   return {
@@ -1506,6 +1591,10 @@ export function deriveCharacter(
   const training = characterCombatTraining(character, classReference, allTraits);
   const equipment = equipmentBonuses(character, equipmentCatalog, training);
   const totals = classTableTotals(classReference, character.level);
+  const ownsFeature = (className: string, feature: string, nativeLevel: number) => (
+    (character.class === className && character.level >= nativeLevel)
+    || hasDirectMulticlassFeature(character, className, feature)
+  );
   // Ignore stale Psion path choices from older saves. Psion v2 grants Talents at
   // 2/4/7/10, not the Martial or Spellcaster Path Progression benefit.
   const paths = character.class === 'Psion' ? [] : Object.values(character.build?.pathProgressionChoices ?? {});
@@ -1520,41 +1609,43 @@ export function deriveCharacter(
   const ancestryAD = -traitCount(character, chosenTraits, 'Brittle')
     + traitCount(character, chosenTraits, 'Strong Minded')
     + (equipment.isUnarmored ? traitCount(character, chosenTraits, 'Thick-Skinned') + traitCount(character, chosenTraits, 'Hard Shell') : 0);
-  const classPD = equipment.isUnarmored && character.class === 'Monk' ? 2 : 0;
-  const classAD = equipment.isUnarmored && character.class === 'Barbarian' ? 2 : 0;
-  const warlockPactBoons = new Set(character.class === 'Warlock'
+  const classPD = equipment.isUnarmored && ownsFeature('Monk', 'Monk Training', 1) ? 2 : 0;
+  const classAD = equipment.isUnarmored && ownsFeature('Barbarian', 'Berserker', 1) ? 2 : 0;
+  const warlockPactBoons = new Set(character.class === 'Warlock' || hasDirectMulticlassFeature(character, 'Warlock', 'Pact Boon')
     ? character.build?.classFeatureSelections?.['warlock.boon'] ?? []
     : []);
   const pactArmorActive = equipment.hasArmor && warlockPactBoons.has('Pact Armor');
-  const classFeatureHP = character.class === 'Warlock' && character.level >= 5 ? 2 : 0;
+  const classFeatureHP = ((character.class === 'Warlock' && character.level >= 5)
+    || hasDirectMulticlassFeature(character, 'Warlock', 'Expert Warlock')) ? 2 : 0;
   const hunterTerrains = new Set(hunterFavoredTerrainNames(character));
-  const classSpeed = character.class === 'Barbarian' ? 1
-    : character.class === 'Monk' ? (character.level >= 5 ? 2 : 1)
-      : character.class === 'Hunter' && hunterTerrains.has('Grassland') ? 1 : 0;
+  const classSpeed = Number(ownsFeature('Barbarian', 'Berserker', 1))
+    + (ownsFeature('Monk', 'Monk Training', 1) ? (ownsFeature('Monk', 'Expert Monk', 5) ? 2 : 1) : 0)
+    + Number(ownsFeature('Hunter', 'Favored Terrain', 1) && hunterTerrains.has('Grassland'));
   const disciplines = new Set(spellbladeDisciplineNames(character));
-  const clericDomains = character.class === 'Cleric'
+  const clericDomains = character.class === 'Cleric' || hasDirectMulticlassFeature(character, 'Cleric', 'Cleric Order')
     ? character.build?.classFeatureSelections?.['cleric.domains'] ?? [] : [];
   const clericMagicDomains = clericDomains.filter((domain) => domain === 'Magic').length;
   const selectedTalents = character.build?.selectedTalents ?? [];
-  const sorcererGreaterInnate = character.class === 'Sorcerer'
+  const sorcererGreaterInnate = ownsFeature('Sorcerer', 'Innate Power', 1)
     ? selectedTalents.filter((name) => name === 'Greater Innate Power').length : 0;
-  const sorcererExpandedMeta = character.class === 'Sorcerer'
+  const sorcererExpandedMeta = ownsFeature('Sorcerer', 'Meta Magic', 2)
     ? selectedTalents.filter((name) => name === 'Expanded Meta Magic').length : 0;
-  const sorcererIntuitiveOrigins = character.class === 'Sorcerer'
+  const sorcererIntuitiveOrigins = ownsFeature('Sorcerer', 'Innate Power', 1)
     ? (character.build?.classFeatureSelections?.['sorcerer.origin'] ?? []).filter((name) => name === 'Intuitive Magic').length : 0;
-  const featureMana = character.class === 'Sorcerer'
-    ? (character.level >= 5 ? 2 : 1) + sorcererGreaterInnate + sorcererExpandedMeta * 2
-    : character.class === 'Spellblade' && disciplines.has('Magus') ? 1
+  const featureMana = ownsFeature('Sorcerer', 'Innate Power', 1)
+    ? 1 + Number(ownsFeature('Sorcerer', 'Expert Sorcerer', 5)) + sorcererGreaterInnate + sorcererExpandedMeta * 2
+    : disciplines.has('Magus') ? 1
       : clericMagicDomains;
-  const skillFeaturePoints = character.class === 'Bard'
-    ? (character.level >= 5 ? 4 : 2) + selectedTalents.filter((name) => name === 'Expanded Repertoire').length * 2
-    : character.class === 'Rogue' ? (character.level >= 5 ? 2 : 1)
-      : character.class === 'Cleric' && clericDomains.includes('Knowledge') ? 2
-        : character.class === 'Hunter' ? ['Forest', 'Urban'].filter((terrain) => hunterTerrains.has(terrain)).length * 2 : 0;
+  const skillFeaturePoints = (ownsFeature('Bard', 'Remarkable Repertoire', 1)
+    ? 2 + Number(ownsFeature('Bard', 'Expert Bard', 5)) * 2 + selectedTalents.filter((name) => name === 'Expanded Repertoire').length * 2 : 0)
+    + (ownsFeature('Rogue', 'Roguish Finesse', 1) ? 1 + Number(ownsFeature('Rogue', 'Expert Rogue', 5)) : 0)
+    + (ownsFeature('Cleric', 'Cleric Order', 1) && clericDomains.includes('Knowledge') ? 2 : 0)
+    + (ownsFeature('Hunter', 'Favored Terrain', 1) ? ['Forest', 'Urban'].filter((terrain) => hunterTerrains.has(terrain)).length * 2 : 0);
   const skillConversions = character.build?.skillPointsConvertedToTrades ?? 0;
   const tradeConversions = character.build?.tradePointsConvertedToLanguages ?? 0;
   const skillTalentPoints = selectedTalents.filter((name) => name === 'Skill Increase').length * 4;
-  const paragonTradePoints = character.subclass === 'Paragon' && character.level >= 3 ? 1 : 0;
+  const paragonTradePoints = Number(character.subclass === 'Paragon' && character.level >= 3)
+    + multiclassSubclassCount(character, 'Paragon');
 
   return {
     effectiveAttributes,
@@ -1577,11 +1668,11 @@ export function deriveCharacter(
     spellLimit: totals.spells + spellcasterPaths
       + selectedTalents.filter((name) => name === 'Spellcasting Expansion').length * 3
       + sorcererIntuitiveOrigins * 2
-      + Number(character.class === 'Spellblade' && disciplines.has('Magus')),
+      + Number(ownsFeature('Spellblade', 'Spellblade Disciplines', 1) && disciplines.has('Magus')),
     cantripLimit: totals.cantrips,
     maneuverLimit: totals.maneuvers + martialPaths
       + selectedTalents.filter((name) => name === 'Martial Expansion').length * 2
-      + Number(character.class === 'Spellblade' && disciplines.has('Warrior')),
+      + Number(ownsFeature('Spellblade', 'Spellblade Disciplines', 1) && disciplines.has('Warrior')),
     physicalDR: Math.max(equipment.physicalDR, Number(equipment.isUnarmored && traitCount(character, chosenTraits, 'Natural Armor') > 0)),
     elementalDR: equipment.elementalDR,
     mysticalDR: equipment.mysticalDR + Number(pactArmorActive),

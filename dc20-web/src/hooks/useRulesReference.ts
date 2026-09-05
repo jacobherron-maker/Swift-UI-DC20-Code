@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { RulesReferenceData } from '../types/models';
+import { auditedTalentRuleEntry } from '../utils/talentRules';
 
 let cache: RulesReferenceData | null = null;
 let pending: Promise<RulesReferenceData> | null = null;
@@ -14,8 +15,9 @@ function loadRules(): Promise<RulesReferenceData> {
       if (!document || document.sections?.length !== 5 || !Array.isArray(document.entries) || document.entries.length < 400) {
         throw new Error('Rules reference is incomplete.');
       }
-      cache = document;
-      return document;
+      const audited = { ...document, entries: document.entries.map(auditedTalentRuleEntry) };
+      cache = audited;
+      return audited;
     })
     .finally(() => { pending = null; });
   return pending;

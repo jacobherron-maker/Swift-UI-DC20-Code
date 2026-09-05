@@ -981,6 +981,8 @@ describe('Spellblade Beta 0.10.5 source audit', () => {
 
   it('applies active Rune and resistance choices to the live sheet', () => {
     const hero = character('Spellblade');
+    hero.level = 3;
+    hero.subclass = 'Rune Knight';
     hero.build = {
       ...defaultBuild(),
       selectedTalents: ['Adaptive Bond'],
