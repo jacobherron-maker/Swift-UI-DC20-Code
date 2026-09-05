@@ -9808,11 +9808,11 @@
           "feature" : "Prepared Spell",
           "id" : "wizard.preparedSpells",
           "level" : 2,
-          "limit" : 2,
+          "limit" : 1,
           "options" : [
 
           ],
-          "prompt" : "Choose 2 Spells you know. Both become your Prepared Spells until your next Long Rest.",
+          "prompt" : "Choose 1 Spell you know. Expert Wizard increases this to 2 Prepared Spells.",
           "title" : "Prepared Spells"
         },
         {
@@ -9822,7 +9822,7 @@
           "limit" : 1,
           "options" : [
             {
-              "description" : "Arcane, Divine • Enchantment • Curse, Enfeeble • 1 AP + 1 MP • 10 Spaces • 1 Minute\n\nMake a Spell Check against the Repeated Charisma Save of a target within range. Check Success: The target is Cursed for the duration. While Cursed this way, it gains Vulnerability (1) to a damage type of your choice. The Curse can be removed by any effect that ends a Basic Curse.\n\nEnhancements: Range: (1 AP, Repeatable) The range of the Spell increases by 5 Spaces. You can use this Enhancement a maximum of two times. Targets: (1 AP + X MP) You can target X additional creatures within range. When you choose this Enhancement, the cost of all other Enhancements (except Range) is doubled. The AP cost of this Enhancement can’t be paid for with MP. Expanded: (1 MP) The target becomes Vulnerable to a category of damage (Physical, Elemental or Mystical) of your choice instead of 1 damage type. Break Resistance: (1 MP) While Cursed by this Spell, the target doesn’t benefit from Resistance to the damage types they’re Vulnerable to for the duration. Improved Vulnerability: (2 Vulnerability increases by 1. MP, Repeatable) The",
+              "description" : "Arcane, Divine • Enchantment • Curse, Enfeeble • 1 AP + 1 MP • 10 Spaces • 1 Minute\n\nMake a Spell Check against the Repeated Charisma Save of a target within range. Check Success: The target is Cursed for the duration. While Cursed this way, it gains Vulnerability (1) to a damage type of your choice. The Curse can be removed by any effect that ends a Basic Curse.\n\nEnhancements: Range: (1 AP, Repeatable) The range of the Spell increases by 5 Spaces. You can use this Enhancement a maximum of two times. Targets: (1 AP + X MP) You can target X additional creatures within range. When you choose this Enhancement, the cost of all other Enhancements (except Range) is doubled. The AP cost of this Enhancement can’t be paid for with MP. Expanded: (1 MP) The target becomes Vulnerable to a category of damage (Physical, Elemental or Mystical) of your choice instead of 1 damage type. Break Resistance: (1 MP) While Cursed by this Spell, the target doesn’t benefit from Resistance to the damage types they’re Vulnerable to for the duration. Improved Vulnerability: (2 MP, Repeatable) The Vulnerability increases by 1.",
               "isRepeatable" : false,
               "name" : "Hex",
               "pointCost" : 1
@@ -9868,15 +9868,15 @@
         {
           "features" : [
             {
-              "description" : "You’ve completed training in a specialized School of Magic. Choose a Spell School. You gain the following benefits: School Magic: You learn 2 Arcane Spells from this Spell School. Signature School: When you cast a Spell from the chosen School, you can reduce its MP cost by 1. Its total MP cost before the reduction can’t exceed your Mana Spend Limit. You can use this Feature once per Long Rest, but regain the ability to use it again when you roll for Initiative.",
+              "description" : "You’ve completed training in a specialized School of Magic. Choose a Spell School. You gain the following benefits:\n\nSchool Magic: You learn 2 Arcane Spells from this Spell School.\n\nSignature School: When you cast a Spell from the chosen School, you can reduce its MP cost by 1. Its total MP cost before the reduction can’t exceed your Mana Spend Limit. You can use this Feature once per Long Rest, but regain the ability to use it again when you roll for Initiative.",
               "name" : "Spell School Initiate"
             },
             {
-              "description" : "You can spend 1 AP and 1 MP to choose a Spell School or Spell Tag and create a 1 Space diameter Circle on a surface within a Space you’re occupying. The Circle is your Arcane Sigil which lasts for 1 minute. You can’t place more than 1 Arcane Sigil in the same Space. Using a Sigil: While within the area of your Arcane Sigil, creatures gain ADV on Checks they make to cast or produce the effects of Spells with the chosen Spell School or Spell Tag. Moving a Sigil: You can spend 1 AP to teleport one of your Arcane Sigils that’s within 10 Spaces to a surface within a Space you’re occupying, provided the Space doesn’t already have an Arcane Sigil. DC Tip: A magical sigil like this radiates the magic of the chosen School making its type of magic discernable by effects that can detect magic. Example: A Wizard can spend 1 AP and 1 MP to create an Arcane Sigil on the ground, ceiling, or a wall that’s within the Space they’re occupying. If they choose the Fire Spell Tag, anyone within the Arcane Sigil would have ADV on Checks made to cast Spells with the Fire Spell Tag.",
+              "description" : "You can spend 1 AP and 1 MP to choose a Spell School or Spell Tag and create a 1 Space diameter Circle on a surface within a Space you’re occupying. The Circle is your Arcane Sigil which lasts for 1 minute. You can’t place more than 1 Arcane Sigil in the same Space.\n\nUsing a Sigil: While within the area of your Arcane Sigil, creatures gain ADV on Checks they make to cast or produce the effects of Spells with the chosen Spell School or Spell Tag.\n\nMoving a Sigil: You can spend 1 AP to teleport one of your Arcane Sigils that’s within 10 Spaces to a surface within a Space you’re occupying, provided the Space doesn’t already have an Arcane Sigil.\n\nDC Tip: A magical sigil like this radiates the magic of the chosen School making its type of magic discernable by effects that can detect magic.\n\nExample: A Wizard can spend 1 AP and 1 MP to create an Arcane Sigil on the ground, ceiling, or a wall that’s within the Space they’re occupying. If they choose the Fire Spell Tag, anyone within the Arcane Sigil would have ADV on Checks made to cast Spells with the Fire Spell Tag.",
               "name" : "Arcane Sigil"
             },
             {
-              "description" : "You learn 1 Ritual. Additionally, when you encounter a Ritual in a form you can study (such as a ritual book, a scroll, or from an instructor), you can learn it over the course of a Short Rest. Beta Note: Rituals will be released in a future update. Alarm is an example of a Ritual.",
+              "description" : "You learn 1 Ritual. Additionally, when you encounter a Ritual in a form you can study (such as a ritual book, a scroll, or from an instructor), you can learn it over the course of a Short Rest.\n\nBeta Note: Rituals will be released in a future update. Alarm is an example of a Ritual.",
               "name" : "Ritual Caster (Flavor Feature)"
             }
           ],
@@ -9885,7 +9885,7 @@
         {
           "features" : [
             {
-              "description" : "When you complete a Long Rest, choose 1 Spell you know. The chosen Spell becomes your Prepared Spell until your next Long Rest. Your Prepared Spell gains the following benefits: Mana Limit Break: When you cast your Prepared Spell, you can increase your Mana Spend Limit by 1 for the casting. You can use this Feature once per Long Rest, but you regain the ability to use it when you roll for Initiative. Rehearsed Casting: When creatures Challenge your Spell as part of a Spell Duel, they have DisADV on Checks made to stop your Spell.",
+              "description" : "When you complete a Long Rest, choose 1 Spell you know. The chosen Spell becomes your Prepared Spell until your next Long Rest. Your Prepared Spell gains the following benefits:\n\nMana Limit Break: When you cast your Prepared Spell, you can increase your Mana Spend Limit by 1 for the casting. You can use this Feature once per Long Rest, but you regain the ability to use it when you roll for Initiative.\n\nRehearsed Casting: When creatures Challenge your Spell as part of a Spell Duel, they have DisADV on Checks made to stop your Spell.",
               "name" : "Prepared Spell"
             },
             {
@@ -9928,7 +9928,7 @@
         {
           "features" : [
             {
-              "description" : "You gain the following benefits for your Wizard Class Features. Spell School Initiate You learn 1 additional Arcane Spell from the chosen School. Signature School: When you cast a Spell from the chosen School, you can reduce its MP cost by an additional 1. Arcane Sigil When you create a Sigil, you can add the following benefits:\n• Spell Tag: (X MP) The Sigil gains an additional Spell School or Spell Tag per MP spent.\n• Area: (X MP) The diameter of the Sigil increases by 1 Space per MP spent. Prepared Spell When you complete a Long Rest, choose 1 additional Spell you know. Both Spells become your Prepared Spells until your next Long Rest. DC Tip: You can still only use Mana Limit Break once, on either of your Prepared Spells.",
+              "description" : "You gain the following benefits for your Wizard Class Features.\n\nSpell School Initiate\n\nYou learn 1 additional Arcane Spell from the chosen School.\n\nSignature School: When you cast a Spell from the chosen School, you can reduce its MP cost by an additional 1.\n\nArcane Sigil\n\nWhen you create a Sigil, you can add the following benefits:\n• Spell Tag: (X MP) The Sigil gains an additional Spell School or Spell Tag per MP spent.\n• Area: (X MP) The diameter of the Sigil increases by 1 Space per MP spent.\n\nPrepared Spell\n\nWhen you complete a Long Rest, choose 1 additional Spell you know. Both Spells become your Prepared Spells until your next Long Rest.\n\nDC Tip: You can still only use Mana Limit Break once, on either of your Prepared Spells.",
               "name" : "Expert Wizard"
             }
           ],
@@ -10029,46 +10029,56 @@
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ],
         "Portal Mage" : [
           {
-            "description" : "When you create an Arcane Sigil, you can spend 1 additional MP to create an identical Arcane Sigil on a surface within a Space you can see within 10 Spaces. The identical Arcane Sigil has the same chosen Spell Schools or Spell Tags.\n• Arcane Portal: A portal connects the two Arcane Sigils. Creatures of your choice within 1 Space of either Arcane Sigil can spend 1 Space of movement to teleport to an unoccupied Space within 1 Space of the other Arcane Sigil. DC Tip: Teleportation doesn’t provoke Opportunity Attacks.\n\n• Linked Magic: While within 1 Space of a connected Arcane Sigil, you can make an Attack or cast a Spell as if you were standing in the Space of the other connected Arcane Sigil. Teleportation Expert: When you learn a new Spell, you can choose any Spell with the Teleportation Spell Tag.",
+            "description" : "When you create an Arcane Sigil, you can spend 1 additional MP to create an identical Arcane Sigil on a surface within a Space you can see within 10 Spaces. The identical Arcane Sigil has the same chosen Spell Schools or Spell Tags.\n• Arcane Portal: A portal connects the two Arcane Sigils. Creatures of your choice within 1 Space of either Arcane Sigil can spend 1 Space of movement to teleport to an unoccupied Space within 1 Space of the other Arcane Sigil.\n\nDC Tip: Teleportation doesn’t provoke Opportunity Attacks.\n\n• Linked Magic: While within 1 Space of a connected Arcane Sigil, you can make an Attack or cast a Spell as if you were standing in the Space of the other connected Arcane Sigil.\n\nTeleportation Expert: When you learn a new Spell, you can choose any Spell with the Teleportation Spell Tag.",
+            "level" : 3,
             "name" : "Portal Magic"
           },
           {
             "description" : "You have ADV on Checks to learn about the Astromancy Spell School (such as Teleportation magic or Portals). Additionally, if you spend 1 minute observing a portal or teleportation runes, you can make a DC 10 Spell Check to try to understand the inner mechanism of a Portal within 5 Spaces. Success: You learn where it leads to and for how long it has been open. Success (5): You learn how to activate and deactivate it (such as its passphrase, procedures, or any required special item).",
+            "level" : 3,
             "name" : "Portal Sage (Flavor Feature)"
           }
         ],
         "Witch" : [
           {
             "description" : "You learn 1 Spell of your choice with the Curse Spell Tag. When you learn a new Spell, you can choose any Spell with the Curse Spell Tag. Spells with the Curse Spell Tag count as being part of your chosen Spell School for the purposes of your Spell School Initiate Feature.",
+            "level" : 3,
             "name" : "Coven’s Gift"
           },
           {
-            "description" : "You can add the Spell Enhancements below to any Spell you cast, but you can only add 1 at a time. MP spent on these Spell Enhancements doesn’t count against your Mana Spend Limit. When you use one of these Spell Enhancements, 1 creature of your choice that’s targeted by the Spell must make a Repeated Charisma Save against your Check. If the Spell doesn’t normally require a Check, you must make a Spell Check when using one of these Spell Enhancements. Save Failure: The target is subjected to the chosen Hex for 1 minute:\n• Bewitching Hex: (1 MP) The target becomes Charmed by you for the duration.\n• Reaping Hex: (1 MP) The target takes 1 True damage and you regain 1 HP. This effect repeats at the end of each of its turns for the duration.\n• Vermin Hex: (1 MP) The target can’t speak and if its Size is Large or smaller its Size decreases by 1. Its Size decreases by 1 again at the end of each of its turns for the duration until it becomes Tiny. DC Tip: You could flavor this as the target slowly turning into a toad or other tiny creature.",
+            "description" : "You can add the Spell Enhancements below to any Spell you cast, but you can only add 1 at a time. MP spent on these Spell Enhancements doesn’t count against your Mana Spend Limit.\n\nWhen you use one of these Spell Enhancements, 1 creature of your choice that’s targeted by the Spell must make a Repeated Charisma Save against your Check. If the Spell doesn’t normally require a Check, you must make a Spell Check when using one of these Spell Enhancements. Save Failure: The target is subjected to the chosen Hex for 1 minute:\n• Bewitching Hex: (1 MP) The target becomes Charmed by you for the duration.\n• Reaping Hex: (1 MP) The target takes 1 True damage and you regain 1 HP. This effect repeats at the end of each of its turns for the duration.\n• Vermin Hex: (1 MP) The target can’t speak and if its Size is Large or smaller its Size decreases by 1. Its Size decreases by 1 again at the end of each of its turns for the duration until it becomes Tiny.\n\nDC Tip: You could flavor this as the target slowly turning into a toad or other tiny creature.",
+            "level" : 3,
             "name" : "Hex Enhancements"
           },
           {
             "description" : "You can spend 1 minute focusing your mind to detect the presence of Curses within 20 Spaces. You learn the location of any Cursed creature or Cursed object within range. If you spend 10 minutes in contact with a Cursed creature or object, you learn the nature of the Curse but not the knowledge of how to remove it.",
+            "level" : 3,
             "name" : "Curse Expert (Flavor Feature)"
           }
         ]

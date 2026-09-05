@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useCharacterReference } from '../../hooks/useCharacterReference';
 import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
-import { usePowerCatalog } from '../../hooks/usePowerCatalog';
+import { usePowerCatalog, type SpellReference } from '../../hooks/usePowerCatalog';
 import { CharacterAvatarEditor } from '../character/CharacterAvatar';
 import { CharacterRestControls, CharacterSheetTabContent, type RedesignedSheetTab } from '../character/CharacterSheetTabs';
-import type { AncestryTrait, CampaignNote, Character, CharacterInventoryItem, DC20Attribute, DruidWildFormRecord, EquipmentCatalogItem, MasteryLevel } from '../../types/models';
+import type { AncestryTrait, CampaignNote, Character, CharacterInventoryItem, DC20Attribute, DruidWildFormRecord, EquipmentCatalogItem, MasteryLevel, Spell } from '../../types/models';
 import {
   ATTRIBUTE_NAMES,
   BARBARIAN_RAGE_STATE,
@@ -52,6 +52,20 @@ import {
   SORCERER_WILD_FORM_HP,
   SORCERER_WILD_NEXT_ADVANTAGE,
   SORCERER_WILD_OUTCOME,
+  WIZARD_HEX_ACTIVE,
+  WIZARD_HEX_PENDING,
+  WIZARD_MANA_LIMIT_BREAK_READY,
+  WIZARD_MANA_LIMIT_BREAK_USED,
+  WIZARD_PREPARED_ACTIVE,
+  WIZARD_PREPARED_DUEL_ACTIVE,
+  WIZARD_SIGNATURE_ACTIVE,
+  WIZARD_SIGNATURE_USED_PREFIX,
+  WIZARD_SIGIL_ACTIVE,
+  WIZARD_SIGIL_BOUND_SELF,
+  WIZARD_SIGIL_DIAMETER,
+  WIZARD_SIGIL_INSIDE,
+  WIZARD_SIGIL_PORTAL,
+  WIZARD_SIGIL_TAGS,
   ancestryGrantedSpellNames,
   applySorcererWildMagic,
   applyMonkStaminaSpendRecovery,
@@ -1865,6 +1879,109 @@ function SorcererControls({ character, onChange, onRoll }: {
   </section>;
 }
 
+function WizardControls({ character, spellCatalog, knownSpells, onChange, onRoll }: {
+  character: Character;
+  spellCatalog: SpellReference[];
+  knownSpells: Spell[];
+  onChange: (values: Partial<Character>) => void;
+  onRoll: (label: string, modifier: number, extraAdjustment?: number) => unknown;
+}) {
+  const build = character.build;
+  const storedPrepared = (build?.sheetFeatureSelections[WIZARD_PREPARED_ACTIVE]
+    ?? build?.classFeatureSelections['wizard.preparedSpells']?.join('|') ?? '').split('|').filter(Boolean);
+  const schools = build?.classFeatureSelections['wizard.school'] ?? [];
+  const allSigilOptions = Array.from(new Set([
+    ...spellCatalog.map(({ school }) => school),
+    ...spellCatalog.flatMap(({ tags }) => (tags ?? '').split(',').map((tag) => tag.trim()).filter(Boolean)),
+  ])).sort();
+  const [notice, setNotice] = useState('');
+  const [pendingPrepared, setPendingPrepared] = useState<string[]>(storedPrepared);
+  const [sigilPrimary, setSigilPrimary] = useState(schools[0] ?? allSigilOptions[0] ?? 'Astromancy');
+  const [sigilExtras, setSigilExtras] = useState<string[]>([]);
+  const [sigilExtraChoice, setSigilExtraChoice] = useState('');
+  const [sigilAreaMP, setSigilAreaMP] = useState(0);
+  const [createPortal, setCreatePortal] = useState(false);
+  const [bindSelf, setBindSelf] = useState(false);
+  const [hexEnhancement, setHexEnhancement] = useState('Bewitching Hex');
+  if (!build) return null;
+  const states = build.sheetFeatureStates;
+  const selections = build.sheetFeatureSelections;
+  const counters = build.sheetFeatureCounters;
+  const talents = new Set(build.selectedTalents);
+  const expert = character.level >= 5;
+  const preparedLimit = expert ? 2 : 1;
+  const overlyPrepared = talents.has('Overly Prepared Spellcaster');
+  const crownedSigil = talents.has('Crowned Sigil');
+  const activeSignature = selections[WIZARD_SIGNATURE_ACTIVE] ?? '';
+  const sigilActive = Boolean(states[WIZARD_SIGIL_ACTIVE]);
+  const manaSpendLimit = Math.max(1, character.combatMastery);
+  const sigilCost = 1 + sigilExtras.length + sigilAreaMP + Number(character.subclass === 'Portal Mage' && createPortal);
+  const updateBuild = (nextStates = states, nextSelections = selections, nextCounters = counters, values: Partial<Character> = {}) => onChange({
+    ...values,
+    build: { ...build, sheetFeatureStates: nextStates, sheetFeatureSelections: nextSelections, sheetFeatureCounters: nextCounters },
+  });
+  const setState = (key: string, value: boolean) => updateBuild({ ...states, [key]: value });
+  const selectSignature = (school: string) => updateBuild(states, { ...selections, [WIZARD_SIGNATURE_ACTIVE]: school });
+  const applyPrepared = () => {
+    if (pendingPrepared.length !== preparedLimit) return;
+    updateBuild(states, { ...selections, [WIZARD_PREPARED_ACTIVE]: pendingPrepared.join('|') });
+    setNotice(`${pendingPrepared.join(' and ')} ${preparedLimit === 1 ? 'is' : 'are'} now Prepared. ${overlyPrepared ? 'This change is allowed after a Quick, Short, or Long Rest.' : 'Make this change only after a Long Rest.'}`);
+  };
+  const createSigil = () => {
+    if (!sigilPrimary || sigilCost > manaSpendLimit || character.currentAP < 1 || character.manaPoints < sigilCost) return;
+    updateBuild({
+      ...states,
+      [WIZARD_SIGIL_ACTIVE]: true,
+      [WIZARD_SIGIL_INSIDE]: true,
+      [WIZARD_SIGIL_PORTAL]: character.subclass === 'Portal Mage' && createPortal,
+      [WIZARD_SIGIL_BOUND_SELF]: crownedSigil && bindSelf,
+    }, {
+      ...selections,
+      [WIZARD_SIGIL_TAGS]: [sigilPrimary, ...sigilExtras].join('|'),
+    }, {
+      ...counters,
+      [WIZARD_SIGIL_DIAMETER]: 1 + sigilAreaMP,
+    }, { currentAP: character.currentAP - 1, manaPoints: character.manaPoints - sigilCost });
+    setNotice(`Arcane Sigil created: ${[sigilPrimary, ...sigilExtras].join(', ')} • ${1 + sigilAreaMP}-Space diameter${createPortal ? ' • linked portal created within 10 Spaces' : ''}.`);
+  };
+  const endSigil = () => {
+    const nextSelections = { ...selections };
+    delete nextSelections[WIZARD_SIGIL_TAGS];
+    updateBuild({ ...states, [WIZARD_SIGIL_ACTIVE]: false, [WIZARD_SIGIL_INSIDE]: false, [WIZARD_SIGIL_PORTAL]: false, [WIZARD_SIGIL_BOUND_SELF]: false }, nextSelections, counters);
+  };
+  const rechargeInitiative = () => {
+    const nextStates: Record<string, boolean> = { ...states, [WIZARD_MANA_LIMIT_BREAK_USED]: false, [WIZARD_MANA_LIMIT_BREAK_READY]: false };
+    Object.keys(nextStates).forEach((key) => { if (key.startsWith(WIZARD_SIGNATURE_USED_PREFIX)) nextStates[key] = false; });
+    const nextSelections = { ...selections };
+    delete nextSelections[WIZARD_SIGNATURE_ACTIVE];
+    updateBuild(nextStates, nextSelections);
+    onRoll('Initiative Check', character.attributes.Agility.modifier + character.combatMastery);
+    setNotice('Initiative rolled: every Signature School and Mana Limit Break recharged.');
+  };
+  const armHex = () => {
+    if (character.manaPoints < 1 || states[WIZARD_HEX_PENDING] || selections[WIZARD_HEX_ACTIVE]) return;
+    updateBuild({ ...states, [WIZARD_HEX_PENDING]: true }, { ...selections, [WIZARD_HEX_ACTIVE]: hexEnhancement }, counters, { manaPoints: character.manaPoints - 1 });
+    setNotice(`${hexEnhancement} is ready for the next Spell. Its 1 MP cost does not count against the Mana Spend Limit.`);
+  };
+  const recordReaping = () => {
+    if (selections[WIZARD_HEX_ACTIVE] !== 'Reaping Hex') return;
+    onChange({ healthPoints: Math.min(character.maxHealthPoints, character.healthPoints + 1) });
+    setNotice('Reaping Hex repeat recorded: the target takes 1 True damage and this Wizard regains 1 HP.');
+  };
+
+  return <section className="rounded-2xl border border-indigo-400/25 bg-gradient-to-br from-indigo-950/50 via-violet-950/30 to-slate-950/75 p-4 sm:p-5">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">Live Class Features</p><h2 className="text-xl font-black text-white">Wizard Controls</h2></div><button type="button" onClick={rechargeInitiative} className="rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white">Roll Initiative / New Combat</button></div>
+    {notice && <p role="status" className="mb-4 rounded-lg bg-indigo-500/10 px-3 py-2 text-xs font-bold leading-5 text-indigo-100">{notice}</p>}
+    <div className="grid gap-4 xl:grid-cols-2">
+      <div className="rounded-xl border border-fuchsia-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-fuchsia-200">Signature School</h3><p className="mt-1 text-xs leading-5 text-slate-500">Reduce an eligible Spell’s MP cost by {expert ? 2 : 1}. Its unreduced cost cannot exceed Mana Spend Limit {manaSpendLimit}. Each chosen School recharges independently.</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{schools.map((school) => { const used = Boolean(states[`${WIZARD_SIGNATURE_USED_PREFIX}${school}`]); return <button type="button" key={school} disabled={used} onClick={() => selectSignature(school)} className={`rounded-lg px-3 py-2 text-xs font-black disabled:opacity-35 ${activeSignature === school ? 'bg-fuchsia-700 text-white' : 'bg-slate-800 text-slate-300'}`}>{school} • {used ? 'Used' : activeSignature === school ? 'Ready' : 'Arm'}</button>; })}</div>{schools.length === 0 && <p className="mt-3 text-xs text-amber-200">Choose a Spell School in the builder.</p>}</div>
+      {character.level >= 2 && <div className="rounded-xl border border-violet-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-violet-200">Prepared Spell</h3><p className="mt-1 text-xs leading-5 text-slate-500">Choose {preparedLimit}. Mana Limit Break grants +1 Mana Spend Limit once per Long Rest or Initiative. Rehearsed Casting gives challengers DisADV in a Spell Duel.</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{knownSpells.map((spell) => <label key={spell.id} className={`rounded-lg border p-2 text-xs ${pendingPrepared.includes(spell.name) ? 'border-violet-400/50 bg-violet-500/10 text-violet-100' : 'border-white/10 text-slate-300'}`}><input type="checkbox" className="mr-2" checked={pendingPrepared.includes(spell.name)} disabled={!pendingPrepared.includes(spell.name) && pendingPrepared.length >= preparedLimit} onChange={() => setPendingPrepared((current) => current.includes(spell.name) ? current.filter((name) => name !== spell.name) : [...current, spell.name])} />{spell.name}</label>)}</div><button type="button" disabled={pendingPrepared.length !== preparedLimit} onClick={applyPrepared} className="mt-3 w-full rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Set Prepared Spell{preparedLimit > 1 ? 's' : ''}</button><div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" disabled={Boolean(states[WIZARD_MANA_LIMIT_BREAK_USED])} onClick={() => setState(WIZARD_MANA_LIMIT_BREAK_READY, !states[WIZARD_MANA_LIMIT_BREAK_READY])} className={`rounded-lg px-3 py-2 text-xs font-black disabled:opacity-35 ${states[WIZARD_MANA_LIMIT_BREAK_READY] ? 'bg-emerald-700 text-white' : 'bg-slate-800 text-slate-300'}`}>{states[WIZARD_MANA_LIMIT_BREAK_USED] ? 'Mana Limit Break used' : states[WIZARD_MANA_LIMIT_BREAK_READY] ? 'Mana Limit Break ready' : 'Arm Mana Limit Break'}</button>{overlyPrepared && <button type="button" onClick={() => setState(WIZARD_PREPARED_DUEL_ACTIVE, !states[WIZARD_PREPARED_DUEL_ACTIVE])} className={`rounded-lg px-3 py-2 text-xs font-black ${states[WIZARD_PREPARED_DUEL_ACTIVE] ? 'bg-fuchsia-700 text-white' : 'bg-slate-800 text-slate-300'}`}>{states[WIZARD_PREPARED_DUEL_ACTIVE] ? 'Prepared Duel ADV ready' : 'Declare Prepared Spell Duel'}</button>}</div>{overlyPrepared && <p className="mt-2 text-xs text-emerald-200">Dazed Resistance is active. Signature School can affect a Prepared Spell, and Mana Limit Break grants ADV on its casting Check.</p>}</div>}
+      <div className="rounded-xl border border-indigo-400/20 bg-slate-950/55 p-4 xl:col-span-2"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-black text-indigo-200">Arcane Sigil</h3><p className="mt-1 text-xs leading-5 text-slate-500">1 minute • matching Spell Checks gain ADV while within the area • move within 10 Spaces for 1 AP</p></div>{sigilActive && <span className="rounded-full bg-indigo-500/15 px-2 py-1 text-[10px] font-black uppercase text-indigo-200">{counters[WIZARD_SIGIL_DIAMETER] ?? 1}-Space Sigil</span>}</div>{!sigilActive ? <><div className="mt-3 grid gap-3 md:grid-cols-3"><label className="text-xs font-bold text-slate-400">School or Tag<select value={sigilPrimary} onChange={(event) => setSigilPrimary(event.target.value)} className={`${fieldClass} mt-1`}>{allSigilOptions.map((option) => <option key={option}>{option}</option>)}</select></label>{expert && <label className="text-xs font-bold text-slate-400">Additional School or Tag<select value={sigilExtraChoice} onChange={(event) => setSigilExtraChoice(event.target.value)} className={`${fieldClass} mt-1`}><option value="">Choose…</option>{allSigilOptions.filter((option) => option !== sigilPrimary && !sigilExtras.includes(option)).map((option) => <option key={option}>{option}</option>)}</select><button type="button" disabled={!sigilExtraChoice || sigilCost >= manaSpendLimit} onClick={() => { setSigilExtras((current) => [...current, sigilExtraChoice]); setSigilExtraChoice(''); }} className="mt-2 w-full rounded bg-indigo-800 px-2 py-1 text-[10px] font-black disabled:opacity-35">Add • 1 MP</button></label>}<div className="text-xs font-bold text-slate-400">Area Enhancement<div className="mt-1 flex items-center justify-between rounded-lg border border-slate-600 bg-slate-950/70 p-2"><button type="button" disabled={sigilAreaMP <= 0} onClick={() => setSigilAreaMP(Math.max(0, sigilAreaMP - 1))} className="h-7 w-7 rounded bg-slate-800 disabled:opacity-35">−</button><span>{1 + sigilAreaMP} Spaces</span><button type="button" disabled={!expert || sigilCost >= manaSpendLimit} onClick={() => setSigilAreaMP(sigilAreaMP + 1)} className="h-7 w-7 rounded bg-indigo-700 disabled:opacity-35">+</button></div></div></div>{sigilExtras.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{sigilExtras.map((option) => <button type="button" key={option} onClick={() => setSigilExtras((current) => current.filter((entry) => entry !== option))} className="rounded-full bg-indigo-500/10 px-2 py-1 text-[10px] font-black text-indigo-200">{option} ×</button>)}</div>}<div className="mt-3 grid gap-2 sm:grid-cols-2">{character.subclass === 'Portal Mage' && <label className="rounded-lg bg-sky-500/10 p-2 text-xs text-sky-100"><input type="checkbox" className="mr-2" checked={createPortal} onChange={(event) => setCreatePortal(event.target.checked)} />Portal Magic • +1 MP</label>}{crownedSigil && <label className="rounded-lg bg-amber-500/10 p-2 text-xs text-amber-100"><input type="checkbox" className="mr-2" checked={bindSelf} onChange={(event) => setBindSelf(event.target.checked)} />Crowned Sigil • bind to self for +2 AD</label>}</div><button type="button" disabled={!sigilPrimary || sigilCost > manaSpendLimit || character.currentAP < 1 || character.manaPoints < sigilCost} onClick={createSigil} className="mt-3 w-full rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Create Sigil • 1 AP + {sigilCost} MP</button></> : <><p className="mt-3 rounded-lg bg-indigo-500/10 p-3 text-xs text-indigo-100"><strong>Matching:</strong> {selections[WIZARD_SIGIL_TAGS]?.split('|').join(', ')}{states[WIZARD_SIGIL_PORTAL] ? ' • linked portal active' : ''}{states[WIZARD_SIGIL_BOUND_SELF] ? ' • bound to self (+2 AD)' : ''}</p><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"><button type="button" onClick={() => setState(WIZARD_SIGIL_INSIDE, !states[WIZARD_SIGIL_INSIDE])} className={`rounded-lg px-3 py-2 text-xs font-black ${states[WIZARD_SIGIL_INSIDE] ? 'bg-emerald-700 text-white' : 'bg-slate-800 text-slate-300'}`}>{states[WIZARD_SIGIL_INSIDE] ? 'Inside Sigil' : 'Outside Sigil'}</button><button type="button" disabled={character.currentAP < 1} onClick={() => { onChange({ currentAP: character.currentAP - 1 }); setNotice('Arcane Sigil teleported to a surface within the occupied Space.'); }} className="rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Move Sigil • 1 AP</button>{states[WIZARD_SIGIL_BOUND_SELF] && <button type="button" disabled={character.currentAP < 1} onClick={() => updateBuild({ ...states, [WIZARD_SIGIL_BOUND_SELF]: false }, selections, counters, { currentAP: character.currentAP - 1 })} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Unbind & Place • 1 AP</button>}<button type="button" onClick={endSigil} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-slate-300">End Sigil</button></div></>}</div>
+      {character.subclass === 'Portal Mage' && <div className="rounded-xl border border-sky-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-sky-200">Portal Sage</h3><p className="mt-2 text-xs leading-5 text-slate-400">You have ADV on Checks to learn about Astromancy. After observing a portal or teleportation runes for 1 minute, make a DC 10 Spell Check within 5 Spaces. Success reveals where it leads and how long it has been open; Success (5) also reveals how to activate and deactivate it.</p><button type="button" onClick={() => onRoll('Portal Sage Spell Check vs DC 10', character.primeModifier + character.combatMastery, 1)} className="mt-3 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white">Analyze Portal • Roll with ADV</button></div>}
+      {character.subclass === 'Witch' && <div className="rounded-xl border border-rose-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-rose-200">Hex Enhancements</h3><p className="mt-1 text-xs leading-5 text-slate-500">Add one enhancement to a Spell for 1 MP without counting against the Mana Spend Limit. A target makes a Repeated Charisma Save at the end of each turn.</p><select value={hexEnhancement} disabled={Boolean(selections[WIZARD_HEX_ACTIVE])} onChange={(event) => setHexEnhancement(event.target.value)} className={`${fieldClass} mt-3 disabled:opacity-40`}><option>Bewitching Hex</option><option>Reaping Hex</option><option>Vermin Hex</option></select><p className="mt-2 text-xs leading-5 text-rose-100">{hexEnhancement === 'Bewitching Hex' ? 'Save Failure: Charmed until the Spell ends.' : hexEnhancement === 'Reaping Hex' ? 'Save Failure: 1 True damage and you regain 1 HP; repeats at the end of each target turn.' : 'Save Failure: cannot speak and shrinks one Size category (minimum Tiny) until the Spell ends.'}</p><button type="button" disabled={character.manaPoints < 1 || Boolean(states[WIZARD_HEX_PENDING]) || Boolean(selections[WIZARD_HEX_ACTIVE])} onClick={armHex} className="mt-3 w-full rounded-lg bg-rose-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[WIZARD_HEX_PENDING] ? 'Hex ready for next Spell' : selections[WIZARD_HEX_ACTIVE] ? `${selections[WIZARD_HEX_ACTIVE]} active` : 'Prepare for Next Spell • 1 MP'}</button>{selections[WIZARD_HEX_ACTIVE] === 'Reaping Hex' && !states[WIZARD_HEX_PENDING] && <button type="button" onClick={recordReaping} className="mt-2 w-full rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white">Record Reaping Save Failure • Heal 1 HP</button>}{selections[WIZARD_HEX_ACTIVE] && !states[WIZARD_HEX_PENDING] && <button type="button" onClick={() => { const nextSelections = { ...selections }; delete nextSelections[WIZARD_HEX_ACTIVE]; updateBuild(states, nextSelections); }} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-slate-300">End Hex after Spell ends</button>}<p className="mt-3 text-xs text-fuchsia-200"><strong>Curse Expert:</strong> focus for 1 minute to locate Cursed creatures and objects within 20 Spaces; 10 minutes of contact reveals the Curse’s nature, but not how to remove it.</p></div>}
+    </div>
+  </section>;
+}
+
 const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit, onCharacterChange }) => {
   const characterRef = useRef(character);
   useEffect(() => { characterRef.current = character; }, [character]);
@@ -1900,7 +2017,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const isHunter = character.class === 'Hunter';
   const isMonk = character.class === 'Monk';
   const isSorcerer = character.class === 'Sorcerer';
-  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter || isMonk || isSorcerer;
+  const isWizard = character.class === 'Wizard';
+  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter || isMonk || isSorcerer || isWizard;
   const isRaging = isBarbarian && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
   const hasUnfathomableStrength = (build?.selectedTalents ?? []).includes('Unfathomable Strength');
   const battlecryShout = featureSelections[BARBARIAN_BATTLECRY_SELECTION] || 'Fortitude Shout';
@@ -2016,9 +2134,30 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     const monkBearApplies = isMonk && Boolean(featureStates[MONK_BEAR_ADVANTAGE]) && label.includes('Melee Martial Attack');
     const sorcererNextSpellAdvantage = Number(isSorcerer && isSpellRoll && featureStates[SORCERER_WILD_NEXT_ADVANTAGE]);
     const sorcererWildAdjustment = isSorcerer && isCheckOrSave ? sorcererWildEffects.allCheckSaveAdjustment : 0;
+    const wizardSpell = isWizard && isSpellRoll ? spellCatalog.find(({ name }) => name === pactSpellName) : undefined;
+    const wizardSpellTags = (wizardSpell?.tags ?? '').split(',').map((tag) => tag.trim());
+    const wizardPreparedSpells = (featureSelections[WIZARD_PREPARED_ACTIVE]
+      ?? build?.classFeatureSelections['wizard.preparedSpells']?.join('|') ?? '').split('|').filter(Boolean);
+    const wizardPreparedApplies = Boolean(wizardSpell && wizardPreparedSpells.includes(wizardSpell.name));
+    const wizardSignatureSchool = featureSelections[WIZARD_SIGNATURE_ACTIVE] ?? '';
+    const wizardSignatureApplies = Boolean(wizardSpell && wizardSignatureSchool
+      && !featureStates[`${WIZARD_SIGNATURE_USED_PREFIX}${wizardSignatureSchool}`]
+      && (wizardSpell.school === wizardSignatureSchool
+        || (character.subclass === 'Witch' && wizardSpellTags.includes('Curse'))
+        || ((build?.selectedTalents ?? []).includes('Overly Prepared Spellcaster') && wizardPreparedApplies)));
+    const wizardSigilMatches = Boolean(wizardSpell && featureStates[WIZARD_SIGIL_ACTIVE] && featureStates[WIZARD_SIGIL_INSIDE]
+      && (featureSelections[WIZARD_SIGIL_TAGS] ?? '').split('|').some((entry) => entry === wizardSpell.school || wizardSpellTags.includes(entry)));
+    const wizardPreparedDuelApplies = Boolean(wizardPreparedApplies && featureStates[WIZARD_PREPARED_DUEL_ACTIVE]
+      && label.endsWith(' Spell Check'));
+    const wizardManaLimitBreakApplies = Boolean(wizardPreparedApplies && featureStates[WIZARD_MANA_LIMIT_BREAK_READY]
+      && !featureStates[WIZARD_MANA_LIMIT_BREAK_USED]);
+    const wizardHex = isWizard && isSpellRoll && featureStates[WIZARD_HEX_PENDING]
+      ? featureSelections[WIZARD_HEX_ACTIVE] : '';
+    const wizardFeatureAdjustment = Number(wizardSigilMatches) + Number(wizardPreparedDuelApplies)
+      + Number(wizardManaLimitBreakApplies && (build?.selectedTalents ?? []).includes('Overly Prepared Spellcaster'));
     const featureAdjustment = warlockAdvantage + Number(clericChaosApplies) + Number(championReadinessApplies) + Number(fastReflexesApplies)
       + Number(hunterMarkAttackApplies) + hunterTerrainAdvantage + Number(hunterBigGameApplies) + hunterConcoctionAdvantage
-      + sorcererNextSpellAdvantage + sorcererWildAdjustment;
+      + sorcererNextSpellAdvantage + sorcererWildAdjustment + wizardFeatureAdjustment;
     const totalAdjustment = Math.max(-5, Math.min(5, rollAdjustment + featureAdjustment + Number(monkBearApplies) + extraAdjustment));
     const dice = Array.from({ length: 1 + Math.abs(totalAdjustment) }, () => Math.floor(Math.random() * 20) + 1);
     const chosen = totalAdjustment > 0 ? Math.max(...dice) : totalAdjustment < 0 ? Math.min(...dice) : dice[0];
@@ -2048,7 +2187,15 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       sorcererWildDie !== 0 && `Wild Magic d4: ${sorcererWildDie > 0 ? '+' : ''}${sorcererWildDie}`,
       wildSurgeOutcome > 0 && `Wild Magic ${wildSurgeDice.join(', ')} → ${wildSurgeOutcome}: ${sorcererWildMagicOutcome(wildSurgeOutcome)}`,
     ].filter(Boolean);
-    const allRollNotes = [...hunterRollNotes, ...sorcererRollNotes];
+    const wizardRollNotes = [
+      wizardSignatureApplies && `Signature ${wizardSignatureSchool}: −${character.level >= 5 ? 2 : 1} MP (unreduced cost must fit the Mana Spend Limit)`,
+      wizardSigilMatches && 'Arcane Sigil: ADV',
+      wizardPreparedApplies && 'Rehearsed Casting: challengers have DisADV in a Spell Duel',
+      wizardPreparedDuelApplies && 'Overly Prepared Spellcaster: Spell Duel ADV',
+      wizardManaLimitBreakApplies && 'Mana Limit Break: +1 Mana Spend Limit for this casting',
+      wizardHex && `${wizardHex}: 1 target makes a Repeated Charisma Save; failure applies the Hex for 1 minute`,
+    ].filter(Boolean);
+    const allRollNotes = [...hunterRollNotes, ...sorcererRollNotes, ...wizardRollNotes];
     const result = {
       label: allRollNotes.length > 0 ? `${label} • ${allRollNotes.join(' • ')}` : label,
       dice,
@@ -2074,7 +2221,17 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     if (sorcererNextSpellAdvantage) nextFeatureStates[SORCERER_WILD_NEXT_ADVANTAGE] = false;
     const nextFeatureSelections = { ...(characterRef.current.build?.sheetFeatureSelections ?? featureSelections) };
     if (preparedMeta.length > 0) delete nextFeatureSelections[SORCERER_META_ACTIVE];
-    const sheetStateChanged = warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies || hunterMarkAttackApplies || hunterStrikeApplies || monkBearApplies || sorcererNextSpellAdvantage || preparedMeta.length > 0;
+    if (wizardSignatureApplies) {
+      nextFeatureStates[`${WIZARD_SIGNATURE_USED_PREFIX}${wizardSignatureSchool}`] = true;
+      delete nextFeatureSelections[WIZARD_SIGNATURE_ACTIVE];
+    }
+    if (wizardManaLimitBreakApplies) {
+      nextFeatureStates[WIZARD_MANA_LIMIT_BREAK_READY] = false;
+      nextFeatureStates[WIZARD_MANA_LIMIT_BREAK_USED] = true;
+    }
+    if (wizardPreparedDuelApplies) nextFeatureStates[WIZARD_PREPARED_DUEL_ACTIVE] = false;
+    if (wizardHex) nextFeatureStates[WIZARD_HEX_PENDING] = false;
+    const sheetStateChanged = warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies || hunterMarkAttackApplies || hunterStrikeApplies || monkBearApplies || sorcererNextSpellAdvantage || preparedMeta.length > 0 || wizardSignatureApplies || wizardManaLimitBreakApplies || wizardPreparedDuelApplies || Boolean(wizardHex);
     if (wildSurgeOutcome > 0 && characterRef.current.build) {
       update(applySorcererWildMagic({
         ...characterRef.current,
@@ -2229,6 +2386,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         {isHunter && <HunterControls character={character} onChange={update} onRoll={roll} awarenessModifier={hunterAwarenessModifier} investigationModifier={hunterInvestigationModifier} />}
         {isMonk && <MonkControls character={character} onChange={update} onRoll={roll} />}
         {isSorcerer && <SorcererControls character={character} onChange={update} onRoll={roll} />}
+        {isWizard && <WizardControls character={character} spellCatalog={spellCatalog} knownSpells={knownSpells} onChange={update} onRoll={roll} />}
           </div>
         </details>}
 
@@ -2255,7 +2413,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
             onChange={update}
             onRoll={roll}
           />}
-          {selectedTab === 'overview' && <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3"><section className={panelClass}><h2 className="font-black text-violet-200">Combat</h2><div className="mt-4 grid grid-cols-2 gap-3">{[['Physical Defense', sheetEffects.physicalDefense], ['Arcane Defense', character.arcaneDefense], ['Combat Mastery', `+${character.combatMastery}`], ['Speed', sheetEffects.speed], ['Martial Check', `+${character.primeModifier + character.combatMastery}`], ['Spell Check', `+${character.primeModifier + character.combatMastery}`], ['Class Save DC', 10 + character.primeModifier + character.combatMastery], ['Death Threshold', -4]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-950/55 p-3"><div className="text-xs text-slate-500">{label}</div><div className="text-xl font-black text-slate-100">{value}</div>{label === 'Physical Defense' && isRaging && <div className="text-[10px] font-bold text-red-300">Rage: −5</div>}{label === 'Speed' && sheetEffects.speed !== character.speed && <div className="text-[10px] font-bold text-sky-300">Active Rune: +1</div>}</div>)}</div>{sheetEffects.resistances.length > 0 && <div className="mt-3 rounded-lg border border-sky-400/15 bg-sky-500/5 p-2 text-xs text-sky-100"><strong>Active Resistances:</strong> {sheetEffects.resistances.join(' • ')}</div>}</section><section className={panelClass}><h2 className="font-black text-violet-200">Attributes</h2><div className="mt-4 grid grid-cols-2 gap-3">{ATTRIBUTE_NAMES.map((attribute) => <button type="button" key={attribute} onClick={() => roll(`${attribute} Check`, character.attributes[attribute].modifier)} className="rounded-lg bg-slate-950/55 p-3 text-left hover:bg-violet-500/10"><div className="text-xs text-slate-500">{attribute}</div><div className="text-xl font-black text-slate-100">{character.attributes[attribute].modifier >= 0 ? '+' : ''}{character.attributes[attribute].modifier}</div><div className="text-xs text-violet-300">Roll check</div></button>)}</div></section><section className={panelClass}><div className="flex items-center justify-between"><h2 className="font-black text-violet-200">Active Conditions</h2><div className="flex gap-2"><select value={conditionToAdd} onChange={(event) => setConditionToAdd(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs">{conditions.map((condition) => <option key={condition}>{condition}</option>)}</select><button type="button" onClick={() => setCondition(conditionToAdd, conditionLevels[conditionToAdd] ?? 1)} className="rounded-lg bg-violet-600 px-2 py-1 text-xs font-bold">Add</button></div></div><div className="mt-4 space-y-2">{Object.entries(conditionLevels).length === 0 ? <p className="text-sm text-slate-500">No active conditions.</p> : Object.entries(conditionLevels).sort().map(([condition, value]) => <div key={condition} className="flex items-center justify-between rounded-lg bg-slate-950/55 p-3"><span className="font-bold text-slate-200">{condition}</span><div className="flex items-center gap-2"><button type="button" onClick={() => setCondition(condition, value - 1)} className="h-7 w-7 rounded bg-slate-800">−</button><span className="min-w-6 text-center font-black text-violet-200">{value}</span><button type="button" onClick={() => setCondition(condition, value + 1)} className="h-7 w-7 rounded bg-slate-800">+</button><button type="button" onClick={() => setCondition(condition, 0)} className="ml-1 text-xs font-bold text-red-300">×</button></div></div>)}</div></section><section className={`${panelClass} lg:col-span-2 xl:col-span-3`}><h2 className="font-black text-violet-200">Background</h2><h3 className="mt-3 text-lg font-black text-slate-200">{build?.backgroundName || character.background || 'Unnamed Background'}</h3><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-400">{build?.backgroundStory || 'No background story has been written yet.'}</p></section></div>}
+          {selectedTab === 'overview' && <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3"><section className={panelClass}><h2 className="font-black text-violet-200">Combat</h2><div className="mt-4 grid grid-cols-2 gap-3">{[['Physical Defense', sheetEffects.physicalDefense], ['Area Defense', sheetEffects.areaDefense], ['Combat Mastery', `+${character.combatMastery}`], ['Speed', sheetEffects.speed], ['Martial Check', `+${character.primeModifier + character.combatMastery}`], ['Spell Check', `+${character.primeModifier + character.combatMastery}`], ['Class Save DC', 10 + character.primeModifier + character.combatMastery], ['Death Threshold', -4]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-950/55 p-3"><div className="text-xs text-slate-500">{label}</div><div className="text-xl font-black text-slate-100">{value}</div>{label === 'Physical Defense' && isRaging && <div className="text-[10px] font-bold text-red-300">Rage: −5</div>}{label === 'Speed' && sheetEffects.speed !== character.speed && <div className="text-[10px] font-bold text-sky-300">Active Rune: +1</div>}</div>)}</div>{sheetEffects.resistances.length > 0 && <div className="mt-3 rounded-lg border border-sky-400/15 bg-sky-500/5 p-2 text-xs text-sky-100"><strong>Active Resistances:</strong> {sheetEffects.resistances.join(' • ')}</div>}</section><section className={panelClass}><h2 className="font-black text-violet-200">Attributes</h2><div className="mt-4 grid grid-cols-2 gap-3">{ATTRIBUTE_NAMES.map((attribute) => <button type="button" key={attribute} onClick={() => roll(`${attribute} Check`, character.attributes[attribute].modifier)} className="rounded-lg bg-slate-950/55 p-3 text-left hover:bg-violet-500/10"><div className="text-xs text-slate-500">{attribute}</div><div className="text-xl font-black text-slate-100">{character.attributes[attribute].modifier >= 0 ? '+' : ''}{character.attributes[attribute].modifier}</div><div className="text-xs text-violet-300">Roll check</div></button>)}</div></section><section className={panelClass}><div className="flex items-center justify-between"><h2 className="font-black text-violet-200">Active Conditions</h2><div className="flex gap-2"><select value={conditionToAdd} onChange={(event) => setConditionToAdd(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs">{conditions.map((condition) => <option key={condition}>{condition}</option>)}</select><button type="button" onClick={() => setCondition(conditionToAdd, conditionLevels[conditionToAdd] ?? 1)} className="rounded-lg bg-violet-600 px-2 py-1 text-xs font-bold">Add</button></div></div><div className="mt-4 space-y-2">{Object.entries(conditionLevels).length === 0 ? <p className="text-sm text-slate-500">No active conditions.</p> : Object.entries(conditionLevels).sort().map(([condition, value]) => <div key={condition} className="flex items-center justify-between rounded-lg bg-slate-950/55 p-3"><span className="font-bold text-slate-200">{condition}</span><div className="flex items-center gap-2"><button type="button" onClick={() => setCondition(condition, value - 1)} className="h-7 w-7 rounded bg-slate-800">−</button><span className="min-w-6 text-center font-black text-violet-200">{value}</span><button type="button" onClick={() => setCondition(condition, value + 1)} className="h-7 w-7 rounded bg-slate-800">+</button><button type="button" onClick={() => setCondition(condition, 0)} className="ml-1 text-xs font-bold text-red-300">×</button></div></div>)}</div></section><section className={`${panelClass} lg:col-span-2 xl:col-span-3`}><h2 className="font-black text-violet-200">Background</h2><h3 className="mt-3 text-lg font-black text-slate-200">{build?.backgroundName || character.background || 'Unnamed Background'}</h3><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-400">{build?.backgroundStory || 'No background story has been written yet.'}</p></section></div>}
 
           {selectedTab === 'checks' && <div className="space-y-5"><section><h2 className="mb-3 font-black text-violet-200">Attribute Saves</h2><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{ATTRIBUTE_NAMES.map((attribute) => { const modifier = character.attributes[attribute].modifier + character.combatMastery; return <button type="button" key={attribute} onClick={() => roll(`${attribute} Save`, modifier)} className="rounded-xl border border-white/10 bg-slate-950/45 p-4 text-left hover:border-violet-400/40"><div className="text-xs text-slate-500">{attribute} Save</div><div className="text-2xl font-black text-violet-200">+{modifier}</div></button>; })}</div></section><section><button type="button" onClick={() => setExpandedSkills((value) => !value)} className="mb-3 flex w-full items-center justify-between rounded-xl bg-slate-950/55 p-4 font-black text-violet-200"><span>Skills</span><span>{expandedSkills ? 'Collapse' : 'Expand'}</span></button>{expandedSkills && <div className="space-y-5">{skillGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">{group.name}</h3><div className="grid gap-2 md:grid-cols-2">{group.options.map((name) => { const mastery = character.skillMasteries[name] ?? 'Untrained'; const modifier = skillModifier(name, mastery); return <button type="button" key={name} onClick={() => roll(`${name} Check`, modifier)} className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-950/45 p-3 text-left hover:border-violet-400/40"><span><span className="font-bold text-slate-200">{name}</span><span className="ml-2 text-xs text-slate-500">{mastery}</span></span><span className="font-black text-violet-200">{modifier >= 0 ? '+' : ''}{modifier}</span></button>; })}</div></div>)}</div>}</section><section><button type="button" onClick={() => setExpandedTrades((value) => !value)} className="mb-3 flex w-full items-center justify-between rounded-xl bg-slate-950/55 p-4 font-black text-fuchsia-200"><span>Trades</span><span>{expandedTrades ? 'Collapse' : 'Expand'}</span></button>{expandedTrades && <div className="space-y-5">{tradeGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">{group.name}</h3><div className="grid gap-2 md:grid-cols-2">{group.options.map((name) => { const mastery = character.tradeMasteries[name] ?? 'Untrained'; const modifier = tradeModifier(name, mastery); return <button type="button" key={name} onClick={() => roll(`${name} Trade Check`, modifier)} className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-950/45 p-3 text-left hover:border-fuchsia-400/40"><span><span className="font-bold text-slate-200">{name}</span><span className="ml-2 text-xs text-slate-500">{mastery}</span></span><span className="font-black text-fuchsia-200">{modifier >= 0 ? '+' : ''}{modifier}</span></button>; })}</div></div>)}</div>}</section></div>}
 

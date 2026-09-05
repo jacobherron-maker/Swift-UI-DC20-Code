@@ -84,6 +84,21 @@ import {
   sorcererDraconicDamageType,
   sorcererWildMagicOutcome,
   sorcererWildMagicProfile,
+  WIZARD_HEX_ACTIVE,
+  WIZARD_HEX_PENDING,
+  WIZARD_MANA_LIMIT_BREAK_READY,
+  WIZARD_MANA_LIMIT_BREAK_USED,
+  WIZARD_PREPARED_ACTIVE,
+  WIZARD_SIGNATURE_ACTIVE,
+  WIZARD_SIGNATURE_USED_PREFIX,
+  WIZARD_SIGIL_ACTIVE,
+  WIZARD_SIGIL_BOUND_SELF,
+  WIZARD_SIGIL_DIAMETER,
+  WIZARD_SIGIL_INSIDE,
+  WIZARD_SIGIL_PORTAL,
+  WIZARD_SIGIL_TAGS,
+  wizardSchoolSpellGrantLimit,
+  wizardSchoolSpellSelectionKey,
 } from './characterRules';
 
 const reference = referenceDocument as CharacterReferenceData;
@@ -450,6 +465,7 @@ describe('DC20 character calculations', () => {
     };
     expect(characterSheetEffects(hero)).toEqual({
       physicalDefense: 5,
+      areaDefense: 14,
       speed: 6,
       saveAdvantage: { Might: 1 },
       martialMeleeDamageBonus: 1,
@@ -663,6 +679,7 @@ describe('Bard Beta 0.10.5 source audit', () => {
     };
     expect(characterSheetEffects(hero)).toEqual({
       physicalDefense: 10,
+      areaDefense: 14,
       speed: 6,
       saveAdvantage: {},
       martialMeleeDamageBonus: 0,
@@ -931,6 +948,7 @@ describe('Spellblade Beta 0.10.5 source audit', () => {
     };
     expect(characterSheetEffects(hero)).toEqual({
       physicalDefense: 10,
+      areaDefense: 14,
       speed: 7,
       saveAdvantage: {},
       martialMeleeDamageBonus: 0,
@@ -1938,6 +1956,122 @@ describe('Sorcerer Beta 0.10.5 source audit', () => {
       ['Draconic Spark', 3], ['Draconic Appearance (Flavor Feature)', 3],
     ]);
     expect(sorcerer.subclassFeatures.Paragon.map(({ name, level }) => [name, level])).toEqual([
+      ['Paragon Subclass', 3], ['Novice Paragon', 3], ['Jack of one Trade (Flavor Feature)', 3], ['Expert Paragon', 7], ['Master Paragon', 10],
+    ]);
+  });
+});
+
+describe('Wizard Beta 0.10.5 source audit', () => {
+  const feature = (level: number, name: string) => wizard.features.find((entry) => entry.level === level)?.features.find((entry) => entry.name === name)?.description;
+
+  it('matches the published level 1-10 class table', () => {
+    expect(wizard.tableRows).toEqual([
+      { level: 1, health: 7, attribute: undefined, skill: undefined, trade: undefined, mana: 6, spells: 4, features: 'Class Features' },
+      { level: 2, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Class Feature, Talent, Path Progression' },
+      { level: 3, health: 1, attribute: 1, skill: 1, trade: 1, mana: 3, spells: 1, features: 'Subclass Feature' },
+      { level: 4, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 5, health: 1, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Class Feature' },
+      { level: 6, health: 1, attribute: undefined, skill: 1, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, Path Progression' },
+      { level: 7, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Subclass Expert Feature' },
+      { level: 8, health: 1, attribute: 1, skill: 1, trade: 1, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 9, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Class Capstone Feature' },
+      { level: 10, health: 1, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Subclass Capstone Feature' },
+    ]);
+  });
+
+  it('preserves the published path, equipment, and complete core feature wording', () => {
+    expect(wizard.pathDetails).toBe('Combat Training: Spell Focuses, Light Armor\n\nSpell List: When you learn a new Spell, you can choose any Spell on the Arcane Spell Source.\n\nSpells Known: The number of Spells you know increases as shown in the Spells Known column of the Wizard Class Table.\n\nMana Points: Your maximum number of Mana Points increases as shown in the Mana Points column of the Wizard Class Table.');
+    expect(wizard.startingEquipment.description).toBe('Arsenal: 2 Spell Focuses.\nArmor: 1 set of Light Armor.\nTrade Tools: Choose 2 of any of the following items:\nAlchemist’s Supplies, Calligrapher’s Supplies, Glassblower’s Tools, or Herbalist’s Supplies.\nAdventuring Pack: Choose 1 of the following packs:\n(Adventuring Packs Coming Soon).');
+    expect(feature(1, 'Spell School Initiate')).toBe('You’ve completed training in a specialized School of Magic. Choose a Spell School. You gain the following benefits:\n\nSchool Magic: You learn 2 Arcane Spells from this Spell School.\n\nSignature School: When you cast a Spell from the chosen School, you can reduce its MP cost by 1. Its total MP cost before the reduction can’t exceed your Mana Spend Limit. You can use this Feature once per Long Rest, but regain the ability to use it again when you roll for Initiative.');
+    expect(feature(2, 'Prepared Spell')).toBe('When you complete a Long Rest, choose 1 Spell you know. The chosen Spell becomes your Prepared Spell until your next Long Rest. Your Prepared Spell gains the following benefits:\n\nMana Limit Break: When you cast your Prepared Spell, you can increase your Mana Spend Limit by 1 for the casting. You can use this Feature once per Long Rest, but you regain the ability to use it when you roll for Initiative.\n\nRehearsed Casting: When creatures Challenge your Spell as part of a Spell Duel, they have DisADV on Checks made to stop your Spell.');
+    expect(feature(5, 'Expert Wizard')).toContain('You learn 1 additional Arcane Spell from the chosen School.');
+    expect(feature(5, 'Expert Wizard')).toContain('Signature School: When you cast a Spell from the chosen School, you can reduce its MP cost by an additional 1.');
+    expect(feature(5, 'Expert Wizard')).toContain('DC Tip: You can still only use Mana Limit Break once, on either of your Prepared Spells.');
+  });
+
+  it('scales unique Spell Schools, School Magic grants, and Prepared Spells', () => {
+    const schoolGroup = wizard.choiceGroups.find(({ id }) => id === 'wizard.school')!;
+    const preparedGroup = wizard.choiceGroups.find(({ id }) => id === 'wizard.preparedSpells')!;
+    const hero = character('Wizard');
+    hero.build = { ...defaultBuild(), selectedTalents: ['Expanded Spell School', 'Expanded Spell School'] };
+    expect(classChoiceSelectionLimit(schoolGroup, hero)).toBe(3);
+    expect(classChoiceSelectionLimit(preparedGroup, hero)).toBe(1);
+    expect(wizardSchoolSpellGrantLimit(hero.level)).toBe(2);
+    hero.level = 5;
+    expect(classChoiceSelectionLimit(preparedGroup, hero)).toBe(2);
+    expect(wizardSchoolSpellGrantLimit(hero.level)).toBe(3);
+    expect(wizard.talents.find(({ name }) => name === 'Crowned Sigil')?.isRepeatable).toBe(true);
+    expect(wizard.talents.find(({ name }) => name === 'Overly Prepared Spellcaster')?.isRepeatable).toBe(true);
+  });
+
+  it('routes School Magic and Coven’s Gift outside the Class Table spell allowance', () => {
+    const hero = character('Wizard');
+    hero.build = { ...defaultBuild(), classFeatureSelections: {
+      'wizard.school': ['Astromancy'],
+      [wizardSchoolSpellSelectionKey('Astromancy')]: ['Arcane Missiles', 'Blink', 'Extra ignored'],
+    } };
+    expect(grantedClassSpellNames(hero)).toEqual(['Arcane Missiles', 'Blink']);
+    hero.level = 5;
+    hero.subclass = 'Witch';
+    hero.build = { ...hero.build, classFeatureSelections: { ...hero.build.classFeatureSelections, 'wizard.witchCurseSpell': ['Bane'] } };
+    expect(grantedClassSpellNames(hero)).toEqual(['Arcane Missiles', 'Blink', 'Extra ignored', 'Bane']);
+  });
+
+  it('uses Arcane access plus the published Portal Mage and Witch expansions', () => {
+    const arcane = { source: 'Arcane', school: 'Invocation', tags: 'Force' };
+    const divineCurse = { source: 'Divine', school: 'Nullification', tags: 'Curse, Enfeeble' };
+    const primalTeleport = { source: 'Primal', school: 'Conjuration', tags: 'Teleportation' };
+    expect(spellIsAvailableToClass('Wizard', arcane, 'Arcane')).toBe(true);
+    expect(spellIsAvailableToClass('Wizard', divineCurse, 'Arcane', '', [], 'Witch')).toBe(true);
+    expect(spellIsAvailableToClass('Wizard', primalTeleport, 'Arcane', '', [], 'Portal Mage')).toBe(true);
+    expect(spellIsAvailableToClass('Wizard', divineCurse, 'Arcane', '', [], 'Portal Mage')).toBe(false);
+  });
+
+  it('routes Wizard talent defenses and clears live features on the correct rest', () => {
+    const hero = character('Wizard');
+    hero.level = 3;
+    hero.build = {
+      ...defaultBuild(),
+      selectedTalents: ['Crowned Sigil', 'Overly Prepared Spellcaster'],
+      sheetFeatureStates: {
+        [WIZARD_SIGIL_ACTIVE]: true,
+        [WIZARD_SIGIL_INSIDE]: true,
+        [WIZARD_SIGIL_PORTAL]: true,
+        [WIZARD_SIGIL_BOUND_SELF]: true,
+        [WIZARD_HEX_PENDING]: true,
+        [WIZARD_MANA_LIMIT_BREAK_READY]: true,
+        [WIZARD_MANA_LIMIT_BREAK_USED]: true,
+        [`${WIZARD_SIGNATURE_USED_PREFIX}Astromancy`]: true,
+      },
+      sheetFeatureSelections: {
+        [WIZARD_SIGNATURE_ACTIVE]: 'Astromancy',
+        [WIZARD_PREPARED_ACTIVE]: 'Blink',
+        [WIZARD_SIGIL_TAGS]: 'Astromancy|Teleportation',
+        [WIZARD_HEX_ACTIVE]: 'Reaping Hex',
+      },
+      sheetFeatureCounters: { [WIZARD_SIGIL_DIAMETER]: 2 },
+    };
+    expect(characterSheetEffects(hero)).toMatchObject({ areaDefense: 16, resistances: ['Dazed Condition'] });
+    const quick = completeCharacterRest(hero, 'Quick', 0);
+    expect(quick.build?.sheetFeatureStates[WIZARD_SIGIL_ACTIVE]).toBe(false);
+    expect(quick.build?.sheetFeatureStates[WIZARD_HEX_PENDING]).toBe(false);
+    expect(quick.build?.sheetFeatureStates[`${WIZARD_SIGNATURE_USED_PREFIX}Astromancy`]).toBe(true);
+    expect(quick.build?.sheetFeatureSelections[WIZARD_HEX_ACTIVE]).toBeUndefined();
+    const long = completeCharacterRest(hero, 'Long', 0);
+    expect(long.build?.sheetFeatureStates[`${WIZARD_SIGNATURE_USED_PREFIX}Astromancy`]).toBeUndefined();
+    expect(long.build?.sheetFeatureSelections[WIZARD_PREPARED_ACTIVE]).toBeUndefined();
+  });
+
+  it('includes every published Wizard subclass feature with honest level metadata', () => {
+    expect(wizard.subclasses).toEqual(['Portal Mage', 'Witch', 'Paragon']);
+    expect(new Set(wizard.choiceGroups.map(({ id }) => id)).size).toBe(wizard.choiceGroups.length);
+    expect(wizard.subclassFeatures['Portal Mage'].map(({ name, level }) => [name, level])).toEqual([
+      ['Portal Magic', 3], ['Portal Sage (Flavor Feature)', 3],
+    ]);
+    expect(wizard.subclassFeatures.Witch.map(({ name, level }) => [name, level])).toEqual([
+      ['Coven’s Gift', 3], ['Hex Enhancements', 3], ['Curse Expert (Flavor Feature)', 3],
+    ]);
+    expect(wizard.subclassFeatures.Paragon.map(({ name, level }) => [name, level])).toEqual([
       ['Paragon Subclass', 3], ['Novice Paragon', 3], ['Jack of one Trade (Flavor Feature)', 3], ['Expert Paragon', 7], ['Master Paragon', 10],
     ]);
   });

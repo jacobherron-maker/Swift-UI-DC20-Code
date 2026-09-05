@@ -45,6 +45,8 @@ import {
   isAutomaticAncestryTrait,
   spellIsAvailableToClass,
   talentSlots,
+  wizardSchoolSpellGrantLimit,
+  wizardSchoolSpellSelectionKey,
 } from '../../utils/characterRules';
 import { toggleInventoryEquipped } from '../../utils/equipmentRules';
 import { generateUUID } from '../../utils/gameUtils';
@@ -522,6 +524,17 @@ const CharacterBuilderView: React.FC<{
   const attributePool = attributeMethod === 'Standard Array' ? STANDARD_ARRAY : rolledResults;
   const assignedCount = new Set(attributeAssignments.filter(Boolean)).size;
   const previewClassReference = reference?.classes.find((entry) => entry.name === classPreviewName) ?? null;
+  const wizardSchools = className === 'Wizard' ? featureChoices['wizard.school'] ?? [] : [];
+  const wizardSchoolSpellLimit = wizardSchoolSpellGrantLimit(level);
+  const wizardSchoolSpellGroups = wizardSchools.map((school) => [
+    wizardSchoolSpellSelectionKey(school),
+    featureChoices[wizardSchoolSpellSelectionKey(school)] ?? [],
+  ] as const);
+  const wizardCovenSpell = className === 'Wizard' && level >= 3 && subclass === 'Witch'
+    ? featureChoices['wizard.witchCurseSpell'] ?? [] : [];
+  const wizardFeatureSpellNames = wizardSchoolSpellGroups.flatMap(([, names]) => names).concat(wizardCovenSpell);
+  const wizardKnownSpellNames = new Set([...selectedSpells, ...wizardFeatureSpellNames]);
+  const wizardPreparedLimit = level >= 5 ? 2 : 1;
   const featureChoiceGroups = (classReference?.choiceGroups.filter((group) => (
     group.level <= level
     && (!group.requiredSubclass || group.requiredSubclass === subclass)
@@ -529,7 +542,17 @@ const CharacterBuilderView: React.FC<{
     && (group.id !== 'hunter.forestSkills' || (featureChoices['hunter.terrain'] ?? []).includes('Forest'))
     && (group.id !== 'hunter.urbanSkills' || (featureChoices['hunter.terrain'] ?? []).includes('Urban'))
   )) ?? []).map((group) => {
-    const options = group.optionsFromGroup
+    const options: ClassChoiceGroupReference['options'] = group.id === 'wizard.preparedSpells'
+      ? Array.from(wizardKnownSpellNames).sort().flatMap((name) => {
+        const spell = spells.find(({ name: candidate }) => candidate === name);
+        return spell ? [{
+          name: spell.name,
+          description: `${spell.source} • ${spell.school} • ${spell.cost} • ${spell.range} • ${spell.duration}\n\n${spell.description}${spell.enhancements ? `\n\nEnhancements: ${spell.enhancements}` : ''}`,
+          pointCost: 1,
+          isRepeatable: false,
+        }] : [];
+      })
+      : group.optionsFromGroup
       ? classReference?.choiceGroups.find(({ id }) => id === group.optionsFromGroup)?.options ?? []
       : group.options;
     const resolved = { ...group, options };
@@ -770,6 +793,10 @@ const CharacterBuilderView: React.FC<{
         if (option === 'Forest') delete next['hunter.forestSkills'];
         if (option === 'Urban') delete next['hunter.urbanSkills'];
       }
+      if (group.id === 'wizard.school' && wasSelected) {
+        delete next[wizardSchoolSpellSelectionKey(option)];
+        delete next['wizard.preparedSpells'];
+      }
       return next;
     });
     if (group.id === 'barbarian.guardianManeuver' && !wasSelected) {
@@ -835,6 +862,10 @@ const CharacterBuilderView: React.FC<{
       return baseDisciplines.includes('Acolyte')
         ? option === 'Acolyte' || baseDisciplines.includes(option)
         : option !== 'Acolyte';
+    }
+    if (className === 'Wizard' && group.id === 'wizard.witchCurseSpell') {
+      return selectedSpells.includes(option)
+        || wizardSchoolSpellGroups.some(([, names]) => names.includes(option));
     }
     if (className !== 'Summoner' || !group.id.startsWith('summoner.')) return false;
     const knownOutsideGroup = new Set([
@@ -1090,6 +1121,23 @@ const CharacterBuilderView: React.FC<{
         }
       }
     }
+    if (className === 'Wizard') {
+      if (derived && selectedSpells.length !== derived.spellLimit) issues.push(`Choose exactly ${derived.spellLimit} Wizard Class Table Spells.`);
+      if (selectedSpells.some((spell) => !allowedSpells.some(({ name }) => name === spell))) issues.push('Remove Spells that are no longer on the Wizard Spell List.');
+      for (const [groupID, schoolSpells] of wizardSchoolSpellGroups) {
+        const school = groupID.slice('wizard.schoolSpells.'.length);
+        if (schoolSpells.length !== wizardSchoolSpellLimit) issues.push(`Choose ${wizardSchoolSpellLimit} Arcane ${school} Spells granted by Spell School Initiate.`);
+        for (const spellName of schoolSpells) {
+          const spell = spells.find(({ name }) => name === spellName);
+          if (!spell || spell.school !== school || !spell.source.split(', ').includes('Arcane')) issues.push(`${spellName} is not an Arcane ${school} Spell.`);
+        }
+      }
+      const allWizardSpells = [...selectedSpells, ...wizardFeatureSpellNames];
+      if (new Set(allWizardSpells).size !== allWizardSpells.length) issues.push('A Wizard Spell can only be learned once across the Class Table, School Magic, and Coven’s Gift.');
+      const preparedSpells = featureChoices['wizard.preparedSpells'] ?? [];
+      if (level >= 2 && preparedSpells.length !== wizardPreparedLimit) issues.push(`Choose ${wizardPreparedLimit} Prepared Spell${wizardPreparedLimit === 1 ? '' : 's'}.`);
+      if (preparedSpells.some((spell) => !wizardKnownSpellNames.has(spell))) issues.push('Every Prepared Spell must be a Spell you know.');
+    }
     if (className === 'Warlock') {
       const weaponManeuvers = featureChoices['warlock.pactWeaponManeuvers'] ?? [];
       const armorManeuvers = featureChoices['warlock.pactArmorManeuvers'] ?? [];
@@ -1236,6 +1284,19 @@ const CharacterBuilderView: React.FC<{
                       return <InfoDetails key={option.name} summary={<label className={`flex flex-1 items-center gap-2 ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`} onClick={(event) => event.stopPropagation()}><input type="checkbox" disabled={disabled} checked={selected} onChange={() => setFeatureChoice(group, option.name)} />{option.name}</label>}>{option.description}</InfoDetails>;
                     })}</div>
                   </div>;
+                })}</div>
+              </div>}
+              {className === 'Wizard' && wizardSchools.length > 0 && <div className={panelClass}>
+                <div className="mb-4"><h3 className="font-black text-fuchsia-200">Spell School Initiate</h3><p className="mt-1 text-sm leading-6 text-slate-500">Each chosen School grants 2 Arcane Spells in addition to the Wizard Class Table. Expert Wizard grants 1 more Spell from every chosen School and improves each Signature School reduction from 1 MP to 2 MP.</p></div>
+                <div className="space-y-4">{wizardSchoolSpellGroups.map(([groupID, schoolSpells]) => {
+                  const school = groupID.slice('wizard.schoolSpells.'.length);
+                  const knownOutside = new Set([
+                    ...selectedSpells,
+                    ...wizardCovenSpell,
+                    ...wizardSchoolSpellGroups.filter(([candidate]) => candidate !== groupID).flatMap(([, names]) => names),
+                  ]);
+                  const options = spells.filter((spell) => spell.school === school && spell.source.split(', ').includes('Arcane'));
+                  return <FeatureSpellPicker key={groupID} title={`School Magic — ${school}`} description={`Learn ${wizardSchoolSpellLimit} Arcane ${school} Spells. Signature School can reduce the MP cost of a ${school} Spell by ${level >= 5 ? 2 : 1} once per Long Rest, and refreshes when Initiative is rolled.`} selected={schoolSpells} limit={wizardSchoolSpellLimit} options={options} knownOutside={knownOutside} onToggle={(spell) => toggleStoredFeatureChoice(groupID, spell, wizardSchoolSpellLimit)} />;
                 })}</div>
               </div>}
               {className === 'Hunter' && <div className={panelClass}><h3 className="font-black text-emerald-200">Favored Terrain Benefits</h3><p className="mt-2 text-sm leading-6 text-slate-400">The selected terrain benefits are routed into the character: Grassland raises Speed by 1; Forest and Urban each add 2 restricted Skill Points. Use the matching allocation choices above, then raise those Skills on the Skills step. The character sheet lists every resistance, movement, sense, and situational benefit for the selected terrains.</p><div className="mt-3 flex flex-wrap gap-2">{(featureChoices['hunter.terrain'] ?? []).map((terrain) => <span key={terrain} className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-200">{terrain}</span>)}</div></div>}

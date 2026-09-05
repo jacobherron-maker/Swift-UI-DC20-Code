@@ -674,7 +674,7 @@ function CombatTab({ character, training, modifiers, equipmentCatalog, knownSpel
       : effects.physicalDefense + Number(shellRetreatActive) * 5;
   const areaDefense = wildForm.active ? wildForm.areaDefense
     : sorcererTransformation ? sorcererTransformation.areaDefense
-      : character.arcaneDefense + Number(shellRetreatActive) * 5;
+      : effects.areaDefense + Number(shellRetreatActive) * 5;
   const speed = wildForm.active ? wildForm.speed : shellRetreatActive ? 0 : effects.speed;
   const martialCheck = character.primeModifier + character.combatMastery;
   const spellCheck = martialCheck + (wildForm.active ? 0 : modifiers.spellCheckBonus);

@@ -124,6 +124,28 @@ export const SORCERER_META_FREE_USED = 'sorcerer.metaMagic.freeUsed';
 export const SORCERER_META_ACTIVE = 'sorcerer.metaMagic.active';
 export const SORCERER_CELESTIAL_LIGHT_ACTIVE = 'sorcerer.celestialLight.active';
 export const SORCERER_CELESTIAL_OVERLOAD_USED = 'sorcerer.celestialOverload.used';
+export const WIZARD_SIGNATURE_ACTIVE = 'wizard.signature.activeSchool';
+export const WIZARD_SIGNATURE_USED_PREFIX = 'wizard.signature.used.';
+export const WIZARD_MANA_LIMIT_BREAK_READY = 'wizard.manaLimitBreak.ready';
+export const WIZARD_MANA_LIMIT_BREAK_USED = 'wizard.manaLimitBreak.used';
+export const WIZARD_PREPARED_DUEL_ACTIVE = 'wizard.preparedSpell.duelActive';
+export const WIZARD_PREPARED_ACTIVE = 'wizard.preparedSpell.active';
+export const WIZARD_SIGIL_ACTIVE = 'wizard.sigil.active';
+export const WIZARD_SIGIL_INSIDE = 'wizard.sigil.inside';
+export const WIZARD_SIGIL_PORTAL = 'wizard.sigil.portal';
+export const WIZARD_SIGIL_BOUND_SELF = 'wizard.sigil.boundSelf';
+export const WIZARD_SIGIL_TAGS = 'wizard.sigil.tags';
+export const WIZARD_SIGIL_DIAMETER = 'wizard.sigil.diameter';
+export const WIZARD_HEX_PENDING = 'wizard.hex.pending';
+export const WIZARD_HEX_ACTIVE = 'wizard.hex.active';
+
+export function wizardSchoolSpellSelectionKey(school: string): string {
+  return `wizard.schoolSpells.${school}`;
+}
+
+export function wizardSchoolSpellGrantLimit(level: number): number {
+  return level >= 5 ? 3 : 2;
+}
 
 export function druidBeastTraitSelection(name: string, cost: number): string {
   return `${DRUID_BEAST_TRAIT_PREFIX} (${cost}) — ${name}`;
@@ -250,6 +272,7 @@ export function druidWildFormProfile(character: Pick<Character, 'class' | 'level
 
 export interface CharacterSheetEffects {
   physicalDefense: number;
+  areaDefense: number;
   speed: number;
   saveAdvantage: Partial<Record<DC20Attribute, number>>;
   martialMeleeDamageBonus: number;
@@ -435,6 +458,12 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
   const sorcererOverloaded = character.class === 'Sorcerer'
     && Boolean(character.build?.sheetFeatureStates?.[SORCERER_OVERLOAD_ACTIVE]);
   const sorcererDraconicDamage = sorcererDraconicDamageType(character);
+  const wizardCrownedSigil = character.class === 'Wizard'
+    && (character.build?.selectedTalents ?? []).includes('Crowned Sigil')
+    && Boolean(character.build?.sheetFeatureStates?.[WIZARD_SIGIL_ACTIVE])
+    && Boolean(character.build?.sheetFeatureStates?.[WIZARD_SIGIL_BOUND_SELF]);
+  const wizardOverlyPrepared = character.class === 'Wizard'
+    && (character.build?.selectedTalents ?? []).includes('Overly Prepared Spellcaster');
   const saveAdvantage: Partial<Record<DC20Attribute, number>> = {};
   if (isRaging || monkStance === 'Turtle Stance') saveAdvantage.Might = 1;
   if (monkStance === 'Gazelle Stance') saveAdvantage.Agility = 1;
@@ -445,6 +474,7 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
     + sorcererWildMagicProfile(character).speedAdjustment;
   return {
     physicalDefense: character.physicalDefense - (isRaging ? 5 : 0),
+    areaDefense: character.arcaneDefense + Number(wizardCrownedSigil) * 2,
     speed: monkStance === 'Turtle Stance' ? Math.min(character.speed, 1) : activeSpeed,
     saveAdvantage,
     martialMeleeDamageBonus: Number(isRaging) + Number(monkCobraDamage) + Number(monkMongooseDamage),
@@ -461,6 +491,7 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
       ...(sorcererOrigins.has('Resilient Magic') ? ['Dazed Condition'] : []),
       ...(sorcererOverloaded && character.subclass === 'Draconic'
         ? ['Physical (1)', ...(sorcererDraconicDamage ? [`${sorcererDraconicDamage} (1)`] : [])] : []),
+      ...(wizardOverlyPrepared ? ['Dazed Condition'] : []),
     ],
   };
 }
@@ -637,6 +668,13 @@ export function classChoiceSelectionLimit(
     const subclassGrant = Number(character.level >= 3 && ['Angelic', 'Draconic'].includes(character.subclass ?? ''));
     return Math.min(group.options.length, 2 + expanded * 2 + Number(character.level >= 5) + subclassGrant);
   }
+  if (group.id === 'wizard.school' && character.class === 'Wizard') {
+    const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Spell School').length;
+    return Math.min(group.options.length, 1 + expanded);
+  }
+  if (group.id === 'wizard.preparedSpells' && character.class === 'Wizard') {
+    return character.level >= 5 ? 2 : 1;
+  }
   if (group.id !== 'spellblade.disciplines' || character.class !== 'Spellblade') return group.limit;
   const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Disciplines').length;
   const paladinReserve = character.subclass === 'Paladin' ? 1 : 0;
@@ -702,6 +740,14 @@ export function grantedClassSpellNames(character: Pick<Character, 'class' | 'lev
   }
   if (character.class === 'Sorcerer') return ['Sorcery'];
   if (character.class === 'Druid') return ['Druidcraft'];
+  if (character.class === 'Wizard') {
+    const schools = choices['wizard.school'] ?? [];
+    const schoolSpellLimit = wizardSchoolSpellGrantLimit(character.level);
+    return Array.from(new Set([
+      ...schools.flatMap((school) => (choices[wizardSchoolSpellSelectionKey(school)] ?? []).slice(0, schoolSpellLimit)),
+      ...(character.level >= 3 && character.subclass === 'Witch' ? (choices['wizard.witchCurseSpell'] ?? []).slice(0, 1) : []),
+    ].filter(Boolean)));
+  }
   if (character.class !== 'Summoner') return [];
   const groups = [
     'summoner.bondedSummon',
@@ -915,6 +961,26 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
       }
     }
   }
+  if (character.class === 'Wizard') {
+    sheetFeatureStates[WIZARD_SIGIL_ACTIVE] = false;
+    sheetFeatureStates[WIZARD_SIGIL_INSIDE] = false;
+    sheetFeatureStates[WIZARD_SIGIL_PORTAL] = false;
+    sheetFeatureStates[WIZARD_SIGIL_BOUND_SELF] = false;
+    sheetFeatureStates[WIZARD_MANA_LIMIT_BREAK_READY] = false;
+    sheetFeatureStates[WIZARD_PREPARED_DUEL_ACTIVE] = false;
+    sheetFeatureStates[WIZARD_HEX_PENDING] = false;
+    delete sheetFeatureSelections[WIZARD_SIGNATURE_ACTIVE];
+    delete sheetFeatureSelections[WIZARD_SIGIL_TAGS];
+    delete sheetFeatureSelections[WIZARD_HEX_ACTIVE];
+    delete sheetFeatureCounters[WIZARD_SIGIL_DIAMETER];
+    if (type === 'Long') {
+      sheetFeatureStates[WIZARD_MANA_LIMIT_BREAK_USED] = false;
+      for (const key of Object.keys(sheetFeatureStates)) {
+        if (key.startsWith(WIZARD_SIGNATURE_USED_PREFIX)) delete sheetFeatureStates[key];
+      }
+      delete sheetFeatureSelections[WIZARD_PREPARED_ACTIVE];
+    }
+  }
 
   if (type === 'Long') {
     restPoints = character.maxHealthPoints;
@@ -1000,6 +1066,12 @@ export function spellIsAvailableToClass(
       || (subclass === 'Eldritch' && tags.includes('psychic'));
   }
   if (className === 'Cleric' && featureSpellTags.some((tag) => tags.includes(tag.toLowerCase()))) return true;
+  if (className === 'Wizard') {
+    const sources = (spell.source ?? '').split(', ');
+    return sources.includes(fixedSpellSource ?? 'Arcane')
+      || (subclass === 'Witch' && tags.includes('curse'))
+      || (subclass === 'Portal Mage' && tags.includes('teleportation'));
+  }
   const source = fixedSpellSource ?? selectedSpellSource;
   return source ? (spell.source ?? '').split(', ').includes(source) : true;
 }
