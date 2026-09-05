@@ -43,7 +43,17 @@ import {
   MONK_MONGOOSE_FLANKED,
   MONK_STAMINA_REGEN_USED,
   MONK_STANCE_ACTIVE,
+  SORCERER_CELESTIAL_LIGHT_ACTIVE,
+  SORCERER_CELESTIAL_OVERLOAD_USED,
+  SORCERER_META_ACTIVE,
+  SORCERER_META_FREE_USED,
+  SORCERER_OVERLOAD_ACTIVE,
+  SORCERER_OVERLOAD_EXHAUSTION,
+  SORCERER_WILD_FORM_HP,
+  SORCERER_WILD_NEXT_ADVANTAGE,
+  SORCERER_WILD_OUTCOME,
   ancestryGrantedSpellNames,
+  applySorcererWildMagic,
   applyMonkStaminaSpendRecovery,
   applyDerivedCharacter,
   barbarianStaminaRegenAmount,
@@ -76,9 +86,12 @@ import {
   selectedAncestryTraits,
   skillMasteryCap,
   spellbladeDisciplineNames,
+  sorcererDraconicDamageType,
+  sorcererWildMagicOutcome,
+  sorcererWildMagicProfile,
 } from '../../utils/characterRules';
 import { enforceEquipmentHandCapacity, isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped as toggleInventoryEquippedBase } from '../../utils/equipmentRules';
-import { generateUUID } from '../../utils/gameUtils';
+import { generateUUID, rollDice } from '../../utils/gameUtils';
 
 interface CharacterSheetProps {
   character: Character;
@@ -1739,6 +1752,119 @@ function MonkControls({ character, onChange, onRoll }: {
   </section>;
 }
 
+function SorcererControls({ character, onChange, onRoll }: {
+  character: Character;
+  onChange: (values: Partial<Character>) => void;
+  onRoll: (label: string, modifier: number, extraAdjustment?: number) => unknown;
+}) {
+  const [notice, setNotice] = useState('');
+  const [saveAttribute, setSaveAttribute] = useState<DC20Attribute>('Charisma');
+  const [wildMode, setWildMode] = useState<-1 | 0 | 1>(0);
+  const [pendingMeta, setPendingMeta] = useState<string[]>([]);
+  const [useFreeMeta, setUseFreeMeta] = useState(false);
+  const [fontReplacements, setFontReplacements] = useState(0);
+  const [matchesDraconicOrigin, setMatchesDraconicOrigin] = useState(false);
+  const build = character.build;
+  if (!build) return null;
+  const states = build.sheetFeatureStates;
+  const counters = build.sheetFeatureCounters;
+  const selections = build.sheetFeatureSelections;
+  const classChoices = build.classFeatureSelections;
+  const origins = classChoices['sorcerer.origin'] ?? [];
+  const focusProperties = classChoices['sorcerer.focus'] ?? [];
+  const knownMeta = character.level >= 2 ? classChoices['sorcerer.metaMagic'] ?? [] : [];
+  const talents = build.selectedTalents;
+  const overloaded = Boolean(states[SORCERER_OVERLOAD_ACTIVE]);
+  const wildMagic = sorcererWildMagicProfile(character);
+  const activeMeta = (selections[SORCERER_META_ACTIVE] ?? '').split('|').filter(Boolean);
+  const maxMetaPerSpell = character.level >= 5 ? 2 : 1;
+  const subclassFreeMeta = character.subclass === 'Angelic' ? 'Careful Spell'
+    : character.subclass === 'Draconic' && matchesDraconicOrigin ? 'Transmuted Spell' : '';
+  const paidMetaCount = pendingMeta.filter((name) => name !== subclassFreeMeta).length;
+  const restPoints = Math.min(character.maxHealthPoints, Math.max(0, build.restPoints ?? character.maxHealthPoints));
+  const fontCount = talents.filter((name) => name === 'Font of Magic').length;
+  const canUseFree = !states[SORCERER_META_FREE_USED] && paidMetaCount > 0;
+  const freeMetaCount = useFreeMeta && canUseFree ? 1 : 0;
+  const maximumFontReplacements = fontCount > 0 ? Math.max(0, paidMetaCount - freeMetaCount) : 0;
+  const fontReplacementCount = Math.min(fontReplacements, maximumFontReplacements);
+  const manaCost = Math.max(0, paidMetaCount - freeMetaCount - fontReplacementCount);
+  const restCost = fontReplacementCount * 2;
+  const setState = (key: string, value: boolean) => onChange({ build: { ...build, sheetFeatureStates: { ...states, [key]: value } } });
+  const updateBuild = (nextStates: Record<string, boolean>, nextCounters = counters, nextSelections = selections, values: Partial<Character> = {}) => onChange({
+    ...values,
+    build: { ...build, sheetFeatureStates: nextStates, sheetFeatureCounters: nextCounters, sheetFeatureSelections: nextSelections },
+  });
+  const rollSave = (label: string) => onRoll(label, character.attributes[saveAttribute].modifier + character.combatMastery);
+  const activateOverload = () => {
+    if (overloaded || character.currentAP < 1 || character.manaPoints < 1) return;
+    if (character.level < 5) rollSave(`Overload Magic — ${saveAttribute} Save vs DC ${10 + character.primeModifier + character.combatMastery}`);
+    updateBuild({ ...states, [SORCERER_OVERLOAD_ACTIVE]: true }, counters, selections, { currentAP: character.currentAP - 1, manaPoints: character.manaPoints - 1 });
+    setNotice(`Overload Magic is active${character.level < 5 ? '; resolve the activation Save and record Exhaustion on a failure' : '; Expert Sorcerer skips the activation Save'}.`);
+  };
+  const recordOverloadFailure = () => {
+    const exhaustion = (build.sheetConditionLevels.Exhaustion ?? 0) + 1;
+    onChange({ build: { ...build, sheetConditionLevels: { ...build.sheetConditionLevels, Exhaustion: exhaustion }, sheetFeatureCounters: { ...counters, [SORCERER_OVERLOAD_EXHAUSTION]: (counters[SORCERER_OVERLOAD_EXHAUSTION] ?? 0) + 1 } } });
+    setNotice('Overload Save failed: Exhaustion increased by 1. This tracked Overload Exhaustion is removed on a Short Rest.');
+  };
+  const rollWildMagic = () => {
+    const dice = Array.from({ length: wildMode === 0 ? 1 : 2 }, () => Math.floor(Math.random() * 20) + 1);
+    const outcome = wildMode > 0 ? Math.max(...dice) : wildMode < 0 ? Math.min(...dice) : dice[0];
+    const next = applySorcererWildMagic(character, outcome);
+    onChange(next);
+    setNotice(`Wild Magic ${dice.join(', ')} → ${outcome}: ${sorcererWildMagicOutcome(outcome)} Next Spell Attack or Spell Check has ADV.`);
+  };
+  const clearWildMagic = () => updateBuild(
+    { ...states, [SORCERER_WILD_NEXT_ADVANTAGE]: false },
+    Object.fromEntries(Object.entries(counters).filter(([key]) => ![SORCERER_WILD_OUTCOME, SORCERER_WILD_FORM_HP].includes(key))),
+  );
+  const toggleMeta = (name: string) => setPendingMeta((current) => current.includes(name)
+    ? current.filter((entry) => entry !== name)
+    : current.length < maxMetaPerSpell ? [...current, name] : current);
+  const prepareMeta = () => {
+    if (pendingMeta.length < 1 || character.manaPoints < manaCost || restPoints < restCost) return;
+    onChange({
+      manaPoints: character.manaPoints - manaCost,
+      build: {
+        ...build,
+        restPoints: restPoints - restCost,
+        sheetFeatureStates: { ...states, ...(freeMetaCount ? { [SORCERER_META_FREE_USED]: true } : {}) },
+        sheetFeatureSelections: { ...selections, [SORCERER_META_ACTIVE]: pendingMeta.join('|') },
+      },
+    });
+    setNotice(`${pendingMeta.join(' + ')} prepared for the next Spell. Meta Magic MP does not count against the Mana Spend Limit.`);
+    setPendingMeta([]);
+    setUseFreeMeta(false);
+    setFontReplacements(0);
+    setMatchesDraconicOrigin(false);
+  };
+  const rollInitiative = () => {
+    onRoll('Initiative Check', character.attributes.Agility.modifier + character.combatMastery);
+    const regained = fontCount * 2;
+    onChange({ build: { ...build, restPoints: Math.min(character.maxHealthPoints, restPoints + regained), sheetFeatureStates: { ...states, [SORCERER_META_FREE_USED]: false, [SORCERER_CELESTIAL_OVERLOAD_USED]: false } } });
+    setNotice(`Initiative rolled: free Meta Magic use restored${regained ? ` and Font of Magic restored ${regained} Rest Points` : ''}.`);
+  };
+  const activateCelestialOverload = (mode: 'Heal' | 'Sear') => {
+    if (character.subclass !== 'Angelic' || !overloaded || states[SORCERER_CELESTIAL_OVERLOAD_USED] || character.currentAP < 1) return;
+    if (mode === 'Sear') onRoll('Celestial Overload — Spell Attack vs AD • 1 Radiant damage', character.primeModifier + character.combatMastery + 5 + Number(focusProperties.includes('Vicious')));
+    updateBuild({ ...states, [SORCERER_CELESTIAL_OVERLOAD_USED]: true }, counters, selections, {
+      currentAP: character.currentAP - 1,
+      ...(mode === 'Heal' ? { healthPoints: Math.min(character.maxHealthPoints, character.healthPoints + 1) } : {}),
+    });
+    setNotice(mode === 'Heal' ? 'Celestial Overload restored 1 HP to this character; apply the Aura separately to other chosen creatures.' : 'Celestial Overload made its Spell Attack; repeat the displayed result for each chosen seared target.');
+  };
+
+  return <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-950/45 via-violet-950/30 to-slate-950/75 p-4 sm:p-5">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-300">Live Class Features</p><h2 className="text-xl font-black text-white">Sorcerer Controls</h2></div><button type="button" onClick={rollInitiative} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white">Roll Initiative / New Combat</button></div>
+    {notice && <p role="status" className="mb-4 rounded-lg bg-fuchsia-500/10 px-3 py-2 text-xs font-bold leading-5 text-fuchsia-100">{notice}</p>}
+    <div className="grid gap-4 xl:grid-cols-2">
+      <div className="rounded-xl border border-fuchsia-400/20 bg-slate-950/55 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black text-fuchsia-200">Overload Magic</h3><p className="mt-1 text-xs text-slate-500">1 AP + 1 MP • 1 minute • +5 Spell Attacks and Spell Checks</p></div>{overloaded && <span className="rounded-full bg-fuchsia-500/15 px-2 py-1 text-[10px] font-black uppercase text-fuchsia-200">Overloaded</span>}</div><label className="mt-3 block text-xs font-bold text-slate-400">Attribute Save<select value={saveAttribute} onChange={(event) => setSaveAttribute(event.target.value as DC20Attribute)} className={`${fieldClass} mt-1`}>{ATTRIBUTE_NAMES.map((attribute) => <option key={attribute}>{attribute}</option>)}</select></label><div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" disabled={overloaded || character.currentAP < 1 || character.manaPoints < 1} onClick={activateOverload} className="rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Activate • 1 AP + 1 MP</button><button type="button" disabled={!overloaded} onClick={() => rollSave(`Overload Magic — Start of Turn ${saveAttribute} Save vs DC ${10 + character.primeModifier + character.combatMastery}`)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Start Turn Save</button><button type="button" disabled={!overloaded} onClick={recordOverloadFailure} className="rounded-lg bg-rose-800 px-3 py-2 text-xs font-bold text-white disabled:opacity-35">Record Save Failure</button><button type="button" disabled={!overloaded} onClick={() => setState(SORCERER_OVERLOAD_ACTIVE, false)} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300 disabled:opacity-35">End Overload • Free</button></div>{character.subclass === 'Draconic' && overloaded && <p className="mt-3 rounded-lg bg-orange-500/10 p-2 text-xs text-orange-100">Draconic Overload: Physical Resistance (1){sorcererDraconicDamageType(character) ? ` and ${sorcererDraconicDamageType(character)} Resistance (1)` : ''}.</p>}</div>
+      <div className="rounded-xl border border-violet-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-violet-200">Meta Magic</h3><p className="mt-1 text-xs leading-5 text-slate-500">Choose up to {maxMetaPerSpell}. Each normally costs 1 MP; subclass reductions, the free use, and Font of Magic can be combined.</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{knownMeta.map((name) => <label key={name} className={`rounded-lg border p-2 text-xs ${pendingMeta.includes(name) ? 'border-violet-400/50 bg-violet-500/10 text-violet-100' : 'border-white/10 text-slate-300'}`}><input type="checkbox" className="mr-2" checked={pendingMeta.includes(name)} disabled={!pendingMeta.includes(name) && pendingMeta.length >= maxMetaPerSpell} onChange={() => toggleMeta(name)} /><strong>{name}</strong>{name === subclassFreeMeta && <span className="ml-1 text-emerald-300">• 0 MP</span>}</label>)}</div>{character.subclass === 'Draconic' && pendingMeta.includes('Transmuted Spell') && <label className="mt-3 flex items-center gap-2 rounded-lg bg-orange-500/10 p-2 text-xs text-orange-100"><input type="checkbox" checked={matchesDraconicOrigin} onChange={(event) => setMatchesDraconicOrigin(event.target.checked)} />Change the Spell to {sorcererDraconicDamageType(character) ?? 'the chosen Draconic Origin'} damage • Transmuted Spell costs 0 MP</label>}{knownMeta.length === 0 && <p className="mt-3 text-xs text-amber-200">Choose Meta Magic options in the builder at level 2.</p>}<label className="mt-3 flex items-center gap-2 rounded-lg border border-white/10 bg-slate-900/60 p-2 text-xs text-slate-300"><input type="checkbox" checked={useFreeMeta && canUseFree} disabled={!canUseFree} onChange={(event) => setUseFreeMeta(event.target.checked)} />Use the once-per-Long-Rest free Meta Magic{states[SORCERER_META_FREE_USED] ? ' • already used' : ''}</label>{fontCount > 0 && <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-slate-900/60 p-2 text-xs text-slate-300"><span><strong>Font of Magic:</strong> replace MP with 2 RP each</span><span className="flex items-center gap-2"><button type="button" disabled={fontReplacementCount <= 0} onClick={() => setFontReplacements(Math.max(0, fontReplacementCount - 1))} className="h-8 w-8 rounded bg-slate-800 disabled:opacity-35">−</button><strong className="min-w-5 text-center text-violet-200">{fontReplacementCount}</strong><button type="button" disabled={fontReplacementCount >= maximumFontReplacements} onClick={() => setFontReplacements(Math.min(maximumFontReplacements, fontReplacementCount + 1))} className="h-8 w-8 rounded bg-violet-700 disabled:opacity-35">+</button></span></div>}<button type="button" disabled={pendingMeta.length < 1 || character.manaPoints < manaCost || restPoints < restCost} onClick={prepareMeta} className="mt-3 w-full rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Prepare for Next Spell • {manaCost || restCost ? [manaCost ? `${manaCost} MP` : '', restCost ? `${restCost} RP` : ''].filter(Boolean).join(' + ') : 'Free'}</button>{activeMeta.length > 0 && <p className="mt-3 rounded-lg bg-emerald-500/10 p-2 text-xs text-emerald-100"><strong>Prepared:</strong> {activeMeta.join(' + ')}</p>}</div>
+      {origins.includes('Unstable Magic') && <div className="rounded-xl border border-cyan-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-cyan-200">Unstable Magic</h3><p className="mt-1 text-xs leading-5 text-slate-500">A Critical Success Spell roll uses ADV; a Critical Failure uses DisADV. The next Spell roll gains ADV.</p><div className="mt-3 grid grid-cols-3 gap-2">{([[-1, 'DisADV'], [0, 'Normal'], [1, 'ADV']] as const).map(([mode, label]) => <button type="button" key={label} onClick={() => setWildMode(mode)} className={`rounded-lg px-2 py-2 text-xs font-black ${wildMode === mode ? 'bg-cyan-700 text-white' : 'bg-slate-800 text-slate-400'}`}>{label}</button>)}</div><button type="button" onClick={rollWildMagic} className="mt-3 w-full rounded-lg bg-cyan-700 px-3 py-2 text-xs font-black text-white">Roll Wild Magic</button>{wildMagic.outcome > 0 && <div className="mt-3 rounded-lg bg-cyan-500/10 p-3 text-xs leading-5 text-cyan-100"><strong>{wildMagic.outcome}:</strong> {wildMagic.description}{wildMagic.transformation && <div className="mt-3 rounded-lg border border-cyan-300/20 bg-slate-950/45 p-3"><div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><span><strong>{wildMagic.transformation.name}</strong><small className="block text-slate-400">{wildMagic.transformation.size}</small></span><span><strong>{wildMagic.transformation.currentHP}/{wildMagic.transformation.maximumHP}</strong><small className="block text-slate-400">Form HP</small></span><span><strong>{wildMagic.transformation.physicalDefense} / {wildMagic.transformation.areaDefense}</strong><small className="block text-slate-400">PD / AD</small></span><span><strong>{wildMagic.transformation.flySpeed ? `${wildMagic.transformation.flySpeed} Fly` : '—'}</strong><small className="block text-slate-400">Special Speed</small></span></div><div className="mt-3 grid grid-cols-3 gap-2"><button type="button" disabled={wildMagic.transformation.currentHP <= 0} onClick={() => updateBuild(states, { ...counters, [SORCERER_WILD_FORM_HP]: Math.max(0, wildMagic.transformation!.currentHP - 1) })} className="rounded-lg bg-slate-800 px-2 py-2 font-black disabled:opacity-35">− HP</button><button type="button" onClick={() => onRoll(`${wildMagic.transformation!.name} Attack • ${wildMagic.transformation!.damage} damage`, wildMagic.transformation!.attackCheck)} className="rounded-lg bg-cyan-700 px-2 py-2 font-black text-white">Attack +{wildMagic.transformation.attackCheck}</button><button type="button" disabled={wildMagic.transformation.currentHP >= wildMagic.transformation.maximumHP} onClick={() => updateBuild(states, { ...counters, [SORCERER_WILD_FORM_HP]: Math.min(wildMagic.transformation!.maximumHP, wildMagic.transformation!.currentHP + 1) })} className="rounded-lg bg-slate-800 px-2 py-2 font-black disabled:opacity-35">+ HP</button></div></div>}<button type="button" onClick={clearWildMagic} className="mt-2 block text-[10px] font-black uppercase text-slate-400">Clear after the effect ends</button></div>}</div>}
+      {character.subclass === 'Angelic' && <div className="rounded-xl border border-amber-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-amber-200">Celestial Spark</h3><button type="button" onClick={() => setState(SORCERER_CELESTIAL_LIGHT_ACTIVE, !states[SORCERER_CELESTIAL_LIGHT_ACTIVE])} className="mt-3 w-full rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white">{states[SORCERER_CELESTIAL_LIGHT_ACTIVE] ? 'End Bright Light' : 'Emit Bright Light • Minor Action'}</button><p className="mt-2 text-xs text-slate-500">Bright Light: 5 Space Radius.</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" disabled={!overloaded || Boolean(states[SORCERER_CELESTIAL_OVERLOAD_USED]) || character.currentAP < 1} onClick={() => activateCelestialOverload('Heal')} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Aura • Heal Self 1 HP • 1 AP</button><button type="button" disabled={!overloaded || Boolean(states[SORCERER_CELESTIAL_OVERLOAD_USED]) || character.currentAP < 1} onClick={() => activateCelestialOverload('Sear')} className="rounded-lg bg-orange-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Aura • Sear vs AD • 1 AP</button></div><p className="mt-2 text-[10px] leading-4 text-slate-500">Once per Combat while Overloaded. Choose healed or seared separately for each creature in the 5 Space Aura.</p></div>}
+    </div>
+  </section>;
+}
+
 const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit, onCharacterChange }) => {
   const characterRef = useRef(character);
   useEffect(() => { characterRef.current = character; }, [character]);
@@ -1760,6 +1886,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const featureCounters = build?.sheetFeatureCounters ?? {};
   const notes = build?.characterNotes ?? [];
   const sheetEffects = characterSheetEffects(character);
+  const sorcererWildEffects = sorcererWildMagicProfile(character);
   const isBarbarian = character.class === 'Barbarian';
   const isRogue = character.class === 'Rogue';
   const isSummoner = character.class === 'Summoner';
@@ -1772,7 +1899,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const isDruid = character.class === 'Druid';
   const isHunter = character.class === 'Hunter';
   const isMonk = character.class === 'Monk';
-  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter || isMonk;
+  const isSorcerer = character.class === 'Sorcerer';
+  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter || isMonk || isSorcerer;
   const isRaging = isBarbarian && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
   const hasUnfathomableStrength = (build?.selectedTalents ?? []).includes('Unfathomable Strength');
   const battlecryShout = featureSelections[BARBARIAN_BATTLECRY_SELECTION] || 'Fortitude Shout';
@@ -1847,6 +1975,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   };
 
   const roll = (label: string, modifier: number, extraAdjustment = 0): RollOutcome => {
+    const isSpellRoll = label.endsWith(' Spell Check') || label.endsWith(' Spell Attack');
+    const isCheckOrSave = label.includes('Check') || label.endsWith(' Save');
     const pactSpellName = label.endsWith(' Spell Check') ? label.slice(0, -' Spell Check'.length)
       : label.endsWith(' Spell Attack') ? label.slice(0, -' Spell Attack'.length) : '';
     const pactSpells = build?.classFeatureSelections['warlock.pactSpells'] ?? [];
@@ -1884,12 +2014,17 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       + Number(hunterConcoction === 'Deathweed' && label.includes('Death Save'));
     const hunterStrikeApplies = isHunter && Boolean(featureStates[HUNTER_STRIKE_READY]) && label.includes('Martial Attack');
     const monkBearApplies = isMonk && Boolean(featureStates[MONK_BEAR_ADVANTAGE]) && label.includes('Melee Martial Attack');
+    const sorcererNextSpellAdvantage = Number(isSorcerer && isSpellRoll && featureStates[SORCERER_WILD_NEXT_ADVANTAGE]);
+    const sorcererWildAdjustment = isSorcerer && isCheckOrSave ? sorcererWildEffects.allCheckSaveAdjustment : 0;
     const featureAdjustment = warlockAdvantage + Number(clericChaosApplies) + Number(championReadinessApplies) + Number(fastReflexesApplies)
-      + Number(hunterMarkAttackApplies) + hunterTerrainAdvantage + Number(hunterBigGameApplies) + hunterConcoctionAdvantage;
+      + Number(hunterMarkAttackApplies) + hunterTerrainAdvantage + Number(hunterBigGameApplies) + hunterConcoctionAdvantage
+      + sorcererNextSpellAdvantage + sorcererWildAdjustment;
     const totalAdjustment = Math.max(-5, Math.min(5, rollAdjustment + featureAdjustment + Number(monkBearApplies) + extraAdjustment));
     const dice = Array.from({ length: 1 + Math.abs(totalAdjustment) }, () => Math.floor(Math.random() * 20) + 1);
     const chosen = totalAdjustment > 0 ? Math.max(...dice) : totalAdjustment < 0 ? Math.min(...dice) : dice[0];
-    const effectiveModifier = modifier + (championAdrenalineApplies ? 5 : 0);
+    const sorcererWildDie = isSorcerer && isCheckOrSave && sorcererWildEffects.allCheckSaveDie
+      ? rollDice(4)[0] * Math.sign(sorcererWildEffects.allCheckSaveDie) : 0;
+    const effectiveModifier = modifier + (championAdrenalineApplies ? 5 : 0) + sorcererWildDie;
     const inspirationRoll = inspirationDie
       ? Array.from({ length: 1 }, () => Math.floor(Math.random() * inspirationDie) + 1)[0]
       : 0;
@@ -1901,8 +2036,21 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       hunterMarked && featureStates[HUNTER_BIG_GAME_ACTIVE] && label.includes('Martial Attack') && 'Big Game Hunter: +1 damage',
       hunterMarked && hunterConcoction === 'Elemental Infusion' && label.includes('Attack') && `Elemental Infusion: +1 ${featureSelections[HUNTER_CONCOCTION_ELEMENT] ?? 'Elemental'} damage`,
     ].filter(Boolean);
+    const preparedMeta = isSorcerer && isSpellRoll ? (featureSelections[SORCERER_META_ACTIVE] ?? '').split('|').filter(Boolean) : [];
+    const unstableMagic = isSorcerer && isSpellRoll
+      && (build?.classFeatureSelections['sorcerer.origin'] ?? []).includes('Unstable Magic');
+    const wildSurgeDice = unstableMagic && (chosen === 1 || chosen === 20)
+      ? Array.from({ length: 2 }, () => Math.floor(Math.random() * 20) + 1) : [];
+    const wildSurgeOutcome = wildSurgeDice.length > 0
+      ? (chosen === 20 ? Math.max(...wildSurgeDice) : Math.min(...wildSurgeDice)) : 0;
+    const sorcererRollNotes = [
+      preparedMeta.length > 0 && `Meta Magic: ${preparedMeta.join(' + ')}`,
+      sorcererWildDie !== 0 && `Wild Magic d4: ${sorcererWildDie > 0 ? '+' : ''}${sorcererWildDie}`,
+      wildSurgeOutcome > 0 && `Wild Magic ${wildSurgeDice.join(', ')} → ${wildSurgeOutcome}: ${sorcererWildMagicOutcome(wildSurgeOutcome)}`,
+    ].filter(Boolean);
+    const allRollNotes = [...hunterRollNotes, ...sorcererRollNotes];
     const result = {
-      label: hunterRollNotes.length > 0 ? `${label} • ${hunterRollNotes.join(' • ')}` : label,
+      label: allRollNotes.length > 0 ? `${label} • ${allRollNotes.join(' • ')}` : label,
       dice,
       chosen,
       modifier: effectiveModifier,
@@ -1923,8 +2071,17 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     if (hunterMarkAttackApplies) nextFeatureStates[HUNTER_MARK_FIRST_ATTACK_USED] = true;
     if (hunterStrikeApplies) nextFeatureStates[HUNTER_STRIKE_READY] = false;
     if (monkBearApplies) nextFeatureStates[MONK_BEAR_ADVANTAGE] = false;
-    if (warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies || hunterMarkAttackApplies || hunterStrikeApplies || monkBearApplies) {
-      updateBuild({ sheetFeatureStates: nextFeatureStates });
+    if (sorcererNextSpellAdvantage) nextFeatureStates[SORCERER_WILD_NEXT_ADVANTAGE] = false;
+    const nextFeatureSelections = { ...(characterRef.current.build?.sheetFeatureSelections ?? featureSelections) };
+    if (preparedMeta.length > 0) delete nextFeatureSelections[SORCERER_META_ACTIVE];
+    const sheetStateChanged = warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies || hunterMarkAttackApplies || hunterStrikeApplies || monkBearApplies || sorcererNextSpellAdvantage || preparedMeta.length > 0;
+    if (wildSurgeOutcome > 0 && characterRef.current.build) {
+      update(applySorcererWildMagic({
+        ...characterRef.current,
+        build: { ...characterRef.current.build, sheetFeatureStates: nextFeatureStates, sheetFeatureSelections: nextFeatureSelections },
+      }, wildSurgeOutcome));
+    } else if (sheetStateChanged) {
+      updateBuild({ sheetFeatureStates: nextFeatureStates, sheetFeatureSelections: nextFeatureSelections });
     }
     return result;
   };
@@ -2041,7 +2198,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       <div className="mx-auto max-w-[1500px]">
         <header className="mb-5 rounded-2xl border border-violet-400/20 bg-slate-950/65 p-4 shadow-2xl shadow-black/20 sm:p-5">
           <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-4 xl:grid-cols-[8rem_minmax(0,1fr)_auto]"><CharacterAvatarEditor image={character.avatarDataURL} name={character.name} onChange={(avatarDataURL) => update({ avatarDataURL })} className="w-20 shrink-0 sm:w-32" compact /><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300 sm:text-xs sm:tracking-[0.25em]">Interactive Character Sheet</p><h1 title={character.name} className="mt-1 truncate whitespace-nowrap text-2xl font-black text-white sm:text-4xl">{character.name}</h1><p className="mt-2 text-sm text-slate-400 sm:text-base">Level {character.level} {character.ancestry} {character.class}{character.subclass ? ` • ${character.subclass}` : ''}</p></div><div className="col-span-2 flex flex-wrap gap-2 sm:justify-end xl:col-span-1">{onEdit && <button type="button" onClick={onEdit} className="min-h-11 rounded-xl bg-violet-600 px-4 py-2 font-bold text-white hover:bg-violet-500">Return to Builder</button>}{onClose && <button type="button" onClick={onClose} className="min-h-11 rounded-xl bg-slate-800 px-4 py-2 font-bold text-slate-200 hover:bg-slate-700">Characters</button>}</div></div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><ResourceControl label="Health" value={character.healthPoints} maximum={character.maxHealthPoints} tone="text-red-300" onChange={(healthPoints) => update({ healthPoints })} /><ResourceControl label="Action Points" value={character.currentAP} maximum={character.maxAP} tone="text-violet-300" onChange={(currentAP) => update({ currentAP })} /><ResourceControl label="Stamina" value={character.stamina} maximum={character.maxStamina} tone="text-sky-300" onChange={(stamina) => update({ stamina })} /><ResourceControl label="Mana" value={character.manaPoints} maximum={character.maxManaPoints} tone="text-fuchsia-300" onChange={(manaPoints) => update({ manaPoints })} /><div className="rounded-xl border border-white/10 bg-slate-950/55 p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Temporary HP</div><div className="mt-2 flex items-center justify-between"><button type="button" onClick={() => updateBuild({ temporaryHP: Math.max(0, (build?.temporaryHP ?? 0) - 1) })} className="h-8 w-8 rounded-lg bg-slate-800">−</button><span className="text-xl font-black text-emerald-300">{build?.temporaryHP ?? 0}</span><button type="button" onClick={() => updateBuild({ temporaryHP: (build?.temporaryHP ?? 0) + 1 })} className="h-8 w-8 rounded-lg bg-slate-800">+</button></div></div></div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><ResourceControl label="Health" value={character.healthPoints} maximum={character.maxHealthPoints} tone="text-red-300" onChange={(healthPoints) => update({ healthPoints })} /><ResourceControl label="Action Points" value={character.currentAP} maximum={character.maxAP + sorcererWildEffects.actionPointMaximumBonus} tone="text-violet-300" onChange={(currentAP) => update({ currentAP })} /><ResourceControl label="Stamina" value={character.stamina} maximum={character.maxStamina} tone="text-sky-300" onChange={(stamina) => update({ stamina })} /><ResourceControl label="Mana" value={character.manaPoints} maximum={character.maxManaPoints} tone="text-fuchsia-300" onChange={(manaPoints) => update({ manaPoints })} /><div className="rounded-xl border border-white/10 bg-slate-950/55 p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Temporary HP</div><div className="mt-2 flex items-center justify-between"><button type="button" onClick={() => updateBuild({ temporaryHP: Math.max(0, (build?.temporaryHP ?? 0) - 1) })} className="h-8 w-8 rounded-lg bg-slate-800">−</button><span className="text-xl font-black text-emerald-300">{build?.temporaryHP ?? 0}</span><button type="button" onClick={() => updateBuild({ temporaryHP: (build?.temporaryHP ?? 0) + 1 })} className="h-8 w-8 rounded-lg bg-slate-800">+</button></div></div></div>
           <CharacterRestControls character={character} onChange={update} />
         </header>
 
@@ -2071,6 +2228,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         {isDruid && <DruidControls character={character} beastTraits={(reference?.ancestryTraits ?? []).filter(({ ancestry, cost }) => ancestry === 'Beastborn' && cost > 0)} onChange={update} onRoll={roll} />}
         {isHunter && <HunterControls character={character} onChange={update} onRoll={roll} awarenessModifier={hunterAwarenessModifier} investigationModifier={hunterInvestigationModifier} />}
         {isMonk && <MonkControls character={character} onChange={update} onRoll={roll} />}
+        {isSorcerer && <SorcererControls character={character} onChange={update} onRoll={roll} />}
           </div>
         </details>}
 

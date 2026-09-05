@@ -436,11 +436,17 @@ const CharacterBuilderView: React.FC<{
   const pathChoices = effectivePathChoices;
   const selectedRogueLanguage = className === 'Rogue' ? featureChoices['rogue.language']?.[0] : undefined;
   const warlockLanguage = className === 'Warlock' && subclass === 'Eldritch' ? 'Deep Speech' : undefined;
+  const sorcererLanguage = className === 'Sorcerer'
+    ? featureChoices[subclass === 'Angelic' ? 'sorcerer.celestialLanguage' : subclass === 'Draconic' ? 'sorcerer.draconicLanguage' : '']?.[0]
+    : undefined;
   const effectiveLanguageFluencies: Record<string, LanguageFluency> = {
     ...languageFluencies,
     Common: 'Fluent',
     ...(selectedRogueLanguage ? { [selectedRogueLanguage]: 'Fluent' as LanguageFluency } : {}),
     ...(warlockLanguage ? { [warlockLanguage]: 'Fluent' as LanguageFluency } : {}),
+    ...(sorcererLanguage ? {
+      [sorcererLanguage]: LANGUAGE_FLUENCIES[Math.min(2, fluencyRank(languageFluencies[sorcererLanguage] ?? 'Untrained') + 1)],
+    } : {}),
   };
   const build: CharacterBuildData = {
     ...originalBuild,
@@ -452,7 +458,7 @@ const CharacterBuilderView: React.FC<{
     backgroundStory,
     skillPointsConvertedToTrades: skillConversion,
     tradePointsConvertedToLanguages: tradeConversion,
-    languageFluencies: effectiveLanguageFluencies,
+    languageFluencies,
     ancestrySecondary: secondaryAncestry,
     selectedAncestryTraitIDs: traitIDs,
     ancestryTraitCounts: traitCounts,
@@ -496,10 +502,15 @@ const CharacterBuilderView: React.FC<{
   const ancestrySpent = ancestryTotals.spent;
   const negativePoints = ancestryTotals.negativePoints;
   const minorTraits = ancestryTotals.zeroPointTraits;
+  const sorcererRestrictedAncestry = className === 'Sorcerer' && subclass === 'Angelic' ? 'Angelborn'
+    : className === 'Sorcerer' && subclass === 'Draconic' ? 'Dragonborn' : '';
+  const ancestrySpentOutsideSorcererOrigin = selectedTraits
+    .filter(({ ancestry: traitAncestry }) => traitAncestry !== sorcererRestrictedAncestry)
+    .reduce((sum, trait) => sum + trait.cost * ancestryTraitSelectionCount(draft, trait), 0);
   const skillSpent = masterySpent(skillMasteries);
   const tradeSpent = masterySpent(tradeMasteries);
   const grantedLanguages = grantedClassLanguageNames(draft);
-  const languageSpent = fluencySpent(effectiveLanguageFluencies, ['Common', ...grantedLanguages]);
+  const languageSpent = fluencySpent(languageFluencies, ['Common', ...grantedLanguages]);
   const advancementAttributePoints = classTotals?.attribute ?? 0;
   const attributeBonusBudget = 2 + advancementAttributePoints + talents.filter((talent) => talent === 'Attribute Increase').length * 2;
   const attributeBonusSpent = ATTRIBUTE_NAMES.reduce((sum, attribute) => sum + (attributeBonusPoints[attribute] ?? 0), 0);
@@ -524,7 +535,9 @@ const CharacterBuilderView: React.FC<{
     const resolved = { ...group, options };
     const limit = classChoiceSelectionLimit(resolved, draft);
     const hunterTerrainSkillAllocation = ['hunter.forestSkills', 'hunter.urbanSkills'].includes(group.id);
-    return { ...resolved, limit, minimumSelections: hunterTerrainSkillAllocation ? limit : group.minimumSelections ?? limit };
+    const alreadyHasDraconicOrigin = group.id === 'sorcerer.draconicOrigin'
+      && selectedTraits.some(({ ancestry: traitAncestry, name }) => traitAncestry === 'Dragonborn' && name === 'Draconic Origin');
+    return { ...resolved, limit, minimumSelections: alreadyHasDraconicOrigin ? 0 : hunterTerrainSkillAllocation ? limit : group.minimumSelections ?? limit };
   });
   const grantedManeuvers = grantedClassManeuverNames(draft);
   const grantedSpells = grantedClassSpellNames(draft);
@@ -977,6 +990,9 @@ const CharacterBuilderView: React.FC<{
       ? `Spend all Ancestry Points (${derived.ancestryPointBudget - ancestrySpent} remaining).`
       : `Ancestry traits exceed the available Ancestry Points by ${ancestrySpent - derived.ancestryPointBudget}.`);
     if (negativePoints > 2) issues.push('Negative ancestry traits can grant at most 2 points.');
+    if (sorcererRestrictedAncestry && derived && ancestrySpentOutsideSorcererOrigin > derived.ancestryPointBudget - 2) {
+      issues.push(`Celestial or Draconic Origin’s 2 bonus Ancestry Points must be spent on ${sorcererRestrictedAncestry} Traits.`);
+    }
     if (minorTraits > 1) issues.push('Choose at most one 0-point minor ancestry trait.');
     const duplicateTraitNames = selectedTraits.filter((trait, index) => !trait.isRepeatable && selectedTraits.findIndex(({ name }) => name === trait.name) !== index).map(({ name }) => name);
     if (duplicateTraitNames.length > 0) issues.push(`Remove duplicate Ancestry Traits: ${Array.from(new Set(duplicateTraitNames)).join(', ')}.`);
@@ -1052,6 +1068,27 @@ const CharacterBuilderView: React.FC<{
         if (spell && tag && !(spell.tags ?? '').split(',').some((candidate) => candidate.trim().toLowerCase() === tag.toLowerCase())) issues.push(`${spellName} must match the ${tag} tag chosen for Magic Domain ${index + 1}.`);
       });
       if (selectedSpells.some((spell) => !allowedSpells.some(({ name }) => name === spell))) issues.push('Remove Spells that are no longer on the Cleric Spell List.');
+    }
+    if (className === 'Sorcerer') {
+      const metaMagic = featureChoices['sorcerer.metaMagic'] ?? [];
+      if (subclass === 'Angelic' && !metaMagic.includes('Careful Spell')) issues.push('Celestial Protection grants Careful Spell; include it among the known Meta Magic options.');
+      if (subclass === 'Draconic' && !metaMagic.includes('Transmuted Spell')) issues.push('Draconic Transmutation grants Transmuted Spell; include it among the known Meta Magic options.');
+      const appearanceLanguage = subclass === 'Angelic' ? { native: 'Celestial', choice: featureChoices['sorcerer.celestialLanguage']?.[0] }
+        : subclass === 'Draconic' ? { native: 'Draconic', choice: featureChoices['sorcerer.draconicLanguage']?.[0] } : null;
+      if (appearanceLanguage?.choice) {
+        const fluencyBeforeAppearance = (language: string) => language === 'Common' || grantedLanguages.includes(language)
+          ? 2 : fluencyRank(languageFluencies[language] ?? 'Untrained');
+        const nativeIsFluent = fluencyBeforeAppearance(appearanceLanguage.native) >= 2;
+        if (!nativeIsFluent && appearanceLanguage.choice !== appearanceLanguage.native) {
+          issues.push(`${subclass} Appearance must increase ${appearanceLanguage.native} unless the character is already Fluent in it.`);
+        }
+        if (nativeIsFluent && appearanceLanguage.choice === appearanceLanguage.native) {
+          issues.push(`${subclass} Appearance must increase another Language because the character is already Fluent in ${appearanceLanguage.native}.`);
+        }
+        if (appearanceLanguage.choice !== appearanceLanguage.native && fluencyBeforeAppearance(appearanceLanguage.choice) >= 2) {
+          issues.push(`${subclass} Appearance must increase a Language that is not already Fluent.`);
+        }
+      }
     }
     if (className === 'Warlock') {
       const weaponManeuvers = featureChoices['warlock.pactWeaponManeuvers'] ?? [];
@@ -1130,7 +1167,7 @@ const CharacterBuilderView: React.FC<{
             <div className="mb-6 grid gap-3 sm:grid-cols-3"><ConversionStepper label="Skill → Trade conversions" value={skillConversion} description="Each Skill Point becomes 2 Trade Points. Decreasing this automatically releases Trade selections that no longer fit." decrementDisabled={skillConversion <= 0} incrementDisabled={!derived || skillSpent >= derived.skillPointBudget} onDecrement={() => adjustSkillConversion(-1)} onIncrement={() => adjustSkillConversion(1)} /><ConversionStepper label="Trade → Language conversions" value={tradeConversion} description="Each Trade Point becomes 2 Language Points. Decreasing this automatically releases Language fluency that no longer fits." decrementDisabled={tradeConversion <= 0} incrementDisabled={!derived || tradeSpent >= derived.tradePointBudget} onDecrement={() => adjustTradeConversion(-1)} onIncrement={() => adjustTradeConversion(1)} /><div className="grid grid-cols-3 gap-2"><Metric label="Skills" value={`${skillSpent}/${derived?.skillPointBudget ?? 0}`} /><Metric label="Trades" value={`${tradeSpent}/${derived?.tradePointBudget ?? 0}`} /><Metric label="Languages" value={`${languageSpent}/${derived?.languagePointBudget ?? 0}`} /></div></div>
             <div className="space-y-5">{reference.skillGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-violet-300">{group.name} Skills</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((skillName) => { const item = reference.skills.find(({ name: candidate }) => candidate === skillName)!; const value = skillMasteries[skillName] ?? 'Untrained'; const pointsAvailable = Math.max(0, (derived?.skillPointBudget ?? 0) - skillSpent + masteryRank(value)); return <InfoDetails key={skillName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span>{skillName}</span><span onClick={(event) => event.stopPropagation()}><MasteryPicker value={value} maximum={Math.min(5, skillMasteryMaximum + (expertise.skills[skillName] ?? 0))} bonus={expertise.skills[skillName] ?? 0} pointsAvailable={pointsAvailable} onChange={(next) => setSkillMasteries((current) => ({ ...current, [skillName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-violet-300">{item.attribute}</p>{item.description}</InfoDetails>; })}</div></div>)}
               {reference.tradeGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-fuchsia-300">{group.name} Trades</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((tradeName) => { const item = reference.trades.find(({ name: candidate }) => candidate === tradeName)!; const value = tradeMasteries[tradeName] ?? 'Untrained'; const pointsAvailable = Math.max(0, (derived?.tradePointBudget ?? 0) - tradeSpent + masteryRank(value)); return <InfoDetails key={tradeName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span className="flex flex-wrap items-center gap-2">{tradeName}<span className="rounded-full bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-fuchsia-300">{item.attribute}</span></span><span onClick={(event) => event.stopPropagation()}><MasteryPicker value={value} maximum={Math.min(5, tradeMasteryMaximum + Math.max(expertise.trades[tradeName] ?? 0, clericHasKnowledgeDomain && group.name === 'Knowledge' ? 1 : 0))} bonus={expertise.trades[tradeName] ?? 0} pointsAvailable={pointsAvailable} onChange={(next) => setTradeMasteries((current) => ({ ...current, [tradeName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-fuchsia-300">{item.attribute} • {item.tool}</p>{item.description}</InfoDetails>; })}</div></div>)}
-              {reference.languageGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-sky-300">{group.name} Languages</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((languageName) => { const item = reference.languages.find(({ name: candidate }) => candidate === languageName)!; const value = effectiveLanguageFluencies[languageName] ?? 'Untrained'; const isClassGranted = grantedLanguages.includes(languageName); const isFree = languageName === 'Common' || isClassGranted; const pointsAvailable = Math.max(0, (derived?.languagePointBudget ?? 0) - languageSpent + (isFree ? 0 : fluencyRank(value))); const classGrantName = className === 'Rogue' ? 'Cypher Speech' : className === 'Warlock' ? 'Alien Comprehension' : 'Class Feature'; return <InfoDetails key={languageName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span>{languageName}{isFree && <span className="ml-2 text-xs text-emerald-300">Free • Fluent{isClassGranted ? ` • ${classGrantName}` : ''}</span>}</span><span onClick={(event) => event.stopPropagation()}><LanguageFluencyPicker value={isFree ? 'Fluent' : value} pointsAvailable={pointsAvailable} isFree={isFree} onChange={(next) => setLanguageFluencies((current) => ({ ...current, [languageName]: next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-sky-300">Typical speakers: {item.typicalSpeakers}</p><p className="mb-2 text-xs text-slate-500">Limited speakers make a Language Check when precise understanding or communication matters. Fluent speakers read, write, and speak without that check.</p>{item.description}</InfoDetails>; })}</div></div>)}
+              {reference.languageGroups.map((group) => <div key={group.name}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-sky-300">{group.name} Languages</h3><div className="grid gap-2 lg:grid-cols-2">{group.options.map((languageName) => { const item = reference.languages.find(({ name: candidate }) => candidate === languageName)!; const value = effectiveLanguageFluencies[languageName] ?? 'Untrained'; const paidValue = languageFluencies[languageName] ?? 'Untrained'; const isClassGranted = grantedLanguages.includes(languageName); const isSorcererIncrease = sorcererLanguage === languageName; const isFree = languageName === 'Common' || isClassGranted; const pointsAvailable = Math.max(0, (derived?.languagePointBudget ?? 0) - languageSpent + (isFree ? 0 : fluencyRank(paidValue))); const classGrantName = className === 'Rogue' ? 'Cypher Speech' : className === 'Warlock' ? 'Alien Comprehension' : 'Class Feature'; return <InfoDetails key={languageName} summary={<div className="flex flex-1 items-center justify-between gap-3"><span>{languageName}{isFree && <span className="ml-2 text-xs text-emerald-300">Free • Fluent{isClassGranted ? ` • ${classGrantName}` : ''}</span>}{isSorcererIncrease && <span className="ml-2 text-xs text-fuchsia-300">+1 Fluency Stage • Sorcerer Appearance</span>}</span><span onClick={(event) => event.stopPropagation()}><LanguageFluencyPicker value={isFree ? 'Fluent' : value} pointsAvailable={pointsAvailable} isFree={isFree} onChange={(next) => setLanguageFluencies((current) => ({ ...current, [languageName]: isSorcererIncrease ? LANGUAGE_FLUENCIES[Math.max(0, fluencyRank(next) - 1)] : next }))} /></span></div>}><p className="mb-2 text-xs font-bold uppercase tracking-wider text-sky-300">Typical speakers: {item.typicalSpeakers}</p><p className="mb-2 text-xs text-slate-500">Limited speakers make a Language Check when precise understanding or communication matters. Fluent speakers read, write, and speak without that check.</p>{item.description}</InfoDetails>; })}</div></div>)}
             </div>
           </section>}
 

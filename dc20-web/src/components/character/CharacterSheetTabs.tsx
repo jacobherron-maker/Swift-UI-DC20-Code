@@ -29,6 +29,8 @@ import {
   completeCharacterRest,
   druidWildFormProfile,
   equippedCombatModifiers,
+  grantedClassLanguageLevels,
+  grantedClassLanguageNames,
   masteryBonus,
   masteryRank,
   masteryTitle,
@@ -46,6 +48,7 @@ import {
   resetCharacterTurn,
   selectedAncestryTraits,
   skillMasteryCap,
+  sorcererWildMagicProfile,
 } from '../../utils/characterRules';
 import {
   addInventoryItem,
@@ -433,12 +436,14 @@ function ChecksTab({ character, reference, equipmentCatalog, equipmentModifiers,
   const carriedToolTrades = new Set((character.inventoryItems ?? []).flatMap(({ equipmentID, quantity }) => quantity > 0
     ? equipmentCatalog.filter(({ id, category }) => id === equipmentID && category === EquipmentCategoryValues.TRADE_TOOLS).flatMap(({ properties }) => properties.slice(0, 1))
     : []));
-  const classLanguages = character.class === 'Rogue'
-    ? (build?.classFeatureSelections['rogue.language'] ?? []).slice(0, 1)
-    : character.class === 'Warlock' && character.subclass === 'Eldritch' ? ['Deep Speech'] : [];
-  const languageRows = Array.from(new Set(['Common', ...character.languages, ...classLanguages])).map((name) => ({
+  const classLanguages = grantedClassLanguageNames(character);
+  const classLanguageLevels = grantedClassLanguageLevels(character);
+  const fluencyStages = ['Untrained', 'Limited', 'Fluent'];
+  const languageRows = Array.from(new Set(['Common', ...character.languages, ...classLanguages, ...Object.keys(classLanguageLevels)])).map((name) => ({
     name,
-    fluency: name === 'Common' || classLanguages.includes(name) ? 'Fluent' : build?.languageFluencies?.[name] ?? 'Limited',
+    fluency: name === 'Common' || classLanguages.includes(name) ? 'Fluent' : classLanguageLevels[name]
+      ? fluencyStages[Math.min(2, fluencyStages.indexOf(build?.languageFluencies?.[name] ?? 'Untrained') + classLanguageLevels[name])]
+      : build?.languageFluencies?.[name] ?? 'Limited',
     group: reference?.languageGroups.find(({ options }) => options.includes(name))?.name ?? 'Other',
   })).sort((left, right) => left.group.localeCompare(right.group) || left.name.localeCompare(right.name));
   const ancestryMechanics = ancestryMechanicalProfile(character, reference?.ancestryTraits ?? []);
@@ -655,6 +660,8 @@ function CombatTab({ character, training, modifiers, equipmentCatalog, knownSpel
   const conditionLevels = build?.sheetConditionLevels ?? {};
   const effects = characterSheetEffects(character);
   const wildForm = druidWildFormProfile(character);
+  const sorcererWildMagic = sorcererWildMagicProfile(character);
+  const sorcererTransformation = sorcererWildMagic.transformation;
   const ancestryMechanics = ancestryMechanicalProfile(character, selectedTraits);
   const hasShellRetreat = wildForm.active
     ? wildForm.shellRetreatAvailable
@@ -662,8 +669,12 @@ function CombatTab({ character, training, modifiers, equipmentCatalog, knownSpel
   const shellRetreatActive = wildForm.active
     ? wildForm.shellRetreatActive
     : Boolean(hasShellRetreat && build?.sheetFeatureStates['ancestry.shellRetreat.active']);
-  const physicalDefense = wildForm.active ? wildForm.physicalDefense : effects.physicalDefense + Number(shellRetreatActive) * 5;
-  const areaDefense = wildForm.active ? wildForm.areaDefense : character.arcaneDefense + Number(shellRetreatActive) * 5;
+  const physicalDefense = wildForm.active ? wildForm.physicalDefense
+    : sorcererTransformation ? sorcererTransformation.physicalDefense
+      : effects.physicalDefense + Number(shellRetreatActive) * 5;
+  const areaDefense = wildForm.active ? wildForm.areaDefense
+    : sorcererTransformation ? sorcererTransformation.areaDefense
+      : character.arcaneDefense + Number(shellRetreatActive) * 5;
   const speed = wildForm.active ? wildForm.speed : shellRetreatActive ? 0 : effects.speed;
   const martialCheck = character.primeModifier + character.combatMastery;
   const spellCheck = martialCheck + (wildForm.active ? 0 : modifiers.spellCheckBonus);
@@ -727,6 +738,7 @@ function CombatTab({ character, training, modifiers, equipmentCatalog, knownSpel
     <section className={panelClass}>
       <SectionHeading eyebrow="At a Glance" title="Combat Reference" />
       {wildForm.active && <div className="mt-3 rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-3 text-xs leading-5 text-emerald-100"><strong>Wild Form active:</strong> {wildForm.size} {wildForm.creatureType} • {wildForm.currentHP}/{wildForm.maximumHP} Wild Form HP • PDR {wildForm.physicalDamageReduction ? 1 : 0} • EDR {wildForm.elementalDamageReduction ? 1 : 0} • MDR 0. Ancestry Traits and ordinary equipment are inactive.{wildForm.beastTraits.length > 0 ? ` Wild Form Beast Traits: ${wildForm.beastTraits.join(', ')}.` : ''}</div>}
+      {sorcererTransformation && <div className="mt-3 rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-3 text-xs leading-5 text-cyan-100"><div className="flex flex-wrap items-center justify-between gap-3"><span><strong>Wild Magic transformation:</strong> {sorcererTransformation.size} {sorcererTransformation.name} • {sorcererTransformation.currentHP}/{sorcererTransformation.maximumHP} form HP{sorcererTransformation.flySpeed ? ` • Fly Speed ${sorcererTransformation.flySpeed}` : ''}</span><button type="button" onClick={() => onRoll(`${sorcererTransformation.name} Attack • ${sorcererTransformation.damage} damage`, sorcererTransformation.attackCheck)} className="rounded-lg bg-cyan-700 px-3 py-2 font-black text-white">Roll Attack +{sorcererTransformation.attackCheck}</button></div></div>}
       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">{referenceStats.map(([label, value, rollModifier]) => rollModifier === null
         ? <div key={label} className="rounded-lg bg-slate-950/55 p-3"><div className="text-xs text-slate-500">{label}</div><div className="text-xl font-black text-slate-100">{value}</div>{(label === 'Physical Defense' || label === 'Area Defense') && <div className="mt-1 text-[10px] font-bold text-amber-200">Heavy {Number(value) + 5} • Brutal {Number(value) + 10}</div>}{label === 'Physical Defense' && physicalDefense !== character.physicalDefense && <div className="text-[10px] font-bold text-red-300">Active feature adjustment</div>}{label === 'Area Defense' && areaDefense !== character.arcaneDefense && <div className="text-[10px] font-bold text-red-300">Active feature adjustment</div>}{label === 'Speed' && shellRetreatActive && <div className="text-[10px] font-bold text-rose-300">Shell Retreat: cannot move</div>}</div>
         : <button type="button" key={label} onClick={() => onRoll(label, rollModifier, (label === 'Martial Check' ? 0 : attackAndSpellAdjustment) - Number(label === 'Spell Attack' && prone))} className="rounded-lg bg-slate-950/55 p-3 text-left hover:bg-violet-500/10"><div className="text-xs text-slate-500">{label}</div><div className="text-xl font-black text-slate-100">{value}</div><div className="text-xs font-bold text-violet-300">Roll</div>{label !== 'Martial Check' && attackAndSpellAdjustment < 0 && <div className="text-[10px] font-bold text-rose-300">{Math.abs(attackAndSpellAdjustment)}× gear DisADV</div>}{label === 'Spell Attack' && prone && <div className="text-[10px] font-bold text-rose-300">Prone DisADV</div>}</button>)}</div>

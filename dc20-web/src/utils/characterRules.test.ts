@@ -3,6 +3,7 @@ import referenceDocument from '../../public/data/CharacterReference.json';
 import equipmentDocument from '../../public/data/EquipmentCatalog.json';
 import type { Character, CharacterReferenceData, EquipmentCatalogItem } from '../types/models';
 import {
+  accessibleAncestryNames,
   ancestryGrantedSpellNames,
   ancestryExpertise,
   ancestryMechanicalProfile,
@@ -13,6 +14,7 @@ import {
   ancestryTraitSelectionCount,
   ancestryTraitSource,
   applyMonkStaminaSpendRecovery,
+  applySorcererWildMagic,
   applyDerivedCharacter,
   attributeCap,
   barbarianStaminaRegenAmount,
@@ -45,6 +47,7 @@ import {
   druidWildFormProfile,
   equippedCombatModifiers,
   grantedClassLanguageNames,
+  grantedClassLanguageLevels,
   grantedClassManeuverNames,
   grantedClassSpellNames,
   HUNTER_CONCOCTION_ACTIVE,
@@ -73,6 +76,14 @@ import {
   skillMasteryCap,
   spellbladeDisciplineNames,
   spellIsAvailableToClass,
+  SORCERER_OVERLOAD_ACTIVE,
+  SORCERER_OVERLOAD_EXHAUSTION,
+  SORCERER_WILD_FORM_HP,
+  SORCERER_WILD_NEXT_ADVANTAGE,
+  SORCERER_WILD_OUTCOME,
+  sorcererDraconicDamageType,
+  sorcererWildMagicOutcome,
+  sorcererWildMagicProfile,
 } from './characterRules';
 
 const reference = referenceDocument as CharacterReferenceData;
@@ -88,6 +99,7 @@ const cleric = reference.classes.find(({ name }) => name === 'Cleric')!;
 const druid = reference.classes.find(({ name }) => name === 'Druid')!;
 const hunter = reference.classes.find(({ name }) => name === 'Hunter')!;
 const monk = reference.classes.find(({ name }) => name === 'Monk')!;
+const sorcerer = reference.classes.find(({ name }) => name === 'Sorcerer')!;
 const wizard = reference.classes.find(({ name }) => name === 'Wizard')!;
 const equipmentCatalog = equipmentDocument as EquipmentCatalogItem[];
 
@@ -1806,5 +1818,127 @@ describe('Monk Beta 0.10.5 source audit', () => {
     ]);
     expect(monk.subclassFeatures['Astral Self'][0].description).toBe('Astral Damage: When you gain this feature, choose a Mystical damage type. This damage type is your Astral Damage.\n\nDuring Combat, you can spend 1 AP and 1 SP to manifest a portion of your astral self for 1 minute. For the duration, you gain the following benefits:\n• Astral Arms: You manifest 2 astral arms that can only be used to make Unarmed Strikes. They can’t otherwise interact with creatures or objects. Attacks made using these Astral Arms have the Reach property, deal Astral Damage instead of the normal damage type, and can target PD or AD (choose for each Attack).\n• Astral Deflection: You can now use Deflect Attack on Ranged Attacks that miss any target within 2 Spaces.\n\nEnding Early: The effect ends early if you fall Unconscious, die, or choose to end it for free.');
     expect(monk.subclassFeatures['Shifting Tide'][0].description).toBe('You gain the following benefits:\n\nEbb: When you enter a new Monk Stance, you gain 2 Spaces of movement.\n\nFlow: When you use your Uncanny Dodge against a Melee Attack, you can spend 1 AP to make an Opportunity Attack against the Attacker, provided they’re within range.\n\nChanging Tides: You can use your Deflect Attack on Melee Martial Attacks from Large or smaller creatures. When you do, you can redirect the Attack to another target within 1 Space of you.');
+  });
+});
+
+describe('Sorcerer Beta 0.10.5 source audit', () => {
+  const feature = (level: number, name: string) => sorcerer.features.find((entry) => entry.level === level)?.features.find((entry) => entry.name === name)?.description;
+
+  it('matches the published level 1-10 class table', () => {
+    expect(sorcerer.tableRows).toEqual([
+      { level: 1, health: 7, attribute: undefined, skill: undefined, trade: undefined, mana: 6, spells: 4, features: 'Class Features' },
+      { level: 2, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Class Feature, Talent, Path Progression' },
+      { level: 3, health: 1, attribute: 1, skill: 1, trade: 1, mana: 3, spells: 1, features: 'Subclass Feature' },
+      { level: 4, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 5, health: 1, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Class Feature' },
+      { level: 6, health: 1, attribute: undefined, skill: 1, trade: undefined, mana: undefined, spells: undefined, features: 'Talent, Path Progression' },
+      { level: 7, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Subclass Expert Feature' },
+      { level: 8, health: 1, attribute: 1, skill: 1, trade: 1, mana: undefined, spells: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 9, health: 1, attribute: undefined, skill: undefined, trade: undefined, mana: 3, spells: 1, features: 'Class Capstone Feature' },
+      { level: 10, health: 1, attribute: 1, skill: 2, trade: 1, mana: 3, spells: 1, features: 'Subclass Capstone Feature' },
+    ]);
+  });
+
+  it('preserves the published path, equipment, core features, and Sorcerer Talents', () => {
+    expect(sorcerer.pathDetails).toBe('Combat Training: Spell Focuses, Light Armor\n\nSpell List: You choose 1 Spell Source (Arcane, Divine, or Primal). When you learn a new Spell, you can choose any Spell from the chosen Spell Source.\n\nSpells Known: The number of Spells you know increases as shown in the Spells Known column of the Sorcerer Class Table.\n\nMana Points: Your maximum number of Mana Points increases as shown in the Mana Points column of the Sorcerer Class Table.');
+    expect(sorcerer.startingEquipment.description).toBe('Arsenal: 2 Spell Focuses.\nArmor: 1 set of Light Armor.\nTrade Tools: Choose 2 of any of the following items:\nAlchemist’s Supplies, Calligrapher’s Supplies, Jeweler’s Tools, or Weaver’s Tools.\nAdventuring Pack: Choose 1 of the following packs:\n(Adventuring Packs Coming Soon).');
+    expect(feature(1, 'Overload Magic')).toBe('You can spend 1 AP + 1 MP in Combat to channel raw magical energy for 1 minute, or until you become Incapacitated, die, or choose to end it early at any time for free. For the duration, your magic is overloaded and you’re subjected to the following effects:\n• You gain +5 to all Spell Attacks and Spell Checks you make.\n• You must immediately make an Attribute Save (your choice) against your Save DC upon using this Feature, and again at the start of each of your turns. Failure: You gain Exhaustion. You lose any Exhaustion gained in this way when you complete a Short Rest.');
+    expect(feature(1, 'Sorcery (Flavor Feature)')).toBe('You learn the Sorcery Spell.');
+    expect(feature(5, 'Expert Sorcerer')).toBe('You gain the following benefits for your Sorcerer Class Features.\n\nInnate Power\n\nYour Maximum MP increases by 1.\n\nYou gain the benefit of an additional 1 point Focus Property of your choice. You can change either or both Properties whenever you finish a Long Rest.\n\nOverload Magic\n\nYou no longer need to make an Attribute Save upon using Overload, but you still need to make a Save at the start of each of your turns while Overloaded.\n\nMeta Magic\n\nYou learn 1 additional Meta Magic option of your choice. You can now use 2 Meta Magic Spell Enhancements at a time, provided you don’t use the same option more than once.');
+    expect(sorcerer.talents.slice(-3).map(({ name, minimumLevel }) => [name, minimumLevel])).toEqual([
+      ['Expanded Meta Magic', 1], ['Greater Innate Power', 3], ['Font of Magic', 3],
+    ]);
+    expect(sorcerer.choiceGroups.find(({ id }) => id === 'sorcerer.focus')?.options.every(({ pointCost }) => pointCost === 1)).toBe(true);
+  });
+
+  it('scales Origins, 1-point Focus Properties, and Meta Magic from level and Talents', () => {
+    const origin = sorcerer.choiceGroups.find(({ id }) => id === 'sorcerer.origin')!;
+    const focus = sorcerer.choiceGroups.find(({ id }) => id === 'sorcerer.focus')!;
+    const meta = sorcerer.choiceGroups.find(({ id }) => id === 'sorcerer.metaMagic')!;
+    const hero = character('Sorcerer');
+    expect(classChoiceSelectionLimit(origin, hero)).toBe(1);
+    expect(classChoiceSelectionLimit(focus, hero)).toBe(1);
+    expect(classChoiceSelectionLimit(meta, hero)).toBe(2);
+    hero.level = 5;
+    hero.subclass = 'Angelic';
+    hero.build = { ...defaultBuild(), selectedTalents: ['Greater Innate Power', 'Expanded Meta Magic'] };
+    expect(classChoiceSelectionLimit(origin, hero)).toBe(2);
+    expect(classChoiceSelectionLimit(focus, hero)).toBe(3);
+    expect(classChoiceSelectionLimit(meta, hero)).toBe(6);
+  });
+
+  it('routes Innate Power, Expert Sorcerer, and class Talents to Mana, Spells, defenses, and rolls', () => {
+    const hero = character('Sorcerer');
+    hero.build = { ...defaultBuild(), classFeatureSelections: { 'sorcerer.origin': ['Intuitive Magic'], 'sorcerer.focus': ['Channeling'] } };
+    let derived = deriveCharacter(hero, sorcerer, reference.ancestryTraits, equipmentCatalog);
+    expect([derived.maxMana, derived.spellLimit]).toEqual([7, 6]);
+    expect(grantedClassSpellNames(hero)).toEqual(['Sorcery']);
+    expect(equippedCombatModifiers(hero, equipmentCatalog, sorcerer).spellCheckBonus).toBe(1);
+    hero.level = 5;
+    hero.build = { ...hero.build, selectedTalents: ['Greater Innate Power', 'Expanded Meta Magic'], classFeatureSelections: { ...hero.build.classFeatureSelections, 'sorcerer.focus': ['Channeling', 'Protective', 'Warded'] } };
+    derived = deriveCharacter(hero, sorcerer, reference.ancestryTraits, equipmentCatalog);
+    expect(derived.maxMana).toBe(17);
+    expect(derived.arcaneDefense).toBe(15);
+    expect(derived.mysticalDR).toBe(1);
+    expect(equippedCombatModifiers(hero, equipmentCatalog, sorcerer).mysticalDamageReduction).toBe(true);
+  });
+
+  it('routes subclass ancestry access, restricted points, language stages, and Draconic Overload', () => {
+    const angelic = character('Sorcerer');
+    angelic.subclass = 'Angelic';
+    angelic.build = { ...defaultBuild(), classFeatureSelections: { 'sorcerer.celestialLanguage': ['Celestial'] } };
+    expect(accessibleAncestryNames(angelic, reference.ancestryTraits)).not.toContain('Angelborn');
+    expect(grantedClassLanguageLevels(angelic)).toEqual({});
+    angelic.level = 3;
+    expect(accessibleAncestryNames(angelic, reference.ancestryTraits)).toContain('Angelborn');
+    expect(ancestryPointBudget(angelic)).toBe(7);
+    expect(grantedClassLanguageLevels(angelic)).toEqual({ Celestial: 1 });
+
+    const draconic = character('Sorcerer');
+    draconic.level = 3;
+    draconic.subclass = 'Draconic';
+    draconic.build = { ...defaultBuild(), classFeatureSelections: { 'sorcerer.draconicOrigin': ['Fire'], 'sorcerer.draconicLanguage': ['Draconic'] }, sheetFeatureStates: { [SORCERER_OVERLOAD_ACTIVE]: true } };
+    expect(accessibleAncestryNames(draconic, reference.ancestryTraits)).toContain('Dragonborn');
+    expect(sorcererDraconicDamageType(draconic)).toBe('Fire');
+    expect(characterSheetEffects(draconic).resistances).toEqual(['Physical (1)', 'Fire (1)']);
+    expect(grantedClassLanguageLevels(draconic)).toEqual({ Draconic: 1 });
+  });
+
+  it('tracks every Wild Magic result and removes only Overload Exhaustion on a Short Rest', () => {
+    expect(sorcererWildMagicOutcome(1)).toContain('Sheep');
+    expect(sorcererWildMagicOutcome(20)).toContain('Young Purple Dragon');
+    const hero = character('Sorcerer');
+    hero.healthPoints = 8;
+    hero.maxHealthPoints = 11;
+    hero.build = { ...defaultBuild(), sheetConditionLevels: { Exhaustion: 3 }, sheetFeatureStates: { [SORCERER_OVERLOAD_ACTIVE]: true }, sheetFeatureCounters: { [SORCERER_OVERLOAD_EXHAUSTION]: 2 } };
+    const surged = applySorcererWildMagic(hero, 13);
+    expect(surged.build?.sheetFeatureStates[SORCERER_WILD_NEXT_ADVANTAGE]).toBe(true);
+    expect(sorcererWildMagicProfile(surged)).toMatchObject({ outcome: 13, allCheckSaveDie: 4 });
+    expect(surged.build?.sheetFeatureCounters[SORCERER_WILD_OUTCOME]).toBe(13);
+    const sheep = applySorcererWildMagic(hero, 1);
+    expect(sorcererWildMagicProfile(sheep).transformation).toMatchObject({ name: 'Sheep', currentHP: 2, maximumHP: 2, physicalDefense: 5, areaDefense: 5, attackCheck: 2, damage: 1 });
+    expect(sheep.build?.sheetFeatureCounters[SORCERER_WILD_FORM_HP]).toBe(2);
+    const dragon = applySorcererWildMagic(hero, 20);
+    expect(sorcererWildMagicProfile(dragon).transformation).toMatchObject({ name: 'Young Purple Dragon', currentHP: 30, maximumHP: 30, physicalDefense: 16, areaDefense: 16, attackCheck: 10, damage: 4, flySpeed: 6 });
+    const rested = completeCharacterRest(surged, 'Short', 0);
+    expect(rested.build?.sheetConditionLevels.Exhaustion).toBe(1);
+    expect(rested.build?.sheetFeatureStates[SORCERER_OVERLOAD_ACTIVE]).toBe(false);
+    expect(rested.build?.sheetFeatureCounters[SORCERER_OVERLOAD_EXHAUSTION]).toBeUndefined();
+    expect(rested.build?.sheetFeatureCounters[SORCERER_WILD_OUTCOME]).toBeUndefined();
+    expect(rested.build?.sheetFeatureCounters[SORCERER_WILD_FORM_HP]).toBeUndefined();
+  });
+
+  it('includes all published Sorcerer subclasses with level-gated metadata and unique choice IDs', () => {
+    expect(sorcerer.subclasses).toEqual(['Angelic', 'Draconic', 'Paragon']);
+    expect(new Set(sorcerer.choiceGroups.map(({ id }) => id)).size).toBe(sorcerer.choiceGroups.length);
+    expect(sorcerer.subclassFeatures.Angelic.map(({ name, level }) => [name, level])).toEqual([
+      ['Celestial Spark', 3], ['Celestial Appearance (Flavor Feature)', 3],
+    ]);
+    expect(sorcerer.subclassFeatures.Draconic.map(({ name, level }) => [name, level])).toEqual([
+      ['Draconic Spark', 3], ['Draconic Appearance (Flavor Feature)', 3],
+    ]);
+    expect(sorcerer.subclassFeatures.Paragon.map(({ name, level }) => [name, level])).toEqual([
+      ['Paragon Subclass', 3], ['Novice Paragon', 3], ['Jack of one Trade (Flavor Feature)', 3], ['Expert Paragon', 7], ['Master Paragon', 10],
+    ]);
   });
 });

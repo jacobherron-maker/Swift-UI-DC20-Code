@@ -6387,7 +6387,7 @@
           "feature" : "Innate Power",
           "id" : "sorcerer.focus",
           "level" : 1,
-          "limit" : 2,
+          "limit" : 1,
           "options" : [
             {
               "description" : "You gain a +1 bonus to Spell Checks.",
@@ -6412,12 +6412,6 @@
               "isRepeatable" : false,
               "name" : "Muffled",
               "pointCost" : 1
-            },
-            {
-              "description" : "Your Spell Attacks deal +1 damage to all targets.",
-              "isRepeatable" : false,
-              "name" : "Powerful",
-              "pointCost" : 2
             },
             {
               "description" : "Spells you cast with a Range of 1 have their range increase by 1 Space.",
@@ -6457,7 +6451,7 @@
           "feature" : "Meta Magic",
           "id" : "sorcerer.metaMagic",
           "level" : 2,
-          "limit" : 3,
+          "limit" : 2,
           "options" : [
             {
               "description" : "(1 MP) When you Cast a Spell that targets an area (such as a Line, Cone, or Sphere), you can choose to exclude creatures of your choice from the Spell’s damage and effects.",
@@ -6501,7 +6495,7 @@
         },
         {
           "feature" : "Celestial Appearance (Flavor Feature)",
-          "id" : "sorcerer.appearanceLanguage",
+          "id" : "sorcerer.celestialLanguage",
           "level" : 3,
           "limit" : 1,
           "options" : [
@@ -6661,7 +6655,7 @@
         },
         {
           "feature" : "Draconic Appearance (Flavor Feature)",
-          "id" : "sorcerer.appearanceLanguage",
+          "id" : "sorcerer.draconicLanguage",
           "level" : 3,
           "limit" : 1,
           "options" : [
@@ -6766,7 +6760,7 @@
         {
           "features" : [
             {
-              "description" : "Choose a Sorcerous Origin that grants you a benefit: Intuitive Magic, Resilient Magic, or Unstable Magic. Additionally, you gain the following benefits:\n• Your Maximum MP increases by 1.\n• You gain the benefit of a 1 point Focus Property of your choice. You can change the Property when you complete a Long Rest. Sorcerous Origins\n• Intuitive Magic: You learn 2 Spells of your choice from your Spell List.\n• Resilient Magic: You gain Dazed Resistance.\n• Unstable Magic: When you Critically Succeed or Fail on a Spell Attack or Spell Check, roll on the Wild Magic Table. If it’s a Critical Success you roll with ADV, if it’s a Critical Failure you roll with DisADV. The effect lasts until the end of your next turn, unless stated otherwise. When you roll on the Wild Magic Table in this way, you gain ADV on the next Spell Attack or Spell Check you make before the end of your next turn.\n\nSorcerer Wild Magic Table d20\n\nWild Surge Outcome\n\n1\n\nYou turn into a small creature with the stats of a Sheep (HP 2, PD & AD 5, Melee Attack +2, Damage 1).\n\n2\n\nA wave of magic explodes out from you. You take True damage equal to your Prime Modifier and creatures within 5 Spaces must succeed a Physical Save against your Save DC or take the same amount of damage.\n\n3\n\nYou are Stunned 3.\n\n4\n\nYou are overcome by a wave of lethargy. You have DisADV on all Checks and Saves.\n\n5\n\nYou are Stunned 1.\n\n6\n\nYou are Blinded and Deafened.\n\n7\n\nAll living creatures become Invisible to you.\n\n8\n\nYou gain a d4 penalty on all Checks and Saves.\n\n9\n\nYou grow by 1 Size, become 2 times heavier, and your Speed is reduced by 2.\n\n10\n\nA strong gravitational pull originates from you. All creatures within 5 Spaces must make a Might Save or be pulled 4 Spaces toward you.\n\n11\n\nForceful winds shoot out from you in all directions. All creatures within 5 Spaces (except you) must make a Might Save or be pushed 4 Spaces away from you.\n\n12\n\nYou grow by 1 Size, become one and a half times heavier, and your Speed is increased by 2.\n\n13\n\nYou gain a d4 bonus to all Checks and Saves.\n\n14\n\nYou gain a Truesight of 10 Spaces.\n\n15\n\nYou become Invisible.\n\n16\n\nYour maximum AP increases by 1 and you gain 1 AP.\n\n17\n\nYou become energized. You have ADV on all Checks and Saves.\n\n18\n\nYou gain a surge of power, granting you +5 to all Spell Checks you make.\n\n19\n\nYou overflow with life energy. You and creatures within 5 Spaces regain HP equal to your Prime Modifier.\n\n20\n\nYou turn into a large creature with the stats of a Young Purple Dragon, but without a Breath Weapon (HP 30, PD & AD 16, Attack +10, Damage 4, Fly Speed 6).",
+              "description" : "Choose a Sorcerous Origin that grants you a benefit: Intuitive Magic, Resilient Magic, or Unstable Magic. Additionally, you gain the following benefits:\n• Your Maximum MP increases by 1.\n• You gain the benefit of a 1 point Focus Property of your choice. You can change the Property when you complete a Long Rest.\n\nSorcerous Origins\n• Intuitive Magic: You learn 2 Spells of your choice from your Spell List.\n• Resilient Magic: You gain Dazed Resistance.\n• Unstable Magic: When you Critically Succeed or Fail on a Spell Attack or Spell Check, roll on the Wild Magic Table. If it’s a Critical Success you roll with ADV, if it’s a Critical Failure you roll with DisADV. The effect lasts until the end of your next turn, unless stated otherwise. When you roll on the Wild Magic Table in this way, you gain ADV on the next Spell Attack or Spell Check you make before the end of your next turn.\n\nSorcerer Wild Magic Table d20\n\nWild Surge Outcome\n\n1\n\nYou turn into a small creature with the stats of a Sheep (HP 2, PD & AD 5, Melee Attack +2, Damage 1).\n\n2\n\nA wave of magic explodes out from you. You take True damage equal to your Prime Modifier and creatures within 5 Spaces must succeed a Physical Save against your Save DC or take the same amount of damage.\n\n3\n\nYou are Stunned 3.\n\n4\n\nYou are overcome by a wave of lethargy. You have DisADV on all Checks and Saves.\n\n5\n\nYou are Stunned 1.\n\n6\n\nYou are Blinded and Deafened.\n\n7\n\nAll living creatures become Invisible to you.\n\n8\n\nYou gain a d4 penalty on all Checks and Saves.\n\n9\n\nYou grow by 1 Size, become 2 times heavier, and your Speed is reduced by 2.\n\n10\n\nA strong gravitational pull originates from you. All creatures within 5 Spaces must make a Might Save or be pulled 4 Spaces toward you.\n\n11\n\nForceful winds shoot out from you in all directions. All creatures within 5 Spaces (except you) must make a Might Save or be pushed 4 Spaces away from you.\n\n12\n\nYou grow by 1 Size, become one and a half times heavier, and your Speed is increased by 2.\n\n13\n\nYou gain a d4 bonus to all Checks and Saves.\n\n14\n\nYou gain a Truesight of 10 Spaces.\n\n15\n\nYou become Invisible.\n\n16\n\nYour maximum AP increases by 1 and you gain 1 AP.\n\n17\n\nYou become energized. You have ADV on all Checks and Saves.\n\n18\n\nYou gain a surge of power, granting you +5 to all Spell Checks you make.\n\n19\n\nYou overflow with life energy. You and creatures within 5 Spaces regain HP equal to your Prime Modifier.\n\n20\n\nYou turn into a large creature with the stats of a Young Purple Dragon, but without a Breath Weapon (HP 30, PD & AD 16, Attack +10, Damage 4, Fly Speed 6).",
               "name" : "Innate Power"
             },
             {
@@ -6783,7 +6777,7 @@
         {
           "features" : [
             {
-              "description" : "You gain 2 unique Spell Enhancements from the list below. You can only use 1 of these Spell Enhancements per Spell you cast. MP spent on these Spell Enhancements don’t count against your Mana Spend Limit.\n• Careful Spell: (1 MP) When you Cast a Spell that targets an area (such as a Line, Cone, or Sphere), you can choose to exclude creatures of your choice from the Spell’s damage and effects.\n• Distant Spell: (1 MP) When you cast a Spell, you can increase its range by 2 Spaces if it has a range of 1 Space or by 10 Spaces if its range is greater than 1 Space.\n• Quickened Spell: (1 MP) You can reduce the AP cost of a Spell by 1 (minimum of 1 AP).\n• Subtle Spell: (1 MP) You can cast the Spell without requiring any Somatic and Verbal Components.\n• Transmuted Spell: (1 MP) When you cast a Spell that deals damage, you can change its damage type to any other damage type of your choice (except True damage).\n• Vicious Spell: (1 MP) When you cast a Spell that forces a creature to make a Save to resist its effects, 1 target of your choice has DisADV on its first Save against the Spell. Once per Long Rest, you can use 1 of these unique Spell Enhancements without spending MP. You regain the ability to do so again when you roll for Initiative.",
+              "description" : "You gain 2 unique Spell Enhancements from the list below. You can only use 1 of these Spell Enhancements per Spell you cast. MP spent on these Spell Enhancements don’t count against your Mana Spend Limit.\n• Careful Spell: (1 MP) When you Cast a Spell that targets an area (such as a Line, Cone, or Sphere), you can choose to exclude creatures of your choice from the Spell’s damage and effects.\n• Distant Spell: (1 MP) When you cast a Spell, you can increase its range by 2 Spaces if it has a range of 1 Space or by 10 Spaces if its range is greater than 1 Space.\n• Quickened Spell: (1 MP) You can reduce the AP cost of a Spell by 1 (minimum of 1 AP).\n• Subtle Spell: (1 MP) You can cast the Spell without requiring any Somatic and Verbal Components.\n• Transmuted Spell: (1 MP) When you cast a Spell that deals damage, you can change its damage type to any other damage type of your choice (except True damage).\n• Vicious Spell: (1 MP) When you cast a Spell that forces a creature to make a Save to resist its effects, 1 target of your choice has DisADV on its first Save against the Spell.\n\nOnce per Long Rest, you can use 1 of these unique Spell Enhancements without spending MP. You regain the ability to do so again when you roll for Initiative.",
               "name" : "Meta Magic"
             },
             {
@@ -6925,43 +6919,52 @@
       "subclassFeatures" : {
         "Angelic" : [
           {
-            "description" : "You can use a Minor Action to emit Bright Light within a 5 Space Radius and can end the effect at any time. You also gain the following abilities: Celestial Origin: You gain access to the Angelborn Ancestry and you gain 2 Ancestry Points that can only be spent on Angelborn Traits. Celestial Protection: You learn the Careful Spell Meta Magic option (choose another Meta Magic option if you already know it) and Careful Spell now costs 0 MP to use. Celestial Overload: Once per Combat while you’re Overloaded, you can spend 1 AP to release a burst of radiant light in a 5 Space Aura. Creatures of your choice within range are either healed or seared by the light (your choice for each creature).\n• Healed: The creature regains 1 HP.\n• Seared: Make a Spell Attack against the AD of each target. Hit: The target takes 1 Radiant damage.",
+            "description" : "You can use a Minor Action to emit Bright Light within a 5 Space Radius and can end the effect at any time. You also gain the following abilities:\n\nCelestial Origin: You gain access to the Angelborn Ancestry and you gain 2 Ancestry Points that can only be spent on Angelborn Traits.\n\nCelestial Protection: You learn the Careful Spell Meta Magic option (choose another Meta Magic option if you already know it) and Careful Spell now costs 0 MP to use.\n\nCelestial Overload: Once per Combat while you’re Overloaded, you can spend 1 AP to release a burst of radiant light in a 5 Space Aura. Creatures of your choice within range are either healed or seared by the light (your choice for each creature).\n• Healed: The creature regains 1 HP.\n• Seared: Make a Spell Attack against the AD of each target. Hit: The target takes 1 Radiant damage.",
+            "level" : 3,
             "name" : "Celestial Spark"
           },
           {
             "description" : "You gain additional angelic features such as sparkling skin, feathers, a faint halo, or other changes of your choice. If you already have these features, they’re enhanced or expanded upon. Additionally, you gain 1 level of Language Mastery in Celestial. If you’re already Fluent in Celestial, you gain 1 level of Language Mastery in another Language of your choice.",
+            "level" : 3,
             "name" : "Celestial Appearance (Flavor Feature)"
           }
         ],
         "Draconic" : [
           {
-            "description" : "You gain the following abilities: Draconic Origin: You gain access to the Dragonborn Ancestry and you gain 2 Ancestry Points that can only be spent on Dragonborn Traits. Additionally, choose a Draconic Origin from the Dragonborn Ancestry if you haven’t already. Draconic Overload: While Overloaded, you gain Resistance (1) to Physical damage and your Draconic Origin damage type. Draconic Transmutation: You gain the Transmuted Spell Meta Magic (choose another Meta Magic option if you already have Transmuted Spell). Transmuted Spell now costs you 0 MP to use if you change the damage type to your Draconic Origin damage type.",
+            "description" : "You gain the following abilities:\n\nDraconic Origin: You gain access to the Dragonborn Ancestry and you gain 2 Ancestry Points that can only be spent on Dragonborn Traits. Additionally, choose a Draconic Origin from the Dragonborn Ancestry if you haven’t already.\n\nDraconic Overload: While Overloaded, you gain Resistance (1) to Physical damage and your Draconic Origin damage type.\n\nDraconic Transmutation: You gain the Transmuted Spell Meta Magic (choose another Meta Magic option if you already have Transmuted Spell). Transmuted Spell now costs you 0 MP to use if you change the damage type to your Draconic Origin damage type.",
+            "level" : 3,
             "name" : "Draconic Spark"
           },
           {
             "description" : "You gain additional draconic features such as scales, fangs, claws, or other changes of your choice. If you already have these features, they’re enhanced or expanded upon. Additionally, you gain 1 level of Language Mastery in Draconic. If you’re already Fluent in Draconic, you gain 1 level of Language Mastery in another Language of your choice.",
+            "level" : 3,
             "name" : "Draconic Appearance (Flavor Feature)"
           }
         ],
         "Paragon" : [
           {
             "description" : "At Level 3, instead of choosing a Subclass from your Class, you can take the Paragon Subclass.",
+            "level" : 3,
             "name" : "Paragon Subclass"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 3,
             "name" : "Novice Paragon"
           },
           {
             "description" : "You gain 1 Trade Point.",
+            "level" : 3,
             "name" : "Jack of one Trade (Flavor Feature)"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 7,
             "name" : "Expert Paragon"
           },
           {
             "description" : "You gain a Class Talent of your choice from your Class.",
+            "level" : 10,
             "name" : "Master Paragon"
           }
         ]

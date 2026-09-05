@@ -115,6 +115,15 @@ export const MONK_MANTIS_GRAPPLE_AP = 'monk.mantis.grappleAP';
 export const MONK_FLURRY_USED = 'monk.flurry.usedThisTurn';
 export const MONK_COBRA_REVENGE = 'monk.cobra.damagedByTarget';
 export const MONK_MONGOOSE_FLANKED = 'monk.mongoose.flanked';
+export const SORCERER_OVERLOAD_ACTIVE = 'sorcerer.overload.active';
+export const SORCERER_OVERLOAD_EXHAUSTION = 'sorcerer.overload.exhaustion';
+export const SORCERER_WILD_NEXT_ADVANTAGE = 'sorcerer.wildMagic.nextSpellAdvantage';
+export const SORCERER_WILD_OUTCOME = 'sorcerer.wildMagic.outcome';
+export const SORCERER_WILD_FORM_HP = 'sorcerer.wildMagic.formHP';
+export const SORCERER_META_FREE_USED = 'sorcerer.metaMagic.freeUsed';
+export const SORCERER_META_ACTIVE = 'sorcerer.metaMagic.active';
+export const SORCERER_CELESTIAL_LIGHT_ACTIVE = 'sorcerer.celestialLight.active';
+export const SORCERER_CELESTIAL_OVERLOAD_USED = 'sorcerer.celestialOverload.used';
 
 export function druidBeastTraitSelection(name: string, cost: number): string {
   return `${DRUID_BEAST_TRAIT_PREFIX} (${cost}) — ${name}`;
@@ -247,6 +256,115 @@ export interface CharacterSheetEffects {
   resistances: string[];
 }
 
+export const SORCERER_WILD_MAGIC_OUTCOMES = [
+  'You turn into a small creature with the stats of a Sheep (HP 2, PD & AD 5, Melee Attack +2, Damage 1).',
+  'A wave of magic explodes out from you. You take True damage equal to your Prime Modifier and creatures within 5 Spaces must succeed a Physical Save against your Save DC or take the same amount of damage.',
+  'You are Stunned 3.',
+  'You are overcome by a wave of lethargy. You have DisADV on all Checks and Saves.',
+  'You are Stunned 1.',
+  'You are Blinded and Deafened.',
+  'All living creatures become Invisible to you.',
+  'You gain a d4 penalty on all Checks and Saves.',
+  'You grow by 1 Size, become 2 times heavier, and your Speed is reduced by 2.',
+  'A strong gravitational pull originates from you. All creatures within 5 Spaces must make a Might Save or be pulled 4 Spaces toward you.',
+  'Forceful winds shoot out from you in all directions. All creatures within 5 Spaces (except you) must make a Might Save or be pushed 4 Spaces away from you.',
+  'You grow by 1 Size, become one and a half times heavier, and your Speed is increased by 2.',
+  'You gain a d4 bonus to all Checks and Saves.',
+  'You gain a Truesight of 10 Spaces.',
+  'You become Invisible.',
+  'Your maximum AP increases by 1 and you gain 1 AP.',
+  'You become energized. You have ADV on all Checks and Saves.',
+  'You gain a surge of power, granting you +5 to all Spell Checks you make.',
+  'You overflow with life energy. You and creatures within 5 Spaces regain HP equal to your Prime Modifier.',
+  'You turn into a large creature with the stats of a Young Purple Dragon, but without a Breath Weapon (HP 30, PD & AD 16, Attack +10, Damage 4, Fly Speed 6).',
+] as const;
+
+export function sorcererWildMagicOutcome(roll: number): string {
+  return SORCERER_WILD_MAGIC_OUTCOMES[Math.min(20, Math.max(1, Math.trunc(roll))) - 1];
+}
+
+export function sorcererDraconicDamageType(
+  character: Pick<Character, 'class' | 'subclass' | 'ancestry' | 'build'>,
+  traits: AncestryTrait[] = [],
+): string | undefined {
+  if (character.class !== 'Sorcerer' || character.subclass !== 'Draconic') return undefined;
+  const ancestryOrigin = selectedAncestryTraits(character, traits).find(({ ancestry, name }) => ancestry === 'Dragonborn' && name === 'Draconic Origin');
+  return (ancestryOrigin ? character.build?.ancestryTraitChoices?.[ancestryOrigin.id]?.[0] : undefined)
+    ?? character.build?.ancestryTraitChoices?.['Dragonborn|Draconic Origin']?.[0]
+    ?? character.build?.classFeatureSelections?.['sorcerer.draconicOrigin']?.[0];
+}
+
+export interface SorcererWildMagicProfile {
+  outcome: number;
+  description: string;
+  allCheckSaveAdjustment: number;
+  allCheckSaveDie: number;
+  spellCheckBonus: number;
+  speedAdjustment: number;
+  actionPointMaximumBonus: number;
+  transformation: {
+    name: 'Sheep' | 'Young Purple Dragon';
+    size: 'Small' | 'Large';
+    maximumHP: number;
+    currentHP: number;
+    physicalDefense: number;
+    areaDefense: number;
+    attackCheck: number;
+    damage: number;
+    flySpeed?: number;
+  } | null;
+}
+
+export function sorcererWildMagicProfile(character: Pick<Character, 'class' | 'build'>): SorcererWildMagicProfile {
+  const outcome = character.class === 'Sorcerer'
+    ? Math.min(20, Math.max(0, Math.trunc(character.build?.sheetFeatureCounters?.[SORCERER_WILD_OUTCOME] ?? 0))) : 0;
+  const form = outcome === 1
+    ? { name: 'Sheep' as const, size: 'Small' as const, maximumHP: 2, physicalDefense: 5, areaDefense: 5, attackCheck: 2, damage: 1 }
+    : outcome === 20
+      ? { name: 'Young Purple Dragon' as const, size: 'Large' as const, maximumHP: 30, physicalDefense: 16, areaDefense: 16, attackCheck: 10, damage: 4, flySpeed: 6 }
+      : null;
+  return {
+    outcome,
+    description: outcome ? sorcererWildMagicOutcome(outcome) : '',
+    allCheckSaveAdjustment: outcome === 17 ? 1 : outcome === 4 ? -1 : 0,
+    allCheckSaveDie: outcome === 13 ? 4 : outcome === 8 ? -4 : 0,
+    spellCheckBonus: outcome === 18 ? 5 : 0,
+    speedAdjustment: outcome === 12 ? 2 : outcome === 9 ? -2 : 0,
+    actionPointMaximumBonus: Number(outcome === 16),
+    transformation: form ? {
+      ...form,
+      currentHP: Math.min(form.maximumHP, Math.max(0, Math.trunc(character.build?.sheetFeatureCounters?.[SORCERER_WILD_FORM_HP] ?? form.maximumHP))),
+    } : null,
+  };
+}
+
+/** Records the sheet-facing portion of a Wild Magic result and its next-Spell ADV. */
+export function applySorcererWildMagic(character: Character, outcome: number): Character {
+  if (character.class !== 'Sorcerer' || !character.build) return character;
+  const roll = Math.min(20, Math.max(1, Math.trunc(outcome)));
+  const conditions = { ...character.build.sheetConditionLevels };
+  if (roll === 3) conditions.Stunned = Math.max(3, conditions.Stunned ?? 0);
+  if (roll === 5) conditions.Stunned = Math.max(1, conditions.Stunned ?? 0);
+  if (roll === 6) { conditions.Blinded = Math.max(1, conditions.Blinded ?? 0); conditions.Deafened = Math.max(1, conditions.Deafened ?? 0); }
+  if (roll === 15) conditions.Invisible = Math.max(1, conditions.Invisible ?? 0);
+  const counters: Record<string, number> = { ...character.build.sheetFeatureCounters, [SORCERER_WILD_OUTCOME]: roll };
+  if (roll === 1) counters[SORCERER_WILD_FORM_HP] = 2;
+  else if (roll === 20) counters[SORCERER_WILD_FORM_HP] = 30;
+  else delete counters[SORCERER_WILD_FORM_HP];
+  return {
+    ...character,
+    healthPoints: roll === 2 ? Math.max(0, character.healthPoints - Math.max(0, character.primeModifier))
+      : roll === 19 ? Math.min(character.maxHealthPoints, character.healthPoints + Math.max(0, character.primeModifier)) : character.healthPoints,
+    currentAP: roll === 16 ? character.currentAP + 1 : character.currentAP,
+    build: {
+      ...character.build,
+      sheetConditionLevels: conditions,
+      sheetFeatureStates: { ...character.build.sheetFeatureStates, [SORCERER_WILD_NEXT_ADVANTAGE]: true },
+      sheetFeatureCounters: counters,
+    },
+  };
+}
+
 /** Sheet-facing effects that must change live rather than being baked into a character's base statistics. */
 export function characterSheetEffects(character: Character): CharacterSheetEffects {
   const isRaging = character.class === 'Barbarian'
@@ -312,13 +430,19 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
     ? character.build?.sheetFeatureSelections?.[MONK_ACTIVE_STANCE] : undefined;
   const monkCobraDamage = monkStance === 'Cobra Stance' && Boolean(character.build?.sheetFeatureStates?.[MONK_COBRA_REVENGE]);
   const monkMongooseDamage = monkStance === 'Mongoose Stance' && Boolean(character.build?.sheetFeatureStates?.[MONK_MONGOOSE_FLANKED]);
+  const sorcererOrigins = new Set(character.class === 'Sorcerer'
+    ? character.build?.classFeatureSelections?.['sorcerer.origin'] ?? [] : []);
+  const sorcererOverloaded = character.class === 'Sorcerer'
+    && Boolean(character.build?.sheetFeatureStates?.[SORCERER_OVERLOAD_ACTIVE]);
+  const sorcererDraconicDamage = sorcererDraconicDamageType(character);
   const saveAdvantage: Partial<Record<DC20Attribute, number>> = {};
   if (isRaging || monkStance === 'Turtle Stance') saveAdvantage.Might = 1;
   if (monkStance === 'Gazelle Stance') saveAdvantage.Agility = 1;
   const activeSpeed = character.speed
     + (activeRune === 'Lightning Rune' ? 1 : 0)
     + (bardPerformanceAppliesToSelf && bardPerformance === 'Fast Tempo' ? (bardPerformanceEnhanced ? 2 : 1) : 0)
-    + Number(monkStance === 'Gazelle Stance');
+    + Number(monkStance === 'Gazelle Stance')
+    + sorcererWildMagicProfile(character).speedAdjustment;
   return {
     physicalDefense: character.physicalDefense - (isRaging ? 5 : 0),
     speed: monkStance === 'Turtle Stance' ? Math.min(character.speed, 1) : activeSpeed,
@@ -334,6 +458,9 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
       ...commanderResistances,
       ...hunterResistances,
       ...(monkStance === 'Turtle Stance' ? ['Physical (Half)', 'Elemental (Half)', 'Mystical (Half)'] : []),
+      ...(sorcererOrigins.has('Resilient Magic') ? ['Dazed Condition'] : []),
+      ...(sorcererOverloaded && character.subclass === 'Draconic'
+        ? ['Physical (1)', ...(sorcererDraconicDamage ? [`${sorcererDraconicDamage} (1)`] : [])] : []),
     ],
   };
 }
@@ -445,6 +572,15 @@ export function grantedClassLanguageNames(character: Pick<Character, 'class' | '
   return [];
 }
 
+/** Class Features that increase a Language by one stage instead of granting full Fluency. */
+export function grantedClassLanguageLevels(character: Pick<Character, 'class' | 'level' | 'subclass' | 'build'>): Record<string, number> {
+  if (character.class !== 'Sorcerer' || character.level < 3) return {};
+  const group = character.subclass === 'Angelic' ? 'sorcerer.celestialLanguage'
+    : character.subclass === 'Draconic' ? 'sorcerer.draconicLanguage' : '';
+  const language = group ? character.build?.classFeatureSelections?.[group]?.[0] : undefined;
+  return language ? { [language]: 1 } : {};
+}
+
 /** Cheap Shot improves at Expert Rogue; each Sinister Shot adds damage per Condition beyond the first. */
 export function rogueCheapShotDamage(level: number, distinctConditions: number, sinisterShotCount = 0): number {
   const baseDamage = level >= 5 ? 2 : 1;
@@ -487,6 +623,19 @@ export function classChoiceSelectionLimit(
   if (group.id === 'monk.stances' && character.class === 'Monk') {
     const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Stances').length;
     return Math.min(group.options.length, 2 + expanded * 2 + Number(character.level >= 5));
+  }
+  if (group.id === 'sorcerer.origin' && character.class === 'Sorcerer') {
+    const greater = (character.build?.selectedTalents ?? []).filter((name) => name === 'Greater Innate Power').length;
+    return Math.min(group.options.length, 1 + greater);
+  }
+  if (group.id === 'sorcerer.focus' && character.class === 'Sorcerer') {
+    const greater = (character.build?.selectedTalents ?? []).filter((name) => name === 'Greater Innate Power').length;
+    return Math.min(group.options.length, 1 + greater + Number(character.level >= 5));
+  }
+  if (group.id === 'sorcerer.metaMagic' && character.class === 'Sorcerer') {
+    const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Meta Magic').length;
+    const subclassGrant = Number(character.level >= 3 && ['Angelic', 'Draconic'].includes(character.subclass ?? ''));
+    return Math.min(group.options.length, 2 + expanded * 2 + Number(character.level >= 5) + subclassGrant);
   }
   if (group.id !== 'spellblade.disciplines' || character.class !== 'Spellblade') return group.limit;
   const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Disciplines').length;
@@ -551,6 +700,7 @@ export function grantedClassSpellNames(character: Pick<Character, 'class' | 'lev
     const magicDomains = (choices['cleric.domains'] ?? []).filter((domain) => domain === 'Magic').length;
     return Array.from(new Set((choices['cleric.magicDomainSpells'] ?? []).slice(0, magicDomains).filter(Boolean)));
   }
+  if (character.class === 'Sorcerer') return ['Sorcery'];
   if (character.class === 'Druid') return ['Druidcraft'];
   if (character.class !== 'Summoner') return [];
   const groups = [
@@ -569,8 +719,10 @@ export function ancestryPointBudget(character: Pick<Character, 'level' | 'class'
   const talentPoints = (character.build?.selectedTalents ?? []).filter((name) => name === 'Ancestry Increase').length * 4;
   const clericAncestralDomain = character.class === 'Cleric'
     && (character.build?.classFeatureSelections?.['cleric.domains'] ?? []).includes('Ancestral') ? 2 : 0;
+  const sorcererOriginPoints = character.class === 'Sorcerer'
+    && character.level >= 3 && ['Angelic', 'Draconic'].includes(character.subclass ?? '') ? 2 : 0;
   const startingPoints = character.ancestry === 'Custom' ? 4 : 5;
-  return startingPoints + advancement + talentPoints + clericAncestralDomain;
+  return startingPoints + advancement + talentPoints + clericAncestralDomain + sorcererOriginPoints;
 }
 
 /** Number of paid copies of a selected trait; old saves implicitly contain one. */
@@ -612,7 +764,7 @@ export function selectedAncestryTraits(character: Pick<Character, 'build' | 'anc
 
 /** Trait lists available from the chosen ancestries and ancestry-access origin traits. */
 export function accessibleAncestryNames(
-  character: Pick<Character, 'build' | 'ancestry'>,
+  character: Pick<Character, 'build' | 'ancestry' | 'class' | 'level' | 'subclass'>,
   traits: AncestryTrait[],
 ): Set<string> {
   if (character.ancestry === 'Custom') {
@@ -622,6 +774,8 @@ export function accessibleAncestryNames(
   const selected = selectedAncestryTraits(character, traits);
   if (selected.some(({ name }) => name === 'Fallen')) result.add('Fiendborn');
   if (selected.some(({ name }) => name === 'Redeemed')) result.add('Angelborn');
+  if (character.class === 'Sorcerer' && character.level >= 3 && character.subclass === 'Angelic') result.add('Angelborn');
+  if (character.class === 'Sorcerer' && character.level >= 3 && character.subclass === 'Draconic') result.add('Dragonborn');
   return result;
 }
 
@@ -744,6 +898,23 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
   let sheetFeatureSelections = { ...build.sheetFeatureSelections };
   let classFeatureSelections = { ...build.classFeatureSelections };
   const sheetConditionLevels = { ...build.sheetConditionLevels };
+
+  if (character.class === 'Sorcerer') {
+    sheetFeatureStates[SORCERER_OVERLOAD_ACTIVE] = false;
+    delete sheetFeatureSelections[SORCERER_META_ACTIVE];
+    delete sheetFeatureCounters[SORCERER_WILD_OUTCOME];
+    delete sheetFeatureCounters[SORCERER_WILD_FORM_HP];
+    sheetFeatureStates[SORCERER_WILD_NEXT_ADVANTAGE] = false;
+    if (type === 'Short') {
+      const overloadExhaustion = Math.max(0, sheetFeatureCounters[SORCERER_OVERLOAD_EXHAUSTION] ?? 0);
+      if (overloadExhaustion > 0) {
+        const remaining = Math.max(0, (sheetConditionLevels.Exhaustion ?? 0) - overloadExhaustion);
+        if (remaining > 0) sheetConditionLevels.Exhaustion = remaining;
+        else delete sheetConditionLevels.Exhaustion;
+        delete sheetFeatureCounters[SORCERER_OVERLOAD_EXHAUSTION];
+      }
+    }
+  }
 
   if (type === 'Long') {
     restPoints = character.maxHealthPoints;
@@ -1097,16 +1268,26 @@ export function equippedCombatModifiers(
   const hasPactArmor = character.class === 'Warlock'
     && (character.build?.classFeatureSelections?.['warlock.boon'] ?? []).includes('Pact Armor')
     && Boolean(equippedArmor);
-  const focusProperties = Array.from(new Set(focuses.flatMap(({ properties }) => properties.filter((property) => property !== 'Two-Handed'))));
+  const innateFocusProperties = character.class === 'Sorcerer'
+    ? character.build?.classFeatureSelections?.['sorcerer.focus'] ?? [] : [];
+  const focusProperties = Array.from(new Set([
+    ...focuses.flatMap(({ properties }) => properties.filter((property) => property !== 'Two-Handed')),
+    ...innateFocusProperties,
+  ]));
+  const overloaded = character.class === 'Sorcerer'
+    && Boolean(character.build?.sheetFeatureStates?.[SORCERER_OVERLOAD_ACTIVE]);
+  const wildMagic = sorcererWildMagicProfile(character);
   return {
-    spellCheckBonus: focuses.filter(({ properties }) => properties.includes('Channeling')).length,
-    spellAttackBonus: focuses.filter(({ properties }) => properties.includes('Vicious')).length,
+    spellCheckBonus: focuses.filter(({ properties }) => properties.includes('Channeling')).length
+      + Number(innateFocusProperties.includes('Channeling')) + Number(overloaded) * 5 + wildMagic.spellCheckBonus,
+    spellAttackBonus: focuses.filter(({ properties }) => properties.includes('Vicious')).length
+      + Number(innateFocusProperties.includes('Vicious')) + Number(overloaded) * 5,
     spellAttackDamageBonus: focuses.filter(({ properties }) => properties.includes('Powerful')).length,
     attackAndSpellDisadvantage: untrainedGear > 0 ? -untrainedGear : 0,
     agilityCheckDisadvantage: heavyGear > 0 ? -heavyGear : 0,
     physicalDamageReduction: Boolean(armorProfile?.physicalDamageReduction),
     elementalDamageReduction: Boolean(armorProfile?.elementalDamageReduction),
-    mysticalDamageReduction: hasPactArmor || focuses.some(({ properties }) => properties.includes('Warded')),
+    mysticalDamageReduction: hasPactArmor || focusProperties.includes('Warded'),
     unarmedHeavyHitDamageBonus: Number(Boolean(equippedArmor?.subtype === 'Heavy Armor' || equipped.some(({ name }) => name === 'Gauntlet'))),
     immuneToFlanking: equipped.filter(({ category }) => category === 'Shields').length >= 2,
     focusProperties,
@@ -1137,13 +1318,15 @@ function equipmentBonuses(character: Character, catalog: EquipmentCatalogItem[],
     ? equipped.filter((item) => item.category === 'Spell Focuses' && item.properties.includes('Protective')).length : 0;
   const focusMDR = training.spellFocusTraining
     && equipped.some((item) => item.category === 'Spell Focuses' && item.properties.includes('Warded')) ? 1 : 0;
+  const innateFocusProperties = character.class === 'Sorcerer'
+    ? character.build?.classFeatureSelections?.['sorcerer.focus'] ?? [] : [];
   const weaponPD = equipped.filter((item) => item.category === 'Weapons' && item.properties.includes('Guard')).length;
   return {
     pd: (armor?.physicalDefense ?? 0) + (shield?.physicalDefense ?? 0) + weaponPD,
-    ad: (armor?.areaDefense ?? 0) + (shield?.areaDefense ?? 0) + focusAD,
+    ad: (armor?.areaDefense ?? 0) + (shield?.areaDefense ?? 0) + focusAD + Number(innateFocusProperties.includes('Protective')),
     physicalDR: Number(Boolean(armor?.physicalDamageReduction || shield?.physicalDamageReduction)),
     elementalDR: Number(Boolean(armor?.elementalDamageReduction || shield?.elementalDamageReduction)),
-    mysticalDR: focusMDR,
+    mysticalDR: Math.max(focusMDR, Number(innateFocusProperties.includes('Warded'))),
     hasArmor: Boolean(equippedArmor),
     speedPenalty: (armor?.speedPenalty ?? 0) + equippedShields.reduce((sum, { profile }) => sum + profile.speedPenalty, 0),
     isUnarmored: !equippedArmor,
@@ -1228,7 +1411,14 @@ export function deriveCharacter(
     ? character.build?.classFeatureSelections?.['cleric.domains'] ?? [] : [];
   const clericMagicDomains = clericDomains.filter((domain) => domain === 'Magic').length;
   const selectedTalents = character.build?.selectedTalents ?? [];
-  const featureMana = character.class === 'Sorcerer' ? (character.level >= 5 ? 2 : 1)
+  const sorcererGreaterInnate = character.class === 'Sorcerer'
+    ? selectedTalents.filter((name) => name === 'Greater Innate Power').length : 0;
+  const sorcererExpandedMeta = character.class === 'Sorcerer'
+    ? selectedTalents.filter((name) => name === 'Expanded Meta Magic').length : 0;
+  const sorcererIntuitiveOrigins = character.class === 'Sorcerer'
+    ? (character.build?.classFeatureSelections?.['sorcerer.origin'] ?? []).filter((name) => name === 'Intuitive Magic').length : 0;
+  const featureMana = character.class === 'Sorcerer'
+    ? (character.level >= 5 ? 2 : 1) + sorcererGreaterInnate + sorcererExpandedMeta * 2
     : character.class === 'Spellblade' && disciplines.has('Magus') ? 1
       : clericMagicDomains;
   const skillFeaturePoints = character.class === 'Bard'
@@ -1261,6 +1451,7 @@ export function deriveCharacter(
     ancestryPointBudget: ancestryPointBudget(character),
     spellLimit: totals.spells + spellcasterPaths
       + selectedTalents.filter((name) => name === 'Spellcasting Expansion').length * 3
+      + sorcererIntuitiveOrigins * 2
       + Number(character.class === 'Spellblade' && disciplines.has('Magus')),
     cantripLimit: totals.cantrips,
     maneuverLimit: totals.maneuvers + martialPaths
