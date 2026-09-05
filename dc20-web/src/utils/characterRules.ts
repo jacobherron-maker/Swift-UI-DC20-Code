@@ -314,13 +314,43 @@ export function grantedClassSpellNames(character: Pick<Character, 'class' | 'lev
   return Array.from(new Set(groups.flatMap((group) => choices[group] ?? [])));
 }
 
-export function ancestryPointBudget(character: Pick<Character, 'level' | 'class' | 'subclass' | 'build'>): number {
-  const laterIncrease = character.class === 'Psion' ? 7 : 8;
-  const advancement = (character.level >= 4 ? 2 : 0) + (character.level >= laterIncrease ? 2 : 0);
+export function ancestryPointBudget(character: Pick<Character, 'level' | 'class' | 'subclass' | 'ancestry' | 'build'>): number {
+  // Beta p.194: every ancestry gains 2 points at levels 4 and 7. Custom
+  // ancestries use the p.196 variant's lower 4-point starting budget.
+  const advancement = (character.level >= 4 ? 2 : 0) + (character.level >= 7 ? 2 : 0);
   const talentPoints = (character.build?.selectedTalents ?? []).filter((name) => name === 'Ancestry Increase').length * 4;
   const clericAncestralDomain = character.class === 'Cleric'
     && (character.build?.classFeatureSelections?.['cleric.domains'] ?? []).includes('Ancestral') ? 2 : 0;
-  return 5 + advancement + talentPoints + clericAncestralDomain;
+  const startingPoints = character.ancestry === 'Custom' ? 4 : 5;
+  return startingPoints + advancement + talentPoints + clericAncestralDomain;
+}
+
+/** Number of paid copies of a selected trait; old saves implicitly contain one. */
+export function ancestryTraitSelectionCount(
+  character: Pick<Character, 'build' | 'ancestry'>,
+  trait: AncestryTrait,
+): number {
+  const ancestries = new Set([character.ancestry, character.build?.ancestrySecondary]
+    .filter((value): value is string => Boolean(value)));
+  const selected = (character.build?.selectedAncestryTraitIDs ?? []).includes(trait.id)
+    || isAutomaticAncestryTrait(trait, ancestries);
+  if (!selected) return 0;
+  return Math.max(1, Math.trunc(character.build?.ancestryTraitCounts?.[trait.id] ?? 1));
+}
+
+export function ancestryTraitPointTotals(
+  character: Pick<Character, 'build' | 'ancestry'>,
+  traits: AncestryTrait[],
+): { spent: number; negativePoints: number; zeroPointTraits: number; traitCopies: number } {
+  return traits.reduce((totals, trait) => {
+    const count = ancestryTraitSelectionCount(character, trait);
+    if (count === 0) return totals;
+    totals.spent += trait.cost * count;
+    totals.negativePoints += trait.cost < 0 ? -trait.cost * count : 0;
+    totals.zeroPointTraits += trait.countsAsZeroPointTrait ? count : 0;
+    totals.traitCopies += count;
+    return totals;
+  }, { spent: 0, negativePoints: 0, zeroPointTraits: 0, traitCopies: 0 });
 }
 
 export function selectedAncestryTraits(character: Pick<Character, 'build' | 'ancestry'>, traits: AncestryTrait[]): AncestryTrait[] {
@@ -330,6 +360,43 @@ export function selectedAncestryTraits(character: Pick<Character, 'build' | 'anc
     if (isAutomaticAncestryTrait(trait, ancestries)) selected.add(trait.id);
   }
   return traits.filter((trait) => selected.has(trait.id));
+}
+
+/** Trait lists available from the chosen ancestries and ancestry-access origin traits. */
+export function accessibleAncestryNames(
+  character: Pick<Character, 'build' | 'ancestry'>,
+  traits: AncestryTrait[],
+): Set<string> {
+  if (character.ancestry === 'Custom') {
+    return new Set(traits.map(({ ancestry }) => ancestry));
+  }
+  const result = new Set([character.ancestry, character.build?.ancestrySecondary].filter((value): value is string => Boolean(value)));
+  const selected = selectedAncestryTraits(character, traits);
+  if (selected.some(({ name }) => name === 'Fallen')) result.add('Fiendborn');
+  if (selected.some(({ name }) => name === 'Redeemed')) result.add('Angelborn');
+  return result;
+}
+
+/** Handles exact-name requirements plus the two quantified Beastborn requirements. */
+export function ancestryTraitPrerequisiteMet(
+  character: Pick<Character, 'build' | 'ancestry'>,
+  trait: AncestryTrait,
+  selectedTraits: AncestryTrait[],
+): boolean {
+  const originRequirement = ['Draconic Resistance', 'Draconic Breath Weapon', 'Draconic Affinity', 'Draconic Ward'].includes(trait.name)
+    ? 'Draconic Origin'
+    : ['Fiendish Resistance', 'Fiendish Magic', 'Fiendish Aura'].includes(trait.name) ? 'Fiendish Origin' : '';
+  if (originRequirement && !selectedTraits.some(({ name }) => name === originRequirement)) return false;
+  if (!trait.prerequisite) return true;
+  if (trait.prerequisite === 'Any Flying Beast Trait') {
+    return selectedTraits.some(({ ancestry, category, name }) => ancestry === 'Beastborn'
+      && (category === 'Flying' || name === 'Glide Speed'));
+  }
+  if (trait.name === 'Capable Limb') {
+    const additional = selectedTraits.find(({ ancestry, name }) => ancestry === 'Beastborn' && name === 'Additional Limb');
+    return Boolean(additional && ancestryTraitSelectionCount(character, additional) > 0);
+  }
+  return selectedTraits.some(({ name }) => name === trait.prerequisite);
 }
 
 export interface AncestryGrantedSpell {
@@ -450,7 +517,9 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
 export function isAutomaticAncestryTrait(trait: AncestryTrait, ancestries: ReadonlySet<string>): boolean {
   if (!ancestries.has(trait.ancestry)) return false;
   if (trait.name === 'Small-Sized') return ['Gnome', 'Halfling'].includes(trait.ancestry);
-  return trait.ancestry === 'Beastborn' && trait.name === 'Beastkind';
+  return (trait.ancestry === 'Beastborn' && trait.name === 'Beastkind')
+    || (trait.ancestry === 'Dragonborn' && trait.name === 'Draconic Origin')
+    || (trait.ancestry === 'Fiendborn' && trait.name === 'Fiendish Origin');
 }
 
 export function spellIsAvailableToClass(
@@ -503,8 +572,146 @@ export function ancestryExpertise(
   return result;
 }
 
-function traitCount(traits: AncestryTrait[], name: string): number {
-  return traits.filter((trait) => trait.name === name).length;
+export type AncestryRulesTag = 'Action' | 'Ancestry Access' | 'Attack' | 'Attribute' | 'Check'
+  | 'Condition' | 'Damage' | 'Defense' | 'Health' | 'Mana' | 'Movement' | 'Natural Weapon'
+  | 'Resistance' | 'Save' | 'Sense' | 'Size' | 'Spell' | 'Training' | 'Utility'
+  | 'Vulnerability';
+
+/** Search/display tags assigned from the actual rule content, with explicit tags for terse traits. */
+export function ancestryTraitRulesTags(trait: AncestryTrait): AncestryRulesTag[] {
+  const text = `${trait.name} ${trait.description}`;
+  const tags = new Set<AncestryRulesTag>();
+  if (/\bAP\b|Action|Reaction|Once per (?:Combat|Long Rest)/i.test(text)) tags.add('Action');
+  if (/Attack|Weapon/i.test(text)) tags.add('Attack');
+  if (/damage/i.test(text)) tags.add('Damage');
+  if (/Attribute|Might|Agility|Charisma|Intelligence/i.test(text)) tags.add('Attribute');
+  if (/\bCheck/i.test(text)) tags.add('Check');
+  if (/Condition|Blinded|Bleeding|Charmed|Dazed|Deafened|Doomed|Frightened|Grappled|Hindered|Impaired|Intimidated|Petrified|Poisoned|Prone|Restrained|Slowed|Stunned|Taunted|Terrified/i.test(text)) tags.add('Condition');
+  if (/\bPD\b|\bAD\b|\bMD\b|Armor|Shield|Damage Reduction|\bPDR\b|\bEDR\b/i.test(text)) tags.add('Defense');
+  if (/\bHP\b|Heal|Death's Door/i.test(text)) tags.add('Health');
+  if (/\bMP\b|Mana/i.test(text)) tags.add('Mana');
+  if (/Speed|movement|Climb|Swim|Burrow|Fly|Flying|Glide|Jump|Falling/i.test(text)) tags.add('Movement');
+  if (/Natural Weapon/i.test(text)) tags.add('Natural Weapon');
+  if (/Resistance/i.test(text)) tags.add('Resistance');
+  if (/\bSave/i.test(text)) tags.add('Save');
+  if (/Darkvision|Blindsight|Tremorsense|Echolocation|sense|Sight|Vision/i.test(text)) tags.add('Sense');
+  if (/\bSize/i.test(text)) tags.add('Size');
+  if (/Spell|Cantrip/i.test(text)) tags.add('Spell');
+  if (/Combat Training|Mastery/i.test(text)) tags.add('Training');
+  if (/Vulnerability/i.test(text)) tags.add('Vulnerability');
+  if (['Fallen', 'Redeemed'].includes(trait.name)) tags.add('Ancestry Access');
+  if (tags.size === 0) tags.add('Utility');
+  return [...tags];
+}
+
+export function ancestryTraitSource(trait: Pick<AncestryTrait, 'ancestry' | 'category'>): { title: string; page: number } {
+  if (trait.ancestry === 'Psyborn') return { title: 'DC20 Magazine 01 — Psion v2', page: 5 };
+  const pageByAncestry: Record<string, number> = {
+    Human: 198, Elf: 198, Dwarf: 199, Halfling: 199, Gnome: 200, Orc: 200,
+    Dragonborn: 201, Giantborn: 202, Angelborn: 203, Fiendborn: 204,
+  };
+  return {
+    title: 'DC20 Beta 0.10.5',
+    page: trait.ancestry === 'Beastborn'
+      ? (['Origin', 'Senses', 'Mobility', 'Jumping', 'Flying'].includes(trait.category) ? 205 : 206)
+      : pageByAncestry[trait.ancestry] ?? 195,
+  };
+}
+
+export interface AncestryMechanicalProfile {
+  resistances: string[];
+  vulnerabilities: string[];
+  senses: string[];
+  movement: string[];
+  defenses: string[];
+  conditionalRolls: string[];
+  other: string[];
+  deathDoorThreshold: number;
+  deathDoorActionPoints: number;
+}
+
+function unique(values: Array<string | false | undefined>): string[] {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value))));
+}
+
+/** Player-facing mechanical digest for every selected ancestry trait. */
+export function ancestryMechanicalProfile(
+  character: Pick<Character, 'ancestry' | 'build' | 'speed'>,
+  allTraits: AncestryTrait[],
+): AncestryMechanicalProfile {
+  const traits = selectedAncestryTraits(character, allTraits);
+  const has = (name: string) => traits.some((trait) => trait.name === name);
+  const choice = (ancestry: string, name: string) => {
+    const trait = traits.find((entry) => entry.ancestry === ancestry && entry.name === name);
+    return trait ? character.build?.ancestryTraitChoices?.[trait.id]?.[0] : undefined;
+  };
+  const draconic = choice('Dragonborn', 'Draconic Origin') ?? 'chosen Draconic damage';
+  const fiendish = choice('Fiendborn', 'Fiendish Origin') ?? 'chosen Fiendish damage';
+  const darkvision = has('Superior Darkvision') ? 20 : has('Darkvision') ? 10 : 0;
+  const keenSenses = traits.filter(({ name }) => name === 'Keen Sense')
+    .flatMap((trait) => character.build?.ancestryTraitChoices?.[trait.id] ?? []);
+  const conditionalRolls = traits.filter((trait) => /\b(?:ADV|DisADV)\b/.test(trait.description))
+    .map((trait) => `${trait.name}: ${trait.description}`);
+  const covered = new Set([
+    'Attribute Increase', 'Attribute Decrease', 'Might Attribute Decrease', 'Agility Attribute Decrease',
+    'Charisma Attribute Decrease', 'Intelligence Attribute Decrease', 'Skill Expertise', 'Trade Expertise',
+    'Tough', 'Frail', 'Mana Increase', 'Quick Reactions', 'Brittle', 'Reckless', 'Strong Minded',
+    'Thick-Skinned', 'Hard Shell', 'Small-Sized', 'Powerful Build', 'Speed Increase', 'Short-Legged',
+    'Natural Combatant', 'Darkvision', 'Superior Darkvision', 'Minor Tremorsense', 'Echolocation',
+    'Keen Sense', 'Draconic Resistance', 'Fiendish Resistance', 'Radiant Resistance', 'Psychic Resistance',
+    'Strong-Minded', 'Toxic Fortitude', 'Lightning Insulation', 'Cold Resistance', 'Fire Resistance',
+    'Cursed Mind', 'Umbral Weakness', 'Radiant Weakness', 'Climb Speed', 'Swim Speed', 'Burrow Speed',
+    'Glide Speed', 'Limited Flight', 'Full Flight', 'Natural Armor', 'Human Resolve', 'Orcish Resolve',
+  ]);
+  return {
+    resistances: unique([
+      has('Radiant Resistance') && 'Radiant Resistance (Half)',
+      has('Psychic Resistance') && 'Psychic Resistance (Half)',
+      has('Strong-Minded') && 'Psychic Resistance (1)',
+      has('Toxic Fortitude') && 'Poison Resistance (Half)',
+      has('Lightning Insulation') && 'Lightning Resistance (Half)',
+      has('Cold Resistance') && 'Cold Resistance (Half)',
+      has('Fire Resistance') && 'Fire Resistance (Half)',
+      has('Halfling Endurance') && 'Exhaustion Resistance',
+      has('Draconic Resistance') && `${draconic} Resistance (Half)`,
+      has('Fiendish Resistance') && `${fiendish} Resistance (Half)`,
+    ]),
+    vulnerabilities: unique([
+      has('Cursed Mind') && 'Psychic Vulnerability (1)',
+      has('Umbral Weakness') && 'Umbral Vulnerability (1)',
+      has('Radiant Weakness') && 'Radiant Vulnerability (1)',
+    ]),
+    senses: unique([
+      darkvision > 0 && `Darkvision ${darkvision} Spaces`,
+      has('Minor Tremorsense') && 'Tremorsense 3 Spaces',
+      has('Echolocation') && '1 AP: Blindsight in a 10 Space radius until your next turn',
+      ...keenSenses.map((sense) => `Keen ${sense}: ADV on Awareness Checks using it`),
+    ]),
+    movement: unique([
+      has('Climb Speed') && `Climb Speed ${character.speed} Spaces`,
+      has('Swim Speed') && `Swim Speed ${character.speed} Spaces; Breath Duration +3`,
+      has('Burrow Speed') && `Burrow Speed ${Math.floor(character.speed / 2)} Spaces`,
+      has('Glide Speed') && 'Glide Speed; no Controlled Falling damage; descend 4 Spaces at turn end',
+      has('Limited Flight') && 'Limited Flight: ascend 1 Space per 2 movement; can Hover',
+      has('Full Flight') && `Fly Speed ${character.speed} Spaces`,
+    ]),
+    defenses: unique([
+      has('Natural Armor') && 'PDR while not wearing Armor',
+      has('Hard Shell') && '+1 AD while unarmored; immune to Flanking; Speed −1',
+      has('Powerful Build') && 'Size increases by 1; occupy the Space of a creature 1 Size smaller',
+      has('Strong Minded') && '+1 legacy MD, routed to Area Defense in the Beta 0.10.5 defense model',
+    ]),
+    conditionalRolls,
+    other: traits.filter((trait) => !covered.has(trait.name) && !conditionalRolls.some((line) => line.startsWith(`${trait.name}:`)))
+      .map((trait) => `${trait.name}: ${trait.description}`),
+    deathDoorThreshold: -4 - Number(has('Human Resolve')),
+    deathDoorActionPoints: 4 + Number(has('Orcish Resolve')),
+  };
+}
+
+function traitCount(character: Pick<Character, 'build' | 'ancestry'>, traits: AncestryTrait[], name: string): number {
+  return traits.filter((trait) => trait.name === name)
+    .reduce((sum, trait) => sum + ancestryTraitSelectionCount(character, trait), 0);
 }
 
 export interface CharacterCombatTraining {
@@ -720,13 +927,15 @@ export function deriveCharacter(
   const paths = Object.values(character.build?.pathProgressionChoices ?? {});
   const martialPaths = paths.filter((path) => path === 'Martial').length;
   const spellcasterPaths = paths.filter((path) => path === 'Spellcaster').length;
-  const manaTraits = traitCount(chosenTraits, 'Mana Increase');
-  const ancestryHP = traitCount(chosenTraits, 'Tough') - traitCount(chosenTraits, 'Frail') * 2;
-  const ancestryPD = -traitCount(chosenTraits, 'Reckless')
-    + (equipment.isUnarmored ? traitCount(chosenTraits, 'Quick Reactions') : 0);
-  const ancestryAD = -traitCount(chosenTraits, 'Brittle')
-    + traitCount(chosenTraits, 'Strong Minded') + traitCount(chosenTraits, 'Strong-Minded')
-    + (equipment.isUnarmored ? traitCount(chosenTraits, 'Thick-Skinned') + traitCount(chosenTraits, 'Hard Shell') : 0);
+  const manaTraits = traitCount(character, chosenTraits, 'Mana Increase');
+  const ancestryHP = traitCount(character, chosenTraits, 'Tough') - traitCount(character, chosenTraits, 'Frail') * 2;
+  const ancestryPD = -traitCount(character, chosenTraits, 'Reckless')
+    + (equipment.isUnarmored ? traitCount(character, chosenTraits, 'Quick Reactions') : 0);
+  // Gnome Strong-Minded grants Psychic Resistance (1); only the Psyborn
+  // supplement's unhyphenated Strong Minded grants the legacy +1 MD/AD.
+  const ancestryAD = -traitCount(character, chosenTraits, 'Brittle')
+    + traitCount(character, chosenTraits, 'Strong Minded')
+    + (equipment.isUnarmored ? traitCount(character, chosenTraits, 'Thick-Skinned') + traitCount(character, chosenTraits, 'Hard Shell') : 0);
   const classPD = equipment.isUnarmored && character.class === 'Monk' ? 2 : 0;
   const classAD = equipment.isUnarmored && character.class === 'Barbarian' ? 2 : 0;
   const warlockPactBoons = new Set(character.class === 'Warlock'
@@ -762,8 +971,8 @@ export function deriveCharacter(
     maxMana: totals.mana + spellcasterPaths * 3 + manaTraits + featureMana,
     physicalDefense: 8 + mastery + effectiveAttributes.Agility + effectiveAttributes.Intelligence + equipment.pd + ancestryPD + classPD,
     arcaneDefense: 8 + mastery + effectiveAttributes.Might + effectiveAttributes.Charisma + equipment.ad + ancestryAD + classAD + Number(pactArmorActive),
-    speed: Math.max(0, 5 + traitCount(chosenTraits, 'Speed Increase') - traitCount(chosenTraits, 'Short-Legged')
-      - traitCount(chosenTraits, 'Hard Shell') - equipment.speedPenalty + classSpeed),
+    speed: Math.max(0, 5 + traitCount(character, chosenTraits, 'Speed Increase') - traitCount(character, chosenTraits, 'Short-Legged')
+      - traitCount(character, chosenTraits, 'Hard Shell') - equipment.speedPenalty + classSpeed),
     saveDC: 10 + primeModifier + mastery,
     martialCheck: primeModifier + mastery,
     spellCheck: primeModifier + mastery,
@@ -778,10 +987,15 @@ export function deriveCharacter(
     maneuverLimit: totals.maneuvers + martialPaths
       + selectedTalents.filter((name) => name === 'Martial Expansion').length * 2
       + Number(character.class === 'Spellblade' && disciplines.has('Warrior')),
-    physicalDR: equipment.physicalDR,
+    physicalDR: Math.max(equipment.physicalDR, Number(equipment.isUnarmored && traitCount(character, chosenTraits, 'Natural Armor') > 0)),
     elementalDR: equipment.elementalDR,
     mysticalDR: equipment.mysticalDR + Number(pactArmorActive),
-    size: chosenTraits.some((trait) => trait.name === 'Small-Sized') ? 'Small' : 'Medium',
+    size: (() => {
+      const sizeOrder = ['Tiny', 'Small', 'Medium', 'Large', 'Huge'];
+      const baseIndex = chosenTraits.some((trait) => trait.name === 'Small-Sized') ? 1 : 2;
+      const increases = traitCount(character, chosenTraits, 'Powerful Build');
+      return sizeOrder[Math.min(sizeOrder.length - 1, baseIndex + increases)];
+    })(),
   };
 }
 
@@ -824,6 +1038,7 @@ export function defaultBuild(): CharacterBuildData {
     languageFluencies: { Common: 'Fluent' },
     ancestrySecondary: '',
     selectedAncestryTraitIDs: [],
+    ancestryTraitCounts: {},
     ancestryTraitChoices: {},
     selectedTalents: [],
     pathProgressionChoices: {},

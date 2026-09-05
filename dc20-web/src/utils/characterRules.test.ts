@@ -5,6 +5,13 @@ import type { Character, CharacterReferenceData, EquipmentCatalogItem } from '..
 import {
   ancestryGrantedSpellNames,
   ancestryExpertise,
+  ancestryMechanicalProfile,
+  ancestryPointBudget,
+  ancestryTraitPointTotals,
+  ancestryTraitPrerequisiteMet,
+  ancestryTraitRulesTags,
+  ancestryTraitSelectionCount,
+  ancestryTraitSource,
   applyDerivedCharacter,
   attributeCap,
   barbarianStaminaRegenAmount,
@@ -127,6 +134,102 @@ describe('DC20 character calculations', () => {
     expect(selected.map(({ name }) => name)).toContain('Beastkind');
     expect(selected.map(({ name }) => name)).not.toContain('Small-Sized');
     expect(deriveCharacter(beastborn, barbarian, reference.ancestryTraits, []).size).toBe('Medium');
+  });
+
+  it('contains every audited ancestry trait with unique IDs and usable metadata', () => {
+    expect(reference.ancestryTraits).toHaveLength(195);
+    expect(reference.ancestryTraits.reduce<Record<string, number>>((counts, { ancestry }) => ({ ...counts, [ancestry]: (counts[ancestry] ?? 0) + 1 }), {})).toEqual({
+      Human: 8, Elf: 13, Dwarf: 13, Halfling: 13, Gnome: 13, Orc: 12,
+      Dragonborn: 15, Giantborn: 14, Angelborn: 13, Fiendborn: 16, Beastborn: 52, Psyborn: 13,
+    });
+    expect(new Set(reference.ancestryTraits.map(({ id }) => id)).size).toBe(reference.ancestryTraits.length);
+    for (const trait of reference.ancestryTraits) {
+      expect(trait.id).toBe(`${trait.ancestry}|${trait.name}`);
+      expect(trait.description.trim().length).toBeGreaterThan(5);
+      expect(ancestryTraitRulesTags(trait).length).toBeGreaterThan(0);
+      expect(ancestryTraitSource(trait).page).toBeGreaterThanOrEqual(5);
+    }
+    expect(reference.ancestryTraits.some(({ description }) => description.includes('Compatibility:'))).toBe(false);
+    expect(ancestryTraitSource(reference.ancestryTraits.find(({ id }) => id === 'Beastborn|Sunlight Sensitivity')!).page).toBe(205);
+    expect(ancestryTraitSource(reference.ancestryTraits.find(({ id }) => id === 'Beastborn|Natural Weapon')!).page).toBe(206);
+  });
+
+  it('uses the universal level 4 and 7 ancestry progression and Custom ancestry variant budget', () => {
+    const hero = character();
+    expect([1, 4, 7].map((level) => ancestryPointBudget({ ...hero, level }))).toEqual([5, 7, 9]);
+    hero.ancestry = 'Custom';
+    expect([1, 4, 7].map((level) => ancestryPointBudget({ ...hero, level }))).toEqual([4, 6, 8]);
+  });
+
+  it('automatically applies required ancestry origins without spending the Minor Trait slot', () => {
+    const dragonborn = character();
+    dragonborn.ancestry = 'Dragonborn';
+    const dragonTraits = selectedAncestryTraits(dragonborn, reference.ancestryTraits);
+    expect(dragonTraits.map(({ name }) => name)).toContain('Draconic Origin');
+    expect(ancestryTraitPointTotals(dragonborn, dragonTraits).zeroPointTraits).toBe(0);
+
+    const fiendborn = character();
+    fiendborn.ancestry = 'Fiendborn';
+    expect(selectedAncestryTraits(fiendborn, reference.ancestryTraits).map(({ name }) => name)).toContain('Fiendish Origin');
+  });
+
+  it('requires an origin before Custom ancestries take origin-dependent traits', () => {
+    const custom = character();
+    custom.ancestry = 'Custom';
+    const draconicOrigin = reference.ancestryTraits.find(({ id }) => id === 'Dragonborn|Draconic Origin')!;
+    const draconicResistance = reference.ancestryTraits.find(({ id }) => id === 'Dragonborn|Draconic Resistance')!;
+    const fiendishOrigin = reference.ancestryTraits.find(({ id }) => id === 'Fiendborn|Fiendish Origin')!;
+    const fiendishMagic = reference.ancestryTraits.find(({ id }) => id === 'Fiendborn|Fiendish Magic')!;
+    expect(ancestryTraitPrerequisiteMet(custom, draconicResistance, [draconicResistance])).toBe(false);
+    expect(ancestryTraitPrerequisiteMet(custom, draconicResistance, [draconicOrigin, draconicResistance])).toBe(true);
+    expect(ancestryTraitPrerequisiteMet(custom, fiendishMagic, [fiendishMagic])).toBe(false);
+    expect(ancestryTraitPrerequisiteMet(custom, fiendishMagic, [fiendishOrigin, fiendishMagic])).toBe(true);
+  });
+
+  it('counts repeatable ancestry traits and enforces quantified prerequisites', () => {
+    const beastborn = character();
+    beastborn.ancestry = 'Beastborn';
+    const additional = reference.ancestryTraits.find(({ ancestry, name }) => ancestry === 'Beastborn' && name === 'Additional Limb')!;
+    const capable = reference.ancestryTraits.find(({ ancestry, name }) => ancestry === 'Beastborn' && name === 'Capable Limb')!;
+    beastborn.build = {
+      ...defaultBuild(),
+      selectedAncestryTraitIDs: [additional.id, capable.id],
+      ancestryTraitCounts: { [additional.id]: 2, [capable.id]: 1 },
+    };
+    const selected = selectedAncestryTraits(beastborn, reference.ancestryTraits);
+    expect(ancestryTraitSelectionCount(beastborn, additional)).toBe(2);
+    expect(ancestryTraitPointTotals(beastborn, selected)).toMatchObject({ spent: 4, traitCopies: 4 });
+    expect(ancestryTraitPrerequisiteMet(beastborn, capable, selected)).toBe(true);
+  });
+
+  it('separates Gnome Psychic Resistance from the Psyborn legacy MD defense bonus', () => {
+    const gnome = character();
+    gnome.ancestry = 'Gnome';
+    const gnomeStrongMind = reference.ancestryTraits.find(({ ancestry, name }) => ancestry === 'Gnome' && name === 'Strong-Minded')!;
+    gnome.build = { ...defaultBuild(), selectedAncestryTraitIDs: [gnomeStrongMind.id] };
+    const baseAD = deriveCharacter(character(), barbarian, reference.ancestryTraits, []).arcaneDefense;
+    expect(deriveCharacter(gnome, barbarian, reference.ancestryTraits, []).arcaneDefense).toBe(baseAD);
+    expect(ancestryMechanicalProfile(gnome, reference.ancestryTraits).resistances).toContain('Psychic Resistance (1)');
+
+    const psyborn = character();
+    psyborn.ancestry = 'Psyborn';
+    const psybornStrongMind = reference.ancestryTraits.find(({ ancestry, name }) => ancestry === 'Psyborn' && name === 'Strong Minded')!;
+    psyborn.build = { ...defaultBuild(), selectedAncestryTraitIDs: [psybornStrongMind.id] };
+    expect(deriveCharacter(psyborn, barbarian, reference.ancestryTraits, []).arcaneDefense).toBe(baseAD + 1);
+  });
+
+  it('routes size increases, Natural Armor, origins, and Death Door traits into live mechanics', () => {
+    const hero = character();
+    hero.ancestry = 'Custom';
+    const names = ['Powerful Build', 'Natural Armor', 'Thick-Skinned', 'Human Resolve', 'Orcish Resolve'];
+    const traits = names.map((name) => reference.ancestryTraits.find((trait) => trait.name === name)!);
+    hero.build = { ...defaultBuild(), selectedAncestryTraitIDs: traits.map(({ id }) => id) };
+    const derived = deriveCharacter(hero, barbarian, reference.ancestryTraits, []);
+    expect(derived.size).toBe('Large');
+    expect(derived.physicalDR).toBe(1);
+    const mechanics = ancestryMechanicalProfile({ ...hero, speed: derived.speed }, reference.ancestryTraits);
+    expect(mechanics.deathDoorThreshold).toBe(-5);
+    expect(mechanics.deathDoorActionPoints).toBe(5);
   });
 
   it('routes choice-based and fixed ancestry spells into the character sheet', () => {

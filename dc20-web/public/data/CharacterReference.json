@@ -1362,7 +1362,7 @@
     },
     {
       "ancestry" : "Beastborn",
-      "category" : "Negative",
+      "category" : "Senses",
       "cost" : -2,
       "countsAsZeroPointTrait" : false,
       "description" : "While you or your target is in sunlight, you have DisADV on Attacks and Awareness Checks that rely on sight.",
@@ -1547,7 +1547,7 @@
     },
     {
       "ancestry" : "Beastborn",
-      "category" : "Negative",
+      "category" : "Flying",
       "cost" : -1,
       "countsAsZeroPointTrait" : false,
       "description" : "Requires any Flying Beast Trait. Your arms are also your wings. Anytime you use a Glide Speed or Flying Speed, you can't hold anything in your hands.",
@@ -1702,7 +1702,7 @@
     },
     {
       "ancestry" : "Beastborn",
-      "category" : "Negative",
+      "category" : "Body",
       "cost" : -1,
       "countsAsZeroPointTrait" : false,
       "description" : "Your Speed decreases by 1 Space.",
@@ -1712,7 +1712,7 @@
     },
     {
       "ancestry" : "Beastborn",
-      "category" : "Negative",
+      "category" : "Body",
       "cost" : -1,
       "countsAsZeroPointTrait" : false,
       "description" : "Your Size is considered Small.",
@@ -1722,7 +1722,7 @@
     },
     {
       "ancestry" : "Beastborn",
-      "category" : "Negative",
+      "category" : "Body",
       "cost" : -1,
       "countsAsZeroPointTrait" : false,
       "description" : "Your PD decreases by 1.",
@@ -1891,7 +1891,7 @@
       "category" : "Default",
       "cost" : 1,
       "countsAsZeroPointTrait" : false,
-      "description" : "Your MD increases by 1. Compatibility: in this Beta 0.10.5 builder, this legacy MD bonus increases Area Defense (AD) by 1.",
+      "description" : "Your MD increases by 1.",
       "id" : "Psyborn|Strong Minded",
       "isRepeatable" : false,
       "name" : "Strong Minded"
@@ -1943,7 +1943,7 @@
       "category" : "Expanded",
       "cost" : 2,
       "countsAsZeroPointTrait" : false,
-      "description" : "You learn 1 Spell with the Psychic or Gravity Tag. Once per Long Rest, you can cast the chosen Spell spending 1 less MP than normal, to a minimum of 0 MP. The Spell's total MP cost before reductions still can't exceed your Mana Spend Limit.",
+      "description" : "You learn 1 Spell of your choice with the Psychic or Gravity Spell Tag. Once per Long Rest, you can cast the chosen Spell spending 1 less MP than normal (minimum of 0 MP). The Spell's total MP cost (before all reductions) still can't exceed your Mana Spend Limit.",
       "id" : "Psyborn|Psionic Magic",
       "isRepeatable" : false,
       "name" : "Psionic Magic"
@@ -1963,7 +1963,7 @@
       "category" : "Expanded",
       "cost" : 2,
       "countsAsZeroPointTrait" : false,
-      "description" : "Once per Combat when you take damage from an Attack that targets your MD, you can reduce the damage taken by an amount equal to your Intelligence or Charisma. Compatibility: MD-targeting Attacks are treated as AD-targeting Attacks in this Beta 0.10.5 builder.",
+      "description" : "Once per Combat, when you take damage that targets your MD, you can reduce the damage taken by an amount equal to your Intelligence or Charisma (your choice).",
       "id" : "Psyborn|Strong Mind",
       "isRepeatable" : false,
       "name" : "Strong Mind"

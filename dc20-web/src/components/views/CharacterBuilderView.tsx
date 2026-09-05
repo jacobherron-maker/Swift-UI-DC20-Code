@@ -21,7 +21,13 @@ import type {
 import {
   ATTRIBUTE_NAMES,
   MASTERY_TITLES,
+  accessibleAncestryNames,
   ancestryExpertise,
+  ancestryTraitPointTotals,
+  ancestryTraitPrerequisiteMet,
+  ancestryTraitRulesTags,
+  ancestryTraitSelectionCount,
+  ancestryTraitSource,
   applyDerivedCharacter,
   attributeCap,
   classChoiceSelectionLimit,
@@ -253,7 +259,7 @@ function assignedAttributes(
   return result;
 }
 
-function choiceOptions(trait: AncestryTrait, skills: MasteryReference[], trades: MasteryReference[], spells: Array<{ name: string; source: string; school: string; tags: string }>): string[] {
+function choiceOptions(trait: AncestryTrait, skills: MasteryReference[], trades: MasteryReference[], spells: Array<{ name: string; source: string; school: string; tags: string; description?: string }>, ancestryChoices: Record<string, string[]> = {}): string[] {
   if (['Attribute Increase', 'Attribute Decrease'].includes(trait.name)) return ATTRIBUTE_NAMES;
   if (trait.name === 'Skill Expertise') return skills.map(({ name }) => name);
   if (trait.name === 'Trade Expertise') {
@@ -266,10 +272,25 @@ function choiceOptions(trait: AncestryTrait, skills: MasteryReference[], trades:
   if (trait.name === 'Keen Sense') return ['Hearing', 'Sight', 'Smell'];
   if (trait.name === 'Hazardous Hide') return ['Corrosion', 'Piercing', 'Poison'];
   if (trait.name === 'Natural Weapon') return ['Bludgeoning', 'Piercing', 'Slashing'];
+  if (trait.name === 'Natural Weapon Style') return ['Axe', 'Bow', 'Crossbow', 'Fist', 'Hammer', 'Pick', 'Sling', 'Spear', 'Staff', 'Sword', 'Whip'];
   if (trait.name === 'Celestial Magic') return spells.filter(({ source }) => source.split(', ').includes('Divine')).map(({ name }) => name);
-  if (trait.name === 'Fiendish Magic') return spells.filter(({ source, school }) => source.split(', ').includes('Arcane') && ['Elemental', 'Enchantment'].includes(school)).map(({ name }) => name);
+  if (trait.name === 'Fiendish Magic') {
+    const origin = ancestryChoices['Fiendborn|Fiendish Origin']?.[0]?.toLowerCase();
+    return spells.filter(({ source, school, tags, description }) => {
+      if (!source.split(', ').includes('Arcane') || !['Elemental', 'Enchantment'].includes(school)) return false;
+      const dealsDamage = /\b(?:takes?|deals?)\s+\d+[^.]*\bdamage\b/i.test(description ?? '');
+      return !dealsDamage || !origin || tags.split(', ').some((tag) => tag.toLowerCase() === origin);
+    }).map(({ name }) => name);
+  }
   if (trait.name === 'Psionic Magic') return spells.filter(({ tags }) => tags.split(', ').some((tag) => ['Psychic', 'Gravity'].includes(tag))).map(({ name }) => name);
   return [];
+}
+
+function ancestryRequirementLabel(trait: AncestryTrait): string | undefined {
+  if (trait.prerequisite) return trait.prerequisite;
+  if (['Draconic Resistance', 'Draconic Breath Weapon', 'Draconic Affinity', 'Draconic Ward'].includes(trait.name)) return 'Draconic Origin';
+  if (['Fiendish Resistance', 'Fiendish Magic', 'Fiendish Aura'].includes(trait.name)) return 'Fiendish Origin';
+  return undefined;
 }
 
 const CharacterBuilderView: React.FC<{
@@ -332,6 +353,7 @@ const CharacterBuilderView: React.FC<{
   const [ancestry, setAncestry] = useState(original.ancestry || 'Human');
   const [secondaryAncestry, setSecondaryAncestry] = useState(originalBuild.ancestrySecondary);
   const [traitIDs, setTraitIDs] = useState<string[]>(originalBuild.selectedAncestryTraitIDs);
+  const [traitCounts, setTraitCounts] = useState<Record<string, number>>(originalBuild.ancestryTraitCounts ?? {});
   const [traitChoices, setTraitChoices] = useState<Record<string, string[]>>(originalBuild.ancestryTraitChoices);
   const [className, setClassName] = useState(original.class || 'Champion');
   const [classPreviewName, setClassPreviewName] = useState(original.class || 'Champion');
@@ -375,6 +397,7 @@ const CharacterBuilderView: React.FC<{
     languageFluencies: effectiveLanguageFluencies,
     ancestrySecondary: secondaryAncestry,
     selectedAncestryTraitIDs: traitIDs,
+    ancestryTraitCounts: traitCounts,
     ancestryTraitChoices: traitChoices,
     selectedTalents: talents,
     pathProgressionChoices: effectivePathChoices,
@@ -408,11 +431,13 @@ const CharacterBuilderView: React.FC<{
   const classTotals = classReference ? classTableTotals(classReference, level) : null;
   const expertise = reference ? ancestryExpertise(draft, reference.ancestryTraits) : { skills: {}, trades: {} };
   const selectedTraits = reference ? selectedAncestryTraits(draft, reference.ancestryTraits) : [];
+  const accessibleAncestries = reference ? accessibleAncestryNames(draft, reference.ancestryTraits) : new Set<string>();
   const selectedAncestries = new Set([ancestry, secondaryAncestry].filter((entry): entry is string => Boolean(entry)));
   const automaticTraitIDs = new Set(selectedTraits.filter((trait) => isAutomaticAncestryTrait(trait, selectedAncestries)).map((trait) => trait.id));
-  const ancestrySpent = selectedTraits.reduce((sum, trait) => sum + trait.cost, 0);
-  const negativePoints = -selectedTraits.filter(({ cost }) => cost < 0).reduce((sum, trait) => sum + trait.cost, 0);
-  const minorTraits = selectedTraits.filter(({ countsAsZeroPointTrait }) => countsAsZeroPointTrait).length;
+  const ancestryTotals = ancestryTraitPointTotals(draft, selectedTraits);
+  const ancestrySpent = ancestryTotals.spent;
+  const negativePoints = ancestryTotals.negativePoints;
+  const minorTraits = ancestryTotals.zeroPointTraits;
   const skillSpent = masterySpent(skillMasteries);
   const tradeSpent = masterySpent(tradeMasteries);
   const grantedLanguages = grantedClassLanguageNames(draft);
@@ -539,13 +564,38 @@ const CharacterBuilderView: React.FC<{
     const selected = traitIDs.includes(trait.id);
     if (selected) {
       setTraitIDs((current) => current.filter((id) => id !== trait.id));
+      setTraitCounts((current) => Object.fromEntries(Object.entries(current).filter(([id]) => id !== trait.id)));
       setTraitChoices((current) => Object.fromEntries(Object.entries(current).filter(([id]) => id !== trait.id)));
       return;
     }
     if (trait.countsAsZeroPointTrait && minorTraits >= 1) return;
-    if (trait.cost < 0 && negativePoints >= 2) return;
-    if (trait.prerequisite && !selectedTraits.some(({ name }) => name === trait.prerequisite)) return;
+    if (trait.cost < 0 && negativePoints - trait.cost > 2) return;
+    if (!ancestryTraitPrerequisiteMet(draft, trait, selectedTraits)) return;
+    if (!trait.isRepeatable && selectedTraits.some((selectedTrait) => selectedTrait.name === trait.name)) return;
     setTraitIDs((current) => [...current, trait.id]);
+    setTraitCounts((current) => ({ ...current, [trait.id]: 1 }));
+  };
+
+  const adjustRepeatableTrait = (trait: AncestryTrait, direction: -1 | 1) => {
+    if (!trait.isRepeatable || automaticTraitIDs.has(trait.id)) return;
+    const count = ancestryTraitSelectionCount(draft, trait);
+    if (direction < 0) {
+      if (count <= 1) { toggleTrait(trait); return; }
+      setTraitCounts((current) => ({ ...current, [trait.id]: count - 1 }));
+      setTraitChoices((current) => ({ ...current, [trait.id]: (current[trait.id] ?? []).slice(0, count - 1) }));
+      return;
+    }
+    const maximum = trait.name === 'Keen Sense' ? 3
+      : trait.name === 'Capable Limb'
+        ? selectedTraits.filter(({ ancestry: traitAncestry, name }) => traitAncestry === 'Beastborn' && name === 'Additional Limb')
+          .reduce((sum, entry) => sum + ancestryTraitSelectionCount(draft, entry), 0)
+        : Number.POSITIVE_INFINITY;
+    if (count >= maximum || !ancestryTraitPrerequisiteMet(draft, trait, selectedTraits)) return;
+    if (trait.countsAsZeroPointTrait && minorTraits >= 1) return;
+    if (trait.cost < 0 && negativePoints - trait.cost > 2) return;
+    if (count === 0) setTraitIDs((current) => [...current, trait.id]);
+    setTraitCounts((current) => ({ ...current, [trait.id]: Math.max(1, count + 1) }));
+    if (trait.name === 'Keen Sense') setTraitChoices((current) => ({ ...current, [trait.id]: [...(current[trait.id] ?? []), ''] }));
   };
 
   const setClass = (next: string) => {
@@ -813,9 +863,29 @@ const CharacterBuilderView: React.FC<{
     if (derived && skillSpent > derived.skillPointBudget) issues.push('Skill mastery exceeds the available Skill Points.');
     if (derived && tradeSpent > derived.tradePointBudget) issues.push('Trade mastery exceeds the available Trade Points.');
     if (derived && languageSpent > derived.languagePointBudget) issues.push('Language fluency exceeds the available Language Points.');
-    if (derived && ancestrySpent > derived.ancestryPointBudget) issues.push('Ancestry traits exceed the available Ancestry Points.');
+    if (derived && ancestrySpent !== derived.ancestryPointBudget) issues.push(ancestrySpent < derived.ancestryPointBudget
+      ? `Spend all Ancestry Points (${derived.ancestryPointBudget - ancestrySpent} remaining).`
+      : `Ancestry traits exceed the available Ancestry Points by ${ancestrySpent - derived.ancestryPointBudget}.`);
     if (negativePoints > 2) issues.push('Negative ancestry traits can grant at most 2 points.');
     if (minorTraits > 1) issues.push('Choose at most one 0-point minor ancestry trait.');
+    const duplicateTraitNames = selectedTraits.filter((trait, index) => !trait.isRepeatable && selectedTraits.findIndex(({ name }) => name === trait.name) !== index).map(({ name }) => name);
+    if (duplicateTraitNames.length > 0) issues.push(`Remove duplicate Ancestry Traits: ${Array.from(new Set(duplicateTraitNames)).join(', ')}.`);
+    selectedTraits.forEach((trait) => {
+      if (!accessibleAncestries.has(trait.ancestry)) issues.push(`${trait.name} is no longer available from the selected Ancestry Lists.`);
+      if (!ancestryTraitPrerequisiteMet(draft, trait, selectedTraits)) issues.push(`${trait.name} requires ${ancestryRequirementLabel(trait)}.`);
+      const options = choiceOptions(trait, reference?.skills ?? [], reference?.trades ?? [], spells, traitChoices);
+      const count = ancestryTraitSelectionCount(draft, trait);
+      const choices = traitChoices[trait.id] ?? [];
+      if (trait.name === 'Beastkind' && !choices[0]?.trim()) issues.push('Name the Beastborn Origin granted by Beastkind.');
+      if (options.length > 0 && trait.name !== 'Keen Sense' && !choices[0]) issues.push(`Complete the required choice for ${trait.name}.`);
+      if (options.length > 0 && trait.name !== 'Keen Sense' && choices[0] && !options.includes(choices[0])) issues.push(`Choose a valid option for ${trait.name}.`);
+      if (trait.name === 'Keen Sense' && (choices.slice(0, count).filter(Boolean).length !== count || new Set(choices.slice(0, count)).size !== count)) issues.push('Choose a different sense for every copy of Keen Sense.');
+      if (trait.name === 'Capable Limb') {
+        const additionalLimb = selectedTraits.find(({ ancestry: traitAncestry, name }) => traitAncestry === 'Beastborn' && name === 'Additional Limb');
+        const additionalCount = additionalLimb ? ancestryTraitSelectionCount(draft, additionalLimb) : 0;
+        if (count > additionalCount) issues.push('Capable Limb can only be selected once per Additional Limb.');
+      }
+    });
     if (className === 'Rogue' && selectedTraits.some(({ name }) => name === 'Skill Expertise')) issues.push('Roguish Finesse already increases every Skill Mastery Limit; replace the Skill Expertise ancestry trait because these increases cannot stack.');
     if (talents.length > availableTalentSlots) issues.push('Too many Talents are selected.');
     if (level >= 3 && classReference?.subclasses.length && !subclass) issues.push('Choose a subclass.');
@@ -907,7 +977,7 @@ const CharacterBuilderView: React.FC<{
   const masteryMaximum = skillMasteryCap(draft);
   const skillMasteryMaximum = masteryMaximum;
   const tradeMasteryMaximum = masteryCap(level);
-  const visibleTraits = reference.ancestryTraits.filter((trait) => [ancestry, secondaryAncestry].includes(trait.ancestry));
+  const visibleTraits = reference.ancestryTraits.filter((trait) => accessibleAncestries.has(trait.ancestry));
   return (
     <div className="min-h-full bg-[radial-gradient(circle_at_top,#4c1d95_0%,#111827_42%,#020617_100%)] p-4 lg:p-7">
       <div className="mx-auto max-w-[1500px]">
@@ -945,10 +1015,31 @@ const CharacterBuilderView: React.FC<{
 
           {currentStep === 'ancestry' && <section>
             {className === 'Rogue' && selectedTraits.some(({ name }) => name === 'Skill Expertise') && <div role="alert" className="mb-6 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100"><strong>Skill Expertise conflict:</strong> Roguish Finesse already increases every Skill Mastery Limit. The Beta says a Skill cannot benefit from more than one such increase, so replace the Skill Expertise ancestry trait before finishing.</div>}
-            <div className="mb-6 grid gap-4 md:grid-cols-2"><label className="text-sm font-bold text-slate-300">Primary Ancestry<select value={ancestry} onChange={(event) => { setAncestry(event.target.value); setTraitIDs([]); setTraitChoices({}); }} className={`${fieldClass} mt-2`}>{reference.ancestries.map((option) => <option key={option}>{option}</option>)}</select></label><label className="text-sm font-bold text-slate-300">Secondary Ancestry (optional)<select value={secondaryAncestry} onChange={(event) => { setSecondaryAncestry(event.target.value); setTraitIDs([]); setTraitChoices({}); }} className={`${fieldClass} mt-2`}><option value="">None</option>{reference.ancestries.filter((option) => option !== ancestry && option !== 'Custom').map((option) => <option key={option}>{option}</option>)}</select></label></div>
-            <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><Metric label="Size" value={derived?.size ?? 'Medium'} tone="green" /><Metric label="Ancestry Points" value={`${ancestrySpent}/${derived?.ancestryPointBudget ?? 5}`} /><Metric label="Negative Points" value={`${negativePoints}/2`} /><Metric label="Minor Traits" value={`${minorTraits}/1`} /><Metric label="Traits Chosen" value={selectedTraits.length} /></div>
+            <div className="mb-6 grid gap-4 md:grid-cols-2"><label className="text-sm font-bold text-slate-300">Primary Ancestry<select value={ancestry} onChange={(event) => { setAncestry(event.target.value); setSecondaryAncestry(''); setTraitIDs([]); setTraitCounts({}); setTraitChoices({}); }} className={`${fieldClass} mt-2`}>{reference.ancestries.map((option) => <option key={option}>{option}</option>)}</select></label><label className="text-sm font-bold text-slate-300">Secondary Ancestry (optional)<select disabled={ancestry === 'Custom'} value={secondaryAncestry} onChange={(event) => { setSecondaryAncestry(event.target.value); setTraitIDs([]); setTraitCounts({}); setTraitChoices({}); }} className={`${fieldClass} mt-2 disabled:cursor-not-allowed disabled:opacity-40`}><option value="">{ancestry === 'Custom' ? 'Custom already accesses every list' : 'None'}</option>{reference.ancestries.filter((option) => option !== ancestry && option !== 'Custom').map((option) => <option key={option}>{option}</option>)}</select></label></div>
+            <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><Metric label="Size" value={derived?.size ?? 'Medium'} tone="green" /><Metric label="Ancestry Points" value={`${ancestrySpent}/${derived?.ancestryPointBudget ?? 5}`} /><Metric label="Negative Points" value={`${negativePoints}/2`} /><Metric label="Minor Traits" value={`${minorTraits}/1`} /><Metric label="Trait Copies" value={ancestryTotals.traitCopies} /></div>
+            {ancestry === 'Custom' && <div className="mb-6 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/10 p-4 text-sm leading-6 text-fuchsia-100"><strong>Custom Ancestry variant:</strong> every published Ancestry List is available, with the Beta’s reduced 4-point starting budget. Duplicate, Minor Trait, Negative Trait, and prerequisite rules still apply.</div>}
+            {(selectedTraits.some(({ name }) => name === 'Fallen') || selectedTraits.some(({ name }) => name === 'Redeemed')) && <div className="mb-6 rounded-xl border border-violet-400/25 bg-violet-500/10 p-4 text-sm leading-6 text-violet-100"><strong>Ancestry access unlocked:</strong> {selectedTraits.some(({ name }) => name === 'Fallen') && 'Fallen grants access to Fiendborn Traits. '}{selectedTraits.some(({ name }) => name === 'Redeemed') && 'Redeemed grants access to Angelborn Traits.'}</div>}
             <div className="mb-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4"><h3 className="font-black text-emerald-300">Base Ancestry Statistics</h3><div className="mt-3 grid gap-2 md:grid-cols-3"><InfoDetails summary={`${derived?.size ?? 'Medium'} Size`}>{derived?.size === 'Small' ? 'Your Size is considered Small.' : reference.generalAncestryTraits.find((trait) => trait.name.includes('Medium'))?.description ?? 'Your Size is considered Medium.'}</InfoDetails>{reference.generalAncestryTraits.filter((trait) => !trait.name.includes('Medium')).map((trait) => <InfoDetails key={trait.id} summary={trait.name}>{trait.description}</InfoDetails>)}</div></div>
-            <div className="space-y-5">{Array.from(new Set(visibleTraits.map(({ category }) => category))).sort().map((category) => <div key={category}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-violet-300">{category} Traits</h3><div className="grid gap-3 lg:grid-cols-2">{visibleTraits.filter((trait) => trait.category === category).map((trait) => { const selected = selectedTraits.some(({ id }) => id === trait.id); const automatic = automaticTraitIDs.has(trait.id); const options = choiceOptions(trait, reference.skills, reference.trades, spells); const selectedChoice = traitChoices[trait.id]?.[0] ?? ''; const chosenSpell = ['Celestial Magic', 'Fiendish Magic', 'Psionic Magic'].includes(trait.name) ? spells.find(({ name: spellName }) => spellName === selectedChoice) : undefined; return <div key={trait.id} className={`rounded-xl border p-4 ${selected ? 'border-violet-400/60 bg-violet-500/10' : 'border-white/10 bg-slate-950/45'}`}><div className="flex items-start justify-between gap-3"><div><h4 className="font-black text-slate-100">{trait.name} <span className="text-sm text-violet-300">({trait.cost > 0 ? '+' : ''}{trait.cost} AP)</span></h4><p className="mt-1 text-xs text-slate-500">{trait.ancestry}{trait.prerequisite ? ` • Requires ${trait.prerequisite}` : ''}{automatic ? ' • Applied by ancestry' : ''}</p></div><button type="button" disabled={automatic} onClick={() => toggleTrait(trait)} className={`rounded-lg px-3 py-2 text-xs font-black disabled:cursor-not-allowed disabled:opacity-70 ${selected ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'}`}>{automatic ? 'Applied' : selected ? 'Selected' : 'Select'}</button></div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{trait.description}</p>{selected && options.length > 0 && <label className="mt-3 block text-xs font-bold uppercase tracking-wider text-slate-500">Required choice<select value={selectedChoice} onChange={(event) => setTraitChoices((current) => ({ ...current, [trait.id]: [event.target.value] }))} className={`${fieldClass} mt-2 normal-case tracking-normal`}><option value="">Choose…</option>{options.map((option) => <option key={option} disabled={trait.name === 'Attribute Increase' && attributes[option as DC20Attribute] >= attributeCap(level)}>{option}</option>)}</select></label>}{chosenSpell && <div className="mt-3"><InfoDetails summary={`View ${chosenSpell.name} spell`}><p className="mb-2 text-xs font-bold text-violet-300">{chosenSpell.source} • {chosenSpell.school} • {chosenSpell.cost} • {chosenSpell.range} • {chosenSpell.duration}</p>{chosenSpell.description}{chosenSpell.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{chosenSpell.enhancements}</p></>}</InfoDetails></div>}</div>; })}</div></div>)}</div>
+            <div className="space-y-5">{Array.from(new Set(visibleTraits.map(({ category }) => category))).sort((left, right) => ['Origin', 'Default', 'Minor', 'Expanded', 'Negative', 'Senses', 'Mobility', 'Jumping', 'Flying', 'Body', 'Natural Weapons', 'Miscellaneous'].indexOf(left) - ['Origin', 'Default', 'Minor', 'Expanded', 'Negative', 'Senses', 'Mobility', 'Jumping', 'Flying', 'Body', 'Natural Weapons', 'Miscellaneous'].indexOf(right)).map((category) => <div key={category}><h3 className="mb-2 text-sm font-black uppercase tracking-[0.16em] text-violet-300">{category} Traits</h3><div className="grid gap-3 lg:grid-cols-2">{visibleTraits.filter((trait) => trait.category === category).map((trait) => {
+              const selected = selectedTraits.some(({ id }) => id === trait.id);
+              const automatic = automaticTraitIDs.has(trait.id);
+              const count = ancestryTraitSelectionCount(draft, trait);
+              const options = choiceOptions(trait, reference.skills, reference.trades, spells, traitChoices);
+              const choices = traitChoices[trait.id] ?? [];
+              const selectedChoice = choices[0] ?? '';
+              const source = ancestryTraitSource(trait);
+              const tags = ancestryTraitRulesTags(trait);
+              const requirement = ancestryRequirementLabel(trait);
+              const prerequisiteMet = ancestryTraitPrerequisiteMet(draft, trait, selectedTraits);
+              const duplicateSelected = !selected && !trait.isRepeatable && selectedTraits.some((entry) => entry.name === trait.name);
+              const negativeLimitReached = !selected && trait.cost < 0 && negativePoints - trait.cost > 2;
+              const minorLimitReached = !selected && trait.countsAsZeroPointTrait && minorTraits >= 1;
+              const unavailable = !prerequisiteMet || duplicateSelected || negativeLimitReached || minorLimitReached;
+              const additionalLimbCount = selectedTraits.filter(({ ancestry: traitAncestry, name }) => traitAncestry === 'Beastborn' && name === 'Additional Limb').reduce((sum, entry) => sum + ancestryTraitSelectionCount(draft, entry), 0);
+              const repeatMaximum = trait.name === 'Keen Sense' ? 3 : trait.name === 'Capable Limb' ? additionalLimbCount : Number.POSITIVE_INFINITY;
+              const chosenSpell = ['Celestial Magic', 'Fiendish Magic', 'Psionic Magic'].includes(trait.name) ? spells.find(({ name: spellName }) => spellName === selectedChoice) : undefined;
+              return <div key={trait.id} className={`rounded-xl border p-4 ${selected ? 'border-violet-400/60 bg-violet-500/10' : unavailable ? 'border-white/5 bg-slate-950/30 opacity-55' : 'border-white/10 bg-slate-950/45'}`}><div className="flex items-start justify-between gap-3"><div><h4 className="font-black text-slate-100">{trait.name} <span className="text-sm text-violet-300">({trait.cost > 0 ? '+' : ''}{trait.cost} AP{count > 1 ? ` × ${count}` : ''})</span></h4><p className="mt-1 text-xs text-slate-500">{trait.ancestry} • {source.title}, p. {source.page}{requirement ? ` • Requires ${requirement}` : ''}{automatic ? ' • Applied by ancestry' : ''}</p></div>{trait.isRepeatable && selected ? <div className="flex items-center gap-2"><button type="button" onClick={() => adjustRepeatableTrait(trait, -1)} className="h-9 w-9 rounded-lg bg-slate-800 font-black text-slate-200">−</button><span className="min-w-5 text-center font-black text-violet-200">{count}</span><button type="button" disabled={count >= repeatMaximum} onClick={() => adjustRepeatableTrait(trait, 1)} className="h-9 w-9 rounded-lg bg-violet-700 font-black text-white disabled:cursor-not-allowed disabled:opacity-35">+</button></div> : <button type="button" disabled={automatic || unavailable} onClick={() => toggleTrait(trait)} className={`rounded-lg px-3 py-2 text-xs font-black disabled:cursor-not-allowed disabled:opacity-50 ${selected ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'}`}>{automatic ? 'Applied' : selected ? 'Selected' : unavailable ? 'Locked' : 'Select'}</button>}</div><div className="mt-3 flex flex-wrap gap-1.5">{tags.map((tag) => <span key={tag} className="rounded-full bg-violet-500/10 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-violet-200">{tag}</span>)}</div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{trait.description}</p>{unavailable && !selected && <p className="mt-2 text-xs font-bold text-amber-300">{!prerequisiteMet ? `Requires ${requirement}.` : duplicateSelected ? 'A Trait with this name is already selected; the Beta forbids duplicate Traits.' : negativeLimitReached ? 'This would exceed the 2-point Negative Trait limit.' : 'Only one 0-point Minor Trait can be selected.'}</p>}{selected && trait.name === 'Beastkind' && <label className="mt-3 block text-xs font-bold uppercase tracking-wider text-slate-500">Beastborn origin<input value={selectedChoice} onChange={(event) => setTraitChoices((current) => ({ ...current, [trait.id]: [event.target.value] }))} className={`${fieldClass} mt-2 normal-case tracking-normal`} placeholder="Frog, lion, spider, turtle…" /></label>}{selected && trait.name === 'Keen Sense' && Array.from({ length: count }, (_, index) => <label key={index} className="mt-3 block text-xs font-bold uppercase tracking-wider text-slate-500">Keen Sense {index + 1}<select value={choices[index] ?? ''} onChange={(event) => setTraitChoices((current) => { const next = [...(current[trait.id] ?? [])]; next[index] = event.target.value; return { ...current, [trait.id]: next }; })} className={`${fieldClass} mt-2 normal-case tracking-normal`}><option value="">Choose…</option>{options.map((option) => <option key={option} disabled={choices.some((choice, choiceIndex) => choice === option && choiceIndex !== index)}>{option}</option>)}</select></label>)}{selected && trait.name !== 'Keen Sense' && trait.name !== 'Beastkind' && options.length > 0 && <label className="mt-3 block text-xs font-bold uppercase tracking-wider text-slate-500">Required choice<select value={selectedChoice} onChange={(event) => setTraitChoices((current) => ({ ...current, [trait.id]: [event.target.value] }))} className={`${fieldClass} mt-2 normal-case tracking-normal`}><option value="">Choose…</option>{options.map((option) => <option key={option} disabled={trait.name === 'Attribute Increase' && attributes[option as DC20Attribute] >= attributeCap(level)}>{option}</option>)}</select></label>}{chosenSpell && <div className="mt-3"><InfoDetails summary={`View ${chosenSpell.name} spell`}><p className="mb-2 text-xs font-bold text-violet-300">{chosenSpell.source} • {chosenSpell.school} • {chosenSpell.cost} • {chosenSpell.range} • {chosenSpell.duration}</p>{chosenSpell.description}{chosenSpell.enhancements && <><h5 className="mt-4 font-bold text-slate-300">Enhancements</h5><p>{chosenSpell.enhancements}</p></>}</InfoDetails></div>}</div>;
+            })}</div></div>)}</div>
           </section>}
 
           {currentStep === 'class' && classReference && <section>
@@ -1033,7 +1124,7 @@ const CharacterBuilderView: React.FC<{
 
           {currentStep === 'equipment' && classReference && <section><div className="mb-6"><p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">{classReference.name} Training</p><h2 className="text-2xl font-black text-white">Starting Equipment</h2><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{classReference.startingEquipment.description}</p></div>{equipmentLoading ? <p className="text-slate-400">Loading equipment…</p> : <div className="space-y-6">{([['arsenal', `Arsenal — choose ${classReference.startingEquipment.arsenalCount}`], ['armor', 'Armor — choose 1'], ['tools', `Trade Tools — choose ${classReference.startingEquipment.tradeToolCount}`]] as const).map(([group, title]) => { const limit = group === 'arsenal' ? classReference.startingEquipment.arsenalCount : group === 'armor' ? 1 : classReference.startingEquipment.tradeToolCount; const groupIDs = new Set(startingEquipment[group].map(({ id }) => id)); const selectedCount = inventoryItems.filter((entry) => entry.source === 'startingEquipment' && groupIDs.has(entry.equipmentID)).length; const groupFull = selectedCount >= limit; return <div key={group}><h3 className="mb-3 font-black text-violet-200">{title} <span className={`ml-2 text-xs ${groupFull ? 'text-emerald-300' : 'text-slate-500'}`}>({selectedCount}/{limit})</span></h3><div className="grid gap-2 lg:grid-cols-2">{startingEquipment[group].map((item) => { const selected = inventoryItems.some((entry) => entry.equipmentID === item.id && entry.source === 'startingEquipment'); const disabled = groupFull && !selected; return <div key={item.id} className={disabled ? 'opacity-40' : ''}><InfoDetails summary={<label className={`flex flex-1 items-center gap-2 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`} onClick={(event) => event.stopPropagation()}><input type="checkbox" disabled={disabled} checked={selected} onChange={() => toggleStartingEquipment(item.id, group)} />{item.name}<span className="ml-auto text-xs text-slate-500">{item.slot}</span></label>}><p className="mb-2 font-semibold text-violet-200">{item.summary}</p>{item.mechanics}</InfoDetails></div>; })}</div></div>; })}</div>}<label className="mt-6 block text-sm font-bold text-slate-300">Character Notes<textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={5} className={`${fieldClass} mt-2`} placeholder="Goals, bonds, appearance, reminders…" /></label></section>}
 
-          {currentStep === 'summary' && derived && classReference && <section><h2 className="text-2xl font-black text-white">Final Character Summary</h2><p className="mt-2 text-slate-400">All health, resources, defenses, combat values, and saves are calculated from the preceding choices.</p><div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6"><Metric label="Maximum HP" value={derived.maxHP} tone="red" /><Metric label="Action Points" value={4} /><Metric label="Stamina" value={derived.maxStamina} tone="blue" /><Metric label="Mana" value={derived.maxMana} tone="blue" /><Metric label="Physical Defense" value={derived.physicalDefense} /><Metric label="Arcane Defense" value={derived.arcaneDefense} /><Metric label="Combat Mastery" value={`+${derived.combatMastery}`} /><Metric label="Prime Modifier" value={`+${derived.primeModifier}`} /><Metric label="Martial Check" value={`+${derived.martialCheck}`} /><Metric label="Spell Check" value={`+${derived.spellCheck}`} /><Metric label="Class Save DC" value={derived.saveDC} /><Metric label="Speed" value={derived.speed} /></div><div className="mt-6 grid gap-5 lg:grid-cols-2"><div className={panelClass}><h3 className="font-black text-violet-200">Identity</h3><dl className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-slate-500">Name</dt><dd className="font-bold text-slate-200">{name || 'Unnamed'}</dd></div><div><dt className="text-slate-500">Level & Class</dt><dd className="font-bold text-slate-200">Level {level} {className}</dd></div><div><dt className="text-slate-500">Subclass</dt><dd className="font-bold text-slate-200">{subclass || 'Not yet available'}</dd></div><div><dt className="text-slate-500">Ancestry</dt><dd className="font-bold text-slate-200">{ancestry}{secondaryAncestry ? ` / ${secondaryAncestry}` : ''}</dd></div><div><dt className="text-slate-500">Size</dt><dd className="font-bold text-slate-200">{derived.size}</dd></div><div><dt className="text-slate-500">Background</dt><dd className="font-bold text-slate-200">{backgroundName || 'Unnamed background'}</dd></div></dl></div><div className={panelClass}><h3 className="font-black text-violet-200">Attributes & Saves</h3><div className="mt-3 grid grid-cols-2 gap-3">{ATTRIBUTE_NAMES.map((attribute) => <div key={attribute} className="rounded-lg bg-slate-950/50 p-3"><div className="text-xs text-slate-500">{attribute}</div><div className="text-xl font-black text-slate-100">{derived.effectiveAttributes[attribute] >= 0 ? '+' : ''}{derived.effectiveAttributes[attribute]}</div><div className="text-xs text-violet-300">Save +{derived.effectiveAttributes[attribute] + derived.combatMastery}</div></div>)}</div></div><div className={panelClass}><h3 className="font-black text-violet-200">Training</h3><p className="mt-3 text-sm text-slate-400">Skills {skillSpent}/{derived.skillPointBudget} • Trades {tradeSpent}/{derived.tradePointBudget} • Language Points {languageSpent}/{derived.languagePointBudget}</p><p className="mt-2 text-sm text-slate-400">Mastery cap: {masteryTitle(masteryMaximum)}{Object.keys(expertise.skills).length || Object.keys(expertise.trades).length ? ' (expertise bonuses shown in Skills)' : ''}</p></div><div className={panelClass}><h3 className="font-black text-violet-200">Features & Powers</h3><p className="mt-3 text-sm text-slate-400">{classReference.features.filter(({ level: featureLevel }) => featureLevel <= level).reduce((sum, entry) => sum + entry.features.length, 0)} class features • {selectedTraits.length} ancestry traits • {talents.length} talents</p><p className="mt-2 text-sm text-slate-400">{selectedSpells.length + grantedSpells.length} spells ({grantedSpells.length} feature-granted) • {selectedCantrips.length} cantrips • {selectedManeuvers.length + grantedManeuvers.length} maneuvers</p></div></div>{validation.length > 0 && <div role="alert" className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4"><h3 className="font-black text-amber-200">Finish these choices</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-100/80">{validation.map((issue) => <li key={issue}>{issue}</li>)}</ul></div>}</section>}
+          {currentStep === 'summary' && derived && classReference && <section><h2 className="text-2xl font-black text-white">Final Character Summary</h2><p className="mt-2 text-slate-400">All health, resources, defenses, combat values, and saves are calculated from the preceding choices.</p><div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6"><Metric label="Maximum HP" value={derived.maxHP} tone="red" /><Metric label="Action Points" value={4} /><Metric label="Stamina" value={derived.maxStamina} tone="blue" /><Metric label="Mana" value={derived.maxMana} tone="blue" /><Metric label="Physical Defense" value={derived.physicalDefense} /><Metric label="Area Defense" value={derived.arcaneDefense} /><Metric label="Combat Mastery" value={`+${derived.combatMastery}`} /><Metric label="Prime Modifier" value={`+${derived.primeModifier}`} /><Metric label="Martial Check" value={`+${derived.martialCheck}`} /><Metric label="Spell Check" value={`+${derived.spellCheck}`} /><Metric label="Class Save DC" value={derived.saveDC} /><Metric label="Speed" value={derived.speed} /><Metric label="PDR" value={derived.physicalDR ? 'Resistance (Half)' : '—'} /><Metric label="EDR" value={derived.elementalDR ? 'Resistance (Half)' : '—'} /><Metric label="MDR" value={derived.mysticalDR ? 'Resistance (Half)' : '—'} /></div><div className="mt-6 grid gap-5 lg:grid-cols-2"><div className={panelClass}><h3 className="font-black text-violet-200">Identity</h3><dl className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-slate-500">Name</dt><dd className="font-bold text-slate-200">{name || 'Unnamed'}</dd></div><div><dt className="text-slate-500">Level & Class</dt><dd className="font-bold text-slate-200">Level {level} {className}</dd></div><div><dt className="text-slate-500">Subclass</dt><dd className="font-bold text-slate-200">{subclass || 'Not yet available'}</dd></div><div><dt className="text-slate-500">Ancestry</dt><dd className="font-bold text-slate-200">{ancestry}{secondaryAncestry ? ` / ${secondaryAncestry}` : ''}</dd></div><div><dt className="text-slate-500">Size</dt><dd className="font-bold text-slate-200">{derived.size}</dd></div><div><dt className="text-slate-500">Background</dt><dd className="font-bold text-slate-200">{backgroundName || 'Unnamed background'}</dd></div></dl></div><div className={panelClass}><h3 className="font-black text-violet-200">Attributes & Saves</h3><div className="mt-3 grid grid-cols-2 gap-3">{ATTRIBUTE_NAMES.map((attribute) => <div key={attribute} className="rounded-lg bg-slate-950/50 p-3"><div className="text-xs text-slate-500">{attribute}</div><div className="text-xl font-black text-slate-100">{derived.effectiveAttributes[attribute] >= 0 ? '+' : ''}{derived.effectiveAttributes[attribute]}</div><div className="text-xs text-violet-300">Save +{derived.effectiveAttributes[attribute] + derived.combatMastery}</div></div>)}</div></div><div className={panelClass}><h3 className="font-black text-violet-200">Training</h3><p className="mt-3 text-sm text-slate-400">Skills {skillSpent}/{derived.skillPointBudget} • Trades {tradeSpent}/{derived.tradePointBudget} • Language Points {languageSpent}/{derived.languagePointBudget}</p><p className="mt-2 text-sm text-slate-400">Mastery cap: {masteryTitle(masteryMaximum)}{Object.keys(expertise.skills).length || Object.keys(expertise.trades).length ? ' (expertise bonuses shown in Skills)' : ''}</p></div><div className={panelClass}><h3 className="font-black text-violet-200">Features & Powers</h3><p className="mt-3 text-sm text-slate-400">{classReference.features.filter(({ level: featureLevel }) => featureLevel <= level).reduce((sum, entry) => sum + entry.features.length, 0)} class features • {selectedTraits.length} ancestry traits • {talents.length} talents</p><p className="mt-2 text-sm text-slate-400">{selectedSpells.length + grantedSpells.length} spells ({grantedSpells.length} feature-granted) • {selectedCantrips.length} cantrips • {selectedManeuvers.length + grantedManeuvers.length} maneuvers</p></div></div>{validation.length > 0 && <div role="alert" className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4"><h3 className="font-black text-amber-200">Finish these choices</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-100/80">{validation.map((issue) => <li key={issue}>{issue}</li>)}</ul></div>}</section>}
         </main>
 
         {(rulesError || powersError) && <div role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">{rulesError || powersError}</div>}

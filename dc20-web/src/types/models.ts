@@ -271,6 +271,8 @@ export interface CharacterBuildData {
   languageMasteries?: Record<string, MasteryLevel>;
   ancestrySecondary: string;
   selectedAncestryTraitIDs: string[];
+  /** Number of copies selected for the few ancestry traits the Beta explicitly allows more than once. */
+  ancestryTraitCounts?: Record<string, number>;
   ancestryTraitChoices: Record<string, string[]>;
   selectedTalents: string[];
   pathProgressionChoices: Record<string, CharacterPathChoice>;

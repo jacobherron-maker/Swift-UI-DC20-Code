@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useCharacterReference } from '../../hooks/useCharacterReference';
 import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { usePowerCatalog } from '../../hooks/usePowerCatalog';
 import { CharacterAvatarEditor } from '../character/CharacterAvatar';
 import { CharacterRestControls, CharacterSheetTabContent, type RedesignedSheetTab } from '../character/CharacterSheetTabs';
 import type { CampaignNote, Character, CharacterInventoryItem, DC20Attribute, EquipmentCatalogItem, MasteryLevel } from '../../types/models';
-import { ATTRIBUTE_NAMES, BARBARIAN_RAGE_STATE, BARD_PERFORMANCE_STATE, ancestryGrantedSpellNames, applyDerivedCharacter, barbarianStaminaRegenAmount, bardHelpDieSize, championStaminaRegenAmount, championTacticalDieSize, characterSheetEffects, commanderHelpDieSize, commanderInspiringPresenceHealing, commanderRallyAmount, commanderStaminaRegenAmount, deriveCharacter, grantedClassLanguageNames, grantedClassManeuverNames, grantedClassSpellNames, masteryBonus, masteryRank, masteryTitle, rogueCheapShotDamage, rogueStaminaRegenAmount, skillMasteryCap, spellbladeDisciplineNames } from '../../utils/characterRules';
+import { ATTRIBUTE_NAMES, BARBARIAN_RAGE_STATE, BARD_PERFORMANCE_STATE, ancestryGrantedSpellNames, applyDerivedCharacter, barbarianStaminaRegenAmount, bardHelpDieSize, championStaminaRegenAmount, championTacticalDieSize, characterSheetEffects, commanderHelpDieSize, commanderInspiringPresenceHealing, commanderRallyAmount, commanderStaminaRegenAmount, deriveCharacter, grantedClassLanguageNames, grantedClassManeuverNames, grantedClassSpellNames, masteryBonus, masteryRank, masteryTitle, rogueCheapShotDamage, rogueStaminaRegenAmount, selectedAncestryTraits, skillMasteryCap, spellbladeDisciplineNames } from '../../utils/characterRules';
 import { enforceEquipmentHandCapacity, isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped as toggleInventoryEquippedBase } from '../../utils/equipmentRules';
 import { generateUUID } from '../../utils/gameUtils';
 
@@ -1026,6 +1026,8 @@ function ClericControls({ character, onChange, onRoll }: {
 }
 
 const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit, onCharacterChange }) => {
+  const characterRef = useRef(character);
+  useEffect(() => { characterRef.current = character; }, [character]);
   const [selectedTab, setSelectedTab] = useState<SheetTab>('sheet-checks');
   const [lastRoll, setLastRoll] = useState<RollOutcome | null>(null);
   const [conditionToAdd, setConditionToAdd] = useState('Bleeding');
@@ -1067,6 +1069,9 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     () => ancestryGrantedSpellNames(character, reference?.ancestryTraits ?? []),
     [character, reference?.ancestryTraits],
   );
+  const activeAncestryTraits = selectedAncestryTraits(character, reference?.ancestryTraits ?? []);
+  const fastReflexesReady = activeAncestryTraits.some(({ name }) => name === 'Fast Reflexes')
+    && !featureStates['ancestry.fastReflexes.firstAttackUsed'];
   const knownSpells = useMemo(() => {
     const result = [...character.spells];
     for (const name of [...grantedSpells, ...ancestryGrantedSpells.map((entry) => entry.name)]) {
@@ -1099,10 +1104,11 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   }, [character.maneuvers, grantedManeuvers, maneuverCatalog]);
 
   const update = (values: Partial<Character>) => {
-    let next = { ...character, ...values };
+    let next = { ...characterRef.current, ...values };
     if (values.inventoryItems && classReference && reference && equipmentCatalog.length > 0) {
       next = applyDerivedCharacter(next, deriveCharacter(next, classReference, reference.ancestryTraits, equipmentCatalog));
     }
+    characterRef.current = next;
     onCharacterChange?.(next);
   };
   const updateBuild = (values: Partial<NonNullable<Character['build']>>) => {
@@ -1130,29 +1136,27 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     ));
     const championAdrenalineApplies = Boolean(isChampion && featureStates[CHAMPION_ADRENALINE_ACTIVE]
       && (label.includes('Martial Attack') || label.includes('Martial Check')));
+    const fastReflexesApplies = fastReflexesReady
+      && (label.includes('Martial Attack') || label.endsWith('Attack Check'));
     const featureAdjustment = (label === 'Might Save' ? (sheetEffects.saveAdvantage.Might ?? 0) : 0)
-      + warlockAdvantage + Number(clericChaosApplies) + Number(championReadinessApplies);
+      + warlockAdvantage + Number(clericChaosApplies) + Number(championReadinessApplies) + Number(fastReflexesApplies);
     const totalAdjustment = Math.max(-5, Math.min(5, rollAdjustment + featureAdjustment + extraAdjustment));
     const dice = Array.from({ length: 1 + Math.abs(totalAdjustment) }, () => Math.floor(Math.random() * 20) + 1);
     const chosen = totalAdjustment > 0 ? Math.max(...dice) : totalAdjustment < 0 ? Math.min(...dice) : dice[0];
     const effectiveModifier = modifier + (championAdrenalineApplies ? 5 : 0);
     const result = { label, dice, chosen, modifier: effectiveModifier, total: chosen + effectiveModifier };
     setLastRoll(result);
+    const nextFeatureStates = { ...featureStates };
     if (warlockAdvantage) {
-      updateBuild({
-        sheetFeatureStates: {
-          ...featureStates,
-          [WARLOCK_HASTY_ACTIVE]: false,
-          [WARLOCK_LIFE_TAP_ADV]: false,
-          ...(patronFavorApplies ? { [WARLOCK_PACT_SPELL_FAVOR_ACTIVE]: false } : {}),
-        },
-      });
+      nextFeatureStates[WARLOCK_HASTY_ACTIVE] = false;
+      nextFeatureStates[WARLOCK_LIFE_TAP_ADV] = false;
+      if (patronFavorApplies) nextFeatureStates[WARLOCK_PACT_SPELL_FAVOR_ACTIVE] = false;
     }
-    if (clericChaosApplies) {
-      updateBuild({ sheetFeatureStates: { ...featureStates, [CLERIC_CHAOS_ACTIVE]: false } });
-    }
-    if (championReadinessApplies) {
-      updateBuild({ sheetFeatureStates: { ...featureStates, [CHAMPION_READINESS_ACTIVE]: false } });
+    if (clericChaosApplies) nextFeatureStates[CLERIC_CHAOS_ACTIVE] = false;
+    if (championReadinessApplies) nextFeatureStates[CHAMPION_READINESS_ACTIVE] = false;
+    if (fastReflexesApplies) nextFeatureStates['ancestry.fastReflexes.firstAttackUsed'] = true;
+    if (warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies) {
+      updateBuild({ sheetFeatureStates: nextFeatureStates });
     }
     return result;
   };
