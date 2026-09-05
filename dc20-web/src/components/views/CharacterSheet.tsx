@@ -26,6 +26,11 @@ import {
   DRUID_WILD_FORM_TRAITS,
   DRUID_WILD_FORM_TRAIT_OPTIONS,
   DRUID_WILD_FORM_TYPE,
+  HUNTER_CONCOCTION_ACTIVE,
+  HUNTER_MARK_ACTIVE,
+  HUNTER_MARK_FIRST_ATTACK_USED,
+  HUNTER_STAMINA_REGEN_USED,
+  HUNTER_TRAPS_AVAILABLE,
   ancestryGrantedSpellNames,
   applyDerivedCharacter,
   barbarianStaminaRegenAmount,
@@ -45,6 +50,8 @@ import {
   grantedClassLanguageNames,
   grantedClassManeuverNames,
   grantedClassSpellNames,
+  hunterFavoredTerrainNames,
+  hunterStaminaRegenAmount,
   masteryBonus,
   masteryRank,
   masteryTitle,
@@ -142,6 +149,29 @@ const DRUID_TORRENT_DAMAGE = 'druid.naturesTorrent.damage';
 const DRUID_TORRENT_VULNERABILITY_MP = 'druid.naturesTorrent.vulnerabilityMP';
 const DRUID_TORRENT_AREA_MP = 'druid.naturesTorrent.areaMP';
 const DRUID_WEATHER_USED = 'druid.wildSpeech.weatherUsed';
+const HUNTER_MARK_TARGET = 'hunter.mark.target';
+const HUNTER_MARK_HELP_RESULT = 'hunter.mark.helpResult';
+const HUNTER_MARK_HELP_READY = 'hunter.mark.helpReady';
+const HUNTER_ACTIVE_TERRAIN = 'hunter.terrain.active';
+const HUNTER_BIG_GAME_ACTIVE = 'hunter.bigGame.active';
+const HUNTER_STRIKE_OPTIONS = 'hunter.strike.options';
+const HUNTER_STRIKE_EXTRA_SP = 'hunter.strike.extraSP';
+const HUNTER_STRIKE_READY = 'hunter.strike.ready';
+const HUNTER_CONCOCTION_NAME = 'hunter.concoction.name';
+const HUNTER_CONCOCTION_ELEMENT = 'hunter.concoction.element';
+const HUNTER_CONCOCTIONS_USED = 'hunter.concoctions.used';
+const HUNTER_TRAPS_SET = 'hunter.traps.set';
+const HUNTER_TRAP_DAMAGE = 'hunter.trap.damage';
+const HUNTER_TRAP_STRIKE = 'hunter.trap.strike';
+const HUNTER_TRAP_ENHANCED = 'hunter.trap.enhanced';
+const HUNTER_BESTIARY_ENTRIES = 'hunter.bestiary.entries';
+const HUNTER_STRIKE_DETAILS: Record<string, string> = {
+  Acid: 'Corrosion damage • Agility Save Failure: Hindered until the end of your next turn.',
+  Fire: 'Fire damage • Might Save Failure: begins Burning.',
+  Piercing: 'Piercing damage • Might Save Failure: begins Bleeding.',
+  Snare: 'Bludgeoning damage • Agility Save Failure: Immobilized until the end of your next turn.',
+  Toxin: 'Poison damage • Might Save Failure: Impaired until the end of your next turn.',
+};
 const CLERIC_BLESSING_EXTRA_MP = 'cleric.blessing.extraMP';
 const CLERIC_BOUNTIFUL_USED = 'cleric.bountiful.used';
 const CLERIC_CHANNEL_CHOICE = 'cleric.channel.choice';
@@ -213,7 +243,15 @@ const COMMANDER_REINFORCE_SAVE_ADV = 'commander.reinforce.saveAdvantage';
 const COMMANDER_REINFORCE_ACTIVE = 'commander.reinforce.active';
 const COMMANDER_PRIORITY_ACTIVE = 'commander.warlord.priorityTarget.active';
 
-interface RollOutcome { label: string; dice: number[]; chosen: number; modifier: number; total: number }
+interface RollOutcome {
+  label: string;
+  dice: number[];
+  chosen: number;
+  modifier: number;
+  inspirationDie?: number;
+  inspirationRoll?: number;
+  total: number;
+}
 
 function ResourceControl({ label, value, maximum, tone, onChange }: { label: string; value: number; maximum: number; tone: string; onChange: (value: number) => void }) {
   return <div className="rounded-xl border border-white/10 bg-slate-950/55 p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{label}</div><div className="mt-2 flex items-center justify-between gap-2"><button type="button" onClick={() => onChange(Math.max(0, value - 1))} className="h-8 w-8 rounded-lg bg-slate-800 text-slate-200">−</button><div className={`text-xl font-black ${tone}`}>{value} / {maximum}</div><button type="button" onClick={() => onChange(Math.min(maximum, value + 1))} className="h-8 w-8 rounded-lg bg-slate-800 text-slate-200">+</button></div></div>;
@@ -1453,11 +1491,154 @@ function DruidControls({ character, beastTraits, onChange, onRoll }: {
   return <section className="rounded-2xl border border-emerald-400/25 bg-gradient-to-br from-emerald-950/45 to-slate-950/70 p-4 sm:p-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">Live Class Features</p><h2 className="text-xl font-black text-white">Druid Controls</h2></div><button type="button" onClick={resetInitiative} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-slate-200">Roll Initiative / New Combat</button></div>{notice && <p role="status" className="mb-4 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-100">{notice}</p>}<div className="grid gap-4 xl:grid-cols-2"><DruidWildFormPanel character={character} beastTraits={beastTraits} onChange={onChange} /><div className="space-y-4"><div className="rounded-xl border border-lime-400/20 bg-slate-950/55 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black text-lime-200">Druid Domain</h3><p className="mt-1 text-xs text-slate-500">{character.level >= 5 ? 10 : 8} Spaces • losing distance {character.level >= 5 ? 20 : 15} Spaces</p></div>{domainActive && <span className="rounded-full bg-lime-500/15 px-2 py-1 text-[10px] font-black uppercase text-lime-200">Active</span>}</div><div className="mt-3 flex items-center gap-2"><button type="button" disabled={domainExtraMP <= 0} onClick={() => setCounter(DRUID_DOMAIN_EXTRA_MP, domainExtraMP - 1)} className="h-8 w-8 rounded bg-slate-800 disabled:opacity-35">−</button><span className="text-xs text-slate-300">Extra MP: {domainExtraMP}{character.level >= 5 ? ` • +${domainExtraMP * 8} Spaces` : ' • no published enhancement before Expert Druid'}</span><button type="button" disabled={character.level < 5 || domainExtraMP >= Math.max(0, manaSpendLimit - 1)} onClick={() => setCounter(DRUID_DOMAIN_EXTRA_MP, domainExtraMP + 1)} className="h-8 w-8 rounded bg-lime-700 disabled:opacity-35">+</button></div><button type="button" disabled={character.currentAP < 1 || character.manaPoints < 1 + domainExtraMP} onClick={useDomain} className="mt-3 w-full rounded-lg bg-lime-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{domainActive ? 'Expand Domain' : 'Create Domain'} • 1 AP + {1 + domainExtraMP} MP</button>{domainActive && <><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" disabled={character.currentAP < 1} onClick={() => domainAction('Nature’s Grasp')} className="rounded-lg bg-emerald-800 px-2 py-2 text-xs font-bold text-white">Nature’s Grasp • 1 AP</button><button type="button" disabled={character.currentAP < 1} onClick={() => domainAction('Move Creature')} className="rounded-lg bg-slate-700 px-2 py-2 text-xs font-bold text-white">Move Creature • 1 AP</button><button type="button" disabled={character.currentAP < 1} onClick={() => domainAction('Move Object')} className="rounded-lg bg-slate-700 px-2 py-2 text-xs font-bold text-white">Move Object • 1 AP</button><button type="button" disabled={character.currentAP < 1 || character.manaPoints < 1 + wildGrowthExtraMP} onClick={() => domainAction('Wild Growth')} className="rounded-lg bg-teal-700 px-2 py-2 text-xs font-bold text-white">Wild Growth • 1 AP + {1 + wildGrowthExtraMP} MP</button></div>{character.level >= 5 && <div className="mt-2 flex items-center gap-2"><button type="button" disabled={wildGrowthExtraMP <= 0} onClick={() => setCounter(DRUID_WILD_GROWTH_EXTRA_MP, wildGrowthExtraMP - 1)} className="h-7 w-7 rounded bg-slate-800 disabled:opacity-35">−</button><span className="text-[10px] text-slate-400">Wild Growth extra MP: {wildGrowthExtraMP} • +{Math.floor(wildGrowthExtraMP / 2)} healing</span><button type="button" disabled={wildGrowthExtraMP >= Math.max(0, manaSpendLimit - 1)} onClick={() => setCounter(DRUID_WILD_GROWTH_EXTRA_MP, wildGrowthExtraMP + 1)} className="h-7 w-7 rounded bg-teal-700 disabled:opacity-35">+</button></div>}<button type="button" onClick={() => updateBuild({ sheetFeatureStates: { ...states, [DRUID_DOMAIN_ACTIVE]: false } })} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">End Domain</button>{character.subclass === 'Phoenix' && <p className="mt-2 text-xs leading-5 text-orange-200">Phoenix: MP healing can cleanse a Basic Poison, Basic Disease, Impaired, Dazed, or Burning; chosen creatures take 1 Fire damage for each Space moved within the Domain or when starting there.</p>}{character.subclass === 'Rampant Growth' && <p className="mt-2 text-xs leading-5 text-emerald-200">Rampant Growth: chosen creatures in the Domain gain 1/2 Cover; a failed Nature’s Grasp Save also causes Bleeding.</p>}</>}</div>{character.level >= 2 && <div className="rounded-xl border border-sky-400/20 bg-slate-950/55 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black text-sky-200">Nature’s Torrent</h3><p className="mt-1 text-xs text-slate-500">Reaction within {character.level >= 5 ? 15 : 10} Spaces • 1 minute</p></div>{torrentActive && <span className="rounded-full bg-sky-500/15 px-2 py-1 text-[10px] font-black uppercase text-sky-200">Active</span>}</div>{hasNaturesVortex && <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => setTorrentMode('Reaction')} className={`rounded-lg px-3 py-2 text-xs font-black disabled:opacity-35 ${torrentMode === 'Reaction' ? 'bg-sky-700 text-white' : 'bg-slate-800 text-slate-300'}`}>Triggered Reaction • 1 AP</button><button type="button" onClick={() => setTorrentMode('Vortex')} className={`rounded-lg px-3 py-2 text-xs font-black disabled:opacity-35 ${torrentMode === 'Vortex' ? 'bg-sky-700 text-white' : 'bg-slate-800 text-slate-300'}`}>Nature’s Vortex • 2 AP</button></div>}<label className="mt-3 block text-xs font-bold text-slate-400">Elemental damage type<select value={torrentDamage} onChange={(event) => setSelection(DRUID_TORRENT_DAMAGE, event.target.value)} className={`${fieldClass} mt-1`}><option>Cold</option><option>Corrosion</option><option>Fire</option><option>Lightning</option><option>Poison</option></select></label>{character.level >= 5 && <div className="mt-3 grid grid-cols-2 gap-2"><label className="text-[10px] font-bold text-slate-400">Vulnerability MP<input type="number" min={0} step={2} max={manaSpendLimit} value={torrentVulnerabilityMP} onChange={(event) => setCounter(DRUID_TORRENT_VULNERABILITY_MP, Math.min(manaSpendLimit, Math.max(0, Math.trunc(Number(event.target.value) / 2) * 2)))} className={`${fieldClass} mt-1`} /></label><label className="text-[10px] font-bold text-slate-400">Area MP<input type="number" min={0} max={manaSpendLimit} value={torrentAreaMP} onChange={(event) => setCounter(DRUID_TORRENT_AREA_MP, Math.min(manaSpendLimit, Math.max(0, Number(event.target.value))))} className={`${fieldClass} mt-1`} /></label></div>}{hasNaturesVortex && <label className="mt-3 flex items-start gap-2 rounded-lg bg-slate-900/70 p-2 text-xs text-slate-300"><input type="checkbox" checked={vortexBoost} onChange={(event) => setVortexBoost(event.target.checked)} /><span><strong>Nature’s Vortex enhancement:</strong> +1 Space Diameter and Ranged Attacks made against creatures within the area have DisADV; chosen creatures are immune.</span></label>}<p className="mt-2 text-xs leading-5 text-sky-100">{3 + torrentAreaMP + Number(hasNaturesVortex && vortexBoost)} Space Diameter • Vulnerability ({1 + Math.floor(torrentVulnerabilityMP / 2)}) • DisADV to resist movement or Prone{hasNaturesVortex ? ' • chosen creatures immune' : ''}</p><button type="button" disabled={character.currentAP < (hasNaturesVortex && torrentMode === 'Vortex' ? 2 : 1) || character.manaPoints < torrentEnhancementMP || torrentEnhancementMP > manaSpendLimit} onClick={useTorrent} className="mt-3 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{hasNaturesVortex && torrentMode === 'Vortex' ? 'Create Nature’s Vortex • 2 AP' : 'Trigger Nature’s Torrent • 1 AP'}{torrentEnhancementMP ? ` + ${torrentEnhancementMP} MP` : ''}</button>{torrentActive && <button type="button" onClick={() => updateBuild({ sheetFeatureStates: { ...states, [DRUID_NATURE_TORRENT_ACTIVE]: false } })} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">End Torrent (Free)</button>}</div>}{wildSpeech && <div className="rounded-xl border border-violet-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-violet-200">Wild Speech • {wildSpeech}</h3><p className="mt-2 text-xs leading-5 text-slate-400">Druidcraft is included in Spells & Maneuvers. {wildSpeech === 'Weather' ? 'Commune with Nature can be cast as a Ritual once per Long Rest.' : `You can communicate with ${wildSpeech === 'Animals' ? 'Beasts' : 'Plants'} in the limited manner described by Wild Speech.`}</p>{wildSpeech === 'Weather' && <button type="button" disabled={Boolean(states[DRUID_WEATHER_USED])} onClick={useWeather} className="mt-3 w-full rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[DRUID_WEATHER_USED] ? 'Commune with Nature used' : 'Cast Commune with Nature Ritual'}</button>}</div>}</div></div></section>;
 }
 
+function HunterControls({ character, onChange, onRoll, awarenessModifier, investigationModifier }: {
+  character: Character;
+  onChange: (values: Partial<Character>) => void;
+  onRoll: (label: string, modifier: number, extraAdjustment?: number) => unknown;
+  awarenessModifier: number;
+  investigationModifier: number;
+}) {
+  const [notice, setNotice] = useState('');
+  const build = character.build;
+  if (!build) return null;
+  const states = build.sheetFeatureStates ?? {};
+  const selections = build.sheetFeatureSelections ?? {};
+  const counters = build.sheetFeatureCounters ?? {};
+  const classChoices = build.classFeatureSelections ?? {};
+  const talents = new Set(build.selectedTalents ?? []);
+  const expert = character.level >= 5;
+  const marked = Boolean(states[HUNTER_MARK_ACTIVE]);
+  const markedTarget = selections[HUNTER_MARK_TARGET] ?? '';
+  const terrains = hunterFavoredTerrainNames(character);
+  const activeTerrain = terrains.includes(selections[HUNTER_ACTIVE_TERRAIN]) ? selections[HUNTER_ACTIVE_TERRAIN] : '';
+  const strikeLimit = expert ? 2 : 1;
+  const selectedStrikeOptions = (selections[HUNTER_STRIKE_OPTIONS] ?? '').split('|').filter((name) => name in HUNTER_STRIKE_DETAILS).slice(0, strikeLimit);
+  const strikeExtraSP = Math.min(Math.max(0, character.combatMastery - selectedStrikeOptions.length), Math.max(0, counters[HUNTER_STRIKE_EXTRA_SP] ?? 0));
+  const strikeCost = selectedStrikeOptions.length + strikeExtraSP;
+  const knownConcoctions = character.subclass === 'Monster Slayer' ? classChoices['hunter.concoctions'] ?? [] : [];
+  const activeConcoction = states[HUNTER_CONCOCTION_ACTIVE] && knownConcoctions.includes(selections[HUNTER_CONCOCTION_NAME]) ? selections[HUNTER_CONCOCTION_NAME] : '';
+  const concoctionLimit = Math.max(0, character.primeModifier);
+  const concoctionsUsed = Math.min(concoctionLimit, Math.max(0, counters[HUNTER_CONCOCTIONS_USED] ?? 0));
+  const maximumTraps = Math.max(0, character.primeModifier);
+  const availableTraps = Math.min(maximumTraps, Math.max(0, counters[HUNTER_TRAPS_AVAILABLE] ?? maximumTraps));
+  const setTraps = Math.min(maximumTraps, Math.max(0, counters[HUNTER_TRAPS_SET] ?? 0));
+  const trapDamage = selections[HUNTER_TRAP_DAMAGE] ?? 'Piercing';
+  const trapStrike = selections[HUNTER_TRAP_STRIKE] ?? 'Fire';
+  const trapEnhanced = Boolean(states[HUNTER_TRAP_ENHANCED]);
+  const terrainDetails: Record<string, string> = {
+    Coast: `Swim Speed ${character.speed}; underwater Weapon Attacks lose DisADV; hold breath twice as long; ADV on underwater Awareness Checks.`,
+    Desert: 'Fire Resistance (Half) and resistance to Exhaustion from hot temperatures.',
+    Forest: '2 Skill Points allocated to Animal, Awareness, Medicine, Survival, or Stealth.',
+    Grassland: `Speed and Jump Distance +1. Current Speed: ${character.speed}.`,
+    Jungle: 'Ignore Difficult Terrain; Poisoned and Diseased Resistance.',
+    Mountain: `Climb Speed ${character.speed}; resistance to high-altitude Exhaustion and Resistance (Half) to Falling damage.`,
+    Swamp: 'Poison Resistance (Half), Poisoned Resistance, and Diseased Resistance.',
+    Tundra: 'Cold Resistance (Half) and resistance to Exhaustion from cold temperatures.',
+    Subterranean: 'Darkvision 10 Spaces (or +5 existing) and Tremorsense 3 Spaces (or +2 existing).',
+    Urban: '2 Skill Points allocated to Influence, Insight, Investigation, Intimidation, or Trickery.',
+  };
+  const concoctionDetails: Record<string, string> = {
+    'Elemental Infusion': `Attacks against your Marked target deal +1 ${selections[HUNTER_CONCOCTION_ELEMENT] ?? 'chosen Elemental'} damage; you gain Resistance (1) to that damage.`,
+    'Hydra’s Blood': 'Heavy Hit your Marked target: regain 1 HP. You have Poisoned Resistance; an adjacent creature that damages you with an Attack takes 1 Poison damage.',
+    'Basilisk Eye': 'Tremorsense 20 Spaces when locating your Marked target and Physical Resistance (1).',
+    'Ooze Gel': 'Heavy Hit your Marked target: it becomes Hindered until 1 AP removes the slime. You can squeeze through 2-inch gaps and walk on any solid surface orientation.',
+    'Aberrant Tumor': 'Within 20 Spaces of your Marked target: ADV on Analyze Creature and Mental Saves it forces. You gain Psychic Resistance (1), and your thoughts cannot be read without permission.',
+    Deathweed: 'Heavy Hits against your Marked target bypass Physical Resistances and prevent HP recovery until your next turn. You gain Umbral Resistance (Half), Doomed Immunity, and ADV on Death Saves.',
+    'Plant Fibers': 'A Marked target that fails your Save cannot move until the end of your next turn. You gain Bleeding Immunity and 1 Temp HP at the end of each turn.',
+    'Divine Water': 'Once each turn, a Heavy Hit against your Marked target Exposes it to the next Attack. You gain Radiant Resistance (Half) and radiate Bright Light 5 Spaces.',
+  };
+  const updateBuild = (values: Partial<NonNullable<Character['build']>>, characterValues: Partial<Character> = {}) => onChange({ ...characterValues, build: { ...build, ...values } });
+  const setState = (key: string, value: boolean) => updateBuild({ sheetFeatureStates: { ...states, [key]: value } });
+  const setSelection = (key: string, value: string) => updateBuild({ sheetFeatureSelections: { ...selections, [key]: value } });
+  const setCounter = (key: string, value: number) => updateBuild({ sheetFeatureCounters: { ...counters, [key]: Math.max(0, Math.trunc(value)) } });
+  const markTarget = () => {
+    if (!markedTarget.trim() || character.currentAP < 1 || character.stamina < 1) return;
+    updateBuild({ sheetFeatureStates: { ...states, [HUNTER_MARK_ACTIVE]: true, [HUNTER_MARK_FIRST_ATTACK_USED]: false, [HUNTER_MARK_HELP_READY]: false } }, { currentAP: character.currentAP - 1, stamina: character.stamina - 1 });
+    setNotice(`${markedTarget.trim()} is Marked within 15 Spaces.`);
+  };
+  const transferMark = (resource: 'AP' | 'SP') => {
+    if (!markedTarget.trim() || (resource === 'AP' ? character.currentAP : character.stamina) < 1) return;
+    updateBuild({ sheetFeatureStates: { ...states, [HUNTER_MARK_ACTIVE]: true, [HUNTER_MARK_FIRST_ATTACK_USED]: false, [HUNTER_MARK_HELP_READY]: false } }, resource === 'AP' ? { currentAP: character.currentAP - 1 } : { stamina: character.stamina - 1 });
+    setNotice(`Reaction: Hunter’s Mark transferred to ${markedTarget.trim()} using 1 ${resource}.`);
+  };
+  const grantMarkHelp = () => {
+    if (!marked) return;
+    const die = expert ? 10 : 8;
+    const result = Math.floor(Math.random() * die) + 1;
+    updateBuild({ sheetFeatureStates: { ...states, [HUNTER_MARK_HELP_READY]: true }, sheetFeatureCounters: { ...counters, [HUNTER_MARK_HELP_RESULT]: result } });
+    setNotice(`Heavy/Critical Hit: the next Attack against ${markedTarget || 'the Marked target'} gains a d${die} Help Die result of ${result}.`);
+  };
+  const regainStamina = () => {
+    if (states[HUNTER_STAMINA_REGEN_USED]) return;
+    updateBuild({ sheetFeatureStates: { ...states, [HUNTER_STAMINA_REGEN_USED]: true } }, { stamina: Math.min(character.maxStamina, character.stamina + hunterStaminaRegenAmount(character.maxStamina)) });
+  };
+  const resetRound = () => updateBuild({
+    sheetFeatureStates: { ...states, [HUNTER_STAMINA_REGEN_USED]: false, [HUNTER_MARK_HELP_READY]: false },
+    sheetFeatureCounters: { ...counters, [HUNTER_MARK_HELP_RESULT]: 0 },
+  });
+  const toggleStrike = (name: string) => {
+    const next = selectedStrikeOptions.includes(name)
+      ? selectedStrikeOptions.filter((option) => option !== name)
+      : selectedStrikeOptions.length < strikeLimit ? [...selectedStrikeOptions, name] : selectedStrikeOptions;
+    setSelection(HUNTER_STRIKE_OPTIONS, next.join('|'));
+  };
+  const prepareStrike = () => {
+    if (selectedStrikeOptions.length === 0 || character.stamina < strikeCost) return;
+    updateBuild({ sheetFeatureStates: { ...states, [HUNTER_STRIKE_READY]: true } }, { stamina: character.stamina - strikeCost });
+    setNotice(`Hunter’s Strike prepared for the next Weapon Attack: ${selectedStrikeOptions.join(' + ')}.`);
+  };
+  const administerConcoction = (self: boolean) => {
+    const recipe = selections[HUNTER_CONCOCTION_NAME];
+    if (!recipe || !knownConcoctions.includes(recipe) || concoctionsUsed >= concoctionLimit || character.currentAP < 1) return;
+    updateBuild({
+      sheetFeatureStates: { ...states, [HUNTER_CONCOCTION_ACTIVE]: self },
+      sheetFeatureCounters: { ...counters, [HUNTER_CONCOCTIONS_USED]: concoctionsUsed + 1 },
+    }, { currentAP: character.currentAP - 1 });
+    setNotice(`${recipe} created and ${self ? 'drunk' : 'administered to an ally'} with the Object Action. ${self ? 'Its 10-minute effect is active.' : 'Track its effect on that ally.'}`);
+  };
+  const gainPlantTempHP = () => {
+    if (activeConcoction !== 'Plant Fibers' || states['hunter.plantFibers.usedThisTurn']) return;
+    updateBuild({ temporaryHP: (build.temporaryHP ?? 0) + 1, sheetFeatureStates: { ...states, 'hunter.plantFibers.usedThisTurn': true } });
+  };
+  const setTrap = () => {
+    if (availableTraps < 1 || character.currentAP < 1 || (trapEnhanced && character.stamina < 1)) return;
+    updateBuild({
+      sheetFeatureCounters: { ...counters, [HUNTER_TRAPS_AVAILABLE]: availableTraps - 1, [HUNTER_TRAPS_SET]: setTraps + 1 },
+    }, { currentAP: character.currentAP - 1, stamina: character.stamina - Number(trapEnhanced) });
+    setNotice(`${trapDamage} Trap Set and Hidden within 5 Spaces${trapEnhanced ? ` with the ${trapStrike} Hunter’s Strike option` : ''}.`);
+  };
+  const triggerTrap = (remote: boolean) => {
+    if (setTraps < 1 || (remote && character.currentAP < 1)) return;
+    if (remote) onChange({ currentAP: character.currentAP - 1 });
+    onRoll(`Hunter’s Trap vs AD • ${character.primeModifier} ${trapDamage} damage${trapEnhanced ? ` • ${trapStrike}: ${HUNTER_STRIKE_DETAILS[trapStrike]}` : ''}`, character.primeModifier + character.combatMastery, 1);
+  };
+  const recoverTrap = () => {
+    if (setTraps < 1 || availableTraps >= maximumTraps || character.currentAP < 1) return;
+    updateBuild({ sheetFeatureCounters: { ...counters, [HUNTER_TRAPS_AVAILABLE]: availableTraps + 1, [HUNTER_TRAPS_SET]: setTraps - 1 } }, { currentAP: character.currentAP - 1 });
+  };
+
+  return <section className="rounded-2xl border border-lime-400/25 bg-gradient-to-br from-lime-950/40 via-emerald-950/25 to-slate-950/75 p-4 sm:p-5">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-lime-300">Live Class Features</p><h2 className="text-xl font-black text-white">Hunter Controls</h2></div><button type="button" onClick={resetRound} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-slate-200">Start Next Round</button></div>
+    {notice && <p role="status" className="mb-4 rounded-lg bg-lime-500/10 px-3 py-2 text-xs font-bold text-lime-100">{notice}</p>}
+    <div className="grid gap-4 xl:grid-cols-2">
+      <div className="rounded-xl border border-lime-400/20 bg-slate-950/55 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black text-lime-200">Hunter’s Mark</h3><p className="mt-1 text-xs text-slate-500">15 Spaces • same Plane • ends on Long Rest, Unconscious, or a new Mark</p></div>{marked && <span className="rounded-full bg-lime-500/15 px-2 py-1 text-[10px] font-black uppercase text-lime-200">Marked</span>}</div><label className="mt-3 block text-xs font-bold text-slate-400">Target<input value={markedTarget} onChange={(event) => setSelection(HUNTER_MARK_TARGET, event.target.value)} className={`${fieldClass} mt-1`} placeholder="Creature name" /></label><div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" disabled={!markedTarget.trim() || character.currentAP < 1 || character.stamina < 1} onClick={markTarget} className="rounded-lg bg-lime-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Mark • 1 AP + 1 SP</button><button type="button" disabled={!marked} onClick={() => setState(HUNTER_MARK_ACTIVE, false)} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300 disabled:opacity-35">End Mark</button></div>{marked && <div className="mt-3 rounded-lg bg-lime-500/10 p-3 text-xs leading-5 text-lime-50"><strong>Active:</strong> ADV on Awareness and Survival to find {markedTarget || 'the target'}. The first Martial Attack each turn has ADV and ignores {expert ? 'Physical Resistance' : 'PDR'}.<div className="mt-2 grid gap-2 sm:grid-cols-3"><button type="button" onClick={grantMarkHelp} className="rounded bg-amber-700 px-2 py-2 font-black text-white">Heavy/Critical • d{expert ? 10 : 8} Help</button><button type="button" disabled={character.currentAP < 1} onClick={() => transferMark('AP')} className="rounded bg-slate-700 px-2 py-2 font-bold text-white">Dead Target • 1 AP</button><button type="button" disabled={character.stamina < 1} onClick={() => transferMark('SP')} className="rounded bg-sky-700 px-2 py-2 font-bold text-white">Dead Target • 1 SP</button></div>{states[HUNTER_MARK_HELP_READY] && <p className="mt-2 font-black text-amber-200">Help Die ready: +{counters[HUNTER_MARK_HELP_RESULT] ?? 0} to the next Attack against the target.</p>}</div>}</div>
+      <div className="rounded-xl border border-sky-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-sky-200">Hunter Martial Path</h3><p className="mt-2 text-xs leading-5 text-slate-400">Once per Round after any listed trigger, regain up to half maximum SP: hit your Mark with a Martial Attack; the Mark reaches 0 HP or dies; recall creature information; or locate an Unseen creature.</p><p className="mt-2 text-xs font-bold text-sky-300">Recovery: up to {hunterStaminaRegenAmount(character.maxStamina)} SP</p><button type="button" disabled={Boolean(states[HUNTER_STAMINA_REGEN_USED]) || character.stamina >= character.maxStamina} onClick={regainStamina} className="mt-3 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[HUNTER_STAMINA_REGEN_USED] ? 'Used This Round' : 'Qualifying Trigger • Regain SP'}</button></div>
+      {character.level >= 2 && <div className="rounded-xl border border-rose-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-rose-200">Hunter’s Strike</h3><p className="mt-2 text-xs leading-5 text-slate-400">Add {expert ? 'up to 2 unique' : '1 unique'} Martial Enhancement{expert ? 's' : ''} to the next Weapon Attack. Each additional SP beyond the first increases the damage of the selected option{expert ? 's' : ''} by 1.</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{Object.entries(HUNTER_STRIKE_DETAILS).map(([name, details]) => <label key={name} className={`rounded-lg border p-2 text-xs ${selectedStrikeOptions.includes(name) ? 'border-rose-400/40 bg-rose-500/10 text-rose-100' : selectedStrikeOptions.length >= strikeLimit ? 'border-white/5 text-slate-600' : 'border-white/10 text-slate-300'}`}><input type="checkbox" className="mr-2" disabled={!selectedStrikeOptions.includes(name) && selectedStrikeOptions.length >= strikeLimit} checked={selectedStrikeOptions.includes(name)} onChange={() => toggleStrike(name)} /><strong>{name}</strong><span className="mt-1 block text-[10px] leading-4 text-slate-500">{details}</span></label>)}</div><label className="mt-3 block text-xs font-bold text-slate-400">Additional SP for damage<input type="number" min={0} max={Math.max(0, character.combatMastery - selectedStrikeOptions.length)} value={strikeExtraSP} onChange={(event) => setCounter(HUNTER_STRIKE_EXTRA_SP, Math.min(Math.max(0, character.combatMastery - selectedStrikeOptions.length), Math.max(0, Number(event.target.value))))} className={`${fieldClass} mt-1`} /></label><button type="button" disabled={selectedStrikeOptions.length === 0 || character.stamina < strikeCost || Boolean(states[HUNTER_STRIKE_READY])} onClick={prepareStrike} className="mt-3 w-full rounded-lg bg-rose-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[HUNTER_STRIKE_READY] ? 'Ready on Next Weapon Attack' : `Prepare • ${strikeCost} SP`}</button></div>}
+      <div className="rounded-xl border border-emerald-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-emerald-200">Favored Terrain</h3><label className="mt-2 block text-xs font-bold text-slate-400">Current environment<select value={activeTerrain} onChange={(event) => setSelection(HUNTER_ACTIVE_TERRAIN, event.target.value)} className={`${fieldClass} mt-1`}><option value="">Not in a Favored Terrain</option>{terrains.map((terrain) => <option key={terrain}>{terrain}</option>)}</select></label>{terrains.length > 0 && <div className="mt-3 space-y-2">{terrains.map((terrain) => <p key={terrain} className={`rounded-lg p-2 text-xs leading-5 ${activeTerrain === terrain ? 'bg-emerald-500/10 text-emerald-100' : 'bg-slate-900/70 text-slate-400'}`}><strong>{terrain}:</strong> {terrainDetails[terrain]}</p>)}</div>}{activeTerrain && <p className="mt-3 rounded-lg bg-lime-500/10 p-2 text-xs font-bold text-lime-100">In Favored Terrain: ADV on Stealth and Survival Checks; cannot be Surprised.</p>}</div>
+      <div className="rounded-xl border border-violet-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-violet-200">Bestiary</h3><p className="mt-2 text-xs leading-5 text-slate-400">Starting type: <strong className="text-violet-100">{classChoices['hunter.bestiary']?.[0] ?? 'Choose in Builder'}</strong>. You have ADV on Checks to learn or recall information about recorded creatures.</p><button type="button" onClick={() => onRoll('Bestiary — Recall Creature Information', character.attributes.Intelligence.modifier, 1)} className="mt-3 w-full rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white">Roll Intelligence Check with ADV</button><label className="mt-3 block text-xs font-bold text-slate-400">Recorded creatures<textarea value={selections[HUNTER_BESTIARY_ENTRIES] ?? ''} onChange={(event) => setSelection(HUNTER_BESTIARY_ENTRIES, event.target.value)} className={`${fieldClass} mt-1 min-h-24`} placeholder="One entry per line…" /></label></div>
+      {character.subclass === 'Monster Slayer' && <div className="rounded-xl border border-fuchsia-400/20 bg-slate-950/55 p-4 xl:col-span-2"><h3 className="font-black text-fuchsia-200">Monstrous Concoctions • {concoctionsUsed}/{concoctionLimit} created</h3><div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]"><label className="text-xs font-bold text-slate-400">Recipe<select value={knownConcoctions.includes(selections[HUNTER_CONCOCTION_NAME]) ? selections[HUNTER_CONCOCTION_NAME] : ''} onChange={(event) => setSelection(HUNTER_CONCOCTION_NAME, event.target.value)} className={`${fieldClass} mt-1`}><option value="">Choose a known recipe…</option>{knownConcoctions.map((recipe) => <option key={recipe}>{recipe}</option>)}</select></label>{selections[HUNTER_CONCOCTION_NAME] === 'Elemental Infusion' && <label className="text-xs font-bold text-slate-400">Elemental damage<select value={selections[HUNTER_CONCOCTION_ELEMENT] ?? 'Fire'} onChange={(event) => setSelection(HUNTER_CONCOCTION_ELEMENT, event.target.value)} className={`${fieldClass} mt-1`}><option>Cold</option><option>Corrosion</option><option>Fire</option><option>Lightning</option><option>Poison</option><option>Psychic</option><option>Radiant</option><option>Umbral</option></select></label>}</div>{selections[HUNTER_CONCOCTION_NAME] && <p className="mt-3 rounded-lg bg-fuchsia-500/10 p-3 text-xs leading-5 text-fuchsia-50">{concoctionDetails[selections[HUNTER_CONCOCTION_NAME]]}</p>}<div className="mt-3 grid gap-2 sm:grid-cols-3"><button type="button" disabled={!selections[HUNTER_CONCOCTION_NAME] || concoctionsUsed >= concoctionLimit || character.currentAP < 1} onClick={() => administerConcoction(true)} className="rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Create & Drink • Object Action</button><button type="button" disabled={!selections[HUNTER_CONCOCTION_NAME] || concoctionsUsed >= concoctionLimit || character.currentAP < 1} onClick={() => administerConcoction(false)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Administer to Ally • Object Action</button><button type="button" disabled={!activeConcoction} onClick={() => setState(HUNTER_CONCOCTION_ACTIVE, false)} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300 disabled:opacity-35">End Active Effect</button></div>{activeConcoction && <p className="mt-3 text-xs font-black text-fuchsia-200">Active for 10 minutes: {activeConcoction}</p>}{activeConcoction === 'Hydra’s Blood' && <button type="button" disabled={character.healthPoints >= character.maxHealthPoints} onClick={() => onChange({ healthPoints: Math.min(character.maxHealthPoints, character.healthPoints + 1) })} className="mt-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Heavy Hit Mark • Regain 1 HP</button>}{activeConcoction === 'Plant Fibers' && <button type="button" disabled={Boolean(states['hunter.plantFibers.usedThisTurn'])} onClick={gainPlantTempHP} className="mt-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">End Turn • Gain 1 Temp HP</button>}</div>}
+      {character.subclass === 'Trapper' && <div className="rounded-xl border border-amber-400/20 bg-slate-950/55 p-4 xl:col-span-2"><h3 className="font-black text-amber-200">Dynamic Traps • {availableTraps} available • {setTraps} set</h3><p className="mt-2 text-xs leading-5 text-slate-400">Maximum {maximumTraps}. A Long Rest crafts up to the maximum; a Short Rest crafts 1 additional Trap without exceeding it. Set and Hide within 5 Spaces against Save DC {10 + character.primeModifier + character.combatMastery}.</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><label className="text-xs font-bold text-slate-400">Damage<select value={trapDamage} onChange={(event) => setSelection(HUNTER_TRAP_DAMAGE, event.target.value)} className={`${fieldClass} mt-1`}><option>Bludgeoning</option><option>Piercing</option><option>Slashing</option></select></label>{character.level >= 2 && <label className="text-xs font-bold text-slate-400">Hunter’s Strike<select value={trapStrike} onChange={(event) => setSelection(HUNTER_TRAP_STRIKE, event.target.value)} className={`${fieldClass} mt-1`}>{Object.keys(HUNTER_STRIKE_DETAILS).map((name) => <option key={name}>{name}</option>)}</select></label>}<label className="flex items-center gap-2 self-end rounded-lg bg-slate-900/70 p-3 text-xs text-slate-300"><input type="checkbox" disabled={character.level < 2} checked={trapEnhanced && character.level >= 2} onChange={(event) => setState(HUNTER_TRAP_ENHANCED, event.target.checked)} />Add Hunter’s Strike • 1 SP</label></div><div className="mt-3 grid gap-2 sm:grid-cols-4"><button type="button" disabled={availableTraps < 1 || character.currentAP < 1 || (trapEnhanced && character.stamina < 1)} onClick={setTrap} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Set Trap • 1 AP{trapEnhanced ? ' + 1 SP' : ''}</button><button type="button" disabled={setTraps < 1} onClick={() => triggerTrap(false)} className="rounded-lg bg-rose-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Trigger Automatically • Free</button><button type="button" disabled={setTraps < 1 || character.currentAP < 1} onClick={() => triggerTrap(true)} className="rounded-lg bg-orange-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Trigger Remotely • 1 AP</button><button type="button" disabled={setTraps < 1 || availableTraps >= maximumTraps || character.currentAP < 1} onClick={recoverTrap} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-35">Recover Trap • 1 AP</button></div><div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => onRoll('Discerning Eye — Discover Hidden Trap', awarenessModifier, 1)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white">Awareness with ADV</button><button type="button" onClick={() => onRoll('Discerning Eye — Disarm Trap', investigationModifier, 1)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white">Investigation with ADV</button></div></div>}
+      {(talents.has('Pack Leader') || talents.has('Big Game Hunter')) && <div className="rounded-xl border border-orange-400/20 bg-slate-950/55 p-4 xl:col-span-2"><h3 className="font-black text-orange-200">Hunter Talents</h3><div className="mt-3 grid gap-3 sm:grid-cols-2">{talents.has('Pack Leader') && <div className="rounded-lg bg-orange-500/10 p-3 text-xs leading-5 text-orange-50"><strong>Pack Leader:</strong> chosen creatures add a d4 to their first Attack each turn against your Marked target.<button type="button" disabled={!marked} onClick={() => { const result = Math.floor(Math.random() * 4) + 1; setNotice(`Pack Leader Help Die: +${result} to the chosen creature’s first Attack against ${markedTarget || 'the Marked target'}.`); }} className="mt-2 w-full rounded bg-orange-700 px-2 py-2 font-black text-white disabled:opacity-35">Roll Pack Leader d4</button></div>}{talents.has('Big Game Hunter') && <label className="rounded-lg bg-rose-500/10 p-3 text-xs leading-5 text-rose-50"><span><strong>Big Game Hunter:</strong> against a Marked Large-or-larger target, +1 Martial damage and ADV on its Saves and Analyze Creature Checks.</span><span className="mt-2 flex items-center gap-2 font-black"><input type="checkbox" disabled={!marked} checked={Boolean(states[HUNTER_BIG_GAME_ACTIVE]) && marked} onChange={(event) => setState(HUNTER_BIG_GAME_ACTIVE, event.target.checked)} />Marked target is Large or larger</span></label>}</div></div>}
+    </div>
+  </section>;
+}
+
 const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit, onCharacterChange }) => {
   const characterRef = useRef(character);
   useEffect(() => { characterRef.current = character; }, [character]);
   const [selectedTab, setSelectedTab] = useState<SheetTab>('sheet-checks');
   const [lastRoll, setLastRoll] = useState<RollOutcome | null>(null);
+  const [inspirationDie, setInspirationDie] = useState<number | null>(null);
   const [conditionToAdd, setConditionToAdd] = useState('Bleeding');
   const [expandedSkills, setExpandedSkills] = useState(true);
   const [expandedTrades, setExpandedTrades] = useState(false);
@@ -1483,7 +1664,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const isChampion = character.class === 'Champion';
   const isCommander = character.class === 'Commander';
   const isDruid = character.class === 'Druid';
-  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid;
+  const isHunter = character.class === 'Hunter';
+  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter;
   const isRaging = isBarbarian && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
   const hasUnfathomableStrength = (build?.selectedTalents ?? []).includes('Unfathomable Strength');
   const battlecryShout = featureSelections[BARBARIAN_BATTLECRY_SELECTION] || 'Fortitude Shout';
@@ -1576,14 +1758,49 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       && (label.includes('Martial Attack') || label.includes('Martial Check')));
     const fastReflexesApplies = fastReflexesReady
       && (label.includes('Martial Attack') || label.endsWith('Attack Check'));
+    const hunterMarked = isHunter && Boolean(featureStates[HUNTER_MARK_ACTIVE]);
+    const hunterMarkAttackApplies = hunterMarked && !featureStates[HUNTER_MARK_FIRST_ATTACK_USED]
+      && label.includes('Martial Attack');
+    const hunterActiveTerrain = isHunter && hunterFavoredTerrainNames(character).includes(featureSelections[HUNTER_ACTIVE_TERRAIN])
+      ? featureSelections[HUNTER_ACTIVE_TERRAIN] : '';
+    const hunterTerrainAdvantage = Number(Boolean(hunterActiveTerrain && ['Stealth Check', 'Survival Check'].includes(label)))
+      + Number(hunterActiveTerrain === 'Coast' && label === 'Awareness Check');
+    const hunterBigGameApplies = isHunter && hunterMarked && Boolean(featureStates[HUNTER_BIG_GAME_ACTIVE])
+      && (label.endsWith(' Save') || label.includes('Analyze Creature'));
+    const hunterConcoction = isHunter && featureStates[HUNTER_CONCOCTION_ACTIVE]
+      ? featureSelections[HUNTER_CONCOCTION_NAME] : '';
+    const hunterConcoctionAdvantage = Number(hunterMarked && hunterConcoction === 'Aberrant Tumor'
+      && (label === 'Charisma Save' || label === 'Intelligence Save' || label.includes('Analyze Creature')))
+      + Number(hunterConcoction === 'Deathweed' && label.includes('Death Save'));
+    const hunterStrikeApplies = isHunter && Boolean(featureStates[HUNTER_STRIKE_READY]) && label.includes('Martial Attack');
     const featureAdjustment = (label === 'Might Save' ? (sheetEffects.saveAdvantage.Might ?? 0) : 0)
-      + warlockAdvantage + Number(clericChaosApplies) + Number(championReadinessApplies) + Number(fastReflexesApplies);
+      + warlockAdvantage + Number(clericChaosApplies) + Number(championReadinessApplies) + Number(fastReflexesApplies)
+      + Number(hunterMarkAttackApplies) + hunterTerrainAdvantage + Number(hunterBigGameApplies) + hunterConcoctionAdvantage;
     const totalAdjustment = Math.max(-5, Math.min(5, rollAdjustment + featureAdjustment + extraAdjustment));
     const dice = Array.from({ length: 1 + Math.abs(totalAdjustment) }, () => Math.floor(Math.random() * 20) + 1);
     const chosen = totalAdjustment > 0 ? Math.max(...dice) : totalAdjustment < 0 ? Math.min(...dice) : dice[0];
     const effectiveModifier = modifier + (championAdrenalineApplies ? 5 : 0);
-    const result = { label, dice, chosen, modifier: effectiveModifier, total: chosen + effectiveModifier };
+    const inspirationRoll = inspirationDie
+      ? Array.from({ length: 1 }, () => Math.floor(Math.random() * inspirationDie) + 1)[0]
+      : 0;
+    const hunterStrikeOptions = (featureSelections[HUNTER_STRIKE_OPTIONS] ?? '').split('|').filter((name) => name in HUNTER_STRIKE_DETAILS);
+    const hunterStrikeDamage = 1 + Math.max(0, featureCounters[HUNTER_STRIKE_EXTRA_SP] ?? 0);
+    const hunterRollNotes = [
+      hunterMarkAttackApplies && `Hunter’s Mark: ADV and ignores ${character.level >= 5 ? 'Physical Resistance' : 'PDR'}`,
+      hunterStrikeApplies && `Hunter’s Strike: ${hunterStrikeOptions.map((name) => `${name} ${hunterStrikeDamage} damage`).join(' + ')}`,
+      hunterMarked && featureStates[HUNTER_BIG_GAME_ACTIVE] && label.includes('Martial Attack') && 'Big Game Hunter: +1 damage',
+      hunterMarked && hunterConcoction === 'Elemental Infusion' && label.includes('Attack') && `Elemental Infusion: +1 ${featureSelections[HUNTER_CONCOCTION_ELEMENT] ?? 'Elemental'} damage`,
+    ].filter(Boolean);
+    const result = {
+      label: hunterRollNotes.length > 0 ? `${label} • ${hunterRollNotes.join(' • ')}` : label,
+      dice,
+      chosen,
+      modifier: effectiveModifier,
+      ...(inspirationDie ? { inspirationDie, inspirationRoll } : {}),
+      total: chosen + effectiveModifier + inspirationRoll,
+    };
     setLastRoll(result);
+    if (inspirationDie) setInspirationDie(null);
     const nextFeatureStates = { ...featureStates };
     if (warlockAdvantage) {
       nextFeatureStates[WARLOCK_HASTY_ACTIVE] = false;
@@ -1593,7 +1810,9 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     if (clericChaosApplies) nextFeatureStates[CLERIC_CHAOS_ACTIVE] = false;
     if (championReadinessApplies) nextFeatureStates[CHAMPION_READINESS_ACTIVE] = false;
     if (fastReflexesApplies) nextFeatureStates['ancestry.fastReflexes.firstAttackUsed'] = true;
-    if (warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies) {
+    if (hunterMarkAttackApplies) nextFeatureStates[HUNTER_MARK_FIRST_ATTACK_USED] = true;
+    if (hunterStrikeApplies) nextFeatureStates[HUNTER_STRIKE_READY] = false;
+    if (warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies || hunterMarkAttackApplies || hunterStrikeApplies) {
       updateBuild({ sheetFeatureStates: nextFeatureStates });
     }
     return result;
@@ -1691,6 +1910,8 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const championInsightModifier = skillModifier('Insight', character.skillMasteries.Insight ?? 'Untrained');
   const commanderIntimidationModifier = skillModifier('Intimidation', character.skillMasteries.Intimidation ?? 'Untrained');
   const commanderCharismaModifier = character.attributes.Charisma.modifier;
+  const hunterAwarenessModifier = skillModifier('Awareness', character.skillMasteries.Awareness ?? 'Untrained');
+  const hunterInvestigationModifier = skillModifier('Investigation', character.skillMasteries.Investigation ?? 'Untrained');
 
   const updateNote = (note: CampaignNote) => updateBuild({ characterNotes: notes.map((entry) => entry.id === note.id ? note : entry) });
   const featureDescription = (name: string, description: string): string => {
@@ -1737,12 +1958,17 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         {isWarlock && <WarlockControls character={character} onChange={update} />}
         {isCleric && <ClericControls character={character} onChange={update} onRoll={roll} />}
         {isDruid && <DruidControls character={character} beastTraits={(reference?.ancestryTraits ?? []).filter(({ ancestry, cost }) => ancestry === 'Beastborn' && cost > 0)} onChange={update} onRoll={roll} />}
+        {isHunter && <HunterControls character={character} onChange={update} onRoll={roll} awarenessModifier={hunterAwarenessModifier} investigationModifier={hunterInvestigationModifier} />}
           </div>
         </details>}
 
-        <div className="mb-5 grid gap-4 xl:grid-cols-[1fr_330px]"><nav className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/60 p-2 sm:grid-cols-3 xl:grid-cols-6">{tabs.map((tab) => <button type="button" key={tab.id} onClick={() => setSelectedTab(tab.id)} className={`rounded-xl px-3 py-3 text-sm font-bold ${selectedTab === tab.id ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}>{tab.label}</button>)}</nav><div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/60 p-3"><button type="button" onClick={() => updateBuild({ rollAdjustment: Math.max(-5, rollAdjustment - 1) })} className="h-9 w-9 rounded-lg bg-slate-800 text-lg">−</button><div className="text-center"><div className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Roll Mode</div><div className="font-black text-violet-200">{rollAdjustment > 0 ? `${rollAdjustment}× Advantage` : rollAdjustment < 0 ? `${Math.abs(rollAdjustment)}× Disadvantage` : 'Normal'}</div></div><button type="button" onClick={() => updateBuild({ rollAdjustment: Math.min(5, rollAdjustment + 1) })} className="h-9 w-9 rounded-lg bg-violet-600 text-lg">+</button></div></div>
+        <div className="mb-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_330px_330px]">
+          <nav className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/60 p-2 sm:grid-cols-3 xl:grid-cols-6">{tabs.map((tab) => <button type="button" key={tab.id} onClick={() => setSelectedTab(tab.id)} className={`rounded-xl px-3 py-3 text-sm font-bold ${selectedTab === tab.id ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}>{tab.label}</button>)}</nav>
+          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/60 p-3"><button type="button" onClick={() => updateBuild({ rollAdjustment: Math.max(-5, rollAdjustment - 1) })} className="h-9 w-9 rounded-lg bg-slate-800 text-lg">−</button><div className="text-center"><div className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Roll Mode</div><div className="font-black text-violet-200">{rollAdjustment > 0 ? `${rollAdjustment}× Advantage` : rollAdjustment < 0 ? `${Math.abs(rollAdjustment)}× Disadvantage` : 'Normal'}</div></div><button type="button" onClick={() => updateBuild({ rollAdjustment: Math.min(5, rollAdjustment + 1) })} className="h-9 w-9 rounded-lg bg-violet-600 text-lg">+</button></div>
+          <div className="rounded-2xl border border-amber-400/20 bg-slate-950/60 p-3"><div className="mb-2 text-center text-[10px] font-bold uppercase tracking-[0.15em] text-amber-300">Inspiration Die • next roll</div><div className="grid grid-cols-6 gap-1">{([null, 4, 6, 8, 10, 12] as Array<number | null>).map((die) => <button type="button" key={die ?? 'none'} onClick={() => setInspirationDie(die)} className={`rounded-lg px-2 py-2 text-xs font-black ${inspirationDie === die ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>{die ? `d${die}` : 'None'}</button>)}</div></div>
+        </div>
 
-        {lastRoll && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-400/30 bg-violet-500/10 p-4"><div><span className="font-black text-violet-200">{lastRoll.label}</span><span className="ml-3 text-sm text-slate-400">Dice: {lastRoll.dice.join(', ')} • chosen {lastRoll.chosen} {lastRoll.modifier >= 0 ? '+' : '−'} {Math.abs(lastRoll.modifier)}</span></div><div className="text-3xl font-black text-white">{lastRoll.total}</div></div>}
+        {lastRoll && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-400/30 bg-violet-500/10 p-4"><div><span className="font-black text-violet-200">{lastRoll.label}</span><span className="ml-3 text-sm text-slate-400">Dice: {lastRoll.dice.join(', ')} • chosen {lastRoll.chosen} {lastRoll.modifier >= 0 ? '+' : '−'} {Math.abs(lastRoll.modifier)}{lastRoll.inspirationDie && lastRoll.inspirationRoll ? ` • Inspiration d${lastRoll.inspirationDie}: +${lastRoll.inspirationRoll}` : ''}</span></div><div className="text-3xl font-black text-white">{lastRoll.total}</div></div>}
 
         <main className={`${panelClass} min-h-[560px]`}>
           {selectedTab.startsWith('sheet-') && <CharacterSheetTabContent

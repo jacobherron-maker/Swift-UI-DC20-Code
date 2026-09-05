@@ -46,6 +46,12 @@ import {
   grantedClassLanguageNames,
   grantedClassManeuverNames,
   grantedClassSpellNames,
+  HUNTER_CONCOCTION_ACTIVE,
+  HUNTER_MARK_ACTIVE,
+  HUNTER_MARK_FIRST_ATTACK_USED,
+  HUNTER_TRAPS_AVAILABLE,
+  hunterFavoredTerrainNames,
+  hunterStaminaRegenAmount,
   masteryCap,
   rogueCheapShotDamage,
   rogueStaminaRegenAmount,
@@ -67,6 +73,7 @@ const rogue = reference.classes.find(({ name }) => name === 'Rogue')!;
 const warlock = reference.classes.find(({ name }) => name === 'Warlock')!;
 const cleric = reference.classes.find(({ name }) => name === 'Cleric')!;
 const druid = reference.classes.find(({ name }) => name === 'Druid')!;
+const hunter = reference.classes.find(({ name }) => name === 'Hunter')!;
 const wizard = reference.classes.find(({ name }) => name === 'Wizard')!;
 const equipmentCatalog = equipmentDocument as EquipmentCatalogItem[];
 
@@ -1532,5 +1539,121 @@ describe('Druid Beta 0.10.5 source audit', () => {
     expect(rested.build?.sheetFeatureSelections[DRUID_WILD_FORM_TYPE]).toBeUndefined();
     expect(rested.build?.sheetFeatureSelections[DRUID_WILD_FORM_DAMAGE]).toBeUndefined();
     expect(rested.build?.druidWildForms).toEqual([]);
+  });
+});
+
+describe('Hunter Beta 0.10.5 source audit', () => {
+  const feature = (level: number, name: string) => hunter.features
+    .find((entry) => entry.level === level)?.features.find((entry) => entry.name === name)?.description;
+
+  it('matches every row of the published Hunter class table', () => {
+    expect(hunter.tableRows.map((row) => ({
+      level: row.level,
+      health: row.health,
+      attribute: row.attribute,
+      skill: row.skill,
+      trade: row.trade,
+      stamina: row.stamina,
+      maneuvers: row.maneuvers,
+      features: row.features,
+    }))).toEqual([
+      { level: 1, health: 8, attribute: undefined, skill: undefined, trade: undefined, stamina: 2, maneuvers: 2, features: 'Class Features' },
+      { level: 2, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Class Feature, Talent, Path Progression' },
+      { level: 3, health: 2, attribute: 1, skill: 1, trade: 1, stamina: 1, maneuvers: 1, features: 'Subclass Feature' },
+      { level: 4, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 5, health: 2, attribute: 1, skill: 2, trade: 1, stamina: undefined, maneuvers: 1, features: 'Class Feature' },
+      { level: 6, health: 2, attribute: undefined, skill: 1, trade: undefined, stamina: undefined, maneuvers: undefined, features: 'Talent, Path Progression' },
+      { level: 7, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: 1, maneuvers: 1, features: 'Subclass Expert Feature' },
+      { level: 8, health: 2, attribute: 1, skill: 1, trade: 1, stamina: undefined, maneuvers: undefined, features: 'Talent, 2 Ancestry Points, Path Progression' },
+      { level: 9, health: 2, attribute: undefined, skill: undefined, trade: undefined, stamina: 1, maneuvers: 1, features: 'Class Capstone Feature' },
+      { level: 10, health: 2, attribute: 1, skill: 2, trade: 1, stamina: 1, maneuvers: 1, features: 'Subclass Capstone Feature' },
+    ]);
+  });
+
+  it('preserves the complete published Hunter’s Mark, Hunter’s Strike, and Expert Hunter wording', () => {
+    expect(feature(1, 'Hunter’s Mark')).toBe('You can spend 1 AP and 1 SP to focus on and mark a creature you can see within 15 Spaces as your quarry. Alternatively, you can mark a creature by studying its tracks for at least 1 minute. While a creature is marked, you gain the following benefits:\n• You have ADV on Awareness and Survival Checks made to find the target.\n• The first Martial Attack against your target on your turn has ADV and ignores PDR.\n• When you score a Heavy or Critical Hit against the target, you automatically grant a d8 Help Die to the next Attack made against the target before the start of your next turn.\n\nThe target is marked as long as it’s on the same Plane of Existence as you, and vanishes early if you complete a Long Rest, fall Unconscious, or use this Feature again to mark another creature.\n\nWhen a marked creature dies you can spend 1 AP or 1 SP as a reaction to immediately Mark another target within range.');
+    expect(feature(2, 'Hunter’s Strike')).toBe('You can spend 1 SP as part of a Weapon Attack to add 1 of the unique Martial Enhancements listed below. You can only use 1 of these Enhancements per Attack. The damage increases by 1 for each SP spent beyond the first. If a Enhancement forces the target to make a Save, it does so against your Save DC.\n• Acid: The target takes 1 Corrosion damage and makes an Agility Save. Save Failure: The target becomes Hindered until the end of your next turn.\n• Fire: The target takes 1 Fire damage and makes a Might Save. Save Failure: The target begins Burning.\n• Piercing: The target takes 1 Piercing damage and makes a Might Save. Save Failure: The target begins Bleeding.\n• Snare: The target takes 1 Bludgeoning damage and makes an Agility Save. Save Failure: The target becomes Immobilized until the end of your next turn.\n• Toxin: The target takes 1 Poison damage and makes a Might Save. Save Failure: The target becomes Impaired until the end of your next turn.\n\nDC Tip: It’s assumed that the Hunter always has these supplies available to them (oils, tools, accessories, ammo, etc.) and they’ve prepared them ahead of time or quickly made them on the fly during Combat, however the PC or GM wants to describe it.');
+    expect(feature(5, 'Expert Hunter')).toBe('You gain the following benefits for your Hunter Class Features.\n\nHunter’s Mark\n\nThe Help die granted by Hunter’s Mark is increased to a d10 and the first Martial Attack against your target on your turn ignores Physical Resistance.\n\nFavored Terrain\n\nYou gain 1 additional Favored Terrain.\n\nHunter’s Strike\n\nYou can use up to 2 Hunter’s Strike Enhancements on an Attack.');
+  });
+
+  it('preserves Hunter training, starting equipment, and every published class Talent', () => {
+    expect(hunter.pathDetails).toBe('Combat Training: Weapons, Light Armor, Light Shields\n\nManeuvers: The number of Maneuvers you know increases as shown in the Maneuvers Known column of the Hunter Class Table.\n\nStamina Points: Your maximum number of Stamina Points increases as shown in the Stamina Points column of the Hunter Class Table.\n\nStamina Regen: Once per Round, you can regain up to half your maximum SP when:\n• When you Hit the target of your Hunter’s Mark with a Martial Attack.\n• The target of your Hunter’s Mark is reduced to 0 HP or dies.\n• You succeed on a Check to recall information about a creature.\n• You succeed on a Check to locate an Unseen creature.');
+    expect(hunter.startingEquipment.description).toBe('Arsenal: Choose 3 of any of the following items: Weapon or Light Shield.\nArmor: 1 set of Light Armor.\nTrade Tools: Choose 1 of any of the following items:\nDisguise Kit, Herbalist’s Supplies, Leatherworker’s Tools, or Sculptor’s Tools.\nAdventuring Pack: Choose 1 of the following packs:\n(Adventuring Packs Coming Soon).');
+    expect(hunter.talents.slice(-3).map(({ name, minimumLevel }) => [name, minimumLevel])).toEqual([
+      ['Expanded Terrains', 1],
+      ['Pack Leader', 3],
+      ['Big Game Hunter', 3],
+    ]);
+  });
+
+  it('scales Favored Terrain choices and routes terrain benefits into the builder', () => {
+    const terrainGroup = hunter.choiceGroups.find(({ id }) => id === 'hunter.terrain')!;
+    const novice = character('Hunter');
+    expect(classChoiceSelectionLimit(terrainGroup, novice)).toBe(2);
+
+    novice.level = 5;
+    novice.build = {
+      ...defaultBuild(),
+      selectedTalents: ['Expanded Terrains', 'Expanded Terrains'],
+      classFeatureSelections: { 'hunter.terrain': ['Forest', 'Urban', 'Grassland'] },
+    };
+    expect(classChoiceSelectionLimit(terrainGroup, novice)).toBe(7);
+    expect(hunterFavoredTerrainNames(novice)).toEqual(['Forest', 'Urban', 'Grassland']);
+    const derived = deriveCharacter(novice, hunter, reference.ancestryTraits, []);
+    expect(derived.speed).toBe(6);
+    expect(derived.skillPointBudget).toBe(12);
+  });
+
+  it('routes terrain and active Monster Slayer resistances to the live sheet', () => {
+    const hero = character('Hunter');
+    hero.level = 3;
+    hero.subclass = 'Monster Slayer';
+    hero.build = {
+      ...defaultBuild(),
+      classFeatureSelections: { 'hunter.terrain': ['Desert', 'Swamp', 'Tundra'], 'hunter.concoctions': ['Basilisk Eye'] },
+      sheetFeatureStates: { [HUNTER_CONCOCTION_ACTIVE]: true },
+      sheetFeatureSelections: { 'hunter.concoction.name': 'Basilisk Eye' },
+    };
+    expect(characterSheetEffects(hero).resistances).toEqual(['Fire (Half)', 'Poison (Half)', 'Cold (Half)', 'Physical (1)']);
+    expect(hunterStaminaRegenAmount(5)).toBe(3);
+  });
+
+  it('resets the Hunter’s first Mark attack each turn and crafts a Trapper Trap on a Short Rest', () => {
+    const hero = character('Hunter');
+    hero.level = 3;
+    hero.subclass = 'Trapper';
+    hero.primeModifier = 3;
+    hero.build = {
+      ...defaultBuild(),
+      sheetFeatureStates: { [HUNTER_MARK_ACTIVE]: true, [HUNTER_MARK_FIRST_ATTACK_USED]: true },
+      sheetFeatureCounters: { [HUNTER_TRAPS_AVAILABLE]: 1 },
+    };
+    expect(resetCharacterTurn(hero).build?.sheetFeatureStates[HUNTER_MARK_FIRST_ATTACK_USED]).toBe(false);
+    expect(completeCharacterRest(hero, 'Short', 0).build?.sheetFeatureCounters[HUNTER_TRAPS_AVAILABLE]).toBe(2);
+  });
+
+  it('includes every source option and level-gates all published Hunter subclass features', () => {
+    expect(hunter.choiceGroups.find(({ id }) => id === 'hunter.terrain')?.options.map(({ name }) => name)).toEqual([
+      'Coast', 'Desert', 'Forest', 'Grassland', 'Jungle', 'Mountain', 'Swamp', 'Tundra', 'Subterranean', 'Urban',
+    ]);
+    expect(hunter.choiceGroups.find(({ id }) => id === 'hunter.bestiary')?.options).toHaveLength(14);
+    expect(hunter.choiceGroups.find(({ id }) => id === 'hunter.concoctions')?.options.map(({ name }) => name)).toEqual([
+      'Elemental Infusion', 'Hydra’s Blood', 'Basilisk Eye', 'Ooze Gel', 'Aberrant Tumor', 'Deathweed', 'Plant Fibers', 'Divine Water',
+    ]);
+    expect(hunter.subclassFeatures['Monster Slayer'].map(({ name, level }) => [name, level])).toEqual([
+      ['Monstrous Concoctions', 3],
+      ['Monster Hunter (Flavor Feature)', 3],
+    ]);
+    expect(hunter.subclassFeatures.Trapper.map(({ name, level }) => [name, level])).toEqual([
+      ['Dynamic Traps', 3],
+      ['Discerning Eye (Flavor Feature)', 3],
+    ]);
+    expect(hunter.subclassFeatures.Paragon.map(({ name, level }) => [name, level])).toEqual([
+      ['Paragon Subclass', 3],
+      ['Novice Paragon', 3],
+      ['Jack of one Trade (Flavor Feature)', 3],
+      ['Expert Paragon', 7],
+      ['Master Paragon', 10],
+    ]);
   });
 });

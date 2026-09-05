@@ -97,6 +97,11 @@ export const DRUID_WILD_FORM_ID = 'druid.wildForm.id';
 export const DRUID_WILD_FORM_NAME = 'druid.wildForm.name';
 export const DRUID_NATURE_TORRENT_ACTIVE = 'druid.naturesTorrent.active';
 export const DRUID_BEAST_TRAIT_PREFIX = 'Beast Trait';
+export const HUNTER_MARK_ACTIVE = 'hunter.mark.active';
+export const HUNTER_MARK_FIRST_ATTACK_USED = 'hunter.mark.firstAttackUsed';
+export const HUNTER_STAMINA_REGEN_USED = 'hunter.staminaRegen.used';
+export const HUNTER_CONCOCTION_ACTIVE = 'hunter.concoction.active';
+export const HUNTER_TRAPS_AVAILABLE = 'hunter.traps.available';
 
 export function druidBeastTraitSelection(name: string, cost: number): string {
   return `${DRUID_BEAST_TRAIT_PREFIX} (${cost}) — ${name}`;
@@ -273,6 +278,23 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
     : [];
   const commanderResistances = character.class === 'Commander' && character.subclass === 'Crusader'
     ? ['Frightened Condition', 'Intimidated Condition'] : [];
+  const hunterTerrains = new Set(hunterFavoredTerrainNames(character));
+  const hunterConcoctionActive = character.class === 'Hunter'
+    && character.subclass === 'Monster Slayer'
+    && Boolean(character.build?.sheetFeatureStates?.[HUNTER_CONCOCTION_ACTIVE]);
+  const hunterConcoction = hunterConcoctionActive
+    ? character.build?.sheetFeatureSelections?.['hunter.concoction.name'] : undefined;
+  const hunterElementalDamage = character.build?.sheetFeatureSelections?.['hunter.concoction.element'];
+  const hunterResistances = [
+    hunterTerrains.has('Desert') && 'Fire (Half)',
+    hunterTerrains.has('Swamp') && 'Poison (Half)',
+    hunterTerrains.has('Tundra') && 'Cold (Half)',
+    hunterConcoction === 'Elemental Infusion' && hunterElementalDamage && `${hunterElementalDamage} (1)`,
+    hunterConcoction === 'Basilisk Eye' && 'Physical (1)',
+    hunterConcoction === 'Aberrant Tumor' && 'Psychic (1)',
+    hunterConcoction === 'Deathweed' && 'Umbral (Half)',
+    hunterConcoction === 'Divine Water' && 'Radiant (Half)',
+  ].filter((entry): entry is string => Boolean(entry));
   return {
     physicalDefense: character.physicalDefense - (isRaging ? 5 : 0),
     speed: character.speed + (activeRune === 'Lightning Rune' ? 1 : 0)
@@ -287,6 +309,7 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
       ...inquisitorResistances,
       ...bardResistances,
       ...commanderResistances,
+      ...hunterResistances,
     ],
   };
 }
@@ -330,6 +353,17 @@ export function commanderInspiringPresenceHealing(level: number, onDeathsDoor = 
 /** Rally grants 1 Temp HP; Expert Commander adds 1 per 2 additional SP spent. */
 export function commanderRallyAmount(level: number, additionalStamina = 0): number {
   return 1 + (level >= 5 ? Math.floor(Math.max(0, additionalStamina) / 2) : 0);
+}
+
+/** DC20 rounds fractions up, so a Hunter regains ceil(maximum SP / 2). */
+export function hunterStaminaRegenAmount(maximumStamina: number): number {
+  return Math.max(0, Math.ceil(maximumStamina / 2));
+}
+
+/** Favored Terrains currently selected through the Hunter class feature. */
+export function hunterFavoredTerrainNames(character: Pick<Character, 'class' | 'build'>): string[] {
+  if (character.class !== 'Hunter') return [];
+  return Array.from(new Set(character.build?.classFeatureSelections?.['hunter.terrain'] ?? []));
 }
 
 /** Every Rogue Martial Path trigger can restore up to half maximum SP once per Round. */
@@ -379,6 +413,10 @@ export function classChoiceSelectionLimit(
   if (group.id === 'warlock.boon' && character.class === 'Warlock') {
     const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Boon').length;
     return Math.min(group.options.length, 1 + expanded);
+  }
+  if (group.id === 'hunter.terrain' && character.class === 'Hunter') {
+    const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Terrains').length;
+    return Math.min(group.options.length, 2 + expanded * 2 + Number(character.level >= 5));
   }
   if (group.id !== 'spellblade.disciplines' || character.class !== 'Spellblade') return group.limit;
   const expanded = (character.build?.selectedTalents ?? []).filter((name) => name === 'Expanded Disciplines').length;
@@ -587,6 +625,8 @@ const TURN_STATE_KEYS = new Set([
   'commander.reinforce.active',
   'commander.warlord.priorityTarget.active',
   'cleric.order.used',
+  HUNTER_MARK_FIRST_ATTACK_USED,
+  'hunter.plantFibers.usedThisTurn',
 ]);
 
 /** Starts a fresh turn without incorrectly resetting round-, combat-, or rest-limited features. */
@@ -645,6 +685,10 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
       delete sheetFeatureSelections[DRUID_WILD_FORM_NAME];
     }
     delete sheetConditionLevels.Doomed;
+  } else if (type === 'Short' && character.class === 'Hunter' && character.subclass === 'Trapper') {
+    const maximumTraps = Math.max(0, character.primeModifier);
+    const availableTraps = Math.max(0, sheetFeatureCounters[HUNTER_TRAPS_AVAILABLE] ?? maximumTraps);
+    sheetFeatureCounters[HUNTER_TRAPS_AVAILABLE] = Math.min(maximumTraps, availableTraps + 1);
   }
 
   return {
@@ -1097,8 +1141,10 @@ export function deriveCharacter(
     : []);
   const pactArmorActive = equipment.hasArmor && warlockPactBoons.has('Pact Armor');
   const classFeatureHP = character.class === 'Warlock' && character.level >= 5 ? 2 : 0;
+  const hunterTerrains = new Set(hunterFavoredTerrainNames(character));
   const classSpeed = character.class === 'Barbarian' ? 1
-    : character.class === 'Monk' ? (character.level >= 5 ? 2 : 1) : 0;
+    : character.class === 'Monk' ? (character.level >= 5 ? 2 : 1)
+      : character.class === 'Hunter' && hunterTerrains.has('Grassland') ? 1 : 0;
   const disciplines = new Set(spellbladeDisciplineNames(character));
   const clericDomains = character.class === 'Cleric'
     ? character.build?.classFeatureSelections?.['cleric.domains'] ?? [] : [];
@@ -1110,7 +1156,8 @@ export function deriveCharacter(
   const skillFeaturePoints = character.class === 'Bard'
     ? (character.level >= 5 ? 4 : 2) + selectedTalents.filter((name) => name === 'Expanded Repertoire').length * 2
     : character.class === 'Rogue' ? (character.level >= 5 ? 2 : 1)
-      : character.class === 'Cleric' && clericDomains.includes('Knowledge') ? 2 : 0;
+      : character.class === 'Cleric' && clericDomains.includes('Knowledge') ? 2
+        : character.class === 'Hunter' ? ['Forest', 'Urban'].filter((terrain) => hunterTerrains.has(terrain)).length * 2 : 0;
   const skillConversions = character.build?.skillPointsConvertedToTrades ?? 0;
   const tradeConversions = character.build?.tradePointsConvertedToLanguages ?? 0;
   const skillTalentPoints = selectedTalents.filter((name) => name === 'Skill Increase').length * 4;

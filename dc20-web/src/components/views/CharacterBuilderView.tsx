@@ -515,13 +515,16 @@ const CharacterBuilderView: React.FC<{
     group.level <= level
     && (!group.requiredSubclass || group.requiredSubclass === subclass)
     && (!group.requiredTalent || talents.includes(group.requiredTalent))
+    && (group.id !== 'hunter.forestSkills' || (featureChoices['hunter.terrain'] ?? []).includes('Forest'))
+    && (group.id !== 'hunter.urbanSkills' || (featureChoices['hunter.terrain'] ?? []).includes('Urban'))
   )) ?? []).map((group) => {
     const options = group.optionsFromGroup
       ? classReference?.choiceGroups.find(({ id }) => id === group.optionsFromGroup)?.options ?? []
       : group.options;
     const resolved = { ...group, options };
     const limit = classChoiceSelectionLimit(resolved, draft);
-    return { ...resolved, limit, minimumSelections: group.minimumSelections ?? limit };
+    const hunterTerrainSkillAllocation = ['hunter.forestSkills', 'hunter.urbanSkills'].includes(group.id);
+    return { ...resolved, limit, minimumSelections: hunterTerrainSkillAllocation ? limit : group.minimumSelections ?? limit };
   });
   const grantedManeuvers = grantedClassManeuverNames(draft);
   const grantedSpells = grantedClassSpellNames(draft);
@@ -749,6 +752,10 @@ const CharacterBuilderView: React.FC<{
         const paladinChoice = next['spellblade.paladinDiscipline'] ?? [];
         if (!updated.includes('Acolyte')) next['spellblade.paladinDiscipline'] = ['Acolyte'];
         else if (paladinChoice[0] === 'Acolyte' || updated.includes(paladinChoice[0])) next['spellblade.paladinDiscipline'] = [];
+      }
+      if (group.id === 'hunter.terrain' && wasSelected) {
+        if (option === 'Forest') delete next['hunter.forestSkills'];
+        if (option === 'Urban') delete next['hunter.urbanSkills'];
       }
       return next;
     });
@@ -1004,6 +1011,17 @@ const CharacterBuilderView: React.FC<{
       if (count > group.limit) issues.push(`Choose no more than ${group.limit} options for ${group.title}.`);
       if (group.id === 'spellblade.paladinDiscipline' && (featureChoices[group.id] ?? []).some((option) => classChoiceOptionDisabled(group, option))) issues.push('Correct the Holy Warrior bonus Discipline choice.');
     }
+    if (className === 'Hunter') {
+      for (const groupID of ['hunter.forestSkills', 'hunter.urbanSkills']) {
+        const allocations = featureChoices[groupID] ?? [];
+        for (const skillName of new Set(allocations)) {
+          const allocatedPoints = allocations.filter((name) => name === skillName).length;
+          if (masteryRank(skillMasteries[skillName]) < allocatedPoints) {
+            issues.push(`Apply ${allocatedPoints} ${groupID.includes('forest') ? 'Forest' : 'Urban'} Skill Point${allocatedPoints === 1 ? '' : 's'} to ${skillName} on the Skills step.`);
+          }
+        }
+      }
+    }
     if (className === 'Bard') {
       if (bardMagicalSecrets.length !== 2) issues.push('Choose the 2 Spells from any Spell List granted by Magical Secrets.');
       if (level >= 5 && bardExpertSecrets.length !== 2) issues.push('Choose the 2 additional Spells from any Spell List granted by Expert Bard.');
@@ -1183,6 +1201,7 @@ const CharacterBuilderView: React.FC<{
                   </div>;
                 })}</div>
               </div>}
+              {className === 'Hunter' && <div className={panelClass}><h3 className="font-black text-emerald-200">Favored Terrain Benefits</h3><p className="mt-2 text-sm leading-6 text-slate-400">The selected terrain benefits are routed into the character: Grassland raises Speed by 1; Forest and Urban each add 2 restricted Skill Points. Use the matching allocation choices above, then raise those Skills on the Skills step. The character sheet lists every resistance, movement, sense, and situational benefit for the selected terrains.</p><div className="mt-3 flex flex-wrap gap-2">{(featureChoices['hunter.terrain'] ?? []).map((terrain) => <span key={terrain} className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-200">{terrain}</span>)}</div></div>}
               {className === 'Champion' && <div className={panelClass}>
                 <div className="mb-4"><h3 className="font-black text-amber-200">Master-at-Arms Maneuvers</h3><p className="mt-1 text-sm leading-6 text-slate-500">Maneuver Master grants Maneuvers in addition to the Champion Class Table. They are kept separate here so the table allowance remains accurate.</p></div>
                 <div className="space-y-4">
