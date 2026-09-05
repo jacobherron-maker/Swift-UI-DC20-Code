@@ -580,7 +580,7 @@
     "category" : "Weapons",
     "id" : "Weapons|Blowgun",
     "mechanics" : "Crossbow • 1 Piercing damage • Two-Handed, Ammo, Deft, Silent • Range 15\/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Crossbow: Accuracy — add a d4 to your Attack Check.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands when you Attack with it.\n• Ammo: Requires ammunition to make Attacks; you can load it as part of an Attack made with it.\n• Deft: Ranged Attacks with it don’t have DisADV from being Prone.\n• Silent: When making a Ranged Attack with it while Hidden, you remain Unheard by creatures you’re Hidden from.",
-    "name" : "Blowgun",
+    "name" : "Blowgun (Needle)",
     "properties" : [
       "Two-Handed",
       "Ammo",
@@ -1120,7 +1120,7 @@
     "slot" : "One Hand",
     "sourcePage" : "Beta 0.10.5 p.172",
     "subtype" : "Thrown Supply",
-    "summary" : "Contest Physical Save to Immobilize; Heavy Success also Restrains"
+    "summary" : "Contest Physical Save to Immobilize; Save Failure (5) also Restrains"
   },
   {
     "category" : "Trade Tools",

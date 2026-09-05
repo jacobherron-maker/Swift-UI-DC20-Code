@@ -3,7 +3,7 @@ import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { useCampaignStore } from '../../store/campaignStore';
 import type { EquipmentCatalogItem, EquipmentCategory } from '../../types/models';
 import { EquipmentCategoryValues } from '../../types/models';
-import { addInventoryItem, isEquipmentEquippable } from '../../utils/equipmentRules';
+import { addInventoryItem, defensiveEquipmentProfile, healingPotionAmount, isEquipmentEquippable, weaponMechanicalProfile } from '../../utils/equipmentRules';
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
 
@@ -105,6 +105,24 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
   onAdd: () => void;
   notice: string;
 }) {
+  const weapon = weaponMechanicalProfile(item);
+  const defense = defensiveEquipmentProfile(item);
+  const potionHealing = healingPotionAmount(item);
+  const routedEffects = [
+    weapon && `${weapon.baseDamage} ${weapon.damageTypes.join('/')} damage`,
+    weapon && `Range ${weapon.range}`,
+    weapon?.heavyHitDamageBonus ? '+1 damage on Heavy Hits' : '',
+    defense.physicalDefense ? `+${defense.physicalDefense} PD` : '',
+    defense.areaDefense ? `+${defense.areaDefense} AD` : '',
+    defense.physicalDamageReduction ? 'PDR' : '',
+    defense.elementalDamageReduction ? 'EDR' : '',
+    defense.speedPenalty ? `Speed −${defense.speedPenalty}` : '',
+    defense.agilityCheckDisadvantage ? 'DisADV on Agility Checks' : '',
+    item.category === 'Spell Focuses' ? item.properties.filter((property) => property !== 'Two-Handed').join(' • ') : '',
+    potionHealing ? `Restores ${potionHealing} HP when consumed` : '',
+    item.name === 'Medicine Kit' ? '5 tracked uses per kit' : '',
+    item.category === 'Trade Tools' ? `Enables ${item.properties[0]} activities` : '',
+  ].filter(Boolean) as string[];
   return (
     <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6 lg:space-y-6 lg:p-8">
       <div className="rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-950/50 via-slate-900 to-slate-950 p-6">
@@ -137,6 +155,8 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
         <h3 className="text-sm font-black uppercase tracking-[0.16em] text-violet-300">Mechanical Rules</h3>
         <div className="mt-4 whitespace-pre-wrap leading-7 text-slate-300">{item.mechanics}</div>
       </section>
+
+      {routedEffects.length > 0 && <section className="rounded-2xl border border-emerald-400/15 bg-emerald-950/15 p-6"><h3 className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">Routed Character-Sheet Effects</h3><p className="mt-2 text-xs leading-5 text-slate-500">These effects become active when the item is equipped and any required Training is met, or when its use action is taken for carried supplies.</p><div className="mt-4 flex flex-wrap gap-2">{routedEffects.map((effect) => <span key={effect} className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm font-semibold text-emerald-100">{effect}</span>)}</div></section>}
 
       <div className="grid gap-4 md:grid-cols-2">
         <section className="rounded-2xl border border-white/8 bg-slate-900/75 p-5">

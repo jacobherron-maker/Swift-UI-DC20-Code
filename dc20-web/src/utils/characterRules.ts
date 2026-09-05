@@ -9,6 +9,7 @@ import type {
   MasteryLevel,
   Spell,
 } from '../types/models';
+import { defensiveEquipmentProfile } from './equipmentRules';
 
 export const ATTRIBUTE_NAMES: DC20Attribute[] = ['Might', 'Agility', 'Charisma', 'Intelligence'];
 export const MASTERY_TITLES: MasteryLevel[] = [
@@ -571,6 +572,13 @@ export interface EquippedCombatModifiers {
   spellAttackDamageBonus: number;
   attackAndSpellDisadvantage: number;
   agilityCheckDisadvantage: number;
+  physicalDamageReduction: boolean;
+  elementalDamageReduction: boolean;
+  mysticalDamageReduction: boolean;
+  unarmedHeavyHitDamageBonus: number;
+  immuneToFlanking: boolean;
+  focusProperties: string[];
+  mountedShieldDefense: { physicalDefense: number; areaDefense: number } | null;
 }
 
 /** Roll-facing modifiers from equipped armor, shields, and trained Spell Focuses. */
@@ -593,12 +601,35 @@ export function equippedCombatModifiers(
     return false;
   }).length;
   const heavyGear = equipped.filter(({ subtype }) => subtype === 'Heavy Armor' || subtype === 'Heavy Shield').length;
+  const equippedArmor = equipped.find(({ category }) => category === 'Armor');
+  const armorProfile = equippedArmor ? defensiveEquipmentProfile(equippedArmor) : null;
+  const equippedShields = (character.inventoryItems ?? []).filter(({ isEquipped }) => isEquipped)
+    .flatMap((inventory) => catalog.filter(({ id, category }) => id === inventory.equipmentID && category === 'Shields')
+      .map((item) => ({ inventory, item, profile: defensiveEquipmentProfile(item) })));
+  const selectedShieldID = character.build?.sheetFeatureSelections?.['equipment.activeShield'];
+  const activeShield = equippedShields.find(({ inventory }) => inventory.id === selectedShieldID)
+    ?? equippedShields.reduce<(typeof equippedShields)[number] | undefined>((best, candidate) => (
+      !best || candidate.profile.physicalDefense + candidate.profile.areaDefense > best.profile.physicalDefense + best.profile.areaDefense ? candidate : best
+    ), undefined);
+  const hasPactArmor = character.class === 'Warlock'
+    && (character.build?.classFeatureSelections?.['warlock.boon'] ?? []).includes('Pact Armor')
+    && Boolean(equippedArmor);
+  const focusProperties = Array.from(new Set(focuses.flatMap(({ properties }) => properties.filter((property) => property !== 'Two-Handed'))));
   return {
     spellCheckBonus: focuses.filter(({ properties }) => properties.includes('Channeling')).length,
     spellAttackBonus: focuses.filter(({ properties }) => properties.includes('Vicious')).length,
     spellAttackDamageBonus: focuses.filter(({ properties }) => properties.includes('Powerful')).length,
     attackAndSpellDisadvantage: untrainedGear > 0 ? -untrainedGear : 0,
     agilityCheckDisadvantage: heavyGear > 0 ? -heavyGear : 0,
+    physicalDamageReduction: Boolean(armorProfile?.physicalDamageReduction),
+    elementalDamageReduction: Boolean(armorProfile?.elementalDamageReduction),
+    mysticalDamageReduction: hasPactArmor || focuses.some(({ properties }) => properties.includes('Warded')),
+    unarmedHeavyHitDamageBonus: Number(Boolean(equippedArmor?.subtype === 'Heavy Armor' || equipped.some(({ name }) => name === 'Gauntlet'))),
+    immuneToFlanking: equipped.filter(({ category }) => category === 'Shields').length >= 2,
+    focusProperties,
+    mountedShieldDefense: activeShield?.item.properties.includes('Mounted')
+      ? { physicalDefense: activeShield.profile.physicalDefense, areaDefense: activeShield.profile.areaDefense }
+      : null,
   };
 }
 
@@ -606,36 +637,33 @@ function equipmentBonuses(character: Character, catalog: EquipmentCatalogItem[],
   const equipped = (character.inventoryItems ?? [])
     .filter((entry) => entry.isEquipped)
     .flatMap((entry) => catalog.filter((item) => item.id === entry.equipmentID));
-  const armorName = equipped.find((item) => item.category === 'Armor')?.name ?? '';
-  const names = new Set(equipped.map((item) => item.name));
-  const armor: Record<string, { pd: number; ad: number; pdr: number }> = {
-    'Defensive Light Armor': { pd: 1, ad: 1, pdr: 0 },
-    'Deflecting Light Armor': { pd: 2, ad: 0, pdr: 0 },
-    'Fortified Light Armor': { pd: 0, ad: 2, pdr: 0 },
-    'Defensive Heavy Armor': { pd: 1, ad: 1, pdr: 1 },
-    'Deflecting Heavy Armor': { pd: 2, ad: 0, pdr: 1 },
-    'Fortified Heavy Armor': { pd: 0, ad: 2, pdr: 1 },
-    'Highly Defensive Heavy Armor': { pd: 2, ad: 2, pdr: 0 },
-  };
-  const shield = names.has('Tower Shield') ? { pd: 2, ad: 2 }
-    : names.has('Kite Shield') ? { pd: 1, ad: 2 }
-      : names.has('Heater Shield') ? { pd: 1, ad: 1 }
-        : names.has('Buckler') ? { pd: 1, ad: 0 }
-          : names.has('Round Shield') ? { pd: 0, ad: 1 } : { pd: 0, ad: 0 };
+  const equippedArmor = equipped.find((item) => item.category === 'Armor');
+  const armor = equippedArmor ? defensiveEquipmentProfile(equippedArmor) : null;
+  // The Beta allows multiple wielded Shields but grants the bonuses of only one.
+  // Choose the strongest combined published bonus; ties preserve inventory order.
+  const equippedShields = (character.inventoryItems ?? []).filter(({ isEquipped }) => isEquipped)
+    .flatMap((inventory) => catalog.filter(({ id, category }) => id === inventory.equipmentID && category === 'Shields')
+      .map((item) => ({ inventory, profile: defensiveEquipmentProfile(item) })));
+  const selectedShieldID = character.build?.sheetFeatureSelections?.['equipment.activeShield'];
+  const shield = equippedShields.find(({ inventory }) => inventory.id === selectedShieldID)?.profile
+    ?? equippedShields.map(({ profile }) => profile)
+      .reduce<ReturnType<typeof defensiveEquipmentProfile> | null>((best, candidate) => (
+        !best || candidate.physicalDefense + candidate.areaDefense > best.physicalDefense + best.areaDefense ? candidate : best
+      ), null);
   const focusAD = training.spellFocusTraining
     ? equipped.filter((item) => item.category === 'Spell Focuses' && item.properties.includes('Protective')).length : 0;
   const focusMDR = training.spellFocusTraining
     && equipped.some((item) => item.category === 'Spell Focuses' && item.properties.includes('Warded')) ? 1 : 0;
   const weaponPD = equipped.filter((item) => item.category === 'Weapons' && item.properties.includes('Guard')).length;
   return {
-    pd: (armor[armorName]?.pd ?? 0) + shield.pd + weaponPD,
-    ad: (armor[armorName]?.ad ?? 0) + shield.ad + focusAD,
-    physicalDR: armor[armorName]?.pdr ?? 0,
+    pd: (armor?.physicalDefense ?? 0) + (shield?.physicalDefense ?? 0) + weaponPD,
+    ad: (armor?.areaDefense ?? 0) + (shield?.areaDefense ?? 0) + focusAD,
+    physicalDR: Number(Boolean(armor?.physicalDamageReduction || shield?.physicalDamageReduction)),
+    elementalDR: Number(Boolean(armor?.elementalDamageReduction || shield?.elementalDamageReduction)),
     mysticalDR: focusMDR,
-    hasArmor: Boolean(armorName),
-    speedPenalty: (armorName.includes('Heavy Armor') ? 1 : 0)
-      + Number(names.has('Kite Shield')) + Number(names.has('Tower Shield')),
-    isUnarmored: !armorName,
+    hasArmor: Boolean(equippedArmor),
+    speedPenalty: (armor?.speedPenalty ?? 0) + equippedShields.reduce((sum, { profile }) => sum + profile.speedPenalty, 0),
+    isUnarmored: !equippedArmor,
   };
 }
 
@@ -660,6 +688,7 @@ export interface CharacterDerivedSummary {
   cantripLimit: number;
   maneuverLimit: number;
   physicalDR: number;
+  elementalDR: number;
   mysticalDR: number;
   size: string;
 }
@@ -750,6 +779,7 @@ export function deriveCharacter(
       + selectedTalents.filter((name) => name === 'Martial Expansion').length * 2
       + Number(character.class === 'Spellblade' && disciplines.has('Warrior')),
     physicalDR: equipment.physicalDR,
+    elementalDR: equipment.elementalDR,
     mysticalDR: equipment.mysticalDR + Number(pactArmorActive),
     size: chosenTraits.some((trait) => trait.name === 'Small-Sized') ? 'Small' : 'Medium',
   };

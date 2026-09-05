@@ -363,6 +363,48 @@ describe('character-sheet combat training and equipment modifiers', () => {
     expect(equippedCombatModifiers(hero, equipmentCatalog, wizard)).toMatchObject({
       attackAndSpellDisadvantage: -1,
       agilityCheckDisadvantage: -1,
+      physicalDamageReduction: true,
+      unarmedHeavyHitDamageBonus: 1,
+    });
+  });
+
+  it('routes every trained Spell Focus statistic and damage reduction', () => {
+    const hero = character('Wizard');
+    const grimoire = equipmentCatalog.find(({ name }) => name === 'Grimoire / Tarot Deck')!;
+    hero.inventoryItems = [{ id: 'grimoire', equipmentID: grimoire.id, quantity: 1, isEquipped: true, source: 'added' }];
+    expect(equippedCombatModifiers(hero, equipmentCatalog, wizard)).toMatchObject({
+      spellCheckBonus: 1,
+      spellAttackBonus: 1,
+      spellAttackDamageBonus: 0,
+      focusProperties: ['Channeling', 'Vicious'],
+    });
+
+    const censer = equipmentCatalog.find(({ name }) => name === 'Censer')!;
+    hero.inventoryItems = [{ id: 'censer', equipmentID: censer.id, quantity: 1, isEquipped: true, source: 'added' }];
+    const derived = deriveCharacter(hero, wizard, reference.ancestryTraits, equipmentCatalog);
+    expect(equippedCombatModifiers(hero, equipmentCatalog, wizard)).toMatchObject({
+      mysticalDamageReduction: true,
+      focusProperties: ['Protective', 'Warded'],
+    });
+    expect(derived.arcaneDefense).toBe(13);
+    expect(derived.mysticalDR).toBe(1);
+  });
+
+  it('applies one chosen Shield bonus while retaining every heavy Shield drawback', () => {
+    const hero = character('Barbarian');
+    const kite = equipmentCatalog.find(({ name }) => name === 'Kite Shield')!;
+    const tower = equipmentCatalog.find(({ name }) => name === 'Tower Shield')!;
+    hero.inventoryItems = [kite, tower].map((item, index) => ({ id: `shield-${index}`, equipmentID: item.id, quantity: 1, isEquipped: true, source: 'added' }));
+    hero.build = { ...defaultBuild(), sheetFeatureSelections: { 'equipment.activeShield': 'shield-0' } };
+    const base = deriveCharacter({ ...hero, inventoryItems: [] }, barbarian, reference.ancestryTraits, equipmentCatalog);
+    const derived = deriveCharacter(hero, barbarian, reference.ancestryTraits, equipmentCatalog);
+    expect(derived.physicalDefense - base.physicalDefense).toBe(1);
+    expect(derived.arcaneDefense - base.arcaneDefense).toBe(2);
+    expect(derived.speed - base.speed).toBe(-2);
+    expect(equippedCombatModifiers(hero, equipmentCatalog, barbarian)).toMatchObject({
+      agilityCheckDisadvantage: -2,
+      immuneToFlanking: true,
+      mountedShieldDefense: { physicalDefense: 1, areaDefense: 2 },
     });
   });
 });

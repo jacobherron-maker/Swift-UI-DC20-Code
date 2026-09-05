@@ -408,6 +408,8 @@ export interface CharacterInventoryItem {
   quantity: number;
   isEquipped: boolean;
   source: 'startingEquipment' | 'added';
+  /** Remaining charges for limited-use supplies such as a Medicine Kit. */
+  remainingUses?: number;
 }
 
 export interface Spell {
