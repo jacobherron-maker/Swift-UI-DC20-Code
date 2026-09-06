@@ -37,6 +37,8 @@ import {
   classTableTotals,
   defaultBuild,
   deriveCharacter,
+  DRUID_WILD_FORM_SKILL_OPTIONS,
+  DRUID_WILD_FORM_TRAIT_OPTIONS,
   grantedClassLanguageNames,
   grantedClassManeuverNames,
   grantedClassSpellNames,
@@ -214,6 +216,76 @@ function ClassProgressionCards({ classReference, currentLevel }: { classReferenc
           </dl>
         </div>
       ))}
+    </div>
+  );
+}
+
+function DruidWildFormBuilderReference({
+  classReference,
+  beastTraits,
+}: {
+  classReference: ClassReference;
+  beastTraits: AncestryTrait[];
+}) {
+  const wildForm = classReference.features
+    .flatMap(({ features }) => features)
+    .find(({ name }) => name === 'Wild Form');
+  const positiveBeastTraits = beastTraits.filter(({ cost }) => cost > 0);
+  const beastTraitGroups = Array.from(new Set(positiveBeastTraits.map(({ category }) => category)));
+
+  if (!wildForm) return null;
+
+  return (
+    <div className="rounded-2xl border border-emerald-400/25 bg-gradient-to-br from-emerald-950/35 to-slate-900/65 p-5 shadow-xl shadow-black/10">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">Builder Reference</p>
+          <h3 className="mt-1 text-lg font-black text-emerald-100">Wild Form</h3>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Review the feature and its available Traits here. Wild Forms are created, named, enhanced, and assigned Traits only from the live character sheet when your Druid transforms.</p>
+        </div>
+        <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-200">Read only</span>
+      </div>
+
+      <div className="mt-4">
+        <InfoDetails summary="Full Wild Form description"><PowerRulesText text={wildForm.description} /></InfoDetails>
+      </div>
+
+      <details className="mt-3 rounded-xl border border-emerald-400/15 bg-slate-950/45 p-4">
+        <summary className="cursor-pointer font-black text-emerald-100">Wild Form Trait Options ({DRUID_WILD_FORM_TRAIT_OPTIONS.length})</summary>
+        <p className="mt-3 text-xs leading-5 text-slate-500">These options are shown for planning only. Trait Point costs and repeat limits are enforced when configuring a form on the character sheet.</p>
+        <div className="mt-3 grid gap-2 md:grid-cols-2">
+          {DRUID_WILD_FORM_TRAIT_OPTIONS.map((option) => (
+            <div key={option.name} className="rounded-lg border border-white/5 bg-slate-900/70 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-black text-slate-200">({option.cost}) {option.name}</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">{option.repeatable ? 'Repeatable' : 'Unique'}</span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-slate-400">{option.description}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-xs leading-5 text-violet-200"><strong>Skillful options:</strong> {DRUID_WILD_FORM_SKILL_OPTIONS.join(', ')}.</p>
+      </details>
+
+      <details className="mt-3 rounded-xl border border-amber-400/15 bg-slate-950/45 p-4">
+        <summary className="cursor-pointer font-black text-amber-100">Positive Beast Trait Options ({positiveBeastTraits.length})</summary>
+        <p className="mt-3 text-xs leading-5 text-slate-500">Wild Form may also spend Trait Points on these positive Beast Traits. Negative Beast Traits are unavailable to Wild Form.</p>
+        <div className="mt-4 space-y-4">
+          {beastTraitGroups.map((group) => (
+            <section key={group}>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-300">{group}</h4>
+              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                {positiveBeastTraits.filter(({ category }) => category === group).map((trait) => (
+                  <InfoDetails key={trait.id} summary={<span>({trait.cost}) {trait.name}</span>}>
+                    {trait.prerequisite && <p className="mb-2 text-xs font-bold text-amber-300">Requires {trait.prerequisite}</p>}
+                    <PowerRulesText text={trait.description} />
+                  </InfoDetails>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }
@@ -1428,8 +1500,9 @@ const CharacterBuilderView: React.FC<{
               <InfoDetails summary={<span>{classReference.pathTitle}</span>}>{classReference.pathDetails}</InfoDetails>
               {pathLevels.length > 0 && <div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Path Progression Choices</h3><div className="grid gap-3 sm:grid-cols-2">{pathLevels.map((pathLevel) => <div key={pathLevel} className="rounded-xl bg-slate-950/50 p-3"><div className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Level {pathLevel}</div><div className="flex gap-2">{(['Martial', 'Spellcaster'] as CharacterPathChoice[]).map((path) => <button type="button" key={path} onClick={() => choosePathProgression(pathLevel, path)} className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold ${pathChoices[String(pathLevel)] === path ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-400'}`}>{path}</button>)}</div></div>)}</div></div>}
               {level >= 3 && classReference.subclasses.length > 0 && <div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Subclass</h3><div className="grid gap-2 sm:grid-cols-3">{classReference.subclasses.map((option) => <button type="button" key={option} onClick={() => { setSubclass(option); setFeatureChoices((current) => Object.fromEntries(Object.entries(current).filter(([groupID]) => { const group = classReference.choiceGroups.find(({ id }) => id === groupID); return !group?.requiredSubclass || group.requiredSubclass === option; }))); }} className={`rounded-lg border px-3 py-3 text-sm font-bold ${subclass === option ? 'border-violet-400 bg-violet-500/15 text-violet-200' : 'border-slate-700 text-slate-400'}`}>{option}</button>)}</div>{subclass && <div className="mt-4 space-y-2">{(classReference.subclassFeatures[subclass] ?? []).filter((feature) => feature.level === undefined || feature.level <= level).map((feature) => <InfoDetails key={feature.name} summary={<span>{feature.name}{feature.level !== undefined && <span className="ml-2 text-xs font-normal text-slate-500">Level {feature.level}</span>}</span>}>{feature.description}</InfoDetails>)}</div>}</div>}
-              <div className={panelClass}><div className="mb-3 flex items-center justify-between"><h3 className="font-black text-violet-200">Class Progression Table</h3><span className="text-xs text-slate-500">{classReference.tableSource}</span></div><ClassProgressionCards classReference={classReference} currentLevel={level} /></div>
-              <div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Features Gained at Level {level}</h3><div className="space-y-3">{classReference.features.filter((entry) => entry.level === level).map((entry) => <div key={entry.level}><div className="space-y-2">{entry.features.map((feature) => <InfoDetails key={`${entry.level}-${feature.name}`} summary={feature.name}>{feature.description}</InfoDetails>)}</div></div>)}{!classReference.features.some((entry) => entry.level === level) && <p className="text-sm text-slate-500">No new class features are listed at this level.</p>}</div></div>
+              <details className={`${panelClass} group`}><summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3"><div><h3 className="font-black text-violet-200">Class Progression Table</h3><span className="text-xs text-slate-500">{classReference.tableSource}</span></div><span className="text-xs font-black text-violet-300 group-open:hidden">Show table</span><span className="hidden text-xs font-black text-violet-300 group-open:inline">Hide table</span></summary><div className="mt-4 border-t border-white/5 pt-4"><ClassProgressionCards classReference={classReference} currentLevel={level} /></div></details>
+              <div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Features Gained at Level {level}</h3><div className="space-y-3">{classReference.features.filter((entry) => entry.level === level).map((entry) => <div key={entry.level}><div className="space-y-2">{entry.features.filter((feature) => !(className === 'Druid' && feature.name === 'Wild Form')).map((feature) => <InfoDetails key={`${entry.level}-${feature.name}`} summary={feature.name}>{feature.description}</InfoDetails>)}</div></div>)}{!classReference.features.some((entry) => entry.level === level) && <p className="text-sm text-slate-500">No new class features are listed at this level.</p>}</div></div>
+              {className === 'Druid' && <DruidWildFormBuilderReference classReference={classReference} beastTraits={reference.ancestryTraits.filter(({ ancestry: traitAncestry }) => traitAncestry === 'Beastborn')} />}
               {availableTalentSlots > 0 && <div className={panelClass}>
                 <h3 className="mb-1 font-black text-violet-200">Talents ({talents.length}/{availableTalentSlots})</h3>
                 <p className="mb-3 text-sm text-slate-500">General, eligible Class, and Multiclass Talents are checked against every published requirement. Locked choices show what is still required.</p>
