@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { EquipmentCatalogItem } from '../types/models';
+import { sortByName } from '../utils/gameUtils';
 
 let cache: EquipmentCatalogItem[] | null = null;
 let pending: Promise<EquipmentCatalogItem[]> | null = null;
@@ -22,8 +23,8 @@ function fetchEquipment(): Promise<EquipmentCatalogItem[]> {
         && Array.isArray((entry as EquipmentCatalogItem).properties)
       ));
       if (records.length !== value.length) throw new Error('One or more equipment records are malformed.');
-      cache = records;
-      return records;
+      cache = sortByName(records);
+      return cache;
     })
     .finally(() => {
       pending = null;

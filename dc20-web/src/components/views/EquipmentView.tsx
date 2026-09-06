@@ -4,7 +4,7 @@ import { useCampaignStore } from '../../store/campaignStore';
 import type { EquipmentCatalogItem, EquipmentCategory } from '../../types/models';
 import { EquipmentCategoryValues, EquipmentSlotValues } from '../../types/models';
 import { addInventoryItem, defensiveEquipmentProfile, healingPotionAmount, isEquipmentEquippable, weaponMechanicalProfile } from '../../utils/equipmentRules';
-import { generateUUID } from '../../utils/gameUtils';
+import { generateUUID, sortByName } from '../../utils/gameUtils';
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
 
@@ -31,7 +31,7 @@ export default function EquipmentView() {
   const categories = Object.values(EquipmentCategoryValues);
   const customEquipment = campaignData.customEquipment;
   const customIDs = useMemo(() => new Set(customEquipment.map(({ id }) => id)), [customEquipment]);
-  const standardEquipment = useMemo(() => [...equipment, ...customEquipment], [customEquipment, equipment]);
+  const standardEquipment = useMemo(() => sortByName([...equipment, ...customEquipment]), [customEquipment, equipment]);
   const effectiveTargetCharacterID = targetCharacterID || selectedCharacterId || characters[0]?.id || '';
 
   const filtered = useMemo(() => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { PowerResolution } from '../utils/powerRules';
+import { sortByName } from '../utils/gameUtils';
 
 export interface SpellReference {
   name: string;
@@ -46,9 +47,9 @@ function loadPowers(): Promise<[SpellReference[], ManeuverReference[]]> {
   ]).then(([spellDocument, maneuverDocument]) => {
     const loadedSpells: SpellReference[] = Array.isArray(spellDocument.spells) ? spellDocument.spells : [];
     const loadedManeuvers: ManeuverReference[] = Array.isArray(maneuverDocument.maneuvers) ? maneuverDocument.maneuvers : [];
-    spellCache = loadedSpells;
-    maneuverCache = loadedManeuvers;
-    return [loadedSpells, loadedManeuvers] as [SpellReference[], ManeuverReference[]];
+    spellCache = sortByName(loadedSpells);
+    maneuverCache = sortByName(loadedManeuvers);
+    return [spellCache, maneuverCache] as [SpellReference[], ManeuverReference[]];
   }).finally(() => {
     pending = null;
   });
