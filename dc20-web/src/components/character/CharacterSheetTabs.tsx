@@ -15,6 +15,7 @@ import type {
   Spell,
 } from '../../types/models';
 import { EquipmentCategoryValues, EquipmentSlotValues } from '../../types/models';
+import { PowerRulesText } from '../powers/PowerRulesText';
 import { useCampaignStore } from '../../store/campaignStore';
 import {
   ATTRIBUTE_NAMES,
@@ -67,6 +68,7 @@ import {
 } from '../../utils/equipmentRules';
 import { generateUUID, rollDice } from '../../utils/gameUtils';
 import { hasDirectMulticlassFeature, ownedClassFeatures, talentByName } from '../../utils/talentRules';
+import { basePowerCost, isPowerAttack, powerResolutionLabel, type PowerResolution } from '../../utils/powerRules';
 
 export type RedesignedSheetTab = 'sheet-checks' | 'sheet-combat' | 'sheet-features' | 'sheet-equipment' | 'sheet-misc';
 
@@ -345,23 +347,68 @@ function MonkUnarmedAttackCard({ character, modifier, adjustment, damageBonus, i
   </div>;
 }
 
-function SpellRollControl({ spell, spellCheck, spellAttack, modifiers, prone, onRoll }: {
+function SpellRollControl({ spell, character, spellCheck, spellAttack, modifiers, prone, onChange, onRoll }: {
   spell: Spell;
+  character: Character;
   spellCheck: number;
   spellAttack: number;
   modifiers: ReturnType<typeof equippedCombatModifiers>;
   prone: boolean;
+  onChange: CharacterSheetTabContentProps['onChange'];
   onRoll: CharacterSheetTabContentProps['onRoll'];
 }) {
   const [enemyInMelee, setEnemyInMelee] = useState(false);
-  const usesAttack = /Spell Attack/i.test(spell.description);
-  const isAreaAttack = /Area Spell Attack/i.test(spell.description);
-  const isRangedAttack = usesAttack && !isAreaAttack && !/^(?:Self|1 Space|Melee)$/i.test(spell.range.trim());
+  const [variableMana, setVariableMana] = useState(1);
+  const resolution: PowerResolution = spell.resolution ?? (/Area Spell Attack/i.test(spell.description) ? 'Area Spell Attack'
+    : /Ranged Spell Attack/i.test(spell.description) ? 'Ranged Spell Attack'
+      : /Melee Spell Attack/i.test(spell.description) ? 'Melee Spell Attack'
+        : /Spell Attack/i.test(spell.description) ? 'Spell Attack'
+          : /Spell Check/i.test(spell.description) ? 'Spell Check' : 'None');
+  const usesAttack = isPowerAttack(resolution);
+  const isRangedAttack = resolution === 'Ranged Spell Attack';
   const protectedByFocus = modifiers.focusProperties.includes('Close Quarters');
   const adjustment = modifiers.attackAndSpellDisadvantage - Number(usesAttack && prone) - Number(isRangedAttack && enemyInMelee && !protectedByFocus);
   const rangeBenefit = modifiers.focusProperties.includes('Reach') && /^1 Space$/i.test(spell.range.trim()) ? '+1 Space from Reach'
     : modifiers.focusProperties.includes('Long-Ranged') && !/^(?:Self|1 Space|Melee)$/i.test(spell.range.trim()) ? '+5 Spaces from Long-Ranged' : '';
-  return <div className="mt-4 space-y-2">{isRangedAttack && <label className={`flex items-center gap-2 rounded-lg p-2 text-xs ${protectedByFocus ? 'bg-emerald-500/10 text-emerald-200' : 'bg-slate-900/70 text-slate-300'}`}><input type="checkbox" checked={enemyInMelee} onChange={(event) => setEnemyInMelee(event.target.checked)} />Within enemy Melee Range {protectedByFocus ? '• Close Quarters prevents DisADV' : '• DisADV'}</label>}{rangeBenefit && <p className="rounded-lg bg-fuchsia-500/10 p-2 text-xs font-bold text-fuchsia-200">Adjusted range: {rangeBenefit}</p>}<button type="button" onClick={() => onRoll(`${spell.name} ${usesAttack ? 'Spell Attack' : 'Spell Check'}`, usesAttack ? spellAttack : spellCheck, adjustment)} className="w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white">Roll {usesAttack ? 'Spell Attack' : 'Spell Check'}{usesAttack && modifiers.spellAttackDamageBonus > 0 ? ` • +${modifiers.spellAttackDamageBonus} damage` : ''}</button></div>;
+  const spellCost = spell.cost ?? '';
+  const fixedCost = basePowerCost(spellCost);
+  const variableManaCost = /\bX MP\b/i.test(spellCost);
+  const manaCost = variableManaCost ? Math.max(1, variableMana) : fixedCost.manaPoints;
+  const costLabel = [fixedCost.actionPoints ? `${fixedCost.actionPoints} AP` : '', manaCost ? `${manaCost} MP` : ''].filter(Boolean).join(' + ') || 'No resource cost';
+  const unavailable = character.currentAP < fixedCost.actionPoints || character.manaPoints < manaCost;
+  const useSpell = () => {
+    if (unavailable) return;
+    onChange({ currentAP: character.currentAP - fixedCost.actionPoints, manaPoints: character.manaPoints - manaCost });
+    if (resolution !== 'None') onRoll(`${spell.name} ${resolution}`, usesAttack ? spellAttack : spellCheck, adjustment);
+  };
+  return <div className="mt-4 space-y-2">{isRangedAttack && <label className={`flex items-center gap-2 rounded-lg p-2 text-xs ${protectedByFocus ? 'bg-emerald-500/10 text-emerald-200' : 'bg-slate-900/70 text-slate-300'}`}><input type="checkbox" checked={enemyInMelee} onChange={(event) => setEnemyInMelee(event.target.checked)} />Within enemy Melee Range {protectedByFocus ? '• Close Quarters prevents DisADV' : '• DisADV'}</label>}{rangeBenefit && <p className="rounded-lg bg-fuchsia-500/10 p-2 text-xs font-bold text-fuchsia-200">Adjusted range: {rangeBenefit}</p>}{spell.alternateResolutions?.length ? <p className="rounded-lg bg-sky-500/10 p-2 text-xs font-bold text-sky-100">Listed follow-up actions also use: {spell.alternateResolutions.join(', ')}.</p> : null}{variableManaCost && <label className="block rounded-lg bg-slate-900/70 p-2 text-xs font-bold text-slate-300">Mana spent (minimum 1)<input type="number" min={1} max={Math.max(1, character.manaPoints)} value={variableMana} onChange={(event) => setVariableMana(Math.max(1, Math.min(character.manaPoints, Number(event.target.value))))} className={`${fieldClass} mt-1 py-1.5`} /></label>}{resolution === 'None' && <p className="rounded-lg border border-emerald-400/15 bg-emerald-500/10 p-2 text-xs font-bold text-emerald-100">No casting Check is required by the base Spell. Resolve its listed effect after paying the cost.</p>}<button type="button" disabled={unavailable} onClick={useSpell} className="w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">{resolution === 'None' ? 'Use Spell' : `Cast & Roll ${powerResolutionLabel(resolution)}`} • {costLabel}{usesAttack && modifiers.spellAttackDamageBonus > 0 ? ` • +${modifiers.spellAttackDamageBonus} damage` : ''}</button></div>;
+}
+
+function ManeuverRollControl({ maneuver, character, martialCheck, modifiers, prone, onChange, onRoll }: {
+  maneuver: Maneuver;
+  character: Character;
+  martialCheck: number;
+  modifiers: ReturnType<typeof equippedCombatModifiers>;
+  prone: boolean;
+  onChange: CharacterSheetTabContentProps['onChange'];
+  onRoll: CharacterSheetTabContentProps['onRoll'];
+}) {
+  const resolution = maneuver.resolution ?? (/Area Martial Attack/i.test(maneuver.description) ? 'Area Martial Attack'
+    : /Ranged Martial Attack/i.test(maneuver.description) ? 'Ranged Martial Attack'
+      : /Melee Martial Attack/i.test(maneuver.description) ? 'Melee Martial Attack'
+        : /Martial Attack/i.test(maneuver.description) ? 'Martial Attack'
+          : /Martial Check/i.test(maneuver.description) ? 'Martial Check' : 'None');
+  const attack = isPowerAttack(resolution);
+  const adjustment = modifiers.attackAndSpellDisadvantage - Number(attack && prone);
+  const cost = basePowerCost(maneuver.cost);
+  const costLabel = [cost.actionPoints ? `${cost.actionPoints} AP` : '', cost.staminaPoints ? `${cost.staminaPoints} SP` : ''].filter(Boolean).join(' + ') || 'No resource cost';
+  const unavailable = character.currentAP < cost.actionPoints || character.stamina < cost.staminaPoints;
+  const useManeuver = () => {
+    if (unavailable) return;
+    onChange({ currentAP: character.currentAP - cost.actionPoints, stamina: character.stamina - cost.staminaPoints });
+    if (resolution !== 'None') onRoll(`${maneuver.name} ${resolution}`, martialCheck, adjustment);
+  };
+  return <div className="mt-4 space-y-2">{resolution === 'None' && <p className="rounded-lg border border-emerald-400/15 bg-emerald-500/10 p-2 text-xs font-bold text-emerald-100">The base Maneuver uses its listed Action or Reaction without a separate Martial Check.</p>}<button type="button" disabled={unavailable} onClick={useManeuver} className="w-full rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">{resolution === 'None' ? 'Use Maneuver' : `Use & Roll ${powerResolutionLabel(resolution)}`} • {costLabel}</button></div>;
 }
 
 function EquippedRulesSummary({ modifiers }: { modifiers: ReturnType<typeof equippedCombatModifiers> }) {
@@ -768,7 +815,7 @@ function CombatTab({ character, training, modifiers, equipmentCatalog, knownSpel
     <div className="grid gap-5 lg:grid-cols-3"><section className={`${panelClass} lg:col-span-2`}><SectionHeading eyebrow="Resist Effects" title="Saving Throws" tone="text-sky-300" /><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{ATTRIBUTE_NAMES.map((attribute) => { const modifier = saveAttributeModifier(attribute) + character.combatMastery; const adjustment = wildForm.active ? Number(attribute === 'Might' && shellRetreatActive) - Number(attribute === 'Agility' && shellRetreatActive) : (effects.saveAdvantage[attribute] ?? 0) + Number(attribute === 'Might' && shellRetreatActive) - Number(attribute === 'Agility' && shellRetreatActive); return <button type="button" key={attribute} onClick={() => onRoll(`${attribute} Save`, modifier, adjustment)} className="rounded-xl border border-white/10 bg-slate-950/45 p-4 text-left hover:border-sky-400/40"><div className="text-xs text-slate-500">{attribute} Save</div><div className="text-2xl font-black text-sky-200">{modifier >= 0 ? '+' : ''}{modifier}</div>{wildForm.active && (attribute === 'Might' || attribute === 'Agility') && <div className="text-[10px] font-bold text-emerald-300">Wild Form statistic</div>}{adjustment > 0 && <div className="text-[10px] font-bold text-orange-300">{adjustment}× ADV active</div>}{adjustment < 0 && <div className="text-[10px] font-bold text-rose-300">{Math.abs(adjustment)}× DisADV active</div>}</button>; })}</div></section><section className={panelClass}><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-black text-violet-200">Active Conditions</h2><div className="flex gap-2"><select value={conditionToAdd} onChange={(event) => setConditionToAdd(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs">{conditions.map((condition) => <option key={condition}>{condition}</option>)}</select><button type="button" onClick={() => setCondition(conditionToAdd, conditionLevels[conditionToAdd] ?? 1)} className="rounded-lg bg-violet-600 px-2 py-1 text-xs font-bold">Add</button></div></div><div className="mt-4 space-y-2">{shellRetreatActive && <div className="flex items-center justify-between rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-3"><span className="font-bold text-emerald-100">Prone</span><span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">Shell Retreat</span></div>}{wildForm.active && wildForm.bleedingImmune && <div className="flex items-center justify-between rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-3"><span className="font-bold text-emerald-100">Immune to Bleeding</span><span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">Plant Form</span></div>}{Object.entries(conditionLevels).length === 0 && !shellRetreatActive ? <p className="text-sm text-slate-500">No active conditions.</p> : Object.entries(conditionLevels).sort().map(([condition, value]) => <div key={condition} className="flex items-center justify-between rounded-lg bg-slate-950/55 p-3"><span className="font-bold text-slate-200">{condition}</span><div className="flex items-center gap-2"><button type="button" onClick={() => setCondition(condition, value - 1)} className="h-7 w-7 rounded bg-slate-800">−</button><span className="min-w-6 text-center font-black text-violet-200">{value}</span><button type="button" onClick={() => setCondition(condition, value + 1)} className="h-7 w-7 rounded bg-slate-800">+</button><button type="button" onClick={() => setCondition(condition, 0)} className="ml-1 text-xs font-bold text-red-300">×</button></div></div>)}</div></section></div>
     {wildForm.active
       ? <section className="rounded-2xl border border-emerald-400/20 bg-emerald-950/15 p-4 text-sm leading-6 text-emerald-100"><strong>Spells & Maneuvers unavailable in Wild Form.</strong> Your Druid Class Features, Druid Subclass Features, and Druid Talents remain available in the live controls above.</section>
-      : <section className={panelClass}><SectionHeading eyebrow="Powers" title="Spells & Maneuvers" tone="text-fuchsia-300" /><p className="mt-1 text-sm text-slate-500">Open only the list you need during combat. Equipped focus properties are applied to the rolls and range reminders below.</p><div className="mt-4 space-y-3"><details className="group rounded-xl border border-fuchsia-400/15 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-center justify-between"><span className="font-black text-fuchsia-200">Spells</span><span className="text-xs font-bold text-fuchsia-200">{knownSpells.length} • <span className="group-open:hidden">Expand</span><span className="hidden group-open:inline">Collapse</span></span></summary><div className="mt-3 space-y-2">{knownSpells.length === 0 ? <p className="text-sm text-slate-500">No spells known.</p> : knownSpells.map((spell) => { const ancestryGrant = ancestryGrantedSpells.find(({ name }) => name === spell.name); return <MoreDetails key={spell.id} title={spell.name} subtitle={[spell.source, spell.school, spell.cost, spell.range, ancestryGrant ? `Ancestry • ${ancestryGrant.traitName}` : grantedSpells.includes(spell.name) ? 'Granted by class feature' : ''].filter(Boolean).join(' • ')}>{ancestryGrant && <div className="mb-4 rounded-lg border border-emerald-400/15 bg-emerald-500/10 p-3 text-xs leading-5 text-emerald-100"><strong>{ancestryGrant.traitName}:</strong> {ancestryGrant.traitDescription}</div>}{spell.description}{spell.enhancements && <><h4 className="mt-4 font-black text-slate-300">Enhancements</h4><p>{spell.enhancements}</p></>}<SpellRollControl spell={spell} spellCheck={spellCheck} spellAttack={spellAttack} modifiers={modifiers} prone={prone} onRoll={onRoll} /></MoreDetails>; })}</div></details><details className="group rounded-xl border border-violet-400/15 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-center justify-between"><span className="font-black text-violet-200">Maneuvers</span><span className="text-xs font-bold text-violet-200">{knownManeuvers.length} • <span className="group-open:hidden">Expand</span><span className="hidden group-open:inline">Collapse</span></span></summary><div className="mt-3 space-y-2">{knownManeuvers.length === 0 ? <p className="text-sm text-slate-500">No maneuvers known.</p> : knownManeuvers.map((maneuver) => <MoreDetails key={maneuver.id} title={maneuver.name} subtitle={[maneuver.category ?? maneuver.type, maneuver.cost, maneuver.range, grantedManeuvers.includes(maneuver.name) ? 'Granted by class feature' : ''].filter(Boolean).join(' • ')}>{maneuver.description}{maneuver.enhancements && <><h4 className="mt-4 font-black text-slate-300">Enhancements</h4><p>{maneuver.enhancements}</p></>}</MoreDetails>)}</div></details></div></section>}
+      : <section className={panelClass}><SectionHeading eyebrow="Powers" title="Spells & Maneuvers" tone="text-fuchsia-300" /><p className="mt-1 text-sm text-slate-500">Open only the list you need during combat. Equipped focus properties are applied to the rolls and range reminders below; using a power spends its audited base AP, MP, and SP cost.</p><div className="mt-4 space-y-3"><details className="group rounded-xl border border-fuchsia-400/15 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-center justify-between"><span className="font-black text-fuchsia-200">Spells</span><span className="text-xs font-bold text-fuchsia-200">{knownSpells.length} • <span className="group-open:hidden">Expand</span><span className="hidden group-open:inline">Collapse</span></span></summary><div className="mt-3 space-y-2">{knownSpells.length === 0 ? <p className="text-sm text-slate-500">No spells known.</p> : knownSpells.map((spell) => { const ancestryGrant = ancestryGrantedSpells.find(({ name }) => name === spell.name); return <MoreDetails key={spell.id} title={spell.name} subtitle={[spell.source, spell.school, spell.cost, spell.range, ancestryGrant ? `Ancestry • ${ancestryGrant.traitName}` : grantedSpells.includes(spell.name) ? 'Granted by class feature' : ''].filter(Boolean).join(' • ')}>{ancestryGrant && <div className="mb-4 rounded-lg border border-emerald-400/15 bg-emerald-500/10 p-3 text-xs leading-5 text-emerald-100"><strong>{ancestryGrant.traitName}:</strong> {ancestryGrant.traitDescription}</div>}<PowerRulesText text={spell.description} />{spell.enhancements && <div className="mt-5"><h4 className="mb-3 font-black text-slate-300">Enhancements</h4><PowerRulesText text={spell.enhancements} enhancements /></div>}<SpellRollControl spell={spell} character={character} spellCheck={spellCheck} spellAttack={spellAttack} modifiers={modifiers} prone={prone} onChange={onChange} onRoll={onRoll} /></MoreDetails>; })}</div></details><details className="group rounded-xl border border-violet-400/15 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-center justify-between"><span className="font-black text-violet-200">Maneuvers</span><span className="text-xs font-bold text-violet-200">{knownManeuvers.length} • <span className="group-open:hidden">Expand</span><span className="hidden group-open:inline">Collapse</span></span></summary><div className="mt-3 space-y-2">{knownManeuvers.length === 0 ? <p className="text-sm text-slate-500">No maneuvers known.</p> : knownManeuvers.map((maneuver) => <MoreDetails key={maneuver.id} title={maneuver.name} subtitle={[maneuver.category ?? maneuver.type, maneuver.cost, maneuver.range, grantedManeuvers.includes(maneuver.name) ? 'Granted by class feature' : ''].filter(Boolean).join(' • ')}><PowerRulesText text={maneuver.description} />{maneuver.enhancements && <div className="mt-5"><h4 className="mb-3 font-black text-slate-300">Enhancements</h4><PowerRulesText text={maneuver.enhancements} enhancements /></div>}<ManeuverRollControl maneuver={maneuver} character={character} martialCheck={martialCheck} modifiers={modifiers} prone={prone} onChange={onChange} onRoll={onRoll} /></MoreDetails>)}</div></details></div></section>}
   </div>;
 }
 

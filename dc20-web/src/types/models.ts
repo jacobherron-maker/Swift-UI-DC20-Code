@@ -443,6 +443,11 @@ export interface Spell {
   range: string;
   components?: string[];
   duration: string;
+  page?: number;
+  resolution?: import('../utils/powerRules').PowerResolution;
+  alternateResolutions?: import('../utils/powerRules').PowerResolution[];
+  reaction?: boolean;
+  sourceNote?: string;
   description: string;
   enhancements?: string;
 }
@@ -455,6 +460,11 @@ export interface Maneuver {
   cost?: string;
   range: string;
   requirements?: string;
+  page?: number;
+  resolution?: import('../utils/powerRules').PowerResolution;
+  alternateResolutions?: import('../utils/powerRules').PowerResolution[];
+  reaction?: boolean;
+  sourceNote?: string;
   description: string;
   enhancements?: string;
 }

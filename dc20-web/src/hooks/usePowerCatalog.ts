@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { PowerResolution } from '../utils/powerRules';
 
 export interface SpellReference {
   name: string;
@@ -8,6 +9,11 @@ export interface SpellReference {
   cost: string;
   range: string;
   duration: string;
+  page: number;
+  resolution: PowerResolution;
+  alternateResolutions?: PowerResolution[];
+  reaction: boolean;
+  sourceNote?: string;
   description: string;
   enhancements: string;
 }
@@ -18,6 +24,11 @@ export interface ManeuverReference {
   cost: string;
   range: string;
   requirements: string;
+  page: number;
+  resolution: PowerResolution;
+  alternateResolutions?: PowerResolution[];
+  reaction: boolean;
+  sourceNote?: string;
   description: string;
   enhancements: string;
 }
