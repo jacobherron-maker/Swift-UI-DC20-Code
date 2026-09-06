@@ -4,7 +4,7 @@ import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { usePowerCatalog, type SpellReference } from '../../hooks/usePowerCatalog';
 import { PowerRulesText } from '../powers/PowerRulesText';
 import { useCampaignStore } from '../../store/campaignStore';
-import { CharacterAvatarEditor } from '../character/CharacterAvatar';
+import { CharacterAvatar, CharacterAvatarEditor } from '../character/CharacterAvatar';
 import { CharacterRestControls, CharacterSheetTabContent, type RedesignedSheetTab } from '../character/CharacterSheetTabs';
 import type { AncestryTrait, CampaignNote, Character, CharacterInventoryItem, DC20Attribute, DruidWildFormRecord, EquipmentCatalogItem, MasteryLevel, Spell } from '../../types/models';
 import {
@@ -122,6 +122,8 @@ interface CharacterSheetProps {
   onClose?: () => void;
   onEdit?: () => void;
   onCharacterChange?: (character: Character) => void;
+  readOnly?: boolean;
+  partyCampaignNames?: string[];
 }
 
 type SheetTab = RedesignedSheetTab | 'overview' | 'checks' | 'powers' | 'features' | 'equipment' | 'notes';
@@ -2093,7 +2095,7 @@ function WizardControls({ character, spellCatalog, knownSpells, onChange, onRoll
   </section>;
 }
 
-const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit, onCharacterChange }) => {
+const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit, onCharacterChange, readOnly = false, partyCampaignNames = [] }) => {
   const characterRef = useRef(character);
   useEffect(() => { characterRef.current = character; }, [character]);
   const [selectedTab, setSelectedTab] = useState<SheetTab>('sheet-checks');
@@ -2217,6 +2219,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   }, [character.build?.selectedManeuvers, character.maneuvers, grantedManeuvers, maneuverCatalog]);
 
   const update = (values: Partial<Character>) => {
+    if (readOnly) return;
     const previous = characterRef.current;
     let next = { ...previous, ...values };
     next = applyMonkStaminaSpendRecovery(next, previous.stamina);
@@ -2536,10 +2539,10 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   }, {}));
 
   return (
-    <div className="character-sheet min-h-full p-4 lg:p-7">
+    <div className="character-sheet min-h-full p-4 lg:p-7" data-read-only={readOnly || undefined}>
       <div className="mx-auto max-w-[1500px]">
         <header className="mb-5 rounded-2xl border border-violet-400/20 bg-slate-950/65 p-4 shadow-2xl shadow-black/20 sm:p-5">
-          <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-4 xl:grid-cols-[8rem_minmax(0,1fr)_auto]"><CharacterAvatarEditor image={character.avatarDataURL} name={character.name} onChange={(avatarDataURL) => update({ avatarDataURL })} className="w-20 shrink-0 sm:w-32" compact /><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300 sm:text-xs sm:tracking-[0.25em]">Interactive Character Sheet</p><h1 title={character.name} className="mt-1 truncate whitespace-nowrap text-2xl font-black text-white sm:text-4xl">{character.name}</h1><p className="mt-2 text-sm text-slate-400 sm:text-base">Level {character.level} {character.ancestry} {character.class}{character.subclass ? ` • ${character.subclass}` : ''}</p></div><div className="col-span-2 flex flex-wrap gap-2 sm:justify-end xl:col-span-1">{onEdit && <button type="button" onClick={onEdit} className="min-h-11 rounded-xl bg-violet-600 px-4 py-2 font-bold text-white hover:bg-violet-500">Return to Builder</button>}{onClose && <button type="button" onClick={onClose} className="min-h-11 rounded-xl bg-slate-800 px-4 py-2 font-bold text-slate-200 hover:bg-slate-700">Characters</button>}</div></div>
+          <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-4 xl:grid-cols-[8rem_minmax(0,1fr)_auto]">{readOnly ? <CharacterAvatar image={character.avatarDataURL} name={character.name} className="w-20 shrink-0 sm:w-32" /> : <CharacterAvatarEditor image={character.avatarDataURL} name={character.name} onChange={(avatarDataURL) => update({ avatarDataURL })} className="w-20 shrink-0 sm:w-32" compact />}<div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300 sm:text-xs sm:tracking-[0.25em]">{readOnly ? 'Party Character Sheet • Read Only' : 'Interactive Character Sheet'}</p><h1 title={character.name} className="mt-1 truncate whitespace-nowrap text-2xl font-black text-white sm:text-4xl">{character.name}</h1><p className="mt-2 text-sm text-slate-400 sm:text-base">Level {character.level} {character.ancestry} {character.class}{character.subclass ? ` • ${character.subclass}` : ''}</p>{partyCampaignNames.length > 0 && <p className="mt-2 text-xs font-bold text-emerald-300">Shared with {partyCampaignNames.join(', ')} • sheet changes sync automatically</p>}</div><div className="col-span-2 flex flex-wrap gap-2 sm:justify-end xl:col-span-1">{readOnly && <span className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-2 text-sm font-black text-emerald-200">GM View • Read Only</span>}{!readOnly && onEdit && <button type="button" onClick={onEdit} className="min-h-11 rounded-xl bg-violet-600 px-4 py-2 font-bold text-white hover:bg-violet-500">Return to Builder</button>}{onClose && <button type="button" onClick={onClose} className="min-h-11 rounded-xl bg-slate-800 px-4 py-2 font-bold text-slate-200 hover:bg-slate-700">{readOnly ? 'Back to Party' : 'Characters'}</button>}</div></div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><ResourceControl label="Health" value={character.healthPoints} maximum={character.maxHealthPoints} tone="text-red-300" onChange={(healthPoints) => update({ healthPoints })} /><ResourceControl label="Action Points" value={character.currentAP} maximum={character.maxAP + sorcererWildEffects.actionPointMaximumBonus} tone="text-violet-300" onChange={(currentAP) => update({ currentAP })} /><ResourceControl label="Stamina" value={character.stamina} maximum={character.maxStamina} tone="text-sky-300" onChange={(stamina) => update({ stamina })} /><ResourceControl label="Mana" value={character.manaPoints} maximum={character.maxManaPoints} tone="text-fuchsia-300" onChange={(manaPoints) => update({ manaPoints })} /><div className="rounded-xl border border-white/10 bg-slate-950/55 p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Temporary HP</div><div className="mt-2 flex items-center justify-between"><button type="button" onClick={() => updateBuild({ temporaryHP: Math.max(0, (build?.temporaryHP ?? 0) - 1) })} className="h-8 w-8 rounded-lg bg-slate-800">−</button><span className="text-xl font-black text-emerald-300">{build?.temporaryHP ?? 0}</span><button type="button" onClick={() => updateBuild({ temporaryHP: (build?.temporaryHP ?? 0) + 1 })} className="h-8 w-8 rounded-lg bg-slate-800">+</button></div></div></div>
           <CharacterRestControls character={character} onChange={update} />
         </header>

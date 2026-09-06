@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore/lite';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthContext';
 import { firestore } from '../lib/firebase';
 import { migratePersistedState, useCampaignStore } from '../store/campaignStore';

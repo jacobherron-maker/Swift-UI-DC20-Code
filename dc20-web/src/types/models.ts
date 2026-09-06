@@ -47,10 +47,53 @@ export interface CampaignNote {
   body: string;
 }
 
+export type PartyCampaignRole = 'gm' | 'player';
+
+export interface CampaignPartyLink {
+  partyId: string;
+  role: PartyCampaignRole;
+  inviteCode?: string;
+  characterId?: string;
+}
+
 export interface CampaignRecord {
   id: string;
   name: string;
   notes: CampaignNote[];
+  party?: CampaignPartyLink;
+}
+
+export interface PartyCampaignMember {
+  userId: string;
+  displayName: string;
+  role: PartyCampaignRole;
+  characterId?: string;
+  character?: Character;
+  joinedAt: string;
+  updatedAt: string;
+}
+
+export interface PartyInventoryItem {
+  id: string;
+  name: string;
+  description: string;
+  quantity: number;
+  addedBy: string;
+  updatedAt: string;
+}
+
+export interface PartyCampaignSnapshot {
+  id: string;
+  name: string;
+  gmUserId: string;
+  gmDisplayName: string;
+  inviteCode: string;
+  createdAt: string;
+  updatedAt: string;
+  role: PartyCampaignRole;
+  members: PartyCampaignMember[];
+  notes: CampaignNote[];
+  inventory: PartyInventoryItem[];
 }
 
 export const CombatantTeamValues = {
@@ -80,6 +123,8 @@ export interface Combatant {
   speed?: number;
   sourceMonsterID?: string;
   sourceCharacterID?: string;
+  sourcePartyCampaignID?: string;
+  sourcePartyMemberID?: string;
   monsterAbilities?: MonsterAbility[];
 }
 

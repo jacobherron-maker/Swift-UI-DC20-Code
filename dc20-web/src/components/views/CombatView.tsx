@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { usePartyCampaigns } from '../../cloud/PartyCampaignContext';
 import { useSourceMonsters } from '../../hooks/useSourceMonsters';
 import { useCampaignStore } from '../../store/campaignStore';
 import type { Combatant, CombatantTeam, SavedCombat } from '../../types/models';
@@ -30,10 +31,13 @@ export default function CombatView() {
     removeCombat,
   } = useCampaignStore();
   const { monsters: sourceMonsters } = useSourceMonsters();
+  const { parties, partyCharacters } = usePartyCampaigns();
   const [participantChoice, setParticipantChoice] = useState('');
   const [encounterChoice, setEncounterChoice] = useState('');
   const combats = campaignData.combats;
   const selected = combats.find(({ id }) => id === selectedCombatId) ?? null;
+  const gmPartyIDs = new Set(parties.filter(({ role }) => role === 'gm').map(({ id }) => id));
+  const availablePartyCharacters = partyCharacters.filter(({ partyId }) => gmPartyIDs.has(partyId));
 
   useEffect(() => {
     if (!selectedCombatId && combats[0]) selectCombat(combats[0].id);
@@ -47,6 +51,16 @@ export default function CombatView() {
     if (kind === 'character') {
       const character = characters.find((entry) => entry.id === id);
       if (character) combatant = combatantFromCharacter(character);
+    } else if (kind === 'party') {
+      const memberId = participantChoice.split(':')[2];
+      const partyCharacter = availablePartyCharacters.find((entry) => entry.partyId === id && entry.memberId === memberId);
+      if (partyCharacter) combatant = {
+        ...combatantFromCharacter(partyCharacter.character),
+        id: generateUUID(),
+        sourceCharacterID: undefined,
+        sourcePartyCampaignID: partyCharacter.partyId,
+        sourcePartyMemberID: partyCharacter.memberId,
+      };
     } else {
       const monster = (kind === 'source' ? sourceMonsters : campaignData.customMonsters)
         .find((entry) => entry.id === id);
@@ -109,6 +123,7 @@ export default function CombatView() {
             sourceMonsters={sourceMonsters}
             customMonsters={campaignData.customMonsters}
             characters={characters}
+            partyCharacters={availablePartyCharacters}
             onAddParticipant={addParticipant}
             onUpdate={updateCombat}
             onDelete={() => {
@@ -121,13 +136,14 @@ export default function CombatView() {
   );
 }
 
-function CombatEditor({ combat, participantChoice, setParticipantChoice, sourceMonsters, customMonsters, characters, onAddParticipant, onUpdate, onDelete }: {
+function CombatEditor({ combat, participantChoice, setParticipantChoice, sourceMonsters, customMonsters, characters, partyCharacters, onAddParticipant, onUpdate, onDelete }: {
   combat: SavedCombat;
   participantChoice: string;
   setParticipantChoice: (value: string) => void;
   sourceMonsters: ReturnType<typeof useSourceMonsters>['monsters'];
   customMonsters: ReturnType<typeof useCampaignStore.getState>['campaignData']['customMonsters'];
   characters: ReturnType<typeof useCampaignStore.getState>['characters'];
+  partyCharacters: ReturnType<typeof usePartyCampaigns>['partyCharacters'];
   onAddParticipant: () => void;
   onUpdate: (combat: SavedCombat) => void;
   onDelete: () => void;
@@ -172,6 +188,9 @@ function CombatEditor({ combat, participantChoice, setParticipantChoice, sourceM
             {characters.length > 0 && <optgroup label="Characters">
               {characters.map((character) => <option key={character.id} value={`character:${character.id}`}>{character.name || 'Unnamed Character'} — Level {character.level} {character.class}</option>)}
             </optgroup>}
+            {partyCharacters.length > 0 && <optgroup label="Connected Party Characters">
+              {partyCharacters.map((entry) => <option key={`${entry.partyId}:${entry.memberId}`} value={`party:${entry.partyId}:${entry.memberId}`}>{entry.character.name} — {entry.partyName} • HP {entry.character.healthPoints}/{entry.character.maxHealthPoints}</option>)}
+            </optgroup>}
             <optgroup label="Sourcebook Monsters">
               {sourceMonsters.map((monster) => <option key={monster.id} value={`source:${monster.id}`}>{monster.name} — Level {monster.level} {monster.role}</option>)}
             </optgroup>
@@ -200,14 +219,27 @@ function CombatEditor({ combat, participantChoice, setParticipantChoice, sourceM
               </div>
               <div className="space-y-3">
                 {combatants.length === 0 && <div className="rounded-xl border border-dashed border-white/8 p-5 text-center text-sm text-slate-600">No {team.toLowerCase()} yet</div>}
-                {combatants.map((combatant) => (
-                  <CombatantCard
+                {combatants.map((combatant) => {
+                  const livePartyCharacter = partyCharacters.find((entry) => entry.partyId === combatant.sourcePartyCampaignID && entry.memberId === combatant.sourcePartyMemberID);
+                  const displayedCombatant = livePartyCharacter ? {
+                    ...combatant,
+                    name: livePartyCharacter.character.name,
+                    hp: livePartyCharacter.character.healthPoints,
+                    maxHP: livePartyCharacter.character.maxHealthPoints,
+                    physicalDefense: livePartyCharacter.character.physicalDefense,
+                    arcaneDefense: livePartyCharacter.character.arcaneDefense,
+                    attackBonus: livePartyCharacter.character.primeModifier + livePartyCharacter.character.combatMastery,
+                    saveDC: 10 + livePartyCharacter.character.primeModifier + livePartyCharacter.character.combatMastery,
+                    speed: livePartyCharacter.character.speed,
+                  } : combatant;
+                  return <CombatantCard
                     key={combatant.id}
-                    combatant={combatant}
+                    combatant={displayedCombatant}
+                    livePartyName={livePartyCharacter?.partyName}
                     onChange={updateCombatant}
                     onRemove={() => update({ combatants: combat.combatants.filter(({ id }) => id !== combatant.id) })}
-                  />
-                ))}
+                  />;
+                })}
               </div>
             </section>
           );
@@ -242,8 +274,9 @@ function ResourceControl({ label, value, max, min = 0, onChange }: {
   );
 }
 
-function CombatantCard({ combatant, onChange, onRemove }: {
+function CombatantCard({ combatant, livePartyName, onChange, onRemove }: {
   combatant: Combatant;
+  livePartyName?: string;
   onChange: (combatant: Combatant) => void;
   onRemove: () => void;
 }) {
@@ -266,6 +299,7 @@ function CombatantCard({ combatant, onChange, onRemove }: {
             <select value={combatant.team} onChange={(event) => onChange({ ...combatant, team: event.target.value as CombatantTeam })} className="mt-1 bg-transparent text-xs text-slate-500 outline-none">
               {teamOptions.map((team) => <option key={team}>{team}</option>)}
             </select>
+            {livePartyName && <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-emerald-300">Live HP • {livePartyName}</p>}
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-400">
             <input type="checkbox" checked={combatant.hasActed} onChange={(event) => onChange({ ...combatant, hasActed: event.target.checked })} className="accent-violet-500" /> Acted
@@ -273,7 +307,7 @@ function CombatantCard({ combatant, onChange, onRemove }: {
         </div>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800"><div className={`h-full ${healthPercent <= 25 ? 'bg-red-500' : healthPercent <= 50 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${healthPercent}%` }} /></div>
         <div className="mt-3 grid grid-cols-3 gap-2">
-          <ResourceControl label="HP" value={combatant.hp} max={combatant.maxHP} min={-20} onChange={(hp) => onChange({ ...combatant, hp })} />
+          {livePartyName ? <div className="rounded-lg border border-emerald-400/15 bg-emerald-950/20 p-2 text-center"><div className="text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-400">Live HP</div><div className="mt-1 font-black text-emerald-100">{combatant.hp} / {combatant.maxHP}</div><div className="text-[10px] text-slate-600">Player controlled</div></div> : <ResourceControl label="HP" value={combatant.hp} max={combatant.maxHP} min={-20} onChange={(hp) => onChange({ ...combatant, hp })} />}
           <ResourceControl label="AP" value={combatant.ap} max={combatant.maxAP} onChange={(ap) => onChange({ ...combatant, ap })} />
           <ResourceControl label="RP" value={combatant.currentReactionPoints} max={combatant.reactionPoints} onChange={(currentReactionPoints) => onChange({ ...combatant, currentReactionPoints })} />
         </div>

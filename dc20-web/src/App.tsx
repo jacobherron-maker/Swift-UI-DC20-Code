@@ -17,7 +17,7 @@ import './App.css';
 import { themePalette } from './data/themePalettes';
 
 function App() {
-  const { currentSection, isDarkMode, selectedPaletteID, loadCampaign, saveCampaign } = useCampaignStore();
+  const { currentSection, isDarkMode, selectedPaletteID, loadCampaign, saveCampaign, setCurrentSection } = useCampaignStore();
   const contentRef = useRef<HTMLElement>(null);
   const palette = themePalette(selectedPaletteID);
   const themeStyle = {
@@ -30,6 +30,10 @@ function App() {
   useEffect(() => {
     loadCampaign();
   }, [loadCampaign]);
+
+  useEffect(() => {
+    if (new URL(window.location.href).searchParams.has('partyInvite')) setCurrentSection('Campaign');
+  }, [setCurrentSection]);
 
   useEffect(() => {
     const interval = setInterval(() => {

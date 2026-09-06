@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
   CampaignData,
+  CampaignPartyLink,
   CampaignRecord,
   Character,
   CharacterBuildData,
@@ -38,7 +39,7 @@ import {
 import { generateUUID } from '../utils/gameUtils';
 import { DEFAULT_PALETTE_ID, themePalette } from '../data/themePalettes';
 
-const STORE_VERSION = 7;
+const STORE_VERSION = 8;
 
 export const defaultCampaignData: CampaignData = {
   title: 'DC20 Hub',
@@ -288,6 +289,8 @@ function normalizeCombatant(value: unknown): Combatant {
     hasActed: Boolean(item.hasActed),
     sourceMonsterID: typeof item.sourceMonsterID === 'string' ? item.sourceMonsterID : undefined,
     sourceCharacterID: typeof item.sourceCharacterID === 'string' ? item.sourceCharacterID : undefined,
+    sourcePartyCampaignID: typeof item.sourcePartyCampaignID === 'string' ? item.sourcePartyCampaignID : undefined,
+    sourcePartyMemberID: typeof item.sourcePartyMemberID === 'string' ? item.sourcePartyMemberID : undefined,
     physicalDefense: item.physicalDefense === undefined ? undefined : asNumber(item.physicalDefense, 0),
     arcaneDefense: item.arcaneDefense === undefined ? undefined : asNumber(item.arcaneDefense, 0),
     attackBonus: item.attackBonus === undefined ? undefined : asNumber(item.attackBonus, 0),
@@ -296,6 +299,37 @@ function normalizeCombatant(value: unknown): Combatant {
     monsterAbilities: Array.isArray(item.monsterAbilities)
       ? item.monsterAbilities.map(normalizeAbility).filter((entry): entry is MonsterAbility => entry !== null)
       : undefined,
+  };
+}
+
+function normalizeCampaignRecord(value: unknown): CampaignRecord | null {
+  if (!value || typeof value !== 'object') return null;
+  const item = value as Record<string, unknown>;
+  const rawParty = item.party && typeof item.party === 'object'
+    ? item.party as Record<string, unknown>
+    : null;
+  const role: CampaignPartyLink['role'] | null = rawParty?.role === 'gm' || rawParty?.role === 'player' ? rawParty.role : null;
+  const party = rawParty && typeof rawParty.partyId === 'string' && role
+    ? {
+        partyId: rawParty.partyId,
+        role,
+        inviteCode: typeof rawParty.inviteCode === 'string' ? rawParty.inviteCode : undefined,
+        characterId: typeof rawParty.characterId === 'string' ? rawParty.characterId : undefined,
+      }
+    : undefined;
+  return {
+    id: typeof item.id === 'string' ? item.id : generateUUID(),
+    name: typeof item.name === 'string' && item.name.trim() ? item.name : 'Unnamed Campaign',
+    notes: Array.isArray(item.notes) ? item.notes.flatMap((note) => {
+      if (!note || typeof note !== 'object') return [];
+      const entry = note as Record<string, unknown>;
+      return [{
+        id: typeof entry.id === 'string' ? entry.id : generateUUID(),
+        title: typeof entry.title === 'string' ? entry.title : 'Untitled Note',
+        body: typeof entry.body === 'string' ? entry.body : '',
+      }];
+    }) : [],
+    party,
   };
 }
 
@@ -460,7 +494,9 @@ export function migratePersistedState(value: unknown): PersistedCampaignState {
         ? rawCampaignData.title
         : defaultCampaignData.title,
       notes: typeof rawCampaignData.notes === 'string' ? rawCampaignData.notes : defaultCampaignData.notes,
-      campaigns: Array.isArray(rawCampaignData.campaigns) ? rawCampaignData.campaigns as CampaignRecord[] : [],
+      campaigns: Array.isArray(rawCampaignData.campaigns)
+        ? rawCampaignData.campaigns.map(normalizeCampaignRecord).filter((campaign): campaign is CampaignRecord => campaign !== null)
+        : [],
       customMonsters: Array.isArray(rawCampaignData.customMonsters)
         ? rawCampaignData.customMonsters.map(normalizeMonster)
         : [],

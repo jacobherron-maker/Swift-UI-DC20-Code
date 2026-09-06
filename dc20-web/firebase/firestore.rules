@@ -17,5 +17,66 @@ service cloud.firestore {
       allow read: if isOwner();
       allow create, update: if isOwner() && hasValidHubState();
     }
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function partyDocument(campaignId) {
+      return get(/databases/$(database)/documents/party_campaigns/$(campaignId));
+    }
+
+    function isPartyGM(campaignId) {
+      return signedIn() && partyDocument(campaignId).data.gm_user_id == request.auth.uid;
+    }
+
+    function isPartyMember(campaignId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/party_campaigns/$(campaignId)/members/$(request.auth.uid));
+    }
+
+    match /party_invites/{inviteCode} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.campaign_id is string
+        && isPartyGM(request.resource.data.campaign_id);
+      allow delete: if signedIn()
+        && resource.data.campaign_id is string
+        && isPartyGM(resource.data.campaign_id);
+    }
+
+    match /party_campaigns/{campaignId} {
+      allow read: if isPartyGM(campaignId) || isPartyMember(campaignId);
+      allow create: if signedIn()
+        && request.resource.data.gm_user_id == request.auth.uid
+        && request.resource.data.id == campaignId;
+      allow update, delete: if isPartyGM(campaignId);
+
+      match /members/{memberId} {
+        allow read: if memberId == request.auth.uid || isPartyGM(campaignId) || isPartyMember(campaignId);
+        allow create: if signedIn()
+          && request.resource.data.user_id == request.auth.uid
+          && memberId == request.auth.uid
+          && (isPartyGM(campaignId)
+            || (request.resource.data.invite_code is string
+              && get(/databases/$(database)/documents/party_invites/$(request.resource.data.invite_code)).data.campaign_id == campaignId
+              && get(/databases/$(database)/documents/party_invites/$(request.resource.data.invite_code)).data.active == true));
+        allow update: if signedIn()
+          && memberId == request.auth.uid
+          && resource.data.user_id == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'display_name', 'character_id', 'character', 'updated_at'
+          ]);
+        allow delete: if signedIn() && (memberId == request.auth.uid || isPartyGM(campaignId));
+      }
+
+      match /notes/{noteId} {
+        allow read, create, update, delete: if isPartyGM(campaignId) || isPartyMember(campaignId);
+      }
+
+      match /inventory/{itemId} {
+        allow read, create, update, delete: if isPartyGM(campaignId) || isPartyMember(campaignId);
+      }
+    }
   }
 }

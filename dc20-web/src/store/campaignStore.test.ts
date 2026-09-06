@@ -135,4 +135,51 @@ describe('campaign persistence migration', () => {
       mechanics: 'A keepsake from home.',
     })]);
   });
+
+  it('preserves connected party links and live party combatant sources', () => {
+    const migrated = migratePersistedState({
+      campaignData: {
+        campaigns: [{
+          id: 'local-party-link',
+          name: 'The Verdant Company',
+          notes: [],
+          party: {
+            partyId: 'shared-party-id',
+            role: 'player',
+            characterId: 'hero-id',
+          },
+        }],
+        combats: [{
+          id: 'party-combat',
+          name: 'Bridge Battle',
+          combatants: [{
+            id: 'live-hero',
+            name: 'Oak',
+            team: 'Heroes',
+            maxHP: 12,
+            hp: 9,
+            maxAP: 4,
+            ap: 3,
+            reactionPoints: 1,
+            currentReactionPoints: 1,
+            conditions: [],
+            hasActed: false,
+            sourcePartyCampaignID: 'shared-party-id',
+            sourcePartyMemberID: 'player-user-id',
+          }],
+        }],
+      },
+    });
+
+    expect(migrated.campaignData.campaigns[0].party).toEqual({
+      partyId: 'shared-party-id',
+      role: 'player',
+      inviteCode: undefined,
+      characterId: 'hero-id',
+    });
+    expect(migrated.campaignData.combats[0].combatants[0]).toMatchObject({
+      sourcePartyCampaignID: 'shared-party-id',
+      sourcePartyMemberID: 'player-user-id',
+    });
+  });
 });

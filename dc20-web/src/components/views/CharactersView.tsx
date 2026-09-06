@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { usePartyCampaigns } from '../../cloud/PartyCampaignContext';
 import { useCampaignStore } from '../../store/campaignStore';
 import CharacterBuilderView from './CharacterBuilderView';
 import CharacterSheet from './CharacterSheet';
@@ -6,6 +7,8 @@ import { CharacterAvatar } from '../character/CharacterAvatar';
 
 const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
   const { characters, deleteCharacter, selectCharacter, selectedCharacterId, updateCharacter } = useCampaignStore();
+  const campaigns = useCampaignStore(({ campaignData }) => campaignData.campaigns);
+  const { publishCharacter } = usePartyCampaigns();
   const [mode, setMode] = useState<'list' | 'builder' | 'sheet'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = (nextMode: 'list' | 'builder' | 'sheet') => {
@@ -27,6 +30,15 @@ const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) =
       ),
     [characters, searchTerm]
   );
+  const selectedPartyLinks = useMemo(() => selectedCharacter ? campaigns.flatMap((campaign) => campaign.party?.characterId === selectedCharacter.id ? [{ campaign, link: campaign.party }] : []) : [], [campaigns, selectedCharacter]);
+
+  useEffect(() => {
+    if (!selectedCharacter || selectedPartyLinks.length === 0) return;
+    const timer = window.setTimeout(() => {
+      for (const { link } of selectedPartyLinks) void publishCharacter(link.partyId, link.role, selectedCharacter);
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [publishCharacter, selectedCharacter, selectedPartyLinks]);
 
   if (mode === 'builder') {
     return (
@@ -44,6 +56,7 @@ const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) =
         onClose={() => navigate('list')}
         onEdit={() => navigate('builder')}
         onCharacterChange={updateCharacter}
+        partyCampaignNames={selectedPartyLinks.map(({ campaign }) => campaign.name)}
       />
     );
   }

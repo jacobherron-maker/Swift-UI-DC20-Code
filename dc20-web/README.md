@@ -14,7 +14,8 @@ DC20 Hub is a cross-platform React and TypeScript companion for building charact
 - 98-item equipment catalog with character inventory and equipped-state support
 - 31 read-only sourcebook monsters plus a full custom monster builder
 - Persistent encounter builder and combat tracker synchronized with characters and custom monsters
-- Multiple campaigns with multiple named notes nested inside each campaign
+- Solo campaign workspaces plus connected party campaigns with GM/player roles, reusable invitation links, live read-only party sheets, shared notes, and shared inventory
+- Party characters can be added to the combat tracker with live player-controlled HP
 - Standard dice roller and stacked advantage/disadvantage
 - Sixteen curated class-themed palettes carried over from the macOS app
 - Firebase accounts with email/password and Google sign-in
@@ -44,7 +45,7 @@ The test suite covers character calculations and progression, equipment behavior
 
 ## Accounts, cloud saves, and backups
 
-When Firebase environment variables are configured, DC20 Hub requires an account and automatically synchronizes a user's complete hub between devices. Each account can read and update only its own Firestore document through Firebase Authentication and Security Rules. The browser retains a local copy for resilience, and the header shows the current cloud-save state.
+When Firebase environment variables are configured, DC20 Hub requires an account and automatically synchronizes a user's complete hub between devices. Each account can read and update only its own private Firestore document. Connected party campaigns use separate membership-protected documents: the GM manages membership, each player owns their published character snapshot, and party members share notes and inventory. The browser retains a local copy for resilience, and the header shows the current cloud-save state.
 
 Without those environment variables, the app remains in local-only mode so development and existing deployments continue to work.
 
@@ -56,7 +57,7 @@ Use **Export Data** in the sidebar to download a complete versioned JSON backup.
 2. Open **Build → Authentication → Sign-in method**. Enable **Email/Password** and **Google**.
 3. In **Authentication → Settings → Authorized domains**, add the production Netlify hostname. For local development, also add `localhost` explicitly; Firebase projects created after April 28, 2025 no longer include it automatically.
 4. Open **Build → Firestore Database**, create the default database, and select an appropriate region.
-5. Open the Firestore **Rules** tab, replace its contents with [`firebase/firestore.rules`](firebase/firestore.rules), and publish the rules. They restrict every hub document to its authenticated owner.
+5. Open the Firestore **Rules** tab, replace its contents with [`firebase/firestore.rules`](firebase/firestore.rules), and publish the rules. They protect private hub saves and enforce connected-party GM/member permissions. Republish this file after pulling an update that changes the party data model.
 6. Copy the corresponding values from the Firebase Web app configuration into these Netlify environment variables, then redeploy:
 
 ```text
@@ -96,7 +97,7 @@ Cloud-enabled deployments require the four Firebase Web app variables shown abov
 
 ```text
 dc20-web/
-├── firebase/           # Private per-user Firestore security rules
+├── firebase/           # Private-save and connected-party Firestore security rules
 ├── public/data/        # Curated runtime catalogs; no sourcebook PDFs
 ├── scripts/            # Reproducible Swift-to-JSON source exporters
 ├── src/components/     # Layout, builder, sheet, and module views

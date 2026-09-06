@@ -1,6 +1,6 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore/lite';
+import { getFirestore } from 'firebase/firestore';
 
 const apiKey = import.meta.env.VITE_FIREBASE_API_KEY?.trim();
 const authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN?.trim();
