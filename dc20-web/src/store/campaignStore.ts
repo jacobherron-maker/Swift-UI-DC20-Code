@@ -39,7 +39,7 @@ import {
 import { generateUUID } from '../utils/gameUtils';
 import { DEFAULT_PALETTE_ID, themePalette } from '../data/themePalettes';
 
-const STORE_VERSION = 8;
+const STORE_VERSION = 9;
 
 export const defaultCampaignData: CampaignData = {
   title: 'DC20 Hub',
@@ -359,6 +359,19 @@ function normalizeEncounter(value: unknown): Encounter {
     partyLevels: Array.isArray(item.partyLevels)
       ? item.partyLevels.map((level) => Math.min(20, Math.max(1, Math.trunc(asNumber(level, 1)))))
       : [1, 1, 1, 1],
+    partyCharacters: Array.isArray(item.partyCharacters) ? item.partyCharacters.flatMap((partyCharacter) => {
+      if (!partyCharacter || typeof partyCharacter !== 'object') return [];
+      const record = partyCharacter as Record<string, unknown>;
+      if (typeof record.partyId !== 'string' || typeof record.memberId !== 'string' || !record.character) return [];
+      return [{
+        id: typeof record.id === 'string' ? record.id : generateUUID(),
+        partyId: record.partyId,
+        memberId: record.memberId,
+        partyName: typeof record.partyName === 'string' ? record.partyName : 'Connected Campaign',
+        memberName: typeof record.memberName === 'string' ? record.memberName : 'DC20 Player',
+        character: normalizeCharacter(record.character),
+      }];
+    }) : [],
     entries: rawEntries.flatMap((entry) => {
       if (!entry || typeof entry !== 'object') return [];
       const record = entry as Record<string, unknown>;

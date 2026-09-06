@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import { usePartyCampaigns } from '../../cloud/PartyCampaignContext';
+import type { PartyCharacterEntry } from '../../cloud/PartyCampaignContext';
 import { useSourceMonsters } from '../../hooks/useSourceMonsters';
 import { useCampaignStore } from '../../store/campaignStore';
 import type { Encounter, Monster } from '../../types/models';
 import { generateUUID } from '../../utils/gameUtils';
 import { combatFromEncounter, encounterMetrics, monsterBudget, monsterLevelLabel } from '../../utils/monsterRules';
+import { CharacterAvatar } from '../character/CharacterAvatar';
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
 
@@ -23,6 +26,21 @@ function cloneMonsterSnapshot(monster: Monster): Monster {
   return { ...monster, abilities: monster.abilities.map((ability) => ({ ...ability })) };
 }
 
+function withLivePartyCharacters(encounter: Encounter, availableCharacters: PartyCharacterEntry[]): Encounter {
+  return {
+    ...encounter,
+    partyCharacters: (encounter.partyCharacters ?? []).map((partyCharacter) => {
+      const live = availableCharacters.find(({ partyId, memberId }) => partyId === partyCharacter.partyId && memberId === partyCharacter.memberId);
+      return live ? {
+        ...partyCharacter,
+        partyName: live.partyName,
+        memberName: live.memberName,
+        character: live.character,
+      } : partyCharacter;
+    }),
+  };
+}
+
 export default function EncountersView() {
   const {
     campaignData,
@@ -35,11 +53,16 @@ export default function EncountersView() {
     setCurrentSection,
   } = useCampaignStore();
   const { monsters: sourceMonsters } = useSourceMonsters();
+  const { parties, partyCharacters } = usePartyCampaigns();
   const customMonsters = campaignData.customMonsters;
   const encounters = campaignData.encounters;
   const selected = encounters.find(({ id }) => id === selectedEncounterId) ?? null;
   const [monsterToAdd, setMonsterToAdd] = useState('');
+  const [partyCharacterToAdd, setPartyCharacterToAdd] = useState('');
   const allMonsters = useMemo(() => [...sourceMonsters, ...customMonsters], [sourceMonsters, customMonsters]);
+  const gmPartyIDs = useMemo(() => new Set(parties.filter(({ role }) => role === 'gm').map(({ id }) => id)), [parties]);
+  const availablePartyCharacters = useMemo(() => partyCharacters.filter(({ partyId }) => gmPartyIDs.has(partyId)), [gmPartyIDs, partyCharacters]);
+  const liveSelected = useMemo(() => selected ? withLivePartyCharacters(selected, availablePartyCharacters) : null, [availablePartyCharacters, selected]);
 
   useEffect(() => {
     if (!selectedEncounterId && encounters[0]) selectEncounter(encounters[0].id);
@@ -72,6 +95,29 @@ export default function EncountersView() {
     }
   };
 
+  const addPartyCharacter = () => {
+    if (!selected || !partyCharacterToAdd) return;
+    const partyCharacter = availablePartyCharacters.find(({ partyId, memberId }) => `${partyId}:${memberId}` === partyCharacterToAdd);
+    if (!partyCharacter) return;
+    const existing = (selected.partyCharacters ?? []).some(({ partyId, memberId }) => partyId === partyCharacter.partyId && memberId === partyCharacter.memberId);
+    if (existing) return;
+    const hasOnlyDefaultPlaceholders = (selected.partyCharacters ?? []).length === 0
+      && selected.partyLevels.length === 4
+      && selected.partyLevels.every((level) => level === 1);
+    update({
+      partyLevels: hasOnlyDefaultPlaceholders ? [] : selected.partyLevels,
+      partyCharacters: [...(selected.partyCharacters ?? []), {
+        id: generateUUID(),
+        partyId: partyCharacter.partyId,
+        memberId: partyCharacter.memberId,
+        partyName: partyCharacter.partyName,
+        memberName: partyCharacter.memberName,
+        character: partyCharacter.character,
+      }],
+    });
+    setPartyCharacterToAdd('');
+  };
+
   return (
     <div className="flex min-h-full flex-col bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)] lg:h-full lg:flex-row lg:overflow-hidden">
       <aside className="w-full shrink-0 border-b border-white/5 bg-slate-950/45 p-4 lg:w-80 lg:overflow-y-auto lg:border-b-0 lg:border-r">
@@ -87,7 +133,8 @@ export default function EncountersView() {
             <button type="button" onClick={createEncounter} className="w-full rounded-xl border border-dashed border-white/10 p-5 text-sm text-slate-500 hover:border-violet-400/30 hover:text-violet-300">Create your first encounter</button>
           )}
           {encounters.map((encounter) => {
-            const metrics = encounterMetrics(encounter);
+            const liveEncounter = withLivePartyCharacters(encounter, availablePartyCharacters);
+            const metrics = encounterMetrics(liveEncounter);
             return (
               <button
                 type="button"
@@ -96,7 +143,7 @@ export default function EncountersView() {
                 className={`w-full rounded-xl border p-3 text-left transition ${selectedEncounterId === encounter.id ? 'border-violet-400/70 bg-violet-500/15' : 'border-white/5 bg-white/[0.025] hover:bg-white/[0.05]'}`}
               >
                 <div className="font-bold text-slate-100">{encounter.name}</div>
-                <div className="mt-1 flex justify-between text-xs text-slate-500"><span>{encounter.entries.reduce((sum, entry) => sum + entry.count, 0)} creatures</span><span>{metrics.difficulty}</span></div>
+                <div className="mt-1 flex justify-between text-xs text-slate-500"><span>{liveEncounter.partyCharacters?.length ?? 0} linked PCs • {encounter.entries.reduce((sum, entry) => sum + entry.count, 0)} creatures</span><span>{metrics.difficulty}</span></div>
               </button>
             );
           })}
@@ -105,19 +152,23 @@ export default function EncountersView() {
 
       <main className="min-w-0 flex-1 lg:overflow-y-auto">
         {!selected && <div className="grid min-h-full place-items-center p-8 text-center text-slate-500">Select an encounter or create a new one.</div>}
-        {selected && <EncounterEditor
-          encounter={selected}
+        {liveSelected && <EncounterEditor
+          encounter={liveSelected}
           sourceMonsters={sourceMonsters}
           customMonsters={customMonsters}
           monsterToAdd={monsterToAdd}
+          partyCharacters={availablePartyCharacters}
+          partyCharacterToAdd={partyCharacterToAdd}
           onMonsterChoice={setMonsterToAdd}
+          onPartyCharacterChoice={setPartyCharacterToAdd}
           onAddMonster={addMonster}
+          onAddPartyCharacter={addPartyCharacter}
           onUpdate={update}
           onDelete={() => {
-            if (window.confirm(`Delete ${selected.name}? Saved combats created from it will remain.`)) removeEncounter(selected.id);
+            if (window.confirm(`Delete ${liveSelected.name}? Saved combats created from it will remain.`)) removeEncounter(liveSelected.id);
           }}
           onStartCombat={() => {
-            addCombat(combatFromEncounter(selected));
+            addCombat(combatFromEncounter(liveSelected));
             setCurrentSection('Combat');
           }}
         />}
@@ -126,13 +177,17 @@ export default function EncountersView() {
   );
 }
 
-function EncounterEditor({ encounter, sourceMonsters, customMonsters, monsterToAdd, onMonsterChoice, onAddMonster, onUpdate, onDelete, onStartCombat }: {
+function EncounterEditor({ encounter, sourceMonsters, customMonsters, monsterToAdd, partyCharacters, partyCharacterToAdd, onMonsterChoice, onPartyCharacterChoice, onAddMonster, onAddPartyCharacter, onUpdate, onDelete, onStartCombat }: {
   encounter: Encounter;
   sourceMonsters: Monster[];
   customMonsters: Monster[];
   monsterToAdd: string;
+  partyCharacters: PartyCharacterEntry[];
+  partyCharacterToAdd: string;
   onMonsterChoice: (id: string) => void;
+  onPartyCharacterChoice: (id: string) => void;
   onAddMonster: () => void;
+  onAddPartyCharacter: () => void;
   onUpdate: (changes: Partial<Encounter>) => void;
   onDelete: () => void;
   onStartCombat: () => void;
@@ -162,7 +217,7 @@ function EncounterEditor({ encounter, sourceMonsters, customMonsters, monsterToA
           />
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={onStartCombat} disabled={encounter.entries.length === 0} className="btn-primary font-bold disabled:cursor-not-allowed disabled:opacity-40">Start Combat</button>
+          <button type="button" onClick={onStartCombat} disabled={encounter.entries.length === 0 && (encounter.partyCharacters?.length ?? 0) === 0} className="btn-primary font-bold disabled:cursor-not-allowed disabled:opacity-40">Start Combat</button>
           <button type="button" onClick={onDelete} className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/20">Delete</button>
         </div>
       </div>
@@ -170,15 +225,18 @@ function EncounterEditor({ encounter, sourceMonsters, customMonsters, monsterToA
       <section className="rounded-2xl border border-white/8 bg-slate-900/75 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-black text-violet-200">Party Levels</h2>
-            <p className="text-sm text-slate-500">Each character level contributes directly to the encounter budget.</p>
+            <h2 className="text-lg font-black text-violet-200">Party Composition</h2>
+            <p className="text-sm text-slate-500">Connected characters and manual guest levels both contribute to the encounter budget.</p>
           </div>
-          <button type="button" onClick={() => onUpdate({ partyLevels: [...encounter.partyLevels, encounter.partyLevels.at(-1) ?? 1] })} className="rounded-lg border border-violet-400/30 px-3 py-2 text-sm font-bold text-violet-300 hover:bg-violet-500/10">+ Party Member</button>
+          <button type="button" onClick={() => onUpdate({ partyLevels: [...encounter.partyLevels, encounter.partyLevels.at(-1) ?? 1] })} className="rounded-lg border border-violet-400/30 px-3 py-2 text-sm font-bold text-violet-300 hover:bg-violet-500/10">+ Manual PC</button>
         </div>
+        {partyCharacters.length > 0 && <div className="mt-4 rounded-xl border border-emerald-400/15 bg-emerald-950/15 p-4"><label className="text-xs font-black uppercase tracking-[0.14em] text-emerald-300">Add from a campaign you GM</label><div className="mt-2 flex flex-wrap gap-2"><select value={partyCharacterToAdd} onChange={(event) => onPartyCharacterChoice(event.target.value)} className={`${inputClass} min-w-0 grow basis-64`}><option value="">Choose a shared character…</option>{partyCharacters.map((entry) => { const selected = (encounter.partyCharacters ?? []).some(({ partyId, memberId }) => partyId === entry.partyId && memberId === entry.memberId); return <option key={`${entry.partyId}:${entry.memberId}`} value={`${entry.partyId}:${entry.memberId}`} disabled={selected}>{entry.character.name} — Level {entry.character.level} {entry.character.class} • {entry.partyName}{selected ? ' (Added)' : ''}</option>; })}</select><button type="button" onClick={onAddPartyCharacter} disabled={!partyCharacterToAdd} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-black text-white disabled:opacity-40">Add PC</button></div><p className="mt-2 text-xs text-slate-500">Adding the first connected PC replaces untouched four-character level-1 placeholders. Live sheet data is used when combat starts.</p></div>}
+        {partyCharacters.length === 0 && <p className="mt-4 rounded-xl border border-dashed border-white/10 p-4 text-sm text-slate-500">Create or join a connected campaign as GM to select shared player characters here.</p>}
+        {(encounter.partyCharacters?.length ?? 0) > 0 && <div className="mt-4 grid gap-3 md:grid-cols-2">{encounter.partyCharacters?.map((partyCharacter) => <article key={partyCharacter.id} className="flex items-center gap-3 rounded-xl border border-emerald-400/15 bg-slate-950/60 p-3"><CharacterAvatar image={partyCharacter.character.avatarDataURL} name={partyCharacter.character.name} className="w-14 shrink-0" /><div className="min-w-0 grow"><div className="truncate font-black text-slate-100">{partyCharacter.character.name}</div><div className="mt-0.5 text-xs text-slate-500">Level {partyCharacter.character.level} {partyCharacter.character.class} • {partyCharacter.partyName}</div><div className="mt-1 text-xs font-bold text-emerald-300">HP {partyCharacter.character.healthPoints}/{partyCharacter.character.maxHealthPoints}</div></div><button type="button" onClick={() => onUpdate({ partyCharacters: encounter.partyCharacters?.filter(({ id }) => id !== partyCharacter.id) ?? [] })} className="rounded-lg px-2 py-1 text-sm font-bold text-red-300 hover:bg-red-500/10" aria-label={`Remove ${partyCharacter.character.name}`}>Remove</button></article>)}</div>}
         <div className="mt-4 flex flex-wrap gap-3">
           {encounter.partyLevels.map((level, index) => (
             <div key={`${index}-${encounter.partyLevels.length}`} className="flex items-center rounded-xl border border-white/8 bg-slate-950/60 p-1">
-              <span className="pl-2 text-xs font-bold text-slate-500">PC {index + 1}</span>
+              <span className="pl-2 text-xs font-bold text-slate-500">Manual PC {index + 1}</span>
               <input
                 type="number"
                 min={1}

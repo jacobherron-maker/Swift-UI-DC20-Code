@@ -345,9 +345,13 @@ export function cloneMonsterAsCustom(monster: Monster): Monster {
 }
 
 export function encounterMetrics(encounter: Encounter): EncounterMetrics {
-  const mediumBudget = encounter.partyLevels.reduce((total, level) => total + level, 0);
-  const averageLevel = encounter.partyLevels.length > 0
-    ? mediumBudget / encounter.partyLevels.length
+  const partyLevels = [
+    ...encounter.partyLevels,
+    ...(encounter.partyCharacters ?? []).map(({ character }) => character.level),
+  ];
+  const mediumBudget = partyLevels.reduce((total, level) => total + level, 0);
+  const averageLevel = partyLevels.length > 0
+    ? mediumBudget / partyLevels.length
     : 0;
   const easyBudget = Math.max(0, mediumBudget - averageLevel);
   const hardBudget = mediumBudget + averageLevel;
@@ -426,6 +430,15 @@ export function combatantFromCharacter(character: Character): Combatant {
 
 export function combatFromEncounter(encounter: Encounter): SavedCombat {
   const combatants: Combatant[] = [];
+  for (const partyCharacter of encounter.partyCharacters ?? []) {
+    combatants.push({
+      ...combatantFromCharacter(partyCharacter.character),
+      id: generateUUID(),
+      sourceCharacterID: undefined,
+      sourcePartyCampaignID: partyCharacter.partyId,
+      sourcePartyMemberID: partyCharacter.memberId,
+    });
+  }
   for (const entry of encounter.entries) {
     const count = Math.max(1, entry.count);
     for (let instance = 1; instance <= count; instance += 1) {

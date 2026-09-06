@@ -33,7 +33,7 @@ interface PendingPartyInvite {
   gmDisplayName: string;
 }
 
-interface PartyCharacterEntry {
+export interface PartyCharacterEntry {
   partyId: string;
   partyName: string;
   memberId: string;

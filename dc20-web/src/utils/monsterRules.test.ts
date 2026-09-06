@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { Encounter, Monster } from '../types/models';
+import type { Character, Encounter, Monster } from '../types/models';
 import { MonsterRoleValues, MonsterTypeValues } from '../types/models';
 import {
   combatFromEncounter,
@@ -74,6 +74,44 @@ describe('encounter and combat interoperability', () => {
     expect(combat.sourceEncounterID).toBe(encounter.id);
     expect(combat.combatants.map(({ name }) => name)).toEqual(['Void Stalker 1', 'Void Stalker 2']);
     expect(combat.combatants.every(({ sourceMonsterID }) => sourceMonsterID === monster.id)).toBe(true);
+  });
+
+  it('counts connected party characters and carries their live source into combat', () => {
+    const character = {
+      id: 'hero-id',
+      name: 'Oak',
+      level: 3,
+      healthPoints: 14,
+      maxHealthPoints: 18,
+      currentAP: 3,
+      maxAP: 4,
+      physicalDefense: 14,
+      arcaneDefense: 12,
+      primeModifier: 3,
+      combatMastery: 2,
+      speed: 5,
+    } as Character;
+    const connectedEncounter: Encounter = {
+      ...encounter,
+      partyLevels: [],
+      partyCharacters: [{
+        id: 'party-entry',
+        partyId: 'party-id',
+        memberId: 'player-id',
+        partyName: 'The Verdant Company',
+        memberName: 'Player',
+        character,
+      }],
+    };
+
+    expect(encounterMetrics(connectedEncounter).mediumBudget).toBe(3);
+    expect(combatFromEncounter(connectedEncounter).combatants[0]).toMatchObject({
+      name: 'Oak',
+      hp: 14,
+      sourceCharacterID: undefined,
+      sourcePartyCampaignID: 'party-id',
+      sourcePartyMemberID: 'player-id',
+    });
   });
 
   it('preserves spent resources while synchronizing changed custom monster stats', () => {

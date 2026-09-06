@@ -745,8 +745,18 @@ export interface Encounter {
   id: string;
   name: string;
   partyLevels: number[];
+  partyCharacters?: EncounterPartyCharacter[];
   entries: EncounterEntry[];
   notes: string;
+}
+
+export interface EncounterPartyCharacter {
+  id: string;
+  partyId: string;
+  memberId: string;
+  partyName: string;
+  memberName: string;
+  character: Character;
 }
 
 export interface EncounterEntry {
