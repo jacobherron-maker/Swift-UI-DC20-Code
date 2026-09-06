@@ -43,13 +43,6 @@ button,
     linear-gradient(145deg, var(--theme-bg-secondary), var(--theme-bg) 46%, #020617);
 }
 
-.hub-logo {
-  color: transparent;
-  background: linear-gradient(90deg, var(--theme-highlight), var(--theme-accent));
-  background-clip: text;
-  -webkit-background-clip: text;
-}
-
 .theme-accent-text {
   color: var(--theme-highlight);
 }
