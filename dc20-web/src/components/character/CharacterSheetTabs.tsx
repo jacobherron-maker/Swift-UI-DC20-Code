@@ -792,6 +792,40 @@ function FeaturesTab({ character, classReference, reference, selectedTraits, tra
   return <div className="grid gap-5 lg:grid-cols-3"><section className={`${panelClass} lg:col-span-3`}><SectionHeading eyebrow="Proficiencies" title="Combat Training" tone="text-amber-300" /><div className="mt-3 flex flex-wrap gap-2">{training.categories.length === 0 ? <span className="rounded-full bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-400">No combat training recorded</span> : training.categories.map((entry) => <span key={entry} className="rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1.5 text-xs font-black text-amber-100">{entry}</span>)}</div>{classReference?.pathDetails && <div className="mt-3"><MoreDetails title="Class Path & Training Rules" subtitle={character.class}>{classReference.pathDetails}</MoreDetails></div>}</section><section><h2 className="mb-3 font-black text-violet-200">Class Features</h2><div className="space-y-3">{classFeatures.map((entry) => <div key={entry.level}><h3 className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Level {entry.level}</h3><div className="space-y-2">{entry.features.map((feature) => <MoreDetails key={`${entry.level}-${feature.name}`} title={feature.name}>{featureDescription(feature.name, feature.description)}</MoreDetails>)}</div></div>)}{character.subclass && (classReference?.subclassFeatures[character.subclass] ?? []).filter((feature) => feature.level === undefined || feature.level <= character.level).map((feature) => <MoreDetails key={`subclass-${feature.name}`} title={feature.name} subtitle={`${character.subclass}${feature.level !== undefined ? ` • Level ${feature.level}` : ''}`}>{featureDescription(feature.name, feature.description)}</MoreDetails>)}{multiclassFeatures.length > 0 && <div><h3 className="mb-2 mt-4 text-xs font-black uppercase tracking-wider text-cyan-300">Multiclass Features</h3><div className="space-y-2">{multiclassFeatures.map((feature) => <MoreDetails key={`${feature.className}-${feature.subclass ?? ''}-${feature.name}`} title={feature.name} subtitle={`${feature.className}${feature.subclass ? ` • ${feature.subclass}` : ''} • Level ${feature.level} • ${feature.source}`}>{featureDescription(feature.name, feature.description, feature.className)}</MoreDetails>)}</div></div>}</div></section><section><h2 className="mb-3 font-black text-fuchsia-200">Talents</h2><div className="space-y-2">{talents.length === 0 ? <p className="text-slate-500">No talents selected.</p> : talents.map(([name, count]) => { const talent = reference ? talentByName(reference, name) : undefined; return <MoreDetails key={name} title={`${name}${count > 1 ? ` ×${count}` : ''}`} subtitle={talent ? `${talent.category}${talent.className ? ` • ${talent.className}` : ''}` : undefined}>{featureDescription(name, talent?.description ?? 'Talent details are unavailable.', talent?.className)}</MoreDetails>; })}</div></section><section><h2 className="mb-3 font-black text-emerald-200">Ancestry Traits</h2><div className="space-y-2">{selectedTraits.length === 0 ? <p className="text-slate-500">No ancestry traits selected.</p> : selectedTraits.map((trait) => { const count = ancestryTraitSelectionCount(character, trait); const source = ancestryTraitSource(trait); const tags = ancestryTraitRulesTags(trait); return <MoreDetails key={trait.id} title={`${trait.name}${count > 1 ? ` ×${count}` : ''}`} subtitle={`${trait.ancestry} • ${trait.category} • ${trait.cost > 0 ? '+' : ''}${trait.cost} AP each • ${source.title}, p. ${source.page}`}><div className="mb-3 flex flex-wrap gap-1.5">{tags.map((tag) => <span key={tag} className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-200">{tag}</span>)}</div>{trait.description}{build?.ancestryTraitChoices[trait.id]?.filter(Boolean).length ? `\n\nChoice${(build.ancestryTraitChoices[trait.id]?.filter(Boolean).length ?? 0) > 1 ? 's' : ''}: ${build.ancestryTraitChoices[trait.id].filter(Boolean).join(', ')}` : ''}</MoreDetails>; })}</div></section></div>;
 }
 
+function CustomEquipmentRecordEditor({ item, onSave }: {
+  item: EquipmentCatalogItem;
+  onSave: (item: EquipmentCatalogItem) => void;
+}) {
+  const [name, setName] = useState(item.name);
+  const [description, setDescription] = useState(item.mechanics);
+  const [saved, setSaved] = useState(false);
+  const save = () => {
+    if (!name.trim()) return;
+    onSave({ ...item, name: name.trim(), summary: description.trim(), mechanics: description.trim() });
+    setSaved(true);
+  };
+  return <div className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-4">
+    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Name<input value={name} onChange={(event) => { setName(event.target.value); setSaved(false); }} className={`${fieldClass} mt-1`} /></label>
+    <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Description<textarea value={description} onChange={(event) => { setDescription(event.target.value); setSaved(false); }} className={`${fieldClass} mt-1 min-h-24 resize-y`} /></label>
+    <div className="mt-3 flex items-center justify-end gap-3">{saved && <span role="status" className="text-xs font-bold text-emerald-300">Changes saved</span>}<button type="button" disabled={!name.trim()} onClick={save} className="rounded-lg bg-violet-700 px-4 py-2 text-xs font-black text-white hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-35">Save Name &amp; Description</button></div>
+  </div>;
+}
+
+function CustomEquipmentLibraryEditor() {
+  const customEquipment = useCampaignStore((state) => state.campaignData.customEquipment);
+  const updateCustomEquipment = useCampaignStore((state) => state.updateCustomEquipment);
+  const [selectedID, setSelectedID] = useState('');
+  const selected = customEquipment.find(({ id }) => id === selectedID) ?? customEquipment[0];
+  if (!selected) return null;
+  return <details className="group mb-6 rounded-2xl border border-violet-400/20 bg-slate-950/45 p-4">
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3"><span><span className="block text-[10px] font-black uppercase tracking-[0.18em] text-violet-300">Custom Item Library</span><span className="font-black text-violet-100">Edit Custom Items</span></span><span className="text-xs font-black text-violet-300 group-open:hidden">Expand</span><span className="hidden text-xs font-black text-violet-300 group-open:inline">Collapse</span></summary>
+    <div className="mt-4 grid gap-4 border-t border-white/5 pt-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <div className="space-y-2">{customEquipment.map((item) => <button type="button" key={item.id} onClick={() => setSelectedID(item.id)} className={`w-full rounded-lg border px-3 py-2 text-left text-sm font-bold ${selected.id === item.id ? 'border-violet-400/50 bg-violet-500/15 text-violet-100' : 'border-white/10 bg-slate-900/65 text-slate-300 hover:border-violet-400/30'}`}>{item.name}</button>)}</div>
+      <CustomEquipmentRecordEditor key={selected.id} item={selected} onSave={updateCustomEquipment} />
+    </div>
+  </details>;
+}
+
 function EquipmentTab({ character, equipmentCatalog, onChange, onRoll }: { character: Character; equipmentCatalog: EquipmentCatalogItem[]; onChange: CharacterSheetTabContentProps['onChange']; onRoll: CharacterSheetTabContentProps['onRoll'] }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<EquipmentCategory | 'All'>('All');
@@ -965,5 +999,5 @@ export function CharacterSheetTabContent(props: CharacterSheetTabContentProps) {
   if (props.tab === 'sheet-combat') return <CombatTab character={character} training={training} modifiers={modifiers} equipmentCatalog={equipmentCatalog} knownSpells={props.knownSpells} knownManeuvers={props.knownManeuvers} grantedSpells={props.grantedSpells} grantedManeuvers={props.grantedManeuvers} ancestryGrantedSpells={props.ancestryGrantedSpells} selectedTraits={selectedTraits} onChange={props.onChange} onRoll={props.onRoll} />;
   if (props.tab === 'sheet-features') return <FeaturesTab character={character} classReference={classReference} reference={reference} selectedTraits={selectedTraits} training={training} />;
   if (props.tab === 'sheet-misc') return <MiscTab character={character} knownSpells={props.knownSpells} onChange={props.onChange} />;
-  return <EquipmentTab character={character} equipmentCatalog={equipmentCatalog} onChange={props.onChange} onRoll={props.onRoll} />;
+  return <><CustomEquipmentLibraryEditor /><EquipmentTab character={character} equipmentCatalog={equipmentCatalog} onChange={props.onChange} onRoll={props.onRoll} /></>;
 }
