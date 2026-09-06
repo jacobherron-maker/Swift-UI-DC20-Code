@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { PowerRulesText } from '../powers/PowerRulesText';
 import { useCharacterReference } from '../../hooks/useCharacterReference';
 import { useRulesReference } from '../../hooks/useRulesReference';
 import type { ClassReference, RuleReferenceEntry } from '../../types/models';
+import { ruleTextBlocks } from '../../utils/ruleRules';
 
 const sectionIcons: Record<string, string> = {
   'Core Rules': '◆',
@@ -21,30 +23,32 @@ const kindColors: Record<string, string> = {
   Subclass: 'bg-purple-500/15 text-purple-200',
 };
 
+function InlineRuleLabels({ text }: { text: string }) {
+  const label = text.match(/^([^:]{1,58}:)(.*)$/s);
+  if (!label) return <>{text}</>;
+  return <><strong className="font-black text-slate-100">{label[1]}</strong>{label[2]}</>;
+}
+
 function RichRuleText({ text }: { text: string }) {
-  const blocks = text.split(/\n\n+/).map((block) => block.trim()).filter(Boolean);
-  return <div className="space-y-4">{blocks.map((block, blockIndex) => {
-    const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
-    if (lines.every((line) => line.startsWith('•'))) {
-      return <ul key={blockIndex} className="list-disc space-y-2 pl-6 text-slate-300">{lines.map((line, index) => <li key={index}>{line.replace(/^•\s*/, '')}</li>)}</ul>;
-    }
-    if (lines.length === 1 && (/^[A-Z0-9 ’'&:—-]+$/.test(lines[0]) || (lines[0].length < 60 && !/[.!?]$/.test(lines[0])))) {
-      return <h3 key={blockIndex} className="pt-2 text-lg font-black text-violet-200">{lines[0]}</h3>;
-    }
-    return <div key={blockIndex} className="space-y-2">{lines.map((line, lineIndex) => {
-      const label = line.match(/^([^:]{1,55}):\s+(.+)$/);
-      if (label) return <p key={lineIndex} className="leading-7 text-slate-300"><strong className="font-black text-slate-100">{label[1]}:</strong> {label[2]}</p>;
-      if (line.startsWith('•')) return <p key={lineIndex} className="ml-4 leading-7 text-slate-300">• {line.replace(/^•\s*/, '')}</p>;
-      return <p key={lineIndex} className="leading-7 text-slate-300">{line}</p>;
-    })}</div>;
+  const blocks = ruleTextBlocks(text);
+  return <div className="space-y-3">{blocks.map((block, index) => {
+    if (block.kind === 'heading') return <h2 key={index} className="border-b border-white/10 pb-2 pt-6 text-lg font-black uppercase tracking-[0.12em] text-violet-200 first:pt-0">{block.text}</h2>;
+    if (block.kind === 'subheading') return <h3 key={index} className="pt-3 text-base font-black text-slate-100">{block.text}</h3>;
+    if (block.kind === 'bullet') return <div key={index} className="grid grid-cols-[auto_1fr] gap-2 rounded-lg bg-slate-950/35 px-3 py-2 text-sm leading-6 text-slate-300"><span className="theme-accent-text font-black">•</span><span><InlineRuleLabels text={block.text} /></span></div>;
+    if (block.kind === 'callout') return <aside key={index} className="rounded-xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm leading-6 text-sky-100"><InlineRuleLabels text={block.text} /></aside>;
+    return <p key={index} className="whitespace-pre-wrap text-sm leading-7 text-slate-300"><InlineRuleLabels text={block.text} /></p>;
   })}</div>;
 }
 
-function ClassTable({ className }: { className: string }) {
-  const { reference } = useCharacterReference();
-  const entry = reference?.classes.find(({ name }) => name === className);
+function AuditedPowerText({ text }: { text: string }) {
+  const [descriptionBlock = '', enhancements = ''] = text.split(/\n\nENHANCEMENTS\n/);
+  const description = descriptionBlock.replace(/^DESCRIPTION\n/, '');
+  return <div className="space-y-7"><section><h2 className="mb-3 border-b border-white/10 pb-2 text-lg font-black uppercase tracking-[0.12em] text-violet-200">Description</h2><PowerRulesText text={description} /></section><section><h2 className="mb-3 border-b border-white/10 pb-2 text-lg font-black uppercase tracking-[0.12em] text-violet-200">Enhancements</h2><PowerRulesText text={enhancements} enhancements /></section></div>;
+}
+
+function ClassTable({ entry }: { entry?: ClassReference }) {
   if (!entry) return null;
-  return <section className="mt-8 rounded-2xl border border-violet-400/20 bg-slate-950/55 p-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-black text-violet-200">{className} Class Table</h2><span className="text-xs font-bold uppercase tracking-wider text-slate-500">{entry.tableSource}</span></div><div className="overflow-auto"><table className="w-full min-w-[850px] text-sm"><thead><tr>{entry.tableColumns.map((column) => <th key={column} className="border-b border-white/10 p-2 text-left text-[10px] uppercase tracking-[0.12em] text-slate-500">{column}</th>)}</tr></thead><tbody>{entry.tableRows.map((row) => <tr key={row.level} className="text-slate-400 hover:bg-violet-500/5">{entry.tableColumns.map((column) => <td key={column} className="border-b border-white/5 p-2">{column === 'level' ? row.level : column === 'features' ? row.features : row[column as keyof typeof row] === undefined ? '—' : `+${row[column as keyof typeof row]}`}</td>)}</tr>)}</tbody></table></div></section>;
+  return <section className="mt-8 rounded-2xl border border-violet-400/20 bg-slate-950/55 p-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-black text-violet-200">{entry.name} Class Table</h2><span className="text-xs font-bold uppercase tracking-wider text-slate-500">{entry.tableSource}</span></div><div className="overflow-auto"><table className="w-full min-w-[850px] text-sm"><thead><tr>{entry.tableColumns.map((column) => <th key={column} className="border-b border-white/10 p-2 text-left text-[10px] uppercase tracking-[0.12em] text-slate-500">{classColumnLabels[column] ?? column}</th>)}</tr></thead><tbody>{entry.tableRows.map((row) => <tr key={row.level} className="text-slate-400 hover:bg-violet-500/5">{entry.tableColumns.map((column) => <td key={column} className="border-b border-white/5 p-2">{column === 'level' ? row.level : column === 'features' ? row.features : row[column as keyof typeof row] === undefined ? '—' : `+${row[column as keyof typeof row]}`}</td>)}</tr>)}</tbody></table></div></section>;
 }
 
 const classColumnLabels: Record<string, string> = {
@@ -70,9 +74,17 @@ function currentClassRuleText(entry: ClassReference): string {
   return `${entry.description}\n\nPATH & STARTING PROFILE\nPath: ${entry.path}\nLevel 1 HP: ${entry.baseHP}\nLevel 1 Resources: ${entry.levelOneResource}\n\n${entry.pathDetails}\n\nSTARTING EQUIPMENT\n${entry.startingEquipment.description}\n\nCLASS TABLE\n${table}\n\nCLASS FEATURES\n${features}\n\nSUBCLASSES\n${subclasses}`;
 }
 
-function RuleDocument({ entry, classReference }: { entry: RuleReferenceEntry; classReference?: ClassReference }) {
+function RuleDocument({ entry, classReference, entries, onOpenRelated }: { entry: RuleReferenceEntry; classReference?: ClassReference; entries: RuleReferenceEntry[]; onOpenRelated: (entry: RuleReferenceEntry) => void }) {
   const text = entry.kind === 'Class' && classReference ? currentClassRuleText(classReference) : entry.text;
-  return <article className="mx-auto max-w-4xl"><div className="mb-7 border-b border-white/10 pb-6"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${kindColors[entry.kind] ?? kindColors.Rule}`}>{entry.kind}</span><span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{entry.section} • {entry.subsection}</span></div><h1 className="mt-4 break-words text-3xl font-black leading-tight text-white sm:text-4xl">{entry.title}</h1><p className="mt-3 text-lg leading-7 text-violet-200">{entry.summary}</p><p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">{entry.page}</p></div><RichRuleText text={text} />{entry.kind === 'Class' && entry.characterClass && <ClassTable className={entry.characterClass} />}</article>;
+  const related = (entry.relatedIDs ?? []).map((id) => entries.find((candidate) => candidate.id === id)).filter((candidate): candidate is RuleReferenceEntry => Boolean(candidate));
+  return <article className="mx-auto max-w-5xl"><div className="mb-7 border-b border-white/10 pb-6"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${kindColors[entry.kind] ?? kindColors.Rule}`}>{entry.kind}</span><span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-200">✓ {entry.sourceStatus ?? 'Source verified'}</span><span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{entry.section} • {entry.subsection}</span></div><h1 className="mt-4 break-words text-3xl font-black leading-tight text-white sm:text-4xl">{entry.title}</h1><p className="mt-3 text-lg leading-7 text-violet-200">{entry.summary}</p><div className="mt-4 flex flex-wrap gap-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-400"><span className="rounded-lg border border-white/10 bg-slate-950/50 px-3 py-2">{entry.sourceDocument}</span><span className="rounded-lg border border-white/10 bg-slate-950/50 px-3 py-2">{entry.page}</span></div></div>
+    {entry.details && entry.details.length > 0 && <section aria-label="Rule metadata" className="mb-7 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{entry.details.map(({ label, value }) => <div key={`${label}-${value}`} className="rounded-xl border border-white/10 bg-slate-950/45 p-3"><div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</div><div className="mt-1 break-words text-sm font-bold text-slate-200">{value}</div></div>)}</section>}
+    {entry.formulas && entry.formulas.length > 0 && <section aria-label="Quick formulas" className="mb-7 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/5 p-4"><h2 className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-fuchsia-200">Quick Formulas</h2><div className="grid gap-2">{entry.formulas.map((formula) => <code key={formula} className="block whitespace-normal rounded-lg bg-slate-950/55 px-3 py-2 text-sm font-bold text-slate-200">{formula}</code>)}</div></section>}
+    {entry.sourceNote && <aside className="mb-7 rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100"><strong className="font-black">Source note:</strong> {entry.sourceNote}</aside>}
+    {entry.kind === 'Spell' || entry.kind === 'Maneuver' ? <AuditedPowerText text={text} /> : <RichRuleText text={text} />}
+    {entry.kind === 'Class' && <ClassTable entry={classReference} />}
+    {related.length > 0 && <section className="mt-9 border-t border-white/10 pt-6"><h2 className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Related Rules</h2><div className="mt-3 flex flex-wrap gap-2">{related.map((candidate) => <button type="button" key={candidate.id} onClick={() => onOpenRelated(candidate)} className="rounded-xl border border-violet-400/20 bg-violet-500/10 px-3 py-2 text-left text-sm font-bold text-violet-100 hover:bg-violet-500/20"><span>{candidate.title}</span><span className="ml-2 text-[10px] uppercase text-violet-300/60">{candidate.kind}</span></button>)}</div></section>}
+  </article>;
 }
 
 const RulesView: React.FC = () => {
@@ -92,7 +104,7 @@ const RulesView: React.FC = () => {
   const query = search.trim().toLowerCase();
   const filtered = reference.entries.filter((entry) => {
     const auditedClass = entry.characterClass ? characterReference?.classes.find(({ name }) => name === entry.characterClass) : undefined;
-    const matchesSearch = !query || [entry.title, entry.summary, entry.text, entry.keywords, entry.page, entry.characterClass, entry.subclassName, auditedClass ? JSON.stringify(auditedClass) : undefined].some((value) => value?.toLowerCase().includes(query));
+    const matchesSearch = !query || [entry.title, entry.summary, entry.text, entry.keywords, entry.page, entry.sourceDocument, entry.sourceNote, JSON.stringify(entry.details ?? []), JSON.stringify(entry.formulas ?? []), entry.characterClass, entry.subclassName, auditedClass ? JSON.stringify(auditedClass) : undefined].some((value) => value?.toLowerCase().includes(query));
     const matchesSection = query ? true : entry.section === section;
     const matchesSubsection = query || subsection === 'All Topics' || entry.subsection === subsection;
     const matchesKind = kind === 'All Types' || entry.kind === kind;
@@ -109,10 +121,18 @@ const RulesView: React.FC = () => {
     setSelectedID(null);
   };
 
-  return <div className="min-h-full bg-[radial-gradient(circle_at_top,#312e81_0%,#111827_38%,#020617_100%)] p-4 lg:p-7"><div className="mx-auto max-w-[1550px]"><header className="mb-5"><p className="text-xs font-black uppercase tracking-[0.3em] text-violet-300">475 curated reference documents</p><h1 className="mt-1 text-3xl font-black text-white sm:text-4xl">DC20 Rules Library</h1><p className="mt-2 max-w-3xl text-slate-400">Core rules, combat, general play, character creation, conditions, every class table, and standalone subclass documents—organized to match the Beta.</p></header>
+  const openRelated = (entry: RuleReferenceEntry) => {
+    setSection(entry.section);
+    setSubsection('All Topics');
+    setKind('All Types');
+    setSearch('');
+    setSelectedID(entry.id);
+  };
+
+  return <div className="min-h-full bg-[radial-gradient(circle_at_top,#312e81_0%,#111827_38%,#020617_100%)] p-4 lg:p-7"><div className="mx-auto max-w-[1550px]"><header className="mb-5"><p className="text-xs font-black uppercase tracking-[0.3em] text-violet-300">{reference.entries.length} source-audited reference documents</p><h1 className="mt-1 text-3xl font-black text-white sm:text-4xl">DC20 Rules Library</h1><p className="mt-2 max-w-4xl text-slate-400">Source-verified core rules, combat, general play, character creation, conditions, equipment, powers, Classes, and standalone Subclasses. Every document now identifies its printed source and page.</p></header>
     <nav className="mb-5 grid gap-2 rounded-2xl border border-white/10 bg-slate-950/60 p-2 sm:grid-cols-2 lg:grid-cols-5">{reference.sections.map((entry) => <button type="button" key={entry.name} onClick={() => chooseSection(entry.name)} className={`rounded-xl p-3 text-left ${section === entry.name && !query ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}><span className="mr-2">{sectionIcons[entry.name]}</span><span className="font-black">{entry.name}</span><span className="mt-1 block text-[10px] uppercase tracking-wider opacity-60">{entry.pageRange}</span></button>)}</nav>
     <div className="mb-5 grid gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 md:grid-cols-[1fr_230px_190px]"><input value={search} onChange={(event) => { setSearch(event.target.value); setSelectedID(null); }} placeholder="Search every rule, condition, class, spell, maneuver…" aria-label="Search rules" className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none focus:border-violet-400" /><select value={subsection} disabled={Boolean(query)} onChange={(event) => { setSubsection(event.target.value); setSelectedID(null); }} aria-label="Filter rule topics" className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-slate-200 disabled:opacity-40"><option>All Topics</option>{subsections.map((topic) => <option key={topic}>{topic}</option>)}</select><select value={kind} onChange={(event) => { setKind(event.target.value); setSelectedID(null); }} aria-label="Filter document types" className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-slate-200"><option>All Types</option>{kinds.map((value) => <option key={value}>{value}</option>)}</select></div>
-    <div className="grid gap-4 lg:grid-cols-[360px_1fr]"><aside className="max-h-96 overflow-auto rounded-2xl border border-white/10 bg-slate-950/60 p-3 overscroll-contain lg:h-[calc(100vh-310px)] lg:max-h-none lg:min-h-[620px]"><div className="mb-2 flex items-center justify-between px-2 py-1"><h2 className="font-black text-violet-200">{query ? 'Search Results' : section}</h2><span className="rounded-full bg-slate-800 px-2 py-1 text-xs text-slate-400">{filtered.length}</span></div>{filtered.length === 0 ? <p className="p-4 text-sm text-slate-500">No rules match these filters.</p> : filtered.map((entry) => <button type="button" key={entry.id} onClick={() => setSelectedID(entry.id)} className={`mb-1 w-full rounded-xl p-3 text-left ${selected?.id === entry.id ? 'bg-violet-500/15 ring-1 ring-violet-400/40' : 'hover:bg-white/5'}`}><div className="flex items-start justify-between gap-2"><span className="font-bold text-slate-200">{entry.title}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${kindColors[entry.kind] ?? kindColors.Rule}`}>{entry.kind}</span></div><div className="mt-1 text-xs text-slate-500">{entry.subsection} • {entry.page}</div><p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400">{entry.summary}</p></button>)}</aside><main className="rounded-2xl border border-white/10 bg-slate-900/75 p-4 sm:p-6 lg:h-[calc(100vh-310px)] lg:min-h-[620px] lg:overflow-auto lg:p-9">{selected ? <RuleDocument entry={selected} classReference={selectedClass} /> : <div className="grid h-full place-items-center text-slate-500">Select a reference document.</div>}</main></div>
+    <div className="grid gap-4 lg:grid-cols-[360px_1fr]"><aside className="max-h-96 overflow-auto rounded-2xl border border-white/10 bg-slate-950/60 p-3 overscroll-contain lg:h-[calc(100vh-310px)] lg:max-h-none lg:min-h-[620px]"><div className="mb-2 flex items-center justify-between px-2 py-1"><h2 className="font-black text-violet-200">{query ? 'Search Results' : section}</h2><span className="rounded-full bg-slate-800 px-2 py-1 text-xs text-slate-400">{filtered.length}</span></div>{filtered.length === 0 ? <p className="p-4 text-sm text-slate-500">No rules match these filters.</p> : filtered.map((entry) => <button type="button" key={entry.id} onClick={() => setSelectedID(entry.id)} className={`mb-1 w-full rounded-xl p-3 text-left ${selected?.id === entry.id ? 'bg-violet-500/15 ring-1 ring-violet-400/40' : 'hover:bg-white/5'}`}><div className="flex items-start justify-between gap-2"><span className="font-bold text-slate-200">{entry.title}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${kindColors[entry.kind] ?? kindColors.Rule}`}>{entry.kind}</span></div><div className="mt-1 text-xs text-slate-500">{entry.subsection} • {entry.page}</div><p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400">{entry.summary}</p></button>)}</aside><main className="rounded-2xl border border-white/10 bg-slate-900/75 p-4 sm:p-6 lg:h-[calc(100vh-310px)] lg:min-h-[620px] lg:overflow-auto lg:p-9">{selected ? <RuleDocument entry={selected} classReference={selectedClass} entries={reference.entries} onOpenRelated={openRelated} /> : <div className="grid h-full place-items-center text-slate-500">Select a reference document.</div>}</main></div>
   </div></div>;
 };
 

@@ -585,6 +585,20 @@ export interface RuleReferenceEntry {
   keywords: string;
   characterClass?: string;
   subclassName?: string;
+  /** Printed source used to verify this reference record. */
+  sourceDocument?: string;
+  /** Exact printed source pages, excluding intentionally broad overview records. */
+  sourcePages?: number[];
+  /** A source-side typo or discrepancy retained for fidelity and explained to the reader. */
+  sourceNote?: string;
+  /** Compact rules metadata displayed above the source text. */
+  details?: Array<{ label: string; value: string }>;
+  /** Important calculations pulled out of prose for fast table use. */
+  formulas?: string[];
+  /** Exact document IDs that can be opened from this reference. */
+  relatedIDs?: string[];
+  /** Distinguishes the core Beta from installed supplemental publications. */
+  sourceStatus?: 'Beta source verified' | 'Supplemental source verified';
 }
 
 export interface RulesReferenceData {
