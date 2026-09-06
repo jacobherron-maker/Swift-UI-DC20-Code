@@ -40,3 +40,8 @@ export function generateUUID(): string {
     return v.toString(16);
   });
 }
+
+/** Alphabetical ordering shared by every equipment, spell, and maneuver list in the app. */
+export function sortByName<T extends { name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => a.name.localeCompare(b.name));
+}

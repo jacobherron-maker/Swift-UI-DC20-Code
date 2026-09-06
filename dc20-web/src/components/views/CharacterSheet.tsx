@@ -114,7 +114,7 @@ import {
   sorcererWildMagicProfile,
 } from '../../utils/characterRules';
 import { enforceEquipmentHandCapacity, isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped as toggleInventoryEquippedBase } from '../../utils/equipmentRules';
-import { generateUUID, rollDice } from '../../utils/gameUtils';
+import { generateUUID, rollDice, sortByName } from '../../utils/gameUtils';
 import { ownedClassFeatures, talentByName } from '../../utils/talentRules';
 
 interface CharacterSheetProps {
@@ -2105,7 +2105,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const { equipment: standardEquipmentCatalog } = useEquipmentCatalog();
   const customEquipmentCatalog = useCampaignStore(({ campaignData }) => campaignData.customEquipment);
   const equipmentCatalog = useMemo(
-    () => [...standardEquipmentCatalog, ...customEquipmentCatalog],
+    () => sortByName([...standardEquipmentCatalog, ...customEquipmentCatalog]),
     [customEquipmentCatalog, standardEquipmentCatalog],
   );
   const { spells: spellCatalog, maneuvers: maneuverCatalog } = usePowerCatalog();
@@ -2201,7 +2201,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         });
       }
     }
-    return result;
+    return sortByName(result);
   }, [ancestryGrantedSpells, character.build?.selectedCantrips, character.build?.selectedSpells, character.class, character.spells, grantedSpells, spellCatalog]);
   const knownManeuvers = useMemo(() => {
     const result = character.maneuvers.map((saved) => {
@@ -2213,7 +2213,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       const maneuver = maneuverCatalog.find((entry) => entry.name === name);
       if (maneuver) result.push({ id: `maneuver|${maneuver.name}`, type: maneuver.category, ...maneuver });
     }
-    return result;
+    return sortByName(result);
   }, [character.build?.selectedManeuvers, character.maneuvers, grantedManeuvers, maneuverCatalog]);
 
   const update = (values: Partial<Character>) => {
