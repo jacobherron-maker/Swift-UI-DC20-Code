@@ -32,32 +32,31 @@ export interface PrimaryDestinationDefinition {
 export const PRIMARY_DESTINATIONS: PrimaryDestinationDefinition[] = [
   { id: 'Dashboard', icon: '✦', description: 'Overview and recent work', defaultSection: HubSectionValues.DASHBOARD },
   { id: 'Characters', icon: '🧙', description: 'Characters and sheets', defaultSection: HubSectionValues.CHARACTERS },
-  { id: 'Encounters', icon: '⚔', description: 'Build and run encounters', defaultSection: HubSectionValues.ENCOUNTERS },
+  { id: 'Encounters', icon: '⚔', description: 'Monsters, encounters, and combat', defaultSection: HubSectionValues.ENCOUNTERS },
   { id: 'Library', icon: '📚', description: 'Rules and game content', defaultSection: HubSectionValues.LIBRARY },
   { id: 'Campaigns', icon: '🗺', description: 'Parties, notes, and sessions', defaultSection: HubSectionValues.CAMPAIGN },
 ];
 
 export const LIBRARY_SECTIONS: Array<{ section: HubSection; label: string; shortLabel: string }> = [
   { section: HubSectionValues.RULES, label: 'Rules Reference', shortLabel: 'Rules' },
-  { section: HubSectionValues.MONSTERS, label: 'Monsters & Bestiary', shortLabel: 'Monsters' },
   { section: HubSectionValues.POWERS, label: 'Spells & Maneuvers', shortLabel: 'Powers' },
   { section: HubSectionValues.EQUIPMENT, label: 'Items & Equipment', shortLabel: 'Equipment' },
   { section: HubSectionValues.CHARACTER_OPTIONS, label: 'Character Options', shortLabel: 'Options' },
   { section: HubSectionValues.HOMEBREW, label: 'Homebrew', shortLabel: 'Homebrew' },
 ];
 
-export const ENCOUNTER_SECTIONS: Array<{ section: HubSection; label: string }> = [
-  { section: HubSectionValues.ENCOUNTERS, label: 'Encounter Builder' },
-  { section: HubSectionValues.COMBAT, label: 'Live Combat & Initiative' },
+export const ENCOUNTER_SECTIONS: Array<{ section: HubSection; label: string; shortLabel: string }> = [
+  { section: HubSectionValues.ENCOUNTERS, label: 'Encounter Builder', shortLabel: 'Builder' },
+  { section: HubSectionValues.MONSTERS, label: 'Monsters & Bestiary', shortLabel: 'Monsters' },
+  { section: HubSectionValues.COMBAT, label: 'Live Combat & Initiative', shortLabel: 'Combat' },
 ];
 
 export function primaryDestinationForSection(section: HubSection): PrimaryDestination {
   if (section === HubSectionValues.CHARACTERS) return PrimaryDestinationValues.CHARACTERS;
-  if (section === HubSectionValues.ENCOUNTERS || section === HubSectionValues.COMBAT) return PrimaryDestinationValues.ENCOUNTERS;
+  if (section === HubSectionValues.ENCOUNTERS || section === HubSectionValues.MONSTERS || section === HubSectionValues.COMBAT) return PrimaryDestinationValues.ENCOUNTERS;
   const librarySections = new Set<HubSection>([
     HubSectionValues.LIBRARY,
     HubSectionValues.RULES,
-    HubSectionValues.MONSTERS,
     HubSectionValues.POWERS,
     HubSectionValues.EQUIPMENT,
     HubSectionValues.CHARACTER_OPTIONS,
@@ -73,5 +72,5 @@ export function activeLibrarySection(section: HubSection): HubSection {
 }
 
 export function activeEncounterSection(section: HubSection): HubSection {
-  return section === HubSectionValues.COMBAT ? HubSectionValues.COMBAT : HubSectionValues.ENCOUNTERS;
+  return ENCOUNTER_SECTIONS.some((entry) => entry.section === section) ? section : HubSectionValues.ENCOUNTERS;
 }

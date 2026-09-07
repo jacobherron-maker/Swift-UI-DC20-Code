@@ -25,13 +25,13 @@ describe('DC20 Hub information architecture', () => {
     expect(primaryDestinationForSection(HubSectionValues.DICE)).toBe('Dashboard');
     expect(primaryDestinationForSection(HubSectionValues.CHARACTERS)).toBe('Characters');
     expect(primaryDestinationForSection(HubSectionValues.ENCOUNTERS)).toBe('Encounters');
+    expect(primaryDestinationForSection(HubSectionValues.MONSTERS)).toBe('Encounters');
     expect(primaryDestinationForSection(HubSectionValues.COMBAT)).toBe('Encounters');
     expect(primaryDestinationForSection(HubSectionValues.CAMPAIGN)).toBe('Campaigns');
 
     for (const section of [
       HubSectionValues.LIBRARY,
       HubSectionValues.RULES,
-      HubSectionValues.MONSTERS,
       HubSectionValues.POWERS,
       HubSectionValues.EQUIPMENT,
       HubSectionValues.CHARACTER_OPTIONS,
@@ -41,20 +41,21 @@ describe('DC20 Hub information architecture', () => {
     }
   });
 
-  it('keeps combat and every library collection reachable through contextual tabs', () => {
+  it('keeps encounter tools and every library collection reachable through contextual tabs', () => {
     expect(ENCOUNTER_SECTIONS.map(({ section }) => section)).toEqual([
       HubSectionValues.ENCOUNTERS,
+      HubSectionValues.MONSTERS,
       HubSectionValues.COMBAT,
     ]);
     expect(LIBRARY_SECTIONS.map(({ section }) => section)).toEqual([
       HubSectionValues.RULES,
-      HubSectionValues.MONSTERS,
       HubSectionValues.POWERS,
       HubSectionValues.EQUIPMENT,
       HubSectionValues.CHARACTER_OPTIONS,
       HubSectionValues.HOMEBREW,
     ]);
     expect(activeEncounterSection(HubSectionValues.COMBAT)).toBe(HubSectionValues.COMBAT);
+    expect(activeEncounterSection(HubSectionValues.MONSTERS)).toBe(HubSectionValues.MONSTERS);
     expect(activeEncounterSection(HubSectionValues.DASHBOARD)).toBe(HubSectionValues.ENCOUNTERS);
     expect(activeLibrarySection(HubSectionValues.EQUIPMENT)).toBe(HubSectionValues.EQUIPMENT);
     expect(activeLibrarySection(HubSectionValues.DASHBOARD)).toBe(HubSectionValues.RULES);

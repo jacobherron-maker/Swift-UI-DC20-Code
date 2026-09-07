@@ -124,6 +124,7 @@ function App() {
             <WorkspaceTabs eyebrow="Encounters" tabs={ENCOUNTER_SECTIONS} active={activeEncounter} onChange={setCurrentSection} />
             <div className="min-h-0 flex-1 overflow-hidden">
               <div className={activeEncounter === HubSectionValues.ENCOUNTERS ? 'h-full' : 'hidden'}><EncountersView focusRequest={focusRequest?.kind === 'encounter' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
+              <div className={activeEncounter === HubSectionValues.MONSTERS ? 'h-full' : 'hidden'}><MonstersView focusRequest={focusRequest?.kind === 'monster' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
               <div className={activeEncounter === HubSectionValues.COMBAT ? 'h-full' : 'hidden'}><CombatView /></div>
             </div>
           </div>
@@ -131,7 +132,6 @@ function App() {
             <WorkspaceTabs eyebrow="Library" tabs={LIBRARY_SECTIONS} active={activeLibrary} onChange={setCurrentSection} />
             <div className="min-h-0 flex-1 overflow-hidden">
               <div className={activeLibrary === HubSectionValues.RULES ? 'h-full overflow-auto' : 'hidden'}><RulesView focusRequest={focusRequest?.kind === 'rule' ? focusRequest : null} onFocusHandled={clearFocus} returnContextLabel={ruleReturnSection ? `Return to ${ruleReturnSection}` : undefined} onReturnToContext={ruleReturnSection ? () => { setCurrentSection(ruleReturnSection); setRuleReturnSection(null); } : undefined} /></div>
-              <div className={activeLibrary === HubSectionValues.MONSTERS ? 'h-full' : 'hidden'}><MonstersView focusRequest={focusRequest?.kind === 'monster' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
               <div className={activeLibrary === HubSectionValues.POWERS ? 'h-full overflow-auto' : 'hidden'}><PowersView focusRequest={focusRequest?.kind === 'power' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
               <div className={activeLibrary === HubSectionValues.EQUIPMENT ? 'h-full' : 'hidden'}><EquipmentView focusRequest={focusRequest?.kind === 'equipment' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
               <div className={activeLibrary === HubSectionValues.CHARACTER_OPTIONS ? 'h-full overflow-auto' : 'hidden'}><RulesView preset="character-options" /></div>
