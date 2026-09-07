@@ -7,6 +7,10 @@ import type { Encounter, Monster } from '../../types/models';
 import { generateUUID } from '../../utils/gameUtils';
 import { combatFromEncounter, encounterMetrics, monsterBudget, monsterLevelLabel } from '../../utils/monsterRules';
 import { CharacterAvatar } from '../character/CharacterAvatar';
+import type { ContentFocusRequest } from '../../navigation/appNavigation';
+
+/* Navigation requests intentionally synchronize this view's local selection. */
+/* oxlint-disable react-hooks/exhaustive-deps */
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
 
@@ -41,7 +45,7 @@ function withLivePartyCharacters(encounter: Encounter, availableCharacters: Part
   };
 }
 
-export default function EncountersView() {
+export default function EncountersView({ focusRequest, onFocusHandled }: { focusRequest?: ContentFocusRequest | null; onFocusHandled?: () => void }) {
   const {
     campaignData,
     selectedEncounterId,
@@ -78,6 +82,13 @@ export default function EncountersView() {
     };
     addEncounter(encounter);
   };
+
+  useEffect(() => {
+    if (focusRequest?.kind !== 'encounter') return;
+    if (focusRequest.id && encounters.some(({ id }) => id === focusRequest.id)) selectEncounter(focusRequest.id);
+    else createEncounter();
+    onFocusHandled?.();
+  }, [encounters, focusRequest, onFocusHandled, selectEncounter]);
 
   const update = (changes: Partial<Encounter>) => {
     if (selected) updateEncounter({ ...selected, ...changes });

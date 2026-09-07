@@ -2,6 +2,9 @@
 
 export const HubSectionValues = {
   DASHBOARD: "Dashboard",
+  LIBRARY: "Library",
+  CHARACTER_OPTIONS: "Character Options",
+  HOMEBREW: "Homebrew",
   RULES: "Rules",
   POWERS: "Spells & Maneuvers",
   DICE: "Dice Roller",
@@ -17,6 +20,9 @@ export type HubSection = (typeof HubSectionValues)[keyof typeof HubSectionValues
 
 export const HubSectionIcons: Record<HubSection, string> = {
   "Dashboard": "sparkles",
+  "Library": "books.vertical.fill",
+  "Character Options": "person.text.rectangle",
+  "Homebrew": "hammer.fill",
   "Rules": "books.vertical.fill",
   "Spells & Maneuvers": "wand.and.stars",
   "Dice Roller": "die.face.5.fill",

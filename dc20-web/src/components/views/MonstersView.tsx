@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useSourceMonsters } from '../../hooks/useSourceMonsters';
 import { useCampaignStore } from '../../store/campaignStore';
+import type { ContentFocusRequest } from '../../navigation/appNavigation';
+
+/* Navigation requests intentionally synchronize this view's local workspace state. */
+/* oxlint-disable react/set-state-in-effect, react-hooks/exhaustive-deps */
 import type { Monster, MonsterAbility, MonsterAbilityKind, MonsterRole, MonsterType } from '../../types/models';
 import {
   MonsterAbilityKindValues,
@@ -388,7 +392,7 @@ function AbilityEditor({ ability, onChange, onRemove }: {
   );
 }
 
-export default function MonstersView() {
+export default function MonstersView({ focusRequest, onFocusHandled }: { focusRequest?: ContentFocusRequest | null; onFocusHandled?: () => void }) {
   const {
     campaignData,
     selectedMonsterId,
@@ -429,6 +433,15 @@ export default function MonstersView() {
     addCustomMonster(createCustomMonster());
     setMonsterWorkspaceExpanded(true);
   };
+
+  useEffect(() => {
+    if (focusRequest?.kind !== 'monster') return;
+    if (focusRequest.id) {
+      selectMonster(focusRequest.id);
+      setMonsterWorkspaceExpanded(true);
+    } else createMonster();
+    onFocusHandled?.();
+  }, [focusRequest, onFocusHandled, selectMonster]);
   const openMonster = (id: string) => {
     selectMonster(id);
     setMonsterWorkspaceExpanded(true);

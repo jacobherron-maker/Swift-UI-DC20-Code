@@ -2,9 +2,16 @@ import React from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { useCloudSync } from '../../cloud/CloudSyncContext';
 import { useCampaignStore } from '../../store/campaignStore';
+import { primaryDestinationForSection } from '../../navigation/appNavigation';
 
-const Header: React.FC = () => {
-  const { campaignData, isDarkMode, toggleDarkMode, saveCampaign } = useCampaignStore();
+interface HeaderProps {
+  onOpenCreate: () => void;
+  onOpenSearch: () => void;
+  onOpenTools: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onOpenCreate, onOpenSearch, onOpenTools }) => {
+  const { campaignData, currentSection, isDarkMode, toggleDarkMode, saveCampaign } = useCampaignStore();
   const { isConfigured, user, signOut } = useAuth();
   const { status, error, lastSyncedAt, syncNow } = useCloudSync();
   const syncLabel = status === 'saving' ? 'Saving…'
@@ -23,26 +30,29 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="header-modern flex shrink-0 items-center justify-between gap-2 py-3 pl-16 pr-3 sm:gap-3 sm:px-6 sm:py-4">
-      <div className="min-w-0">
-        <h2 className="truncate text-base font-semibold text-white sm:text-xl">{campaignData.title}</h2>
-        <p className="truncate text-xs text-muted sm:text-sm">GM's Companion</p>
+    <header className="header-modern flex shrink-0 items-center justify-between gap-2 py-3 pl-16 pr-3 sm:gap-3 sm:px-6 sm:py-3">
+      <div className="hidden min-w-0 sm:block">
+        <p className="theme-accent-text text-[10px] font-black uppercase tracking-[0.18em]">{primaryDestinationForSection(currentSection)}</p>
+        <h2 className="truncate text-base font-semibold text-white lg:text-lg">{campaignData.title}</h2>
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-3">
+      <div className="flex min-w-0 shrink-0 items-center justify-end gap-1.5 sm:gap-2">
         <div className="hidden text-right lg:block">
           <div className="text-xs font-bold text-slate-300">{user?.email ?? (isConfigured ? 'Account unavailable' : 'Cloud setup needed')}</div>
           <div title={error || (lastSyncedAt ? `Last synced ${new Date(lastSyncedAt).toLocaleString()}` : '')} className={`text-[10px] font-black uppercase tracking-wider ${status === 'error' ? 'text-red-300' : status === 'synced' ? 'text-emerald-300' : 'text-slate-500'}`}>{syncLabel}</div>
         </div>
+        <button type="button" onClick={onOpenSearch} className="min-h-11 min-w-11 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 hover:bg-white/10" aria-label="Open global search" title="Search (Command or Control K)">⌕ <span className="hidden xl:inline">Search</span></button>
+        <button type="button" onClick={onOpenCreate} className="btn-primary min-h-11 min-w-11 font-black" aria-label="Create something"><span aria-hidden="true">＋</span> <span className="hidden md:inline">Create</span></button>
+        <button type="button" onClick={onOpenTools} className="min-h-11 min-w-11 rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm font-bold text-slate-200 hover:bg-slate-800" aria-label="Open GM Tools" title="GM Tools">⚙ <span className="hidden xl:inline">Tools</span></button>
         <button
           onClick={() => void save()}
           className="btn-primary min-h-11 min-w-11 font-medium"
           aria-label="Save now"
         >
-          ☁️ <span className="hidden sm:inline">Save</span>
+          ☁️ <span className="hidden xl:inline">Save</span>
         </button>
 
-        {user && <button type="button" onClick={() => void logOut()} aria-label="Sign out" className="min-h-11 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800"><span className="sm:hidden" aria-hidden="true">↪</span><span className="hidden sm:inline">Sign Out</span></button>}
+        {user && <button type="button" onClick={() => void logOut()} aria-label="Sign out" className="hidden min-h-11 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 lg:block">Sign Out</button>}
 
         <button
           onClick={toggleDarkMode}

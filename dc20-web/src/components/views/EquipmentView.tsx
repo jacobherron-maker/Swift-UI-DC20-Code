@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { useCampaignStore } from '../../store/campaignStore';
 import type { EquipmentCatalogItem, EquipmentCategory, EquipmentSlot } from '../../types/models';
@@ -6,6 +6,10 @@ import { EquipmentCategoryValues, EquipmentSlotValues } from '../../types/models
 import { addInventoryItem, defensiveEquipmentProfile, healingPotionAmount, isEquipmentEquippable, weaponMechanicalProfile, ROUTED_SHEET_EFFECTS } from '../../utils/equipmentRules';
 import { generateUUID, sortByName } from '../../utils/gameUtils';
 import { PillMultiSelect, toggleValue } from '../equipment/PillMultiSelect';
+import type { ContentFocusRequest } from '../../navigation/appNavigation';
+
+/* Navigation requests intentionally synchronize this view's local filters and dialog. */
+/* oxlint-disable react/set-state-in-effect */
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
 const ROUTED_EFFECT_NAMES = Object.keys(ROUTED_SHEET_EFFECTS);
@@ -44,7 +48,7 @@ function emptyDraft(): CustomItemDraft {
   };
 }
 
-export default function EquipmentView() {
+export default function EquipmentView({ focusRequest, onFocusHandled }: { focusRequest?: ContentFocusRequest | null; onFocusHandled?: () => void }) {
   const { equipment, isLoading, error } = useEquipmentCatalog();
   const {
     campaignData,
@@ -68,6 +72,15 @@ export default function EquipmentView() {
   const standardEquipment = useMemo(() => sortByName([...equipment, ...customEquipment]), [customEquipment, equipment]);
   const propertyOptions = useMemo(() => Array.from(new Set(equipment.flatMap((item) => item.properties))).sort((a, b) => a.localeCompare(b)), [equipment]);
   const effectiveTargetCharacterID = targetCharacterID || selectedCharacterId || characters[0]?.id || '';
+
+  useEffect(() => {
+    if (focusRequest?.kind !== 'equipment') return;
+    setLibrary('standard');
+    setCategory(focusRequest.id && customIDs.has(focusRequest.id) ? 'Custom Items' : 'All');
+    if (focusRequest.id) setSelectedEquipmentID(focusRequest.id);
+    else setShowCustomModal(true);
+    onFocusHandled?.();
+  }, [customIDs, focusRequest, onFocusHandled]);
 
   const filtered = useMemo(() => {
     if (library === 'magic') return [];

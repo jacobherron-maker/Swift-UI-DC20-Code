@@ -4,8 +4,12 @@ import { useCampaignStore } from '../../store/campaignStore';
 import CharacterBuilderView from './CharacterBuilderView';
 import CharacterSheet from './CharacterSheet';
 import { CharacterAvatar } from '../character/CharacterAvatar';
+import type { ContentFocusRequest } from '../../navigation/appNavigation';
 
-const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
+/* Navigation requests intentionally synchronize this view's local mode and selection. */
+/* oxlint-disable react/set-state-in-effect, react-hooks/exhaustive-deps */
+
+const CharactersView: React.FC<{ onNavigate?: () => void; focusRequest?: ContentFocusRequest | null; onFocusHandled?: () => void }> = ({ onNavigate, focusRequest, onFocusHandled }) => {
   const { characters, deleteCharacter, selectCharacter, selectedCharacterId, updateCharacter } = useCampaignStore();
   const campaigns = useCampaignStore(({ campaignData }) => campaignData.campaigns);
   const { publishCharacter } = usePartyCampaigns();
@@ -31,6 +35,18 @@ const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) =
     [characters, searchTerm]
   );
   const selectedPartyLinks = useMemo(() => selectedCharacter ? campaigns.flatMap((campaign) => campaign.party?.characterId === selectedCharacter.id ? [{ campaign, link: campaign.party }] : []) : [], [campaigns, selectedCharacter]);
+
+  useEffect(() => {
+    if (focusRequest?.kind !== 'character') return;
+    if (focusRequest.id && characters.some(({ id }) => id === focusRequest.id)) {
+      selectCharacter(focusRequest.id);
+      navigate('sheet');
+    } else {
+      selectCharacter(null);
+      navigate('builder');
+    }
+    onFocusHandled?.();
+  }, [characters, focusRequest, onFocusHandled, selectCharacter]);
 
   useEffect(() => {
     if (!selectedCharacter || selectedPartyLinks.length === 0) return;

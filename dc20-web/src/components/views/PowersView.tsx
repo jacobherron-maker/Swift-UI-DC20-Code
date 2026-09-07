@@ -1,8 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { PowerRulesText } from '../powers/PowerRulesText';
 import { usePowerCatalog } from '../../hooks/usePowerCatalog';
 import type { ManeuverReference, SpellReference } from '../../hooks/usePowerCatalog';
 import { powerResolutionLabel } from '../../utils/powerRules';
+import type { ContentFocusRequest } from '../../navigation/appNavigation';
+
+/* Navigation requests intentionally synchronize this view's local filters and selection. */
+/* oxlint-disable react/set-state-in-effect */
 
 type PowerDocument =
   | { id: string; kind: 'Spell'; name: string; group: string; spell: SpellReference }
@@ -26,12 +30,21 @@ function PowerDetail({ item }: { item: PowerDocument }) {
   </article>;
 }
 
-const PowersView: React.FC = () => {
+const PowersView: React.FC<{ focusRequest?: ContentFocusRequest | null; onFocusHandled?: () => void }> = ({ focusRequest, onFocusHandled }) => {
   const { spells, maneuvers, isLoading, error } = usePowerCatalog();
   const [kind, setKind] = useState<'Spell' | 'Maneuver'>('Spell');
   const [search, setSearch] = useState('');
   const [group, setGroup] = useState('All');
   const [selectedID, setSelectedID] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (focusRequest?.kind !== 'power') return;
+    if (focusRequest.powerKind) setKind(focusRequest.powerKind);
+    setGroup('All');
+    setSearch(focusRequest.name ?? '');
+    setSelectedID(null);
+    onFocusHandled?.();
+  }, [focusRequest, onFocusHandled]);
 
   const documents = useMemo<PowerDocument[]>(() => kind === 'Spell'
     ? spells.map((spell, index) => ({ id: `spell-${index}-${spell.name}`, kind: 'Spell', name: spell.name, group: spell.school, spell }))

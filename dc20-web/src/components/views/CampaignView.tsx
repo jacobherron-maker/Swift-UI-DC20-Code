@@ -16,12 +16,14 @@ import { combatantFromCharacter } from '../../utils/monsterRules';
 import { CharacterAvatar } from '../character/CharacterAvatar';
 import { GoldBalanceControl } from '../GoldBalanceControl';
 import CharacterSheet from './CharacterSheet';
+import type { ContentFocusRequest } from '../../navigation/appNavigation';
 
-/* oxlint-disable react/set-state-in-effect */
+/* Navigation requests and live party records intentionally synchronize local campaign state. */
+/* oxlint-disable react/set-state-in-effect, react-hooks/exhaustive-deps */
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
 
-export default function CampaignView() {
+export default function CampaignView({ focusRequest, onFocusHandled }: { focusRequest?: ContentFocusRequest | null; onFocusHandled?: () => void }) {
   const {
     campaignData,
     characters,
@@ -59,8 +61,8 @@ export default function CampaignView() {
     void action.catch((caught) => setNotice(caught instanceof Error ? caught.message : 'The shared campaign could not be updated.'));
   };
 
-  const createSoloCampaign = () => {
-    const firstNote: CampaignNote = { id: generateUUID(), title: 'Session Notes', body: '' };
+  const createSoloCampaign = (firstNoteTitle = 'Session Notes', firstNoteBody = '') => {
+    const firstNote: CampaignNote = { id: generateUUID(), title: firstNoteTitle, body: firstNoteBody };
     const next: CampaignRecord = {
       id: generateUUID(),
       name: `Campaign ${campaignData.campaigns.length + 1}`,
@@ -89,6 +91,30 @@ export default function CampaignView() {
       setWorking(false);
     }
   };
+
+  useEffect(() => {
+    if (focusRequest?.kind === 'campaign') {
+      if (focusRequest.id) selectCampaign(focusRequest.id);
+      else createSoloCampaign();
+      if (focusRequest.noteId) setSelectedNoteId(focusRequest.noteId);
+      onFocusHandled?.();
+      return;
+    }
+    if (focusRequest?.kind !== 'npc') return;
+    const title = `NPC — New NPC`;
+    const body = `Role:\nAncestry:\nLocation:\nDisposition:\n\nAppearance:\n\nGoals & Secrets:\n\nVoice & Mannerisms:\n\nNotes:`;
+    if (!campaign) createSoloCampaign(title, body);
+    else if (campaign.party) {
+      performPartyAction(partyHub.addSharedNote(campaign.party.partyId, { id: generateUUID(), title, body }));
+      setNotice('A new NPC record was added to the shared campaign notes.');
+    } else {
+      const note = { id: generateUUID(), title, body };
+      updateCampaign({ ...campaign, notes: [...campaign.notes, note] });
+      setSelectedNoteId(note.id);
+      setNotice('A new NPC record is ready in campaign notes.');
+    }
+    onFocusHandled?.();
+  }, [focusRequest]);
 
   const joinPendingParty = async () => {
     const character = characters.find(({ id }) => id === effectiveJoinCharacterId);
@@ -176,12 +202,12 @@ export default function CampaignView() {
           <p className="text-xs text-slate-500">Solo workspaces and connected parties</p>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <button type="button" onClick={createSoloCampaign} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-slate-200 hover:bg-white/10">+ Solo</button>
+          <button type="button" onClick={() => createSoloCampaign()} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-slate-200 hover:bg-white/10">+ Solo</button>
           <button type="button" disabled={working || !partyHub.isAvailable} onClick={() => void createGroupCampaign()} className="rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">+ Group</button>
         </div>
         {!partyHub.isAvailable && <p className="mt-2 text-[10px] leading-4 text-amber-300">Group campaigns require Firebase and a signed-in account.</p>}
         <div className="mt-5 max-h-64 space-y-2 overflow-y-auto overscroll-contain pr-1 lg:max-h-none">
-          {campaignData.campaigns.length === 0 && <button type="button" onClick={createSoloCampaign} className="w-full rounded-xl border border-dashed border-white/10 p-5 text-sm text-slate-500 hover:border-violet-400/30 hover:text-violet-300">Create your first campaign</button>}
+          {campaignData.campaigns.length === 0 && <button type="button" onClick={() => createSoloCampaign()} className="w-full rounded-xl border border-dashed border-white/10 p-5 text-sm text-slate-500 hover:border-violet-400/30 hover:text-violet-300">Create your first campaign</button>}
           {campaignData.campaigns.map((entry) => (
             <button
               type="button"
