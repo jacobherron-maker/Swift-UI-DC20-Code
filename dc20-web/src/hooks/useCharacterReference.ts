@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CharacterReferenceData } from '../types/models';
+import { augmentCharacterReference } from '../data/supplementalClasses';
 
 let cache: CharacterReferenceData | null = null;
 let pending: Promise<CharacterReferenceData> | null = null;
@@ -14,9 +15,9 @@ function fetchReference(): Promise<CharacterReferenceData> {
     })
     .then((value) => {
       if (!value || typeof value !== 'object') throw new Error('Character reference is malformed.');
-      const reference = value as CharacterReferenceData;
+      const reference = augmentCharacterReference(value as CharacterReferenceData);
       if (
-        reference.classes?.length !== 15
+        reference.classes?.length !== 16
         || !Array.isArray(reference.ancestryTraits)
         || !Array.isArray(reference.skills)
         || !Array.isArray(reference.trades)

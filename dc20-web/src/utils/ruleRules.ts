@@ -6,6 +6,13 @@ import type {
 } from '../types/models';
 import { auditedTalentRuleEntry, talentDefinitions } from './talentRules';
 import type { PowerResolution } from './powerRules';
+import {
+  ARTIFICER_SOURCE,
+  PSION_SUBCLASS_SOURCE,
+  artificerInfusions,
+  artificerRituals,
+  augmentCharacterReference,
+} from '../data/supplementalClasses';
 
 export interface AuditedSpellRecord {
   name: string;
@@ -303,6 +310,12 @@ function sourceFor(entry: RuleReferenceEntry): Pick<RuleReferenceEntry, 'sourceD
   if (entry.page.startsWith('Beta 0.10.5')) {
     return { sourceDocument: BETA_SOURCE, sourceStatus: 'Beta source verified' };
   }
+  if (entry.page.startsWith('DC20 Magazine 09')) {
+    return { sourceDocument: PSION_SUBCLASS_SOURCE, sourceStatus: 'Supplemental source verified' };
+  }
+  if (entry.page.startsWith('DC20 Magazine 16') || entry.characterClass === 'Artificer') {
+    return { sourceDocument: ARTIFICER_SOURCE, sourceStatus: 'Supplemental source verified' };
+  }
   if (entry.characterClass === 'Psion' || entry.title === 'Psyborn') {
     return { sourceDocument: PSION_SOURCE, sourceStatus: 'Supplemental source verified' };
   }
@@ -335,6 +348,131 @@ function canonicalSubclassText(entry: RuleReferenceEntry, reference: CharacterRe
     const level = feature.level ? `LEVEL ${feature.level}\n` : '';
     return `${level}${feature.name}\n${feature.description}`;
   }).join('\n\n');
+}
+
+function canonicalClassText(name: string, reference: CharacterReferenceData): string | undefined {
+  const classRecord = reference.classes.find((entry) => entry.name === name);
+  if (!classRecord) return undefined;
+  const table = [
+    classRecord.tableColumns.map((column) => column.toUpperCase()).join(' | '),
+    ...classRecord.tableRows.map((row) => classRecord.tableColumns.map((column) => String(row[column as keyof typeof row] ?? '—')).join(' | ')),
+  ].join('\n');
+  const features = classRecord.features.flatMap((level) => level.features.map((feature) => (
+    `LEVEL ${level.level}\n${feature.name}\n${feature.description}`
+  ))).join('\n\n');
+  return `${classRecord.description}\n\n${classRecord.pathTitle.toUpperCase()}\n${classRecord.pathDetails}\n\nCLASS TABLE\n${table}\n\nCLASS FEATURES\n${features}`;
+}
+
+function supplementalRuleEntries(reference: CharacterReferenceData): RuleReferenceEntry[] {
+  const base = (
+    id: string,
+    title: string,
+    subsection: string,
+    summary: string,
+    text: string,
+    page: string,
+    kind: RuleReferenceEntry['kind'],
+    characterClass?: string,
+  ): RuleReferenceEntry => ({
+    id,
+    title,
+    section: 'Classes',
+    subsection,
+    summary,
+    text,
+    page,
+    kind,
+    keywords: `${title} ${subsection} ${summary}`,
+    characterClass,
+  });
+  const entries: RuleReferenceEntry[] = [];
+  const psion = reference.classes.find(({ name }) => name === 'Psion');
+  for (const subclass of ['Oracle', 'Psi-Knight', 'Paragon']) {
+    const features = psion?.subclassFeatures[subclass] ?? [];
+    if (features.length) entries.push(base(
+      `Classes|Psion|${subclass}`,
+      subclass,
+      'Psion Subclasses',
+      features.map(({ name }) => name).join(' • '),
+      features.map(({ level, name, description }) => `LEVEL ${level}\n${name}\n${description}`).join('\n\n'),
+      'DC20 Magazine 09 p.3',
+      'Subclass',
+      'Psion',
+    ));
+  }
+  for (const title of ['Greater Telekinesis', 'Psionic Fortress']) {
+    const talent = psion?.talents.find(({ name }) => name === title);
+    if (talent) entries.push(base(
+      `Classes|Psion|Talent|${title}`,
+      title,
+      'Psion Class Talents',
+      `Psion Class Talent • Level ${talent.minimumLevel}+`,
+      talent.description,
+      'DC20 Magazine 09 p.3',
+      'Talent',
+      'Psion',
+    ));
+  }
+
+  const artificer = reference.classes.find(({ name }) => name === 'Artificer');
+  if (artificer) {
+    entries.push(base(
+      'Classes|Artificer|Artificer',
+      'Artificer',
+      'Artificer Class',
+      artificer.summary,
+      canonicalClassText('Artificer', reference) ?? artificer.description,
+      'DC20 Magazine 16 pp.3–5',
+      'Class',
+      'Artificer',
+    ));
+    for (const subclass of artificer.subclasses) {
+      entries.push(base(
+        `Classes|Artificer|${subclass}`,
+        subclass,
+        'Artificer Subclasses',
+        artificer.subclassFeatures[subclass].map(({ name }) => name).join(' • '),
+        artificer.subclassFeatures[subclass].map(({ level, name, description }) => `LEVEL ${level}\n${name}\n${description}`).join('\n\n'),
+        subclass === 'Paragon' ? 'Beta 0.10.5 p.192' : subclass === 'Apothecary' ? 'DC20 Magazine 16 p.5' : 'DC20 Magazine 16 p.6',
+        'Subclass',
+        'Artificer',
+      ));
+    }
+    for (const title of ['Artifice Engine', 'Infusion Conduits']) {
+      const talent = artificer.talents.find(({ name }) => name === title);
+      if (talent) entries.push(base(
+        `Classes|Artificer|Talent|${title}`,
+        title,
+        'Artificer Class Talents',
+        `Artificer Class Talent • Level ${talent.minimumLevel}+`,
+        talent.description,
+        'DC20 Magazine 16 p.6',
+        'Talent',
+        'Artificer',
+      ));
+    }
+    for (const ritual of artificerRituals) entries.push(base(
+      `Classes|Artificer|Ritual|${ritual.name}`,
+      `${ritual.name} (Artificer Ritual)`,
+      'Artificer Rituals',
+      ritual.description.split('\n')[0],
+      ritual.description,
+      'DC20 Magazine 16 p.7',
+      'Rule',
+      'Artificer',
+    ));
+    for (const property of artificerInfusions) entries.push(base(
+      `Classes|Artificer|Infusion|${property.name}`,
+      `${property.name} (Artificer Infusion)`,
+      'Artificer Infusions & Magic Properties',
+      property.description.split('\n').slice(0, 3).join(' • '),
+      property.description,
+      property.name === 'Spell Bomb' ? 'DC20 Magazine 16 p.9' : 'DC20 Magazine 16 p.8',
+      'Rule',
+      'Artificer',
+    ));
+  }
+  return entries;
 }
 
 function equipmentText(title: string, equipment: EquipmentCatalogItem[]): string | undefined {
@@ -516,12 +654,18 @@ export function auditRulesReference(
   characterReference: CharacterReferenceData,
   equipment: EquipmentCatalogItem[],
 ): RulesReferenceData {
+  const augmentedReference = augmentCharacterReference(characterReference);
   const spells = new Map(spellCatalog.map((entry) => [entry.name, entry]));
   const maneuvers = new Map(maneuverCatalog.map((entry) => [entry.name, entry]));
-  const entries = document.entries.map((entry) => auditEntry(entry, spells, maneuvers, characterReference, equipment));
+  const existingIDs = new Set(document.entries.map(({ id }) => id));
+  const sourceEntries = [
+    ...document.entries,
+    ...supplementalRuleEntries(augmentedReference).filter(({ id }) => !existingIDs.has(id)),
+  ];
+  const entries = sourceEntries.map((entry) => auditEntry(entry, spells, maneuvers, augmentedReference, equipment));
   return {
     ...document,
-    source: `${BETA_SOURCE}; ${PSION_SOURCE}; ${SUMMONER_SOURCE}`,
+    source: `${BETA_SOURCE}; ${PSION_SOURCE}; ${PSION_SUBCLASS_SOURCE}; ${SUMMONER_SOURCE}; ${ARTIFICER_SOURCE}`,
     sections: AUDITED_SECTION_RANGES,
     entries: addRelationships(entries),
   };

@@ -31,8 +31,8 @@ function rule(title: string) {
 
 describe('source-audited rules library', () => {
   it('retains every unique document and uses the corrected printed chapter ranges', () => {
-    expect(audited.entries).toHaveLength(475);
-    expect(new Set(audited.entries.map(({ id }) => id)).size).toBe(475);
+    expect(audited.entries).toHaveLength(502);
+    expect(new Set(audited.entries.map(({ id }) => id)).size).toBe(502);
     expect(audited.sections).toEqual(AUDITED_SECTION_RANGES);
     expect(rule('Core Rules Overview').page).toBe('Beta 0.10.5 pp.9–39');
     expect(rule('Combat Rules Overview').page).toBe('Beta 0.10.5 pp.40–150');
@@ -63,6 +63,11 @@ describe('source-audited rules library', () => {
     expect(rule('Precision Defense & Area Defense').formulas).toHaveLength(2);
     expect(rule('Psion').sourceDocument).toContain('Psion v2');
     expect(rule('Summoner').sourceDocument).toContain('The Summoner v1.0');
+    expect(rule('Artificer').sourceDocument).toBe('DC20 Magazine 16 — Artificer');
+    expect(rule('Oracle').sourceDocument).toBe('DC20 Magazine 09 — Psion Subclasses v1.1');
+    expect(rule('Psi-Knight').text).toContain('Psionic Barrier');
+    expect(rule('Artificer').text).toContain('Infusion Magic');
+    expect(rule('Spell Bomb (Artificer Infusion)').text).toContain('Priming:');
     const summonerParagon = audited.entries.find(({ title, characterClass }) => title === 'Paragon' && characterClass === 'Summoner')!;
     expect(summonerParagon.sourceDocument).toBe('DC20 RPG Beta 0.10.5');
   });

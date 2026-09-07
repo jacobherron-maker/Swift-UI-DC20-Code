@@ -13,6 +13,7 @@ export const DEFAULT_PALETTE_ID = 'amethyst-archive';
 
 export const themePalettes: ThemePalette[] = [
   { id: 'amethyst-archive', name: 'Amethyst Archive', associatedClass: 'DC20 Hub', symbol: '✦', accent: '#8C4CF2', highlight: '#C8A5FF', background: '#0E0917', backgroundSecondary: '#241036' },
+  { id: 'artificer-brasswork', name: 'Brasswork Atelier', associatedClass: 'Artificer', symbol: '⚙', accent: '#D6903D', highlight: '#70D6C8', background: '#100D09', backgroundSecondary: '#2D2112' },
   { id: 'barbarian-ember', name: 'Ember Rage', associatedClass: 'Barbarian', symbol: '🔥', accent: '#E05A38', highlight: '#F2A65A', background: '#160A08', backgroundSecondary: '#35100C' },
   { id: 'bard-velvet', name: 'Velvet Encore', associatedClass: 'Bard', symbol: '♫', accent: '#D552B6', highlight: '#F4B7E7', background: '#150817', backgroundSecondary: '#33102E' },
   { id: 'champion-aegis', name: 'Gilded Aegis', associatedClass: 'Champion', symbol: '◈', accent: '#E6B84D', highlight: '#F9E7A6', background: '#11131A', backgroundSecondary: '#302713' },

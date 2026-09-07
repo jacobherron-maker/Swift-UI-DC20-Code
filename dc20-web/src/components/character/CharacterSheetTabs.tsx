@@ -27,6 +27,7 @@ import {
   ancestryTraitSource,
   characterRestPoints,
   characterCombatTraining,
+  classTradeExpertise,
   characterSheetEffects,
   completeCharacterRest,
   druidWildFormProfile,
@@ -445,7 +446,15 @@ function ChecksTab({ character, reference, equipmentCatalog, equipmentModifiers,
     ? build.sheetFeatureSelections[MONK_ACTIVE_STANCE] : '';
   const attributeModifier = (attribute: DC20Attribute) => wildForm.active && attribute === 'Might' ? wildForm.might
     : wildForm.active && attribute === 'Agility' ? wildForm.agility : character.attributes[attribute].modifier;
-  const expertise = wildForm.active ? { skills: {}, trades: {} } : ancestryExpertise(character, selectedTraits);
+  const ancestryMasteryIncreases = wildForm.active ? { skills: {}, trades: {} } : ancestryExpertise(character, selectedTraits);
+  const classMasteryIncreases = wildForm.active ? {} : classTradeExpertise(character);
+  const expertise = {
+    skills: ancestryMasteryIncreases.skills,
+    trades: Object.fromEntries(Array.from(new Set([
+      ...Object.keys(ancestryMasteryIncreases.trades),
+      ...Object.keys(classMasteryIncreases),
+    ])).map((name) => [name, Math.max(ancestryMasteryIncreases.trades[name] ?? 0, classMasteryIncreases[name] ?? 0)])),
+  };
   const skillModifier = (name: string, mastery: MasteryLevel) => {
     const skill = reference?.skills.find(({ name: candidate }) => candidate === name);
     const skillAttribute = skill?.attribute as DC20Attribute | 'Prime' | undefined;

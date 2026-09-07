@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CharacterReferenceData, EquipmentCatalogItem, RulesReferenceData } from '../types/models';
+import { augmentCharacterReference } from '../data/supplementalClasses';
 import {
   auditRulesReference,
   type AuditedManeuverRecord,
@@ -26,9 +27,9 @@ function loadRules(): Promise<RulesReferenceData> {
       }
       const spells = (spellValue as { spells?: AuditedSpellRecord[] }).spells ?? [];
       const maneuvers = (maneuverValue as { maneuvers?: AuditedManeuverRecord[] }).maneuvers ?? [];
-      const characterReference = characterValue as CharacterReferenceData;
+      const characterReference = augmentCharacterReference(characterValue as CharacterReferenceData);
       const equipment = equipmentValue as EquipmentCatalogItem[];
-      if (spells.length !== 160 || maneuvers.length !== 30 || characterReference.classes?.length !== 15 || !Array.isArray(equipment)) {
+      if (spells.length !== 160 || maneuvers.length !== 30 || characterReference.classes?.length !== 16 || !Array.isArray(equipment)) {
         throw new Error('One or more audited rules catalogs are incomplete.');
       }
       const audited = auditRulesReference(document, spells, maneuvers, characterReference, equipment);

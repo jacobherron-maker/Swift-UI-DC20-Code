@@ -5,11 +5,11 @@ DC20 Hub is a cross-platform React and TypeScript companion for building charact
 ## Current feature set
 
 - Comprehensive Rules library with Core, Combat, General, Character Creation, and Classes sections
-- 475 searchable reference documents, including conditions, class tables, and standalone subclasses
+- 502 searchable reference documents, including conditions, class tables, standalone subclasses, Artificer Rituals, and Infusions
 - 160 spells and 30 maneuvers with complete metadata, descriptions, and enhancements
 - Six-step DC20 character builder with calculated summary and interactive character sheet
 - Uploadable square character avatars optimized for backups and Firestore synchronization
-- All 15 supported classes, including Psion and Summoner, plus Psyborn ancestry support
+- All 16 supported classes, including Artificer, Psion, and Summoner, plus Psyborn ancestry support
 - Correct skill, trade, language, mastery-cap, ancestry-trait, talent, path, equipment, and resource logic
 - 98-item equipment catalog with character inventory and equipped-state support
 - 31 read-only sourcebook monsters plus a full custom monster builder
@@ -17,7 +17,7 @@ DC20 Hub is a cross-platform React and TypeScript companion for building charact
 - Solo campaign workspaces plus connected party campaigns with GM/player roles, reusable invitation links, live read-only party sheets, shared notes, and shared inventory
 - Party characters can be added to the combat tracker with live player-controlled HP
 - Standard dice roller and stacked advantage/disadvantage
-- Sixteen curated class-themed palettes carried over from the macOS app
+- Sixteen class-themed palettes plus the default Amethyst Archive palette
 - Firebase accounts with email/password and Google sign-in
 - Private cross-device cloud synchronization with local fallback and JSON backup export/restore
 - Installable web app manifest and offline reference caching
@@ -42,6 +42,12 @@ npm test
 ```
 
 The test suite covers character calculations and progression, equipment behavior, monster/encounter/combat rules, persistence migration, and backup restoration.
+
+## Sourcebook intake
+
+The project’s continuing sourcebook intake folder is [DC20 Sourcebooks on Google Drive](https://drive.google.com/drive/folders/167wGgq5lYTC3MZsEh9NsaA4nbA9__9Pu?usp=sharing). Future sourcebooks added there should be audited against the existing reference catalogs before their structured rules are added to the app.
+
+The current supplemental class sources include **DC20 Magazine 01 — Psion v2**, **DC20 Magazine 09 — Psion Subclasses v1.1**, **DC20 Magazine 16 — Artificer**, and **DC20 Magazine 23 — The Summoner v1.0**. The deployable app stores structured reference data only; the PDFs remain in the source folder and are not copied into the public build.
 
 ## Accounts, cloud saves, and backups
 

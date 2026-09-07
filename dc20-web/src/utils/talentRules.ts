@@ -138,6 +138,10 @@ const CLASS_TALENT_REQUIREMENTS: Record<string, string[]> = {
   'Expanded Spell School': ['Spell School Initiate'],
   'Crowned Sigil': ['Arcane Sigil'],
   'Overly Prepared Spellcaster': ['Prepared Spell', 'Spell School Initiate'],
+  'Greater Telekinesis': ['Telekinesis'],
+  'Psionic Fortress': ['Mind Sense'],
+  'Artifice Engine': ['Infusion Magic'],
+  'Infusion Conduits': ['Infusion Magic'],
 };
 
 const CLASS_TALENT_NAMES: Record<string, readonly string[]> = {
@@ -155,6 +159,8 @@ const CLASS_TALENT_NAMES: Record<string, readonly string[]> = {
   Summoner: ['Creature Specialist', 'Horde Summoner', 'Grand Entrance', 'Reverse Summoning'],
   Warlock: ['Expanded Boon', 'Pact Bane', 'Warlock Subcontract'],
   Wizard: ['Expanded Spell School', 'Crowned Sigil', 'Overly Prepared Spellcaster'],
+  Psion: ['Greater Telekinesis', 'Psionic Fortress'],
+  Artificer: ['Artifice Engine', 'Infusion Conduits'],
 };
 
 export const TALENT_CLASS_BY_NAME: Readonly<Record<string, string>> = Object.fromEntries(
@@ -180,6 +186,8 @@ export function auditedTalentRuleEntry(entry: RuleReferenceEntry): RuleReference
     ? 'Beta 0.10.5 pp.186–191'
     : isMulticlass ? 'Beta 0.10.5 p.191'
       : isSummoner ? 'DC20 Magazine 23 pp.4–5'
+        : className === 'Psion' ? 'DC20 Magazine 09 p.3'
+          : className === 'Artificer' ? 'DC20 Magazine 16 p.6'
         : className ? `Beta 0.10.5 p.${BETA_TALENT_PAGE_BY_CLASS[className]}`
           : 'Beta 0.10.5 p.186';
   const repeatability = entry.title === 'Talents & Requirements'

@@ -214,6 +214,7 @@ export type AttributeSelectionMethod = (typeof AttributeSelectionMethods)[keyof 
 
 // Classes
 export const DC20Classes = {
+  ARTIFICER: "Artificer",
   BARBARIAN: "Barbarian",
   BARD: "Bard",
   CHAMPION: "Champion",

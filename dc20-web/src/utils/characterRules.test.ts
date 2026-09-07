@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import referenceDocument from '../../public/data/CharacterReference.json';
 import equipmentDocument from '../../public/data/EquipmentCatalog.json';
 import type { Character, CharacterReferenceData, EquipmentCatalogItem } from '../types/models';
+import { artificerInfusions, augmentCharacterReference } from '../data/supplementalClasses';
 import {
   accessibleAncestryNames,
   ancestryGrantedSpellNames,
@@ -13,6 +14,9 @@ import {
   ancestryTraitRulesTags,
   ancestryTraitSelectionCount,
   ancestryTraitSource,
+  ARTIFICER_INFUSION_MP_RESERVED,
+  ARTIFICER_ACTIVE_INFUSIONS,
+  ARTIFICER_TINKERER_COUNT,
   applyMonkStaminaSpendRecovery,
   applySorcererWildMagic,
   applyDerivedCharacter,
@@ -32,6 +36,7 @@ import {
   characterCombatTraining,
   characterRestPoints,
   characterSheetEffects,
+  classTradeExpertise,
   classHealth,
   combatMastery,
   completeCharacterRest,
@@ -112,7 +117,7 @@ import {
   wizardSchoolSpellSelectionKey,
 } from './characterRules';
 
-const reference = referenceDocument as CharacterReferenceData;
+const reference = augmentCharacterReference(referenceDocument as CharacterReferenceData);
 const bard = reference.classes.find(({ name }) => name === 'Bard')!;
 const barbarian = reference.classes.find(({ name }) => name === 'Barbarian')!;
 const champion = reference.classes.find(({ name }) => name === 'Champion')!;
@@ -128,6 +133,7 @@ const monk = reference.classes.find(({ name }) => name === 'Monk')!;
 const sorcerer = reference.classes.find(({ name }) => name === 'Sorcerer')!;
 const wizard = reference.classes.find(({ name }) => name === 'Wizard')!;
 const psion = reference.classes.find(({ name }) => name === 'Psion')!;
+const artificer = reference.classes.find(({ name }) => name === 'Artificer')!;
 const equipmentCatalog = equipmentDocument as EquipmentCatalogItem[];
 
 function character(className = 'Barbarian'): Character {
@@ -2223,11 +2229,109 @@ describe('Psion v2 Beta 0.9 source audit', () => {
     expect(rested.build?.sheetFeatureCounters[PSION_AP_ENHANCEMENT_SP]).toBeUndefined();
   });
 
-  it('keeps unpublished level 3-10 class and subclass rules explicitly marked as undeveloped', () => {
-    expect(psion.subclasses).toEqual([]);
-    expect(psion.features.find(({ level }) => level === 3)?.features[0].name).toBe('Subclass Feature — Not Yet Developed');
+  it('adds the published level-3 subclass rules while preserving later unpublished milestones', () => {
+    expect(psion.subclasses).toEqual(['Oracle', 'Psi-Knight', 'Paragon']);
+    expect(psion.features.find(({ level }) => level === 3)?.features[0].name).toBe('Subclass');
+    expect(psion.subclassFeatures.Oracle.find(({ name }) => name === 'Foresight')?.description).toContain('The number rolled on the d20 becomes your new Omen.');
+    expect(psion.subclassFeatures['Psi-Knight'].find(({ name }) => name === 'Psionic Combatant')?.description).toContain('You learn all the Attack Maneuvers, and 1 Maneuver of your choice.');
+    expect(psion.talents.map(({ name }) => name)).toEqual(expect.arrayContaining(['Greater Telekinesis', 'Psionic Fortress']));
     expect(psion.features.find(({ level }) => level === 5)?.features[0].name).toBe('Class Feature — Not Yet Developed');
     expect(psion.features.find(({ level }) => level === 8)?.features[0].name).toBe('Class Capstone Feature — Not Yet Developed');
     expect(psion.features.find(({ level }) => level === 9)?.features[0].name).toBe('Subclass Capstone Feature — Not Yet Developed');
+  });
+});
+
+describe('Artificer supplemental source audit', () => {
+  it('loads the full published table and keeps later unpublished milestones explicit', () => {
+    expect(artificer.tableRows).toHaveLength(10);
+    expect(artificer.tableRows[0]).toMatchObject({ level: 1, health: 8, mana: 6, cantrips: 2, spells: 3 });
+    expect(classTableTotals(artificer, 10)).toMatchObject({ attribute: 4, skill: 7, trade: 4, mana: 18, cantrips: 4, spells: 6 });
+    expect(classHealth('Artificer', 10)).toBe(21);
+    expect(artificer.features.find(({ level }) => level === 5)?.features[0].name).toBe('Class Feature — Not Yet Developed');
+    expect(artificer.subclasses).toEqual(['Apothecary', 'Armorer', 'Paragon']);
+  });
+
+  it('routes the Artificer spell list, Mana Core, Infusions, and Trade Expertise', () => {
+    const spell = (school: string, tags = '') => ({ school, tags, source: 'Arcane' });
+    expect(spellIsAvailableToClass('Artificer', spell('Conjuration'))).toBe(true);
+    expect(spellIsAvailableToClass('Artificer', spell('Elemental'))).toBe(true);
+    expect(spellIsAvailableToClass('Artificer', spell('Transmutation'))).toBe(true);
+    expect(spellIsAvailableToClass('Artificer', spell('Divination', 'Strike'))).toBe(true);
+    expect(spellIsAvailableToClass('Artificer', spell('Divination'))).toBe(false);
+
+    const hero = character('Artificer');
+    hero.level = 3;
+    hero.subclass = 'Armorer';
+    hero.build = {
+      ...defaultBuild(),
+      classFeatureSelections: {
+        'artificer.tradeExpertise': ['Alchemy'],
+        'artificer.artisanResistance': ['Fire'],
+        'artificer.infusions': ['Darkvision', 'Jumping', 'Recall', 'Spellcasting'],
+        'artificer.manaCore': ['Speed'],
+      },
+      sheetFeatureCounters: { [ARTIFICER_INFUSION_MP_RESERVED]: 2 },
+    };
+    expect(classTradeExpertise(hero)).toEqual({ Alchemy: 1 });
+    expect(classChoiceSelectionLimit(artificer.choiceGroups.find(({ id }) => id === 'artificer.infusions')!, hero)).toBe(7);
+    expect(characterCombatTraining(hero, artificer, reference.ancestryTraits)).toMatchObject({
+      lightArmorTraining: true,
+      heavyArmorTraining: true,
+      lightShieldTraining: true,
+      heavyShieldTraining: true,
+    });
+    const derived = deriveCharacter(hero, artificer, reference.ancestryTraits, []);
+    expect(derived.speed).toBe(7);
+    expect(derived.maxMana).toBe(6);
+    expect(derived.spellLimit).toBe(3);
+    expect(derived.tradePointBudget).toBe(6);
+    expect(characterSheetEffects({ ...hero, ...applyDerivedCharacter(hero, derived) }).resistances).toContain('Fire (Half)');
+  });
+
+  it('routes every Focused Mana Core property and only repeats multi-choice Infusions', () => {
+    const hero = character('Artificer');
+    hero.level = 2;
+    const focusModifiers = (property: string) => equippedCombatModifiers({
+      ...hero,
+      build: {
+        ...defaultBuild(),
+        classFeatureSelections: {
+          'artificer.manaCore': ['Focused'],
+          'artificer.focusProperty': [property],
+        },
+      },
+    }, equipmentCatalog, artificer);
+    expect(focusModifiers('Channeling').spellCheckBonus).toBe(1);
+    expect(focusModifiers('Vicious').spellAttackBonus).toBe(1);
+    expect(focusModifiers('Powerful').spellAttackDamageBonus).toBe(1);
+    expect(focusModifiers('Warded').mysticalDamageReduction).toBe(true);
+    const focusOptions = artificer.choiceGroups.find(({ id }) => id === 'artificer.focusProperty')!.options;
+    focusOptions.forEach(({ name }) => expect(focusModifiers(name).focusProperties).toContain(name));
+    expect(artificerInfusions.filter(({ isRepeatable }) => isRepeatable).map(({ name }) => name)).toEqual([
+      'Change Damage Type',
+      'Condition Resilience (Minor)',
+      'Sentience (Minor)',
+      'Spellcasting',
+      'Spell Potion',
+      'Spell Bomb',
+    ]);
+  });
+
+  it('does not erase persistent Infusions or clockwork devices on a Long Rest', () => {
+    const hero = character('Artificer');
+    hero.maxManaPoints = 4;
+    hero.manaPoints = 1;
+    hero.build = {
+      ...defaultBuild(),
+      sheetFeatureSelections: { [ARTIFICER_ACTIVE_INFUSIONS]: 'Darkvision::1::1|Jumping::1::1' },
+      sheetFeatureCounters: { [ARTIFICER_INFUSION_MP_RESERVED]: 2, [ARTIFICER_TINKERER_COUNT]: 2 },
+    };
+    const rested = completeCharacterRest(hero, 'Long', 0);
+    expect(rested.manaPoints).toBe(4);
+    expect(rested.build?.sheetFeatureSelections[ARTIFICER_ACTIVE_INFUSIONS]).toContain('Darkvision');
+    expect(rested.build?.sheetFeatureCounters).toMatchObject({
+      [ARTIFICER_INFUSION_MP_RESERVED]: 2,
+      [ARTIFICER_TINKERER_COUNT]: 2,
+    });
   });
 });

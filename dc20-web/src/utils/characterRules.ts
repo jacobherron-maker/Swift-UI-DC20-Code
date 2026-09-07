@@ -49,6 +49,10 @@ export function masteryBonus(value: MasteryLevel | undefined): number {
 }
 
 export function classHealth(className: string, level: number): number {
+  if (className === 'Artificer') {
+    const cumulative = [8, 9, 11, 12, 14, 15, 17, 18, 20, 21];
+    return cumulative[Math.min(10, Math.max(1, Math.trunc(level))) - 1];
+  }
   const laterLevels = Math.max(0, Math.trunc(level) - 1);
   if (['Barbarian', 'Champion', 'Commander', 'Hunter', 'Monk'].includes(className)) {
     return 8 + laterLevels * 2;
@@ -77,7 +81,7 @@ export function classTableTotals(reference: ClassReference, level: number) {
 }
 
 export function ordinaryTalentSlots(className: string, level: number): number {
-  const progression = className === 'Psion' ? [2, 4, 7, 10] : [2, 4, 6, 8];
+  const progression = ['Psion', 'Artificer'].includes(className) ? [2, 4, 7, 10] : [2, 4, 6, 8];
   return progression.filter((entry) => entry <= level).length;
 }
 
@@ -153,6 +157,16 @@ export const PSION_AP_ENHANCEMENT_SP = 'psion.psionicMind.apEnhancementSP';
 export const PSION_DAZE_PENDING = 'psion.psionicSpell.daze';
 export const PSION_DISRUPTION_PENDING = 'psion.psionicSpell.disruption';
 export const PSION_COMPONENTLESS_PENDING = 'psion.psionicSpell.componentless';
+export const PSION_OMEN_VALUE = 'psion.oracle.omen';
+export const PSION_PSYCHOMETABOLISM_ACTIVE = 'psion.psiKnight.psychometabolism';
+export const ARTIFICER_OVERDRIVE_USED = 'artificer.manaCore.overdriveUsed';
+export const ARTIFICER_OVERDRIVE_ACTIVE = 'artificer.manaCore.overdriveActive';
+export const ARTIFICER_ENGINE_USED = 'artificer.artificeEngine.used';
+export const ARTIFICER_ENGINE_ACTIVE = 'artificer.artificeEngine.active';
+export const ARTIFICER_INFUSION_MP_RESERVED = 'artificer.infusions.reservedMP';
+export const ARTIFICER_ACTIVE_INFUSIONS = 'artificer.infusions.active';
+export const ARTIFICER_TINKERER_COUNT = 'artificer.tinkerer.count';
+export const ARTIFICER_DAMAGE_USED = 'artificer.manaCore.damageUsedThisRound';
 export const WIZARD_SIGNATURE_ACTIVE = 'wizard.signature.activeSchool';
 export const WIZARD_SIGNATURE_USED_PREFIX = 'wizard.signature.used.';
 export const WIZARD_MANA_LIMIT_BREAK_READY = 'wizard.manaLimitBreak.ready';
@@ -502,13 +516,21 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
     && Boolean(character.build?.sheetFeatureStates?.[WIZARD_SIGIL_ACTIVE])
     && Boolean(character.build?.sheetFeatureStates?.[WIZARD_SIGIL_BOUND_SELF]);
   const wizardOverlyPrepared = (character.build?.selectedTalents ?? []).includes('Overly Prepared Spellcaster');
+  const psionicFortress = (character.build?.selectedTalents ?? []).includes('Psionic Fortress')
+    && Boolean(character.build?.sheetFeatureStates?.[PSION_MIND_SENSE_ACTIVE]);
+  const artisanResistance = (character.class === 'Artificer' || hasDirectMulticlassFeature(character, 'Artificer', 'Magical Craftsman'))
+    ? character.build?.classFeatureSelections?.['artificer.artisanResistance']?.[0]
+    : undefined;
   const saveAdvantage: Partial<Record<DC20Attribute, number>> = {};
   if (isRaging || monkStance === 'Turtle Stance') saveAdvantage.Might = 1;
   if (monkStance === 'Gazelle Stance') saveAdvantage.Agility = 1;
+  if (psionicFortress) saveAdvantage.Intelligence = 1;
   const activeSpeed = character.speed
     + (activeRune === 'Lightning Rune' ? 1 : 0)
     + (bardPerformanceAppliesToSelf && bardPerformance === 'Fast Tempo' ? (bardPerformanceEnhanced ? 2 : 1) : 0)
     + Number(monkStance === 'Gazelle Stance')
+    + Number(character.class === 'Psion' && character.subclass === 'Psi-Knight'
+      && character.build?.sheetFeatureStates?.[PSION_PSYCHOMETABOLISM_ACTIVE]) * 5
     + sorcererWildMagicProfile(character).speedAdjustment;
   return {
     physicalDefense: character.physicalDefense - (isRaging ? 5 : 0),
@@ -521,6 +543,8 @@ export function characterSheetEffects(character: Character): CharacterSheetEffec
       ...(adaptiveDamage ? [`${adaptiveDamage} (1)`] : []),
       ...(spellWarderActive && spellWarderDamage ? [`${spellWarderDamage} (${spellWarderHalf ? 'Half' : '1'})`] : []),
       ...(clericDomains.has('Divine Damage Expansion') && clericDivineDamage ? [`${clericDivineDamage} (1)`] : []),
+      ...(psionicFortress ? ['Psychic (Half)'] : []),
+      ...(artisanResistance ? [`${artisanResistance} (Half)`] : []),
       ...inquisitorResistances,
       ...bardResistances,
       ...commanderResistances,
@@ -689,6 +713,10 @@ export function classChoiceSelectionLimit(
     (character.class === className && character.level >= nativeLevel)
     || hasDirectMulticlassFeature(character, className, feature)
   );
+  if (group.id === 'artificer.infusions' && owns('Artificer', 'Infusion Magic', 1)) {
+    const spellSlots = character.level >= 9 ? 6 : character.level >= 6 ? 5 : character.level >= 3 ? 4 : 3;
+    return 3 + spellSlots;
+  }
   if (group.id === 'bard.expression' && owns('Bard', 'Remarkable Repertoire', 1)) {
     return (character.build?.selectedTalents ?? []).includes('Expanded Repertoire') ? 2 : 1;
   }
@@ -780,6 +808,14 @@ export function grantedClassManeuverNames(character: Pick<Character, 'class' | '
     granted.push(
       ...(domains.has('War') ? (choices['cleric.warManeuver'] ?? []).slice(0, 1) : []),
       ...(domains.has('Peace') ? (choices['cleric.peaceManeuver'] ?? []).slice(0, 1) : []),
+    );
+  }
+  if ((character.class === 'Psion' && character.level >= 3 && character.subclass === 'Psi-Knight')
+    || hasMulticlassSubclass(character, 'Psion', 'Psi-Knight')) {
+    granted.push(
+      'Heroic Bash', 'Savage Strike', 'Sunder Strike', 'Swift Strike', 'Meteor Strike', 'Cleave',
+      'Whirlwind', 'Pathcarver', 'Piercing Shot', 'Scattershot', 'Volley',
+      ...(choices['psion.psiKnightManeuver'] ?? []).slice(0, 1),
     );
   }
   return Array.from(new Set(granted.filter(Boolean)));
@@ -1028,6 +1064,8 @@ const TURN_STATE_KEYS = new Set([
   MONK_BEAR_ADVANTAGE,
   MONK_MANTIS_GRAPPLE_AP,
   MONK_FLURRY_USED,
+  PSION_PSYCHOMETABOLISM_ACTIVE,
+  ARTIFICER_OVERDRIVE_ACTIVE,
 ]);
 
 /** Starts a fresh turn without incorrectly resetting round-, combat-, or rest-limited features. */
@@ -1035,11 +1073,15 @@ export function resetCharacterTurn(character: Character): Character {
   if (!character.build) return { ...character, currentAP: character.maxAP };
   const states = { ...character.build.sheetFeatureStates };
   TURN_STATE_KEYS.forEach((key) => { states[key] = false; });
+  const psiKnightBarrier = ((character.class === 'Psion' && character.subclass === 'Psi-Knight')
+    || hasMulticlassSubclass(character, 'Psion', 'Psi-Knight'))
+    && Boolean(states[PSION_MIND_SENSE_ACTIVE]);
   return {
     ...character,
     currentAP: character.maxAP,
     build: {
       ...character.build,
+      temporaryHP: psiKnightBarrier ? Math.max(character.build.temporaryHP, 2) : character.build.temporaryHP,
       sheetFeatureStates: states,
       sheetFeatureCounters: {
         ...character.build.sheetFeatureCounters,
@@ -1071,6 +1113,10 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
   let sheetFeatureSelections = { ...build.sheetFeatureSelections };
   let classFeatureSelections = { ...build.classFeatureSelections };
   const sheetConditionLevels = { ...build.sheetConditionLevels };
+  const persistentArtificerCounters = character.class === 'Artificer' ? {
+    [ARTIFICER_INFUSION_MP_RESERVED]: Math.max(0, sheetFeatureCounters[ARTIFICER_INFUSION_MP_RESERVED] ?? 0),
+    [ARTIFICER_TINKERER_COUNT]: Math.max(0, sheetFeatureCounters[ARTIFICER_TINKERER_COUNT] ?? 0),
+  } : {};
 
   if (character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Overload Magic')) {
     sheetFeatureStates[SORCERER_OVERLOAD_ACTIVE] = false;
@@ -1115,12 +1161,19 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
     sheetFeatureStates[PSION_COMPONENTLESS_PENDING] = false;
     delete sheetFeatureSelections[PSION_INVASION_ACTIVE];
     delete sheetFeatureCounters[PSION_AP_ENHANCEMENT_SP];
+    sheetFeatureCounters[PSION_OMEN_VALUE] = 10;
+  }
+  if (character.class === 'Artificer' && type === 'Long') {
+    sheetFeatureStates[ARTIFICER_OVERDRIVE_USED] = false;
+    sheetFeatureStates[ARTIFICER_OVERDRIVE_ACTIVE] = false;
+    sheetFeatureStates[ARTIFICER_ENGINE_USED] = false;
+    sheetFeatureStates[ARTIFICER_ENGINE_ACTIVE] = false;
   }
 
   if (type === 'Long') {
     restPoints = character.maxHealthPoints;
     sheetFeatureStates = Object.fromEntries(Object.keys(sheetFeatureStates).map((key) => [key, false]));
-    sheetFeatureCounters = {};
+    sheetFeatureCounters = Object.fromEntries(Object.entries(persistentArtificerCounters).filter(([, value]) => value > 0));
     if (character.class === 'Druid' || hasDirectMulticlassFeature(character, 'Druid', 'Wild Form')) {
       classFeatureSelections = { ...classFeatureSelections, [DRUID_WILD_FORM_TRAITS]: [], [DRUID_WILD_FORM_SKILLS]: [] };
       sheetFeatureSelections = { ...sheetFeatureSelections };
@@ -1189,6 +1242,10 @@ export function spellIsAvailableToClass(
     return tags.some((tag) => ['psychic', 'gravity', 'illusion'].includes(tag))
       || ['Divination', 'Enchantment', 'Nullification'].includes(spell.school);
   }
+  if (className === 'Artificer') {
+    return ['Conjuration', 'Elemental', 'Transmutation'].includes(spell.school)
+      || tags.includes('strike');
+  }
   if (className === 'Bard') {
     return spell.school === 'Enchantment'
       || tags.some((tag) => ['embolden', 'enfeeble', 'healing', 'illusion', 'sound'].includes(tag));
@@ -1225,6 +1282,18 @@ export function ancestryExpertise(
     if (trait.name === 'Trade Expertise') result.trades[choice] = (result.trades[choice] ?? 0) + 1;
   }
   return result;
+}
+
+/** Class Features that raise one Trade's Mastery Limit without spending a Trade Point. */
+export function classTradeExpertise(
+  character: Pick<Character, 'class' | 'level' | 'build'>,
+): Record<string, number> {
+  const ownsMagicalCraftsman = (character.class === 'Artificer' && character.level >= 1)
+    || hasDirectMulticlassFeature(character, 'Artificer', 'Magical Craftsman');
+  const choice = ownsMagicalCraftsman
+    ? character.build?.classFeatureSelections?.['artificer.tradeExpertise']?.[0]
+    : undefined;
+  return choice ? { [choice]: 1 } : {};
 }
 
 export type AncestryRulesTag = 'Action' | 'Ancestry Access' | 'Attack' | 'Attribute' | 'Check'
@@ -1383,7 +1452,7 @@ export interface CharacterCombatTraining {
 
 /** Combat-equipment training granted by class paths, talents, ancestry, and selected class features. */
 export function characterCombatTraining(
-  character: Pick<Character, 'class' | 'ancestry' | 'build'>,
+  character: Pick<Character, 'class' | 'subclass' | 'ancestry' | 'build'>,
   classReference: ClassReference,
   allTraits: AncestryTrait[] = [],
 ): CharacterCombatTraining {
@@ -1396,14 +1465,18 @@ export function characterCombatTraining(
   const naturalCombatant = allTraits.length > 0
     && selectedAncestryTraits(character, allTraits).some(({ name }) => name === 'Natural Combatant');
   const martialExpansion = talents.has('Martial Expansion');
+  const psiKnight = (character.class === 'Psion' && character.subclass === 'Psi-Knight')
+    || hasMulticlassSubclass(character, 'Psion', 'Psi-Knight');
+  const artificerArmorer = (character.class === 'Artificer' && character.subclass === 'Armorer')
+    || hasMulticlassSubclass(character, 'Artificer', 'Armorer');
   const allArmor = path.includes('All Armor');
   const allShields = path.includes('All Shields');
-  const weaponTraining = path.includes('Combat Training: Weapons') || martialExpansion || domains.has('War');
+  const weaponTraining = path.includes('Combat Training: Weapons') || martialExpansion || domains.has('War') || psiKnight;
   const spellFocusTraining = path.includes('Spell Focuses') || talents.has('Spellcasting Expansion');
-  const lightArmorTraining = allArmor || path.includes('Light Armor');
-  const heavyArmorTraining = allArmor || path.includes('Heavy Armor') || martialExpansion || naturalCombatant || domains.has('Peace') || disciplines.has('Warrior');
-  const lightShieldTraining = allShields || path.includes('Light Shields') || martialExpansion || naturalCombatant;
-  const heavyShieldTraining = allShields || path.includes('Heavy Shields') || martialExpansion || naturalCombatant || domains.has('Peace') || disciplines.has('Warrior');
+  const lightArmorTraining = allArmor || path.includes('Light Armor') || psiKnight || artificerArmorer;
+  const heavyArmorTraining = allArmor || path.includes('Heavy Armor') || martialExpansion || naturalCombatant || domains.has('Peace') || disciplines.has('Warrior') || psiKnight || artificerArmorer;
+  const lightShieldTraining = allShields || path.includes('Light Shields') || martialExpansion || naturalCombatant || psiKnight || artificerArmorer;
+  const heavyShieldTraining = allShields || path.includes('Heavy Shields') || martialExpansion || naturalCombatant || domains.has('Peace') || disciplines.has('Warrior') || psiKnight || artificerArmorer;
   const pactWeaponTraining = pactBoons.has('Pact Weapon');
   const pactArmorTraining = pactBoons.has('Pact Armor');
   return {
@@ -1478,19 +1551,25 @@ export function equippedCombatModifiers(
     && Boolean(equippedArmor);
   const innateFocusProperties = character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Innate Power')
     ? character.build?.classFeatureSelections?.['sorcerer.focus'] ?? [] : [];
+  const artificerFocusProperties = (character.class === 'Artificer' || hasDirectMulticlassFeature(character, 'Artificer', 'Mana Core'))
+    && character.build?.classFeatureSelections?.['artificer.manaCore']?.includes('Focused')
+    ? character.build?.classFeatureSelections?.['artificer.focusProperty'] ?? [] : [];
   const focusProperties = Array.from(new Set([
     ...focuses.flatMap(({ properties }) => properties.filter((property) => property !== 'Two-Handed')),
     ...innateFocusProperties,
+    ...artificerFocusProperties,
   ]));
   const overloaded = (character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Overload Magic'))
     && Boolean(character.build?.sheetFeatureStates?.[SORCERER_OVERLOAD_ACTIVE]);
   const wildMagic = sorcererWildMagicProfile(character);
   return {
     spellCheckBonus: focuses.filter(({ properties }) => properties.includes('Channeling')).length
-      + Number(innateFocusProperties.includes('Channeling')) + Number(overloaded) * 5 + wildMagic.spellCheckBonus,
+      + Number(innateFocusProperties.includes('Channeling')) + Number(artificerFocusProperties.includes('Channeling'))
+      + Number(overloaded) * 5 + wildMagic.spellCheckBonus,
     spellAttackBonus: focuses.filter(({ properties }) => properties.includes('Vicious')).length
-      + Number(innateFocusProperties.includes('Vicious')) + Number(overloaded) * 5,
-    spellAttackDamageBonus: focuses.filter(({ properties }) => properties.includes('Powerful')).length,
+      + Number(innateFocusProperties.includes('Vicious')) + Number(artificerFocusProperties.includes('Vicious')) + Number(overloaded) * 5,
+    spellAttackDamageBonus: focuses.filter(({ properties }) => properties.includes('Powerful')).length
+      + Number(artificerFocusProperties.includes('Powerful')),
     attackAndSpellDisadvantage: untrainedGear > 0 ? -untrainedGear : 0,
     agilityCheckDisadvantage: heavyGear > 0 ? -heavyGear : 0,
     physicalDamageReduction: Boolean(armorProfile?.physicalDamageReduction),
@@ -1528,13 +1607,17 @@ function equipmentBonuses(character: Character, catalog: EquipmentCatalogItem[],
     && equipped.some((item) => item.category === 'Spell Focuses' && item.properties.includes('Warded')) ? 1 : 0;
   const innateFocusProperties = character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Innate Power')
     ? character.build?.classFeatureSelections?.['sorcerer.focus'] ?? [] : [];
+  const artificerFocusProperties = (character.class === 'Artificer' || hasDirectMulticlassFeature(character, 'Artificer', 'Mana Core'))
+    && character.build?.classFeatureSelections?.['artificer.manaCore']?.includes('Focused')
+    ? character.build?.classFeatureSelections?.['artificer.focusProperty'] ?? [] : [];
   const weaponPD = equipped.filter((item) => item.category === 'Weapons' && item.properties.includes('Guard')).length;
   return {
     pd: (armor?.physicalDefense ?? 0) + (shield?.physicalDefense ?? 0) + weaponPD,
-    ad: (armor?.areaDefense ?? 0) + (shield?.areaDefense ?? 0) + focusAD + Number(innateFocusProperties.includes('Protective')),
+    ad: (armor?.areaDefense ?? 0) + (shield?.areaDefense ?? 0) + focusAD
+      + Number(innateFocusProperties.includes('Protective')) + Number(artificerFocusProperties.includes('Protective')),
     physicalDR: Number(Boolean(armor?.physicalDamageReduction || shield?.physicalDamageReduction)),
     elementalDR: Number(Boolean(armor?.elementalDamageReduction || shield?.elementalDamageReduction)),
-    mysticalDR: Math.max(focusMDR, Number(innateFocusProperties.includes('Warded'))),
+    mysticalDR: Math.max(focusMDR, Number(innateFocusProperties.includes('Warded')), Number(artificerFocusProperties.includes('Warded'))),
     hasArmor: Boolean(equippedArmor),
     speedPenalty: (armor?.speedPenalty ?? 0) + equippedShields.reduce((sum, { profile }) => sum + profile.speedPenalty, 0),
     isUnarmored: !equippedArmor,
@@ -1620,7 +1703,8 @@ export function deriveCharacter(
   const hunterTerrains = new Set(hunterFavoredTerrainNames(character));
   const classSpeed = Number(ownsFeature('Barbarian', 'Berserker', 1))
     + (ownsFeature('Monk', 'Monk Training', 1) ? (ownsFeature('Monk', 'Expert Monk', 5) ? 2 : 1) : 0)
-    + Number(ownsFeature('Hunter', 'Favored Terrain', 1) && hunterTerrains.has('Grassland'));
+    + Number(ownsFeature('Hunter', 'Favored Terrain', 1) && hunterTerrains.has('Grassland'))
+    + Number(character.class === 'Artificer' && character.build?.classFeatureSelections?.['artificer.manaCore']?.[0] === 'Speed') * 2;
   const disciplines = new Set(spellbladeDisciplineNames(character));
   const clericDomains = character.class === 'Cleric' || hasDirectMulticlassFeature(character, 'Cleric', 'Cleric Order')
     ? character.build?.classFeatureSelections?.['cleric.domains'] ?? [] : [];
@@ -1646,6 +1730,15 @@ export function deriveCharacter(
   const skillTalentPoints = selectedTalents.filter((name) => name === 'Skill Increase').length * 4;
   const paragonTradePoints = Number(character.subclass === 'Paragon' && character.level >= 3)
     + multiclassSubclassCount(character, 'Paragon');
+  const artificerTradePoints = ownsFeature('Artificer', 'Magical Craftsman', 1) ? 2 : 0;
+  const apothecaryTradePoints = ((character.class === 'Artificer' && character.level >= 3 && character.subclass === 'Apothecary')
+    || hasMulticlassSubclass(character, 'Artificer', 'Apothecary')) ? 2 : 0;
+  const artificerInfusionCount = character.class === 'Artificer'
+    ? character.build?.classFeatureSelections?.['artificer.infusions']?.length ?? 0 : 0;
+  const tradedSpellSlots = Math.max(0, artificerInfusionCount - 3);
+  const manaCore = character.class === 'Artificer' ? character.build?.classFeatureSelections?.['artificer.manaCore']?.[0] : undefined;
+  const reservedInfusionMana = character.class === 'Artificer'
+    ? Math.max(0, character.build?.sheetFeatureCounters?.[ARTIFICER_INFUSION_MP_RESERVED] ?? 0) : 0;
 
   return {
     effectiveAttributes,
@@ -1653,7 +1746,7 @@ export function deriveCharacter(
     combatMastery: mastery,
     maxHP: Math.max(1, classHealth(character.class, character.level) + effectiveAttributes.Might + ancestryHP + classFeatureHP),
     maxStamina: totals.stamina + martialPaths,
-    maxMana: totals.mana + spellcasterPaths * 3 + manaTraits + featureMana,
+    maxMana: Math.max(0, totals.mana + spellcasterPaths * 3 + manaTraits + featureMana - reservedInfusionMana),
     physicalDefense: 8 + mastery + effectiveAttributes.Agility + effectiveAttributes.Intelligence + equipment.pd + ancestryPD + classPD,
     arcaneDefense: 8 + mastery + effectiveAttributes.Might + effectiveAttributes.Charisma + equipment.ad + ancestryAD + classAD + Number(pactArmorActive),
     speed: Math.max(0, 5 + traitCount(character, chosenTraits, 'Speed Increase') - traitCount(character, chosenTraits, 'Short-Legged')
@@ -1662,20 +1755,20 @@ export function deriveCharacter(
     martialCheck: primeModifier + mastery,
     spellCheck: primeModifier + mastery,
     skillPointBudget: Math.max(0, 5 + effectiveAttributes.Intelligence + totals.skill + skillFeaturePoints + skillTalentPoints - skillConversions),
-    tradePointBudget: Math.max(0, 3 + totals.trade + paragonTradePoints + skillConversions * 2 - tradeConversions),
+    tradePointBudget: Math.max(0, 3 + totals.trade + paragonTradePoints + artificerTradePoints + apothecaryTradePoints + skillConversions * 2 - tradeConversions),
     languagePointBudget: 2 + tradeConversions * 2,
     ancestryPointBudget: ancestryPointBudget(character),
-    spellLimit: totals.spells + spellcasterPaths
+    spellLimit: Math.max(0, totals.spells + spellcasterPaths
       + selectedTalents.filter((name) => name === 'Spellcasting Expansion').length * 3
       + sorcererIntuitiveOrigins * 2
-      + Number(ownsFeature('Spellblade', 'Spellblade Disciplines', 1) && disciplines.has('Magus')),
+      + Number(ownsFeature('Spellblade', 'Spellblade Disciplines', 1) && disciplines.has('Magus')) - tradedSpellSlots),
     cantripLimit: totals.cantrips,
     maneuverLimit: totals.maneuvers + martialPaths
       + selectedTalents.filter((name) => name === 'Martial Expansion').length * 2
       + Number(ownsFeature('Spellblade', 'Spellblade Disciplines', 1) && disciplines.has('Warrior')),
-    physicalDR: Math.max(equipment.physicalDR, Number(equipment.isUnarmored && traitCount(character, chosenTraits, 'Natural Armor') > 0)),
-    elementalDR: equipment.elementalDR,
-    mysticalDR: equipment.mysticalDR + Number(pactArmorActive),
+    physicalDR: Math.max(equipment.physicalDR, Number(equipment.isUnarmored && traitCount(character, chosenTraits, 'Natural Armor') > 0), Number(manaCore === 'Damage Reduction — PDR')),
+    elementalDR: Math.max(equipment.elementalDR, Number(manaCore === 'Damage Reduction — EDR')),
+    mysticalDR: equipment.mysticalDR + Number(pactArmorActive) + Number(manaCore === 'Damage Reduction — MDR'),
     size: (() => {
       const sizeOrder = ['Tiny', 'Small', 'Medium', 'Large', 'Huge'];
       const baseIndex = chosenTraits.some((trait) => trait.name === 'Small-Sized') ? 1 : 2;

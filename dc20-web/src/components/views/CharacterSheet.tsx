@@ -51,6 +51,16 @@ import {
   PSION_DISRUPTION_PENDING,
   PSION_INVASION_ACTIVE,
   PSION_MIND_SENSE_ACTIVE,
+  PSION_OMEN_VALUE,
+  PSION_PSYCHOMETABOLISM_ACTIVE,
+  ARTIFICER_ACTIVE_INFUSIONS,
+  ARTIFICER_ENGINE_ACTIVE,
+  ARTIFICER_ENGINE_USED,
+  ARTIFICER_INFUSION_MP_RESERVED,
+  ARTIFICER_OVERDRIVE_ACTIVE,
+  ARTIFICER_OVERDRIVE_USED,
+  ARTIFICER_TINKERER_COUNT,
+  ARTIFICER_DAMAGE_USED,
   SORCERER_CELESTIAL_LIGHT_ACTIVE,
   SORCERER_CELESTIAL_OVERLOAD_USED,
   SORCERER_META_ACTIVE,
@@ -116,6 +126,7 @@ import {
 import { enforceEquipmentHandCapacity, isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped as toggleInventoryEquippedBase } from '../../utils/equipmentRules';
 import { generateUUID, rollDice, sortByName } from '../../utils/gameUtils';
 import { ownedClassFeatures, talentByName } from '../../utils/talentRules';
+import { artificerInfusions, artificerRituals } from '../../data/supplementalClasses';
 
 interface CharacterSheetProps {
   character: Character;
@@ -1902,6 +1913,131 @@ function SorcererControls({ character, onChange, onRoll }: {
   </section>;
 }
 
+function ArtificerControls({ character, onChange, onRoll }: {
+  character: Character;
+  onChange: (values: Partial<Character>) => void;
+  onRoll: (label: string, modifier: number, extraAdjustment?: number) => unknown;
+}) {
+  const build = character.build;
+  const [notice, setNotice] = useState('');
+  const [selectedInfusion, setSelectedInfusion] = useState('');
+  const [infusionPower, setInfusionPower] = useState(1);
+  const [ritualMP, setRitualMP] = useState(1);
+  const [armorType, setArmorType] = useState<'Light Armor' | 'Heavy Armor'>('Light Armor');
+  const [useArcaneArmorDiscount, setUseArcaneArmorDiscount] = useState(false);
+  if (!build) return null;
+  const states = build.sheetFeatureStates;
+  const selections = build.sheetFeatureSelections;
+  const counters = build.sheetFeatureCounters;
+  const manaCore = build.classFeatureSelections['artificer.manaCore']?.[0] ?? '';
+  const knownInfusions = Array.from(new Set([
+    ...(build.classFeatureSelections['artificer.infusions'] ?? []),
+    ...(character.subclass === 'Apothecary' ? ['Spell Potion', 'Spell Bomb'] : []),
+  ]));
+  const activeInfusions = (selections[ARTIFICER_ACTIVE_INFUSIONS] ?? '').split('|').filter(Boolean);
+  const reservedMP = Math.max(0, counters[ARTIFICER_INFUSION_MP_RESERVED] ?? 0);
+  const tinkererCount = Math.max(0, counters[ARTIFICER_TINKERER_COUNT] ?? 0);
+  const enginePower = Math.max(1, counters['artificer.artificeEngine.power'] ?? 1);
+  const hasArtificeEngine = (build.selectedTalents ?? []).includes('Artifice Engine');
+  const updateBuild = (
+    nextStates = states,
+    nextSelections = selections,
+    values: Partial<Character> = {},
+    nextCounters = counters,
+  ) => onChange({
+    ...values,
+    build: { ...build, sheetFeatureStates: nextStates, sheetFeatureSelections: nextSelections, sheetFeatureCounters: nextCounters },
+  });
+  const infusionRecord = artificerInfusions.find(({ name }) => name === selectedInfusion);
+  const fixedPowerMatch = infusionRecord?.description.match(/Magic Power:\s*(\d+)/i);
+  const minimumPower = fixedPowerMatch ? Number(fixedPowerMatch[1]) : 1;
+  const chosenPower = fixedPowerMatch ? minimumPower : Math.max(1, infusionPower);
+  const arcaneArmorDiscountAvailable = character.subclass === 'Armorer'
+    && !states['artificer.arcaneArmor.discountUsed'];
+  const infusionCost = Math.max(0, chosenPower - Number(arcaneArmorDiscountAvailable && useArcaneArmorDiscount));
+  const applyInfusion = () => {
+    if (!selectedInfusion || character.currentAP < 1 || character.manaPoints < infusionCost) return;
+    const entry = `${selectedInfusion}::${chosenPower}::${infusionCost}`;
+    updateBuild({
+      ...states,
+      ...(arcaneArmorDiscountAvailable && useArcaneArmorDiscount ? { 'artificer.arcaneArmor.discountUsed': true } : {}),
+    }, { ...selections, [ARTIFICER_ACTIVE_INFUSIONS]: [...activeInfusions, entry].join('|') }, {
+      currentAP: character.currentAP - 1,
+      manaPoints: character.manaPoints - infusionCost,
+      maxManaPoints: Math.max(0, character.maxManaPoints - infusionCost),
+    }, { ...counters, [ARTIFICER_INFUSION_MP_RESERVED]: reservedMP + infusionCost });
+    setUseArcaneArmorDiscount(false);
+    setNotice(`${selectedInfusion} applied at Magic Power ${chosenPower}. Maximum MP is reduced by ${infusionCost} until this Infusion ends.`);
+  };
+  const endInfusion = (index: number) => {
+    if (character.currentAP < 1) return;
+    const parts = activeInfusions[index]?.split('::') ?? [];
+    const power = Math.max(0, Number(parts[2] ?? parts[1]) || 0);
+    const next = activeInfusions.filter((_, candidate) => candidate !== index);
+    updateBuild(states, { ...selections, [ARTIFICER_ACTIVE_INFUSIONS]: next.join('|') }, {
+      currentAP: character.currentAP - 1,
+      maxManaPoints: character.maxManaPoints + power,
+    }, { ...counters, [ARTIFICER_INFUSION_MP_RESERVED]: Math.max(0, reservedMP - power) });
+    setNotice(`Infusion ended. Maximum MP increased by ${power}; lost MP was not restored.`);
+  };
+  const overdrive = () => {
+    if (!manaCore || states[ARTIFICER_OVERDRIVE_USED]) return;
+    const remainsArmed = manaCore === 'Damage' || manaCore === 'Focused' || manaCore.startsWith('Damage Reduction');
+    updateBuild({ ...states, [ARTIFICER_OVERDRIVE_USED]: true, [ARTIFICER_OVERDRIVE_ACTIVE]: remainsArmed });
+    setNotice(manaCore === 'Speed'
+      ? 'Overdrive: Teleport up to 5 Spaces to an unoccupied Space you can see.'
+      : `Overdrive armed for the next applicable ${manaCore === 'Damage' ? 'Attack' : manaCore === 'Focused' ? 'Spell Check' : 'damage instance'}.`);
+  };
+  const resetInitiative = () => {
+    updateBuild({
+      ...states,
+      [ARTIFICER_OVERDRIVE_USED]: false,
+      [ARTIFICER_OVERDRIVE_ACTIVE]: false,
+      [ARTIFICER_ENGINE_USED]: false,
+      [ARTIFICER_ENGINE_ACTIVE]: false,
+      [ARTIFICER_DAMAGE_USED]: false,
+    });
+    setNotice('Initiative rolled: Overdrive and Artifice Engine are available again.');
+  };
+  const reduceOverdriveDamage = () => {
+    if (!states[ARTIFICER_OVERDRIVE_ACTIVE] || !manaCore.startsWith('Damage Reduction')) return;
+    updateBuild({ ...states, [ARTIFICER_OVERDRIVE_ACTIVE]: false });
+    setNotice(`Overdrive reduced the damage taken by ${character.primeModifier}.`);
+  };
+  const armEngine = () => {
+    if (!hasArtificeEngine || states[ARTIFICER_ENGINE_USED]) return;
+    updateBuild({ ...states, [ARTIFICER_ENGINE_USED]: true, [ARTIFICER_ENGINE_ACTIVE]: true }, selections, {}, {
+      ...counters,
+      'artificer.artificeEngine.power': enginePower,
+    });
+    setNotice(`Artifice Engine armed: next Spell gains ADV and its MP cost is reduced by ${enginePower}. The item becomes Mundane for 12 hours or until your Long Rest.`);
+  };
+  const restoreCharges = () => {
+    const cost = Math.max(1, ritualMP);
+    if (character.currentAP < 1 || character.manaPoints < cost) return;
+    updateBuild(states, selections, { currentAP: character.currentAP - 1, manaPoints: character.manaPoints - cost });
+    setNotice(`Restore Magic Charges restored ${cost} spent Charge${cost === 1 ? '' : 's'} to the touched Magic Item.`);
+  };
+  const designateArcaneArmor = () => {
+    updateBuild(states, { ...selections, 'artificer.arcaneArmor.type': armorType });
+    setNotice(`${armorType} designated as Arcane Armor after a Long Rest.`);
+  };
+
+  return <section className="rounded-2xl border border-amber-400/25 bg-gradient-to-br from-amber-950/35 via-violet-950/30 to-slate-950/75 p-4 sm:p-5">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">Live Class Features</p><h2 className="text-xl font-black text-white">Artificer Controls</h2></div><button type="button" onClick={resetInitiative} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white">Roll Initiative / New Combat</button></div>
+    {notice && <p role="status" className="mb-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-bold leading-5 text-amber-100">{notice}</p>}
+    <div className="grid gap-4 xl:grid-cols-2">
+      <div className="rounded-xl border border-violet-400/20 bg-slate-950/55 p-4 xl:col-span-2"><h3 className="font-black text-violet-200">Infusion Magic</h3><p className="mt-1 text-xs leading-5 text-slate-500">Apply a known Infusion to a mundane item for 1 AP and MP equal to its Magic Power. That MP also reduces maximum MP until the Infusion ends.</p><div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]"><select value={selectedInfusion} onChange={(event) => { setSelectedInfusion(event.target.value); setInfusionPower(1); }} className={fieldClass}><option value="">Choose a known Infusion</option>{knownInfusions.map((name) => <option key={name}>{name}</option>)}</select><div className="flex items-center gap-2 rounded-lg bg-slate-900 px-2"><button type="button" disabled={Boolean(fixedPowerMatch) || infusionPower <= 1} onClick={() => setInfusionPower((value) => Math.max(1, value - 1))}>−</button><span className="min-w-20 text-center text-xs font-black text-violet-200">Power {chosenPower}</span><button type="button" disabled={Boolean(fixedPowerMatch) || infusionPower >= Math.max(1, character.manaPoints)} onClick={() => setInfusionPower((value) => Math.min(Math.max(1, character.manaPoints), value + 1))}>+</button></div><button type="button" disabled={!selectedInfusion || character.currentAP < 1 || character.manaPoints < infusionCost} onClick={applyInfusion} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Apply • 1 AP + {infusionCost} MP</button></div>{character.subclass === 'Armorer' && <label className={`mt-3 flex items-center gap-2 rounded-lg border border-white/10 p-2 text-xs ${arcaneArmorDiscountAvailable ? 'text-sky-200' : 'text-slate-600'}`}><input type="checkbox" checked={useArcaneArmorDiscount && arcaneArmorDiscountAvailable} disabled={!arcaneArmorDiscountAvailable} onChange={(event) => setUseArcaneArmorDiscount(event.target.checked)} />Apply to Arcane Armor using its once-per-Long-Rest 1 MP discount{!arcaneArmorDiscountAvailable ? ' • used' : ''}</label>}{infusionRecord && <details className="mt-3 rounded-lg border border-white/10 bg-slate-900/60 p-3"><summary className="cursor-pointer text-xs font-black text-violet-200">Infusion details</summary><p className="mt-3 whitespace-pre-wrap text-xs leading-5 text-slate-400">{infusionRecord.description}</p></details>}<div className="mt-3 space-y-2">{activeInfusions.map((entry, index) => { const [name, power, spent] = entry.split('::'); return <div key={`${entry}-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-emerald-500/10 p-2 text-xs text-emerald-100"><span><strong>{name}</strong> • Magic Power {power} • {spent ?? power} MP reserved</span><button type="button" disabled={character.currentAP < 1} onClick={() => endInfusion(index)} className="rounded bg-slate-800 px-2 py-1 font-black disabled:opacity-35">End • 1 AP</button></div>; })}{activeInfusions.length === 0 && <p className="text-xs text-slate-600">No active Infusions • {reservedMP} maximum MP reserved</p>}</div></div>
+      <div className="rounded-xl border border-cyan-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-cyan-200">Mana Core</h3><p className="mt-1 text-xs text-slate-500">Selected benefit: <strong className="text-cyan-100">{manaCore || 'Choose in the builder'}</strong></p><button type="button" disabled={!manaCore || Boolean(states[ARTIFICER_OVERDRIVE_USED])} onClick={overdrive} className="mt-3 w-full rounded-lg bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[ARTIFICER_OVERDRIVE_USED] ? 'Overdrive used' : 'Use Overdrive'}</button>{manaCore === 'Damage' && <button type="button" disabled={!states[ARTIFICER_DAMAGE_USED]} onClick={() => updateBuild({ ...states, [ARTIFICER_DAMAGE_USED]: false })} className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-slate-300 disabled:opacity-35">Start new Round • refresh +1 damage</button>}{manaCore.startsWith('Damage Reduction') && states[ARTIFICER_OVERDRIVE_ACTIVE] && <button type="button" onClick={reduceOverdriveDamage} className="mt-2 w-full rounded-lg bg-sky-800 px-3 py-2 text-xs font-black text-white">Reduce damage by {character.primeModifier}</button>}<p className="mt-2 text-[10px] leading-4 text-slate-500">Once per Long Rest; refreshes when Initiative is rolled. Damage and Focused Overdrives clear on their next applicable roll.</p></div>
+      <div className="rounded-xl border border-emerald-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-emerald-200">Tinkerer</h3><p className="mt-1 text-xs leading-5 text-slate-500">Create Igniters, Illuminators, Recorders, or Holograms in 10 minutes. Maximum active devices: {Math.max(0, character.primeModifier)}.</p><div className="mt-3 flex items-center justify-between rounded-lg bg-slate-900 p-2"><button type="button" disabled={tinkererCount <= 0} onClick={() => updateBuild(states, selections, {}, { ...counters, [ARTIFICER_TINKERER_COUNT]: Math.max(0, tinkererCount - 1) })} className="h-8 w-8 rounded bg-slate-800 disabled:opacity-35">−</button><strong className="text-emerald-200">{tinkererCount} active</strong><button type="button" disabled={tinkererCount >= Math.max(0, character.primeModifier)} onClick={() => updateBuild(states, selections, {}, { ...counters, [ARTIFICER_TINKERER_COUNT]: tinkererCount + 1 })} className="h-8 w-8 rounded bg-emerald-700 disabled:opacity-35">+</button></div></div>
+      <div className="rounded-xl border border-fuchsia-400/20 bg-slate-950/55 p-4 xl:col-span-2"><h3 className="font-black text-fuchsia-200">Magical Craftsman Rituals</h3><div className="mt-3 grid gap-2 md:grid-cols-2">{artificerRituals.map((ritual) => <details key={ritual.name} className="rounded-lg border border-white/10 bg-slate-900/60 p-3"><summary className="cursor-pointer text-xs font-black text-fuchsia-200">{ritual.name}</summary><p className="mt-3 whitespace-pre-wrap text-xs leading-5 text-slate-400">{ritual.description}</p>{ritual.name === 'Identify' && <button type="button" onClick={() => onRoll('Identify Spell Check', character.primeModifier + character.combatMastery)} className="mt-3 rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white">Roll Identify</button>}{ritual.name === 'Restore Magic Charges' && <div className="mt-3 flex flex-wrap items-center gap-2"><button type="button" disabled={ritualMP <= 1} onClick={() => setRitualMP((value) => Math.max(1, value - 1))} className="h-8 w-8 rounded bg-slate-800 disabled:opacity-35">−</button><strong className="text-fuchsia-100">{ritualMP} MP</strong><button type="button" onClick={() => setRitualMP((value) => value + 1)} className="h-8 w-8 rounded bg-fuchsia-800">+</button><button type="button" disabled={character.currentAP < 1 || character.manaPoints < ritualMP} onClick={restoreCharges} className="rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Restore {ritualMP} Charges • 1 AP</button></div>}</details>)}</div></div>
+      {hasArtificeEngine && <div className="rounded-xl border border-orange-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-orange-200">Artifice Engine</h3><p className="mt-1 text-xs leading-5 text-slate-500">Reduce the next Spell’s MP cost by the item’s Magic Power and gain ADV on its Check. The item becomes Mundane as described by the Talent.</p><div className="mt-3 flex items-center justify-between rounded-lg bg-slate-900 p-2"><button type="button" disabled={enginePower <= 1} onClick={() => updateBuild(states, selections, {}, { ...counters, 'artificer.artificeEngine.power': Math.max(1, enginePower - 1) })}>−</button><strong className="text-orange-100">Item Power {enginePower}</strong><button type="button" onClick={() => updateBuild(states, selections, {}, { ...counters, 'artificer.artificeEngine.power': enginePower + 1 })}>+</button></div><button type="button" disabled={Boolean(states[ARTIFICER_ENGINE_USED])} onClick={armEngine} className="mt-3 w-full rounded-lg bg-orange-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[ARTIFICER_ENGINE_ACTIVE] ? 'Armed' : states[ARTIFICER_ENGINE_USED] ? 'Used' : 'Arm next Spell'}</button></div>}
+      {character.subclass === 'Apothecary' && <div className="rounded-xl border border-lime-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-lime-200">Potions & Poisons</h3><p className="mt-1 text-xs leading-5 text-slate-400"><strong>Bless:</strong> target adds a d4 on its next Check within 1 minute.<br /><strong>Bane:</strong> target subtracts a d4 on its next Check within 1 minute.</p><p className="mt-2 text-[10px] text-slate-500">Spell Potion and Spell Bomb are automatically added to known Infusions above.</p></div>}
+      {character.subclass === 'Armorer' && <div className="rounded-xl border border-sky-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-sky-200">Arcane Armor</h3><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]"><select value={armorType} onChange={(event) => setArmorType(event.target.value as 'Light Armor' | 'Heavy Armor')} className={fieldClass}><option>Light Armor</option><option>Heavy Armor</option></select><button type="button" onClick={designateArcaneArmor} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white">Designate after Long Rest</button></div><p className="mt-3 text-xs leading-5 text-slate-400">Once per Long Rest, one Infusion on the Arcane Armor costs 1 less MP (minimum 0). Spend 1 AP to recall it from within 10 Spaces. Overdrive: Light Armor grants Invisibility and prevents Opportunity Attacks for 1 Round; Heavy Armor grants a 1-Space Aura imposing DisADV on Attacks against chosen creatures for 1 Round.</p><button type="button" disabled={character.currentAP < 1} onClick={() => { onChange({ currentAP: character.currentAP - 1 }); setNotice('Arcane Armor recalled from within 10 Spaces and equips/attunes as permitted by the Feature.'); }} className="mt-3 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Recall Arcane Armor • 1 AP</button></div>}
+    </div>
+  </section>;
+}
+
 function PsionControls({ character, onChange, onRoll }: {
   character: Character;
   onChange: (values: Partial<Character>) => void;
@@ -1910,12 +2046,21 @@ function PsionControls({ character, onChange, onRoll }: {
   const build = character.build;
   const [mentalSave, setMentalSave] = useState<'Intelligence' | 'Charisma'>('Intelligence');
   const [enhancementResource, setEnhancementResource] = useState<'AP' | 'SP'>('AP');
+  const [newOmen, setNewOmen] = useState(10);
+  const [thirdEyeAttribute, setThirdEyeAttribute] = useState<DC20Attribute>('Intelligence');
   const [notice, setNotice] = useState('');
   if (!build) return null;
   const states = build.sheetFeatureStates;
   const selections = build.sheetFeatureSelections;
   const counters = build.sheetFeatureCounters;
   const mindSenseActive = Boolean(states[PSION_MIND_SENSE_ACTIVE]);
+  const isOracle = character.subclass === 'Oracle';
+  const isPsiKnight = character.subclass === 'Psi-Knight';
+  const greaterTelekinesis = (build.selectedTalents ?? []).includes('Greater Telekinesis');
+  const psionicFortress = (build.selectedTalents ?? []).includes('Psionic Fortress');
+  const omen = Math.min(20, Math.max(1, counters[PSION_OMEN_VALUE] ?? 10));
+  const mindOverMatterAttribute = (selections['psion.psiKnight.mindOverMatter'] ?? 'Intelligence') as DC20Attribute;
+  const mindOverMatterValue = character.attributes[mindOverMatterAttribute].modifier;
   const invasion = selections[PSION_INVASION_ACTIVE] ?? '';
   const spellCheck = character.primeModifier + character.combatMastery;
   const pendingEnhancements = [
@@ -1957,7 +2102,15 @@ function PsionControls({ character, onChange, onRoll }: {
   };
   const startMindSense = () => {
     if (character.currentAP < 1 || character.manaPoints < 1) return;
-    updateBuild({ ...states, [PSION_MIND_SENSE_ACTIVE]: true }, selections, {
+    if (isPsiKnight) onChange({
+      currentAP: character.currentAP - 1,
+      manaPoints: character.manaPoints - 1,
+      build: {
+        ...build,
+        temporaryHP: Math.max(build.temporaryHP, 2),
+        sheetFeatureStates: { ...states, [PSION_MIND_SENSE_ACTIVE]: true },
+      },
+    }); else updateBuild({ ...states, [PSION_MIND_SENSE_ACTIVE]: true }, selections, {
       currentAP: character.currentAP - 1,
       manaPoints: character.manaPoints - 1,
     });
@@ -1966,8 +2119,29 @@ function PsionControls({ character, onChange, onRoll }: {
   const endMindSense = () => {
     const nextSelections = { ...selections };
     delete nextSelections[PSION_INVASION_ACTIVE];
-    updateBuild({ ...states, [PSION_MIND_SENSE_ACTIVE]: false }, nextSelections);
+    updateBuild({ ...states, [PSION_MIND_SENSE_ACTIVE]: false }, nextSelections, {}, {
+      ...counters,
+      ...(isOracle ? { [PSION_OMEN_VALUE]: 10 } : {}),
+    });
     setNotice('Mind Sense and its Invade Mind effect ended.');
+  };
+  const useForesight = () => {
+    if (!isOracle || !mindSenseActive || character.currentAP < 1 || character.stamina < 1) return;
+    updateBuild(states, selections, { currentAP: character.currentAP - 1, stamina: character.stamina - 1 }, {
+      ...counters,
+      [PSION_OMEN_VALUE]: Math.min(20, Math.max(1, newOmen)),
+    });
+    setNotice(`Foresight replaced the creature’s d20 with ${omen}. Its original d20 result (${Math.min(20, Math.max(1, newOmen))}) is your new Omen.`);
+  };
+  const usePsychometabolism = () => {
+    if (!isPsiKnight || character.stamina < 1 || states[PSION_PSYCHOMETABOLISM_ACTIVE]) return;
+    updateBuild({ ...states, [PSION_PSYCHOMETABOLISM_ACTIVE]: true }, selections, { stamina: character.stamina - 1 });
+    setNotice('Psychometabolism grants +5 Speed and Jump Distance until the start of your next turn.');
+  };
+  const protectMind = () => {
+    if (!psionicFortress || !mindSenseActive || character.currentAP < 1) return;
+    onChange({ currentAP: character.currentAP - 1 });
+    setNotice('Psionic Fortress grants ADV to the detected creature’s Mental Check or Save; this may be used after its d20 is rolled.');
   };
   const invadeMind = (option: 'Read Emotions' | 'Read Thoughts') => {
     if (!mindSenseActive || character.currentAP < 1 || character.stamina < 1) return;
@@ -1986,8 +2160,11 @@ function PsionControls({ character, onChange, onRoll }: {
       <div className="rounded-xl border border-sky-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-sky-200">Psion Stamina</h3><p className="mt-1 text-xs leading-5 text-slate-500">Regain 1 SP when at least one creature fails a Mental Save you impose. The trigger has no published once-per-round limit.</p><button type="button" disabled={character.stamina >= character.maxStamina} onClick={recordMentalFailure} className="mt-3 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Record failed Mental Save • +1 SP</button></div>
       <div className="rounded-xl border border-violet-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-violet-200">Psionic Mind</h3><p className="mt-1 text-xs leading-5 text-slate-500">Spend 1 SP when making a Physical Save to make a Mental Save instead.</p><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]"><select value={mentalSave} onChange={(event) => setMentalSave(event.target.value as 'Intelligence' | 'Charisma')} className={fieldClass}><option>Intelligence</option><option>Charisma</option></select><button type="button" disabled={character.stamina < 1} onClick={substituteMentalSave} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Roll • 1 SP</button></div><button type="button" disabled={character.stamina < 1} onClick={convertStaminaForEnhancement} className="mt-2 w-full rounded-lg bg-sky-800 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Pay 1 SP toward another AP Enhancement{convertedEnhancementSP ? ` • ${convertedEnhancementSP} reserved` : ''}</button></div>
       <div className="rounded-xl border border-fuchsia-400/20 bg-slate-950/55 p-4 xl:col-span-2"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-black text-fuchsia-200">Psionic Spell Enhancements</h3><p className="mt-1 text-xs leading-5 text-slate-500">Arm one or more enhancements, then cast a Spell. Each armed option is recorded on that Spell roll and cleared automatically.</p></div><label className="text-xs font-bold text-slate-400">Daze / Disruption cost<select value={enhancementResource} onChange={(event) => setEnhancementResource(event.target.value as 'AP' | 'SP')} className="ml-2 rounded border border-slate-600 bg-slate-950 px-2 py-1"><option value="AP">1 AP</option><option value="SP">1 SP</option></select></label></div><div className="mt-3 grid gap-2 md:grid-cols-3"><button type="button" disabled={Boolean(states[PSION_DAZE_PENDING]) || (enhancementResource === 'AP' ? character.currentAP < 1 : character.stamina < 1)} onClick={() => armEnhancement(PSION_DAZE_PENDING, 'Daze', enhancementResource)} className="rounded-lg bg-fuchsia-800 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Daze • 1 {enhancementResource}</button><button type="button" disabled={Boolean(states[PSION_DISRUPTION_PENDING]) || (enhancementResource === 'AP' ? character.currentAP < 1 : character.stamina < 1)} onClick={() => armEnhancement(PSION_DISRUPTION_PENDING, 'Disruption', enhancementResource)} className="rounded-lg bg-fuchsia-800 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Disruption • 1 {enhancementResource}</button><button type="button" disabled={Boolean(states[PSION_COMPONENTLESS_PENDING]) || character.manaPoints < 1} onClick={() => armEnhancement(PSION_COMPONENTLESS_PENDING, 'Psionic', 'MP')} className="rounded-lg bg-violet-800 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Psionic • 1 MP</button></div>{pendingEnhancements.length > 0 && <p className="mt-3 rounded-lg bg-fuchsia-500/10 p-2 text-xs font-bold text-fuchsia-100">Armed: {pendingEnhancements.join(' + ')}</p>}<div className="mt-3 grid gap-2 text-xs text-slate-400 md:grid-cols-3"><p><strong className="text-slate-200">Daze:</strong> Mental Save; failure causes Dazed on the next Mental Check before the end of your next turn.</p><p><strong className="text-slate-200">Disruption:</strong> Mental Save; failure ends Concentration.</p><p><strong className="text-slate-200">Psionic:</strong> removes Verbal and Somatic Components.</p></div></div>
-      <div className="rounded-xl border border-cyan-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-cyan-200">Telekinesis</h3><p className="mt-1 text-xs leading-5 text-slate-500">5 Spaces • 1 target • Medium Size • unheld, unsecured objects up to 100lbs (45kg).</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => rollTelekinesis('Object Action')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Object</button><button type="button" onClick={() => rollTelekinesis('Shove')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Shove</button><button type="button" onClick={() => rollTelekinesis('Grapple')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Grapple</button><button type="button" onClick={() => rollTelekinesis('Grapple Maneuver')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Grapple Maneuver</button></div><p className="mt-3 text-xs leading-5 text-slate-400">Vertical Shoves halve distance. Body Block requires you or the attacker within 1 Space. Throw uses Prime Modifier instead of Might and starts from the target’s Space.</p></div>
+      <div className="rounded-xl border border-cyan-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-cyan-200">Telekinesis</h3><p className="mt-1 text-xs leading-5 text-slate-500">{greaterTelekinesis ? '10 Spaces • 2 targets • Large Size • objects up to 200lbs.' : '5 Spaces • 1 target • Medium Size • unheld, unsecured objects up to 100lbs (45kg).'}</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => rollTelekinesis('Object Action')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Object</button><button type="button" onClick={() => rollTelekinesis('Shove')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Shove</button><button type="button" onClick={() => rollTelekinesis('Grapple')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Grapple</button><button type="button" onClick={() => rollTelekinesis('Grapple Maneuver')} className="rounded-lg bg-cyan-800 px-3 py-2 text-xs font-black text-white">Grapple Maneuver</button></div><p className="mt-3 text-xs leading-5 text-slate-400">Vertical Shoves halve distance. Body Block requires you or the attacker within 1 Space. Throw uses Prime Modifier instead of Might and starts from the target’s Space.{greaterTelekinesis ? ' Once each turn, freely move each held object anywhere within range.' : ''}</p></div>
       {character.level >= 2 && <div className="rounded-xl border border-indigo-400/20 bg-slate-950/55 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black text-indigo-200">Mind Sense</h3><p className="mt-1 text-xs leading-5 text-slate-500">1 AP + 1 MP • 10 Spaces • 1 minute</p></div>{mindSenseActive && <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-black uppercase text-emerald-200">Active</span>}</div>{mindSenseActive ? <><p className="mt-3 rounded-lg bg-indigo-500/10 p-2 text-xs text-indigo-100">Qualifying creatures are detected through Full Cover, considered seen, and take +1 Psychic damage from you.</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" disabled={character.currentAP < 1 || character.stamina < 1} onClick={() => invadeMind('Read Emotions')} className="rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Read Emotions • 1 AP + 1 SP</button><button type="button" disabled={character.currentAP < 1 || character.stamina < 1} onClick={() => invadeMind('Read Thoughts')} className="rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Read Thoughts • 1 AP + 1 SP</button></div>{invasion && <div className="mt-3 rounded-lg bg-violet-500/10 p-2 text-xs text-violet-100"><strong>{invasion} active:</strong> {invasion === 'Read Emotions' ? 'ADV on Charisma Checks against the target is applied automatically.' : 'The target has DisADV on Attacks against you.'}<button type="button" onClick={() => { const next = { ...selections }; delete next[PSION_INVASION_ACTIVE]; updateBuild(states, next); }} className="ml-2 font-black text-rose-300">Clear</button></div>}<button type="button" onClick={endMindSense} className="mt-3 w-full rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">End Mind Sense</button></> : <button type="button" disabled={character.currentAP < 1 || character.manaPoints < 1} onClick={startMindSense} className="mt-3 w-full rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Open Mind • 1 AP + 1 MP</button>}</div>}
+      {isOracle && <div className="rounded-xl border border-amber-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-amber-200">Foresight • Omen {omen}</h3><p className="mt-1 text-xs leading-5 text-slate-500">While Mind Sense is active, spend 1 AP and 1 SP as a Reaction to replace a detected creature’s d20 result with your Omen. Its original d20 result becomes your new Omen.</p><label className="mt-3 block text-xs font-bold text-slate-400">Creature’s original d20 result<input type="number" min={1} max={20} value={newOmen} onChange={(event) => setNewOmen(Math.min(20, Math.max(1, Number(event.target.value))))} className={`${fieldClass} mt-1`} /></label><button type="button" disabled={!mindSenseActive || character.currentAP < 1 || character.stamina < 1} onClick={useForesight} className="mt-3 w-full rounded-lg bg-amber-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Replace with {omen} • Reaction • 1 AP + 1 SP</button><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]"><select value={thirdEyeAttribute} onChange={(event) => setThirdEyeAttribute(event.target.value as DC20Attribute)} className={fieldClass}>{ATTRIBUTE_NAMES.map((attribute) => <option key={attribute}>{attribute}</option>)}</select><button type="button" onClick={() => onRoll(`Third Eye — ${thirdEyeAttribute} Check`, character.attributes[thirdEyeAttribute].modifier, 1)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white">Third Eye • ADV</button></div></div>}
+      {isPsiKnight && <div className="rounded-xl border border-sky-400/20 bg-slate-950/55 p-4"><h3 className="font-black text-sky-200">Psionic Combatant</h3><p className="mt-1 text-xs leading-5 text-slate-500">All Weapons, Armor, Shields, and Attack Maneuvers are granted. Daze and Disruption may be applied to Martial Attacks. Mind Sense grants 2 Temp HP immediately and at each turn start.</p><button type="button" disabled={character.stamina < 1 || Boolean(states[PSION_PSYCHOMETABOLISM_ACTIVE])} onClick={usePsychometabolism} className="mt-3 w-full rounded-lg bg-sky-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">{states[PSION_PSYCHOMETABOLISM_ACTIVE] ? '+5 Speed & Jump active' : 'Psychometabolism • 1 SP'}</button><label className="mt-3 block text-xs font-bold text-slate-400">Mind Over Matter Attribute<select value={mindOverMatterAttribute} onChange={(event) => updateBuild(states, { ...selections, 'psion.psiKnight.mindOverMatter': event.target.value })} className={`${fieldClass} mt-1`}><option>Intelligence</option><option>Charisma</option></select></label><p className="mt-2 text-xs leading-5 text-sky-100">Jump Distance: {Math.max(1, mindOverMatterValue) + Number(states[PSION_PSYCHOMETABOLISM_ACTIVE]) * 5} Spaces{states[PSION_PSYCHOMETABOLISM_ACTIVE] ? ' while Psychometabolism is active' : ''}. Use {mindOverMatterAttribute} ({mindOverMatterValue >= 0 ? '+' : ''}{mindOverMatterValue}) for push, drag, lift, and carry calculations.</p></div>}
+      {psionicFortress && <div className="rounded-xl border border-purple-400/20 bg-slate-950/55 p-4 xl:col-span-2"><h3 className="font-black text-purple-200">Psionic Fortress</h3><p className="mt-1 text-xs leading-5 text-slate-400">During Mind Sense, your thoughts can’t be read against your will; Psychic Resistance (Half) and ADV on Intelligence Saves are applied to the sheet.</p><button type="button" disabled={!mindSenseActive || character.currentAP < 1} onClick={protectMind} className="mt-3 rounded-lg bg-purple-700 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Grant detected creature ADV • Reaction • 1 AP</button></div>}
     </div>
   </section>;
 }
@@ -2141,11 +2318,12 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const isMonk = character.class === 'Monk';
   const isSorcerer = character.class === 'Sorcerer';
   const isPsion = character.class === 'Psion';
+  const isArtificer = character.class === 'Artificer';
   const isWizard = character.class === 'Wizard';
   const hasRageFeature = isBarbarian || allOwnedClassFeatures.some(({ className, name }) => className === 'Barbarian' && name === 'Rage');
   const hasMartialExpansion = (build?.selectedTalents ?? []).includes('Martial Expansion');
   const martialExpansionRegen = build?.classFeatureSelections[MARTIAL_EXPANSION_REGEN]?.[0] ?? 'Choose in Builder';
-  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter || isMonk || isSorcerer || isPsion || isWizard || multiclassFeatures.length > 0 || hasMartialExpansion;
+  const hasLiveClassControls = isBarbarian || isRogue || isSummoner || isSpellblade || isWarlock || isCleric || isBard || isChampion || isCommander || isDruid || isHunter || isMonk || isSorcerer || isPsion || isArtificer || isWizard || multiclassFeatures.length > 0 || hasMartialExpansion;
   const isRaging = hasRageFeature && Boolean(featureStates[BARBARIAN_RAGE_STATE]);
   const isOverloaded = Boolean(featureStates[SORCERER_OVERLOAD_ACTIVE]);
   const hasExpertSorcererFeature = allOwnedClassFeatures.some(({ className, name }) => className === 'Sorcerer' && name === 'Expert Sorcerer');
@@ -2237,6 +2415,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
 
   const roll = (label: string, modifier: number, extraAdjustment = 0): RollOutcome => {
     const isSpellRoll = label.endsWith(' Spell Check') || label.endsWith(' Spell Attack');
+    const isMartialAttackRoll = label.includes('Martial Attack');
     const isCheckOrSave = label.includes('Check') || label.endsWith(' Save');
     const pactSpellName = label.endsWith(' Spell Check') ? label.slice(0, -' Spell Check'.length)
       : label.endsWith(' Spell Attack') ? label.slice(0, -' Spell Attack'.length) : '';
@@ -2284,10 +2463,18 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     const psionSpell = isPsion && isSpellRoll ? spellCatalog.find(({ name }) => name === pactSpellName) : undefined;
     const psionSpellTags = (psionSpell?.tags ?? '').split(',').map((tag) => tag.trim());
     const psionMindSenseDamageApplies = Boolean(psionSpell && featureStates[PSION_MIND_SENSE_ACTIVE] && psionSpellTags.includes('Psychic'));
-    const psionDazeApplies = Boolean(isPsion && isSpellRoll && featureStates[PSION_DAZE_PENDING]);
-    const psionDisruptionApplies = Boolean(isPsion && isSpellRoll && featureStates[PSION_DISRUPTION_PENDING]);
+    const psionEnhancementRoll = isSpellRoll || (isPsion && character.subclass === 'Psi-Knight' && isMartialAttackRoll);
+    const psionDazeApplies = Boolean(isPsion && psionEnhancementRoll && featureStates[PSION_DAZE_PENDING]);
+    const psionDisruptionApplies = Boolean(isPsion && psionEnhancementRoll && featureStates[PSION_DISRUPTION_PENDING]);
     const psionComponentlessApplies = Boolean(isPsion && isSpellRoll && featureStates[PSION_COMPONENTLESS_PENDING]);
-    const psionConvertedEnhancementSP = isPsion && isSpellRoll ? Math.max(0, featureCounters[PSION_AP_ENHANCEMENT_SP] ?? 0) : 0;
+    const psionConvertedEnhancementSP = isPsion && psionEnhancementRoll ? Math.max(0, featureCounters[PSION_AP_ENHANCEMENT_SP] ?? 0) : 0;
+    const artificerManaCore = isArtificer ? build?.classFeatureSelections['artificer.manaCore']?.[0] : undefined;
+    const artificerOverdriveActive = Boolean(isArtificer && featureStates[ARTIFICER_OVERDRIVE_ACTIVE]);
+    const artificerCoreDamageApplies = Boolean(isArtificer && artificerManaCore === 'Damage'
+      && label.includes('Attack') && !featureStates[ARTIFICER_DAMAGE_USED]);
+    const artificerFocusedOverdrive = Boolean(artificerOverdriveActive && artificerManaCore === 'Focused' && label.endsWith(' Spell Check'));
+    const artificerDamageOverdrive = Boolean(artificerOverdriveActive && artificerManaCore === 'Damage' && label.includes('Attack'));
+    const artificerEngineApplies = Boolean(isArtificer && isSpellRoll && featureStates[ARTIFICER_ENGINE_ACTIVE]);
     const wizardSpell = isWizard && isSpellRoll ? spellCatalog.find(({ name }) => name === pactSpellName) : undefined;
     const wizardSpellTags = (wizardSpell?.tags ?? '').split(',').map((tag) => tag.trim());
     const wizardPreparedSpells = (featureSelections[WIZARD_PREPARED_ACTIVE]
@@ -2311,13 +2498,15 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       + Number(wizardManaLimitBreakApplies && (build?.selectedTalents ?? []).includes('Overly Prepared Spellcaster'));
     const featureAdjustment = warlockAdvantage + Number(clericChaosApplies) + Number(championReadinessApplies) + Number(fastReflexesApplies)
       + Number(hunterMarkAttackApplies) + hunterTerrainAdvantage + Number(hunterBigGameApplies) + hunterConcoctionAdvantage
-      + sorcererNextSpellAdvantage + sorcererWildAdjustment + psionReadEmotionsAdvantage + wizardFeatureAdjustment;
+      + sorcererNextSpellAdvantage + sorcererWildAdjustment + psionReadEmotionsAdvantage + wizardFeatureAdjustment
+      + Number(artificerEngineApplies);
     const totalAdjustment = Math.max(-5, Math.min(5, rollAdjustment + featureAdjustment + Number(monkBearApplies) + extraAdjustment));
     const dice = Array.from({ length: 1 + Math.abs(totalAdjustment) }, () => Math.floor(Math.random() * 20) + 1);
     const chosen = totalAdjustment > 0 ? Math.max(...dice) : totalAdjustment < 0 ? Math.min(...dice) : dice[0];
     const sorcererWildDie = isSorcerer && isCheckOrSave && sorcererWildEffects.allCheckSaveDie
       ? rollDice(4)[0] * Math.sign(sorcererWildEffects.allCheckSaveDie) : 0;
-    const effectiveModifier = modifier + (championAdrenalineApplies ? 5 : 0) + sorcererWildDie;
+    const effectiveModifier = modifier + (championAdrenalineApplies ? 5 : 0) + sorcererWildDie
+      + (artificerFocusedOverdrive ? 5 : 0);
     const inspirationRoll = inspirationDie
       ? Array.from({ length: 1 }, () => Math.floor(Math.random() * inspirationDie) + 1)[0]
       : 0;
@@ -2349,6 +2538,11 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       psionConvertedEnhancementSP > 0 && `Psionic Mind: ${psionConvertedEnhancementSP} SP paid toward AP Enhancements`,
       psionReadEmotionsAdvantage && 'Read Emotions: ADV on this Charisma Check against the invaded target',
     ].filter(Boolean);
+    const artificerRollNotes = [
+      artificerCoreDamageApplies && `Mana Core: +1 damage to all targets${artificerDamageOverdrive ? ' plus +1 Overdrive damage' : ''}`,
+      artificerFocusedOverdrive && 'Focused Overdrive: +5 to this Spell Check',
+      artificerEngineApplies && `Artifice Engine: ADV and −${Math.max(1, featureCounters['artificer.artificeEngine.power'] ?? 1)} MP cost`,
+    ].filter(Boolean);
     const wizardRollNotes = [
       wizardSignatureApplies && `Signature ${wizardSignatureSchool}: −${character.level >= 5 ? 2 : 1} MP (unreduced cost must fit the Mana Spend Limit)`,
       wizardSigilMatches && 'Arcane Sigil: ADV',
@@ -2357,7 +2551,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       wizardManaLimitBreakApplies && 'Mana Limit Break: +1 Mana Spend Limit for this casting',
       wizardHex && `${wizardHex}: 1 target makes a Repeated Charisma Save; failure applies the Hex for 1 minute`,
     ].filter(Boolean);
-    const allRollNotes = [...hunterRollNotes, ...sorcererRollNotes, ...psionRollNotes, ...wizardRollNotes];
+    const allRollNotes = [...hunterRollNotes, ...sorcererRollNotes, ...psionRollNotes, ...artificerRollNotes, ...wizardRollNotes];
     const result = {
       label: allRollNotes.length > 0 ? `${label} • ${allRollNotes.join(' • ')}` : label,
       dice,
@@ -2384,6 +2578,9 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     if (psionDazeApplies) nextFeatureStates[PSION_DAZE_PENDING] = false;
     if (psionDisruptionApplies) nextFeatureStates[PSION_DISRUPTION_PENDING] = false;
     if (psionComponentlessApplies) nextFeatureStates[PSION_COMPONENTLESS_PENDING] = false;
+    if (artificerFocusedOverdrive || artificerDamageOverdrive) nextFeatureStates[ARTIFICER_OVERDRIVE_ACTIVE] = false;
+    if (artificerCoreDamageApplies) nextFeatureStates[ARTIFICER_DAMAGE_USED] = true;
+    if (artificerEngineApplies) nextFeatureStates[ARTIFICER_ENGINE_ACTIVE] = false;
     const nextFeatureSelections = { ...(characterRef.current.build?.sheetFeatureSelections ?? featureSelections) };
     if (preparedMeta.length > 0) delete nextFeatureSelections[SORCERER_META_ACTIVE];
     if (wizardSignatureApplies) {
@@ -2398,7 +2595,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     if (wizardHex) nextFeatureStates[WIZARD_HEX_PENDING] = false;
     const nextFeatureCounters = { ...(characterRef.current.build?.sheetFeatureCounters ?? featureCounters) };
     if (psionConvertedEnhancementSP > 0) delete nextFeatureCounters[PSION_AP_ENHANCEMENT_SP];
-    const sheetStateChanged = warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies || hunterMarkAttackApplies || hunterStrikeApplies || monkBearApplies || sorcererNextSpellAdvantage || psionDazeApplies || psionDisruptionApplies || psionComponentlessApplies || psionConvertedEnhancementSP > 0 || preparedMeta.length > 0 || wizardSignatureApplies || wizardManaLimitBreakApplies || wizardPreparedDuelApplies || Boolean(wizardHex);
+    const sheetStateChanged = warlockAdvantage || clericChaosApplies || championReadinessApplies || fastReflexesApplies || hunterMarkAttackApplies || hunterStrikeApplies || monkBearApplies || sorcererNextSpellAdvantage || psionDazeApplies || psionDisruptionApplies || psionComponentlessApplies || psionConvertedEnhancementSP > 0 || artificerCoreDamageApplies || artificerFocusedOverdrive || artificerDamageOverdrive || artificerEngineApplies || preparedMeta.length > 0 || wizardSignatureApplies || wizardManaLimitBreakApplies || wizardPreparedDuelApplies || Boolean(wizardHex);
     if (wildSurgeOutcome > 0 && characterRef.current.build) {
       update(applySorcererWildMagic({
         ...characterRef.current,
@@ -2575,6 +2772,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         {isMonk && <MonkControls character={character} onChange={update} onRoll={roll} />}
         {isSorcerer && <SorcererControls character={character} onChange={update} onRoll={roll} />}
         {isPsion && <PsionControls character={character} onChange={update} onRoll={roll} />}
+        {isArtificer && <ArtificerControls character={character} onChange={update} onRoll={roll} />}
         {isWizard && <WizardControls character={character} spellCatalog={spellCatalog} knownSpells={knownSpells} onChange={update} onRoll={roll} />}
         {multiclassFeatures.length > 0 && <section className="rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-cyan-950/35 to-slate-950/75 p-4 sm:p-5">
           <div className="mb-4"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Multiclass Talents</p><h2 className="text-xl font-black text-white">Granted Class Features</h2><p className="mt-1 text-xs leading-5 text-slate-500">Passive bonuses, training, Skills, Spells, Maneuvers, and limits are routed into the sheet automatically. Active Features include their applicable rolls and trackers here.</p></div>
