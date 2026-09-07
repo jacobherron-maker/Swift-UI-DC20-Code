@@ -51,15 +51,44 @@ export const WEAPON_ENHANCEMENTS: Record<string, string> = {
   Whip: 'Pull — the target makes a Might Save. Failure: Move it horizontally 1 Space toward you or to either side, plus 1 Space each time you use this Enhancement.',
 };
 
+/**
+ * Curated defensive modifiers a custom item can route into character-sheet math, stored as
+ * ordinary entries in `EquipmentCatalogItem.properties` alongside real Weapon/Spell Focus tags.
+ * Named standard armor and shields (DEFENSIVE_EQUIPMENT above) take precedence over these.
+ */
+export const ROUTED_SHEET_EFFECTS: Record<string, Partial<DefensiveEquipmentProfile>> = {
+  '+1 Physical Defense': { physicalDefense: 1 },
+  '+2 Physical Defense': { physicalDefense: 2 },
+  '+1 Area Defense': { areaDefense: 1 },
+  '+2 Area Defense': { areaDefense: 2 },
+  'Physical Damage Reduction': { physicalDamageReduction: true },
+  'Elemental Damage Reduction': { elementalDamageReduction: true },
+  'Speed Penalty (−1)': { speedPenalty: 1 },
+  'Agility Check Disadvantage (−1)': { agilityCheckDisadvantage: 1 },
+};
+
 export function defensiveEquipmentProfile(item: EquipmentCatalogItem): DefensiveEquipmentProfile {
-  return DEFENSIVE_EQUIPMENT[item.name] ?? {
+  const named = DEFENSIVE_EQUIPMENT[item.name];
+  if (named) return named;
+  return item.properties.reduce<DefensiveEquipmentProfile>((profile, tag) => {
+    const effect = ROUTED_SHEET_EFFECTS[tag];
+    if (!effect) return profile;
+    return {
+      physicalDefense: profile.physicalDefense + (effect.physicalDefense ?? 0),
+      areaDefense: profile.areaDefense + (effect.areaDefense ?? 0),
+      physicalDamageReduction: profile.physicalDamageReduction || Boolean(effect.physicalDamageReduction),
+      elementalDamageReduction: profile.elementalDamageReduction || Boolean(effect.elementalDamageReduction),
+      speedPenalty: profile.speedPenalty + (effect.speedPenalty ?? 0),
+      agilityCheckDisadvantage: profile.agilityCheckDisadvantage + (effect.agilityCheckDisadvantage ?? 0),
+    };
+  }, {
     physicalDefense: 0,
     areaDefense: 0,
     physicalDamageReduction: false,
     elementalDamageReduction: false,
     speedPenalty: 0,
     agilityCheckDisadvantage: 0,
-  };
+  });
 }
 
 /** Structured combat data for every published Beta weapon example. */

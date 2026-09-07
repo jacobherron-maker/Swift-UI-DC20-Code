@@ -219,6 +219,33 @@ describe('character inventory equipment rules', () => {
     expect(healingPotionAmount(potion)).toBe(2);
   });
 
+  it('routes a custom item\'s chosen sheet-effect tags into its defensive profile', () => {
+    const customArmor: EquipmentCatalogItem = {
+      id: 'custom-equipment-1',
+      name: 'Heirloom Cuirass',
+      category: 'Armor',
+      subtype: 'Custom Item',
+      summary: 'A dented but sturdy family heirloom.',
+      mechanics: 'A dented but sturdy family heirloom.',
+      properties: ['+1 Physical Defense', 'Physical Damage Reduction', 'Speed Penalty (−1)'],
+      slot: 'Armor',
+      sourcePage: 'Custom Item',
+    };
+    expect(defensiveEquipmentProfile(customArmor)).toEqual({
+      physicalDefense: 1,
+      areaDefense: 0,
+      physicalDamageReduction: true,
+      elementalDamageReduction: false,
+      speedPenalty: 1,
+      agilityCheckDisadvantage: 0,
+    });
+  });
+
+  it('prefers a named standard armor entry over any routed-effect tags it happens to carry', () => {
+    const impossibleHybrid: EquipmentCatalogItem = { ...heavyArmor, properties: ['+2 Physical Defense'] };
+    expect(defensiveEquipmentProfile(impossibleHybrid)).toEqual(defensiveEquipmentProfile(heavyArmor));
+  });
+
   it('tracks potion quantities and Medicine Kit uses', () => {
     const potionItem = inventory(potion, 'potion');
     expect(consumeInventoryQuantity([potionItem], 'potion')).toEqual([]);
