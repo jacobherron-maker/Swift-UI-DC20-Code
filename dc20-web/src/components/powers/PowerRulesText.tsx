@@ -1,11 +1,12 @@
 import React from 'react';
 import { powerRuleBlocks } from '../../utils/powerRules';
+import { RuleAwareText } from '../rules/RuleAwareText';
 
 function RuleLabels({ text }: { text: string }) {
   const initialLabel = text.match(/^((?:\(\d+\)\s*)?[A-Z][^:]{0,60}:)(.*)$/s);
-  if (initialLabel) return <><strong className="font-black text-slate-200">{initialLabel[1]}</strong><RuleLabels text={initialLabel[2]} /></>;
+  if (initialLabel) return <><strong className="font-black text-slate-200"><RuleAwareText text={initialLabel[1]} /></strong><RuleLabels text={initialLabel[2]} /></>;
   const parts = text.split(/((?:^|\s)(?:Beta Note|DC Tip|Spell Cast|Spell End|Spell Passive|Recasting the Spell|Trigger|Reaction|Hit|Failure|Success(?: \(each 5\))?|Check Success|Contest Failure|Contest Success|Save Failure(?: \(each 5\))?|Being Identified|Retaliation|Relocate|Examine|Stamina Action|MP Reduction|Shared MCP|Pocket Dimension|Shared Senses|Combat):)/gi);
-  return <>{parts.map((part, index) => /:\s*$/.test(part) ? <strong key={index} className="font-black text-slate-200">{part}</strong> : <React.Fragment key={index}>{part}</React.Fragment>)}</>;
+  return <>{parts.map((part, index) => /:\s*$/.test(part) ? <strong key={index} className="font-black text-slate-200"><RuleAwareText text={part} /></strong> : <React.Fragment key={index}><RuleAwareText text={part} /></React.Fragment>)}</>;
 }
 
 export function PowerRulesText({ text, enhancements = false }: { text: string; enhancements?: boolean }) {

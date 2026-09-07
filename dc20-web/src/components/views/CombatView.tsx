@@ -6,6 +6,7 @@ import type { Combatant, CombatantTeam, SavedCombat } from '../../types/models';
 import { CombatantTeamValues } from '../../types/models';
 import { generateUUID } from '../../utils/gameUtils';
 import { combatantFromCharacter, combatantFromMonster, combatFromEncounter } from '../../utils/monsterRules';
+import { ExplicitRuleLink, RuleAwareText } from '../rules/RuleAwareText';
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
 
@@ -249,6 +250,7 @@ function CombatEditor({ combat, participantChoice, setParticipantChoice, sourceM
       <label className="block rounded-2xl border border-white/8 bg-slate-900/75 p-5">
         <span className="text-lg font-black text-violet-200">Combat Notes</span>
         <textarea className={`${inputClass} mt-3 min-h-24 w-full resize-y`} value={combat.notes} onChange={(event) => update({ notes: event.target.value })} placeholder="Objectives, hazards, reminders…" />
+        {combat.notes.trim() && <details className="mt-2 rounded-lg border border-violet-400/15 bg-violet-500/5 p-3"><summary className="cursor-pointer text-xs font-black text-violet-200">Rules-aware preview</summary><p className="mt-2 whitespace-pre-wrap text-sm normal-case leading-6 text-slate-300"><RuleAwareText text={combat.notes} /></p></details>}
       </label>
     </div>
   );
@@ -313,7 +315,7 @@ function CombatantCard({ combatant, livePartyName, onChange, onRemove }: {
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {combatant.conditions.map((entry, index) => (
-            <button type="button" key={`${entry}-${index}`} onClick={() => onChange({ ...combatant, conditions: combatant.conditions.filter((_, conditionIndex) => conditionIndex !== index) })} className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-200" title="Remove condition">{entry} ×</button>
+            <span key={`${entry}-${index}`} className="inline-flex items-center gap-1 rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-200"><RuleAwareText text={entry} /><button type="button" aria-label={`Remove ${entry}`} onClick={() => onChange({ ...combatant, conditions: combatant.conditions.filter((_, conditionIndex) => conditionIndex !== index) })} className="opacity-60 hover:opacity-100">×</button></span>
           ))}
         </div>
         <div className="mt-3 flex gap-2">
@@ -325,16 +327,16 @@ function CombatantCard({ combatant, livePartyName, onChange, onRemove }: {
         <summary className="cursor-pointer px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-violet-300">Stats & Abilities</summary>
         <div className="space-y-3 border-t border-white/5 p-4 text-sm">
           <div className="grid grid-cols-3 gap-2 text-center">
-            {combatant.physicalDefense !== undefined && <MiniStat label="PD" value={combatant.physicalDefense} />}
-            {combatant.arcaneDefense !== undefined && <MiniStat label="AD" value={combatant.arcaneDefense} />}
+            {combatant.physicalDefense !== undefined && <MiniStat label="PD" ruleID="defense.precisionDefense" value={combatant.physicalDefense} />}
+            {combatant.arcaneDefense !== undefined && <MiniStat label="AD" ruleID="defense.areaDefense" value={combatant.arcaneDefense} />}
             {combatant.attackBonus !== undefined && <MiniStat label="Attack" value={`+${combatant.attackBonus}`} />}
             {combatant.saveDC !== undefined && <MiniStat label="Save DC" value={combatant.saveDC} />}
             {combatant.speed !== undefined && <MiniStat label="Speed" value={combatant.speed} />}
           </div>
           {combatant.monsterAbilities?.map((ability) => (
             <div key={ability.id} className="rounded-lg bg-white/[0.035] p-3">
-              <div className="font-bold text-slate-200">{ability.name} {ability.cost && <span className="text-xs text-violet-300">• {ability.cost}</span>}</div>
-              <p className="mt-1 leading-5 text-slate-400">{ability.details}</p>
+              <div className="font-bold text-slate-200">{ability.name} {ability.cost && <span className="text-xs text-violet-300">• <RuleAwareText text={ability.cost} /></span>}</div>
+              <p className="mt-1 leading-5 text-slate-400"><RuleAwareText text={ability.details} references={ability.ruleReferences} /></p>
             </div>
           ))}
           <button type="button" onClick={onRemove} className="w-full rounded-lg px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Remove from Combat</button>
@@ -344,6 +346,6 @@ function CombatantCard({ combatant, livePartyName, onChange, onRemove }: {
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string | number }) {
-  return <div className="rounded-lg bg-white/[0.04] p-2"><div className="text-[9px] font-bold uppercase tracking-wider text-slate-600">{label}</div><div className="font-black text-slate-200">{value}</div></div>;
+function MiniStat({ label, value, ruleID }: { label: string; value: string | number; ruleID?: string }) {
+  return <div className="rounded-lg bg-white/[0.04] p-2"><div className="text-[9px] font-bold uppercase tracking-wider text-slate-600">{ruleID ? <ExplicitRuleLink ruleID={ruleID}>{label}</ExplicitRuleLink> : label}</div><div className="font-black text-slate-200">{value}</div></div>;
 }

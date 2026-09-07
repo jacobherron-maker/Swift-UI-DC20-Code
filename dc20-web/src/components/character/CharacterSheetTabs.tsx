@@ -73,6 +73,7 @@ import {
 import { generateUUID, rollDice } from '../../utils/gameUtils';
 import { hasDirectMulticlassFeature, ownedClassFeatures, talentByName } from '../../utils/talentRules';
 import { basePowerCost, isPowerAttack, powerResolutionLabel, type PowerResolution } from '../../utils/powerRules';
+import { RuleAwareText } from '../rules/RuleAwareText';
 
 export type RedesignedSheetTab = 'sheet-checks' | 'sheet-combat' | 'sheet-features' | 'sheet-equipment' | 'sheet-misc';
 
@@ -103,7 +104,7 @@ const conditions = ['Bleeding', 'Blinded', 'Burning', 'Charmed', 'Dazed', 'Deafe
 const uniqueStrings = (values: string[]) => Array.from(new Set(values));
 
 function MoreDetails({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
-  return <details className="group rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-start justify-between gap-3"><span><span className="font-black text-slate-200">{title}</span>{subtitle && <span className="mt-1 block text-xs text-slate-500">{subtitle}</span>}</span><span className="text-xs font-bold text-violet-300 group-open:hidden">More</span><span className="hidden text-xs font-bold text-violet-300 group-open:inline">Less</span></summary><div className="mt-4 whitespace-pre-wrap border-t border-white/5 pt-4 text-sm leading-6 text-slate-400">{children}</div></details>;
+  return <details className="group rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-start justify-between gap-3"><span><span className="font-black text-slate-200">{title}</span>{subtitle && <span className="mt-1 block text-xs text-slate-500">{subtitle}</span>}</span><span className="text-xs font-bold text-violet-300 group-open:hidden">More</span><span className="hidden text-xs font-bold text-violet-300 group-open:inline">Less</span></summary><div className="mt-4 whitespace-pre-wrap border-t border-white/5 pt-4 text-sm leading-6 text-slate-400">{React.Children.map(children, (child) => typeof child === 'string' ? <RuleAwareText text={child} /> : child)}</div></details>;
 }
 
 function SectionHeading({ eyebrow, title, tone = 'text-violet-300' }: { eyebrow: string; title: string; tone?: string }) {

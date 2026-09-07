@@ -475,6 +475,7 @@ export interface EquipmentCatalogItem {
   properties: string[];
   slot: EquipmentSlot;
   sourcePage: string;
+  ruleReferences?: SemanticRuleReference[];
 }
 
 export interface CharacterInventoryItem {
@@ -657,6 +658,17 @@ export interface RuleReferenceEntry {
   sourceStatus?: 'Beta source verified' | 'Supplemental source verified';
 }
 
+/** Semantic rules link stored separately from canonical display text. */
+export interface SemanticRuleReference {
+  ruleId: string;
+  text?: string;
+  start?: number;
+  end?: number;
+  rulesVersion?: string;
+  /** Keeps matching text plain without altering the canonical description. */
+  disabled?: boolean;
+}
+
 export interface RulesReferenceData {
   source: string;
   sections: Array<{ name: string; pageRange: string }>;
@@ -701,6 +713,7 @@ export interface MonsterAbility {
   cost: string;
   details: string;
   traitValue?: number;
+  ruleReferences?: SemanticRuleReference[];
 }
 
 export interface Monster {

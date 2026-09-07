@@ -5,6 +5,7 @@ import { useSourceMonsters } from '../../hooks/useSourceMonsters';
 import { useCampaignStore } from '../../store/campaignStore';
 import type { Encounter, Monster } from '../../types/models';
 import { generateUUID } from '../../utils/gameUtils';
+import { RuleAwareText } from '../rules/RuleAwareText';
 import { combatFromEncounter, encounterMetrics, monsterBudget, monsterLevelLabel } from '../../utils/monsterRules';
 import { CharacterAvatar } from '../character/CharacterAvatar';
 import type { ContentFocusRequest } from '../../navigation/appNavigation';
@@ -315,6 +316,7 @@ function EncounterEditor({ encounter, sourceMonsters, customMonsters, monsterToA
       <label className="block rounded-2xl border border-white/8 bg-slate-900/75 p-5">
         <span className="text-lg font-black text-violet-200">Encounter Notes</span>
         <textarea className={`${inputClass} mt-3 min-h-28 w-full resize-y`} value={encounter.notes} onChange={(event) => onUpdate({ notes: event.target.value })} placeholder="Terrain, objectives, reinforcements, treasure…" />
+        {encounter.notes.trim() && <details className="mt-2 rounded-lg border border-violet-400/15 bg-violet-500/5 p-3"><summary className="cursor-pointer text-xs font-black text-violet-200">Rules-aware preview</summary><p className="mt-2 whitespace-pre-wrap text-sm normal-case leading-6 text-slate-300"><RuleAwareText text={encounter.notes} /></p></details>}
       </label>
     </div>
   );

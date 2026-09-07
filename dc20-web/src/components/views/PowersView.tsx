@@ -4,6 +4,9 @@ import { usePowerCatalog } from '../../hooks/usePowerCatalog';
 import type { ManeuverReference, SpellReference } from '../../hooks/usePowerCatalog';
 import { powerResolutionLabel } from '../../utils/powerRules';
 import type { ContentFocusRequest } from '../../navigation/appNavigation';
+import { ExplicitRuleLink, RuleAwareText } from '../rules/RuleAwareText';
+import { resolveRuleAlias } from '../../rules/ruleRegistry';
+import { useRulesCrossLink } from '../../rules/useRulesCrossLink';
 
 /* Navigation requests intentionally synchronize this view's local filters and selection. */
 /* oxlint-disable react/set-state-in-effect */
@@ -11,6 +14,13 @@ import type { ContentFocusRequest } from '../../navigation/appNavigation';
 type PowerDocument =
   | { id: string; kind: 'Spell'; name: string; group: string; spell: SpellReference }
   | { id: string; kind: 'Maneuver'; name: string; group: string; maneuver: ManeuverReference };
+
+function SpellTag({ tag }: { tag: string }) {
+  const { registry } = useRulesCrossLink();
+  return registry && resolveRuleAlias(registry, tag, true)
+    ? <RuleAwareText text={tag} />
+    : <ExplicitRuleLink ruleID="spell.tags">{tag}</ExplicitRuleLink>;
+}
 
 function PowerDetail({ item }: { item: PowerDocument }) {
   const isSpell = item.kind === 'Spell';
@@ -21,8 +31,8 @@ function PowerDetail({ item }: { item: PowerDocument }) {
 
   return <article className="mx-auto max-w-4xl">
     <div className="mb-7 border-b border-white/10 pb-6"><p className="theme-accent-text text-xs font-black uppercase tracking-[0.2em]">{item.kind} reference</p><h1 className="mt-2 break-words text-3xl font-black text-white sm:text-4xl">{item.name}</h1><p className="mt-2 text-slate-400">{item.group}</p></div>
-    <dl className="mb-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{metadata.filter(([, value]) => value).map(([label, value]) => <div key={label} className="rounded-xl border border-white/8 bg-slate-950/50 p-3"><dt className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">{label}</dt><dd className="mt-1 text-sm font-bold text-slate-200">{value}</dd></div>)}</dl>
-    {isSpell && item.spell.tags && <div className="mb-7 flex flex-wrap gap-2" aria-label="Spell tags">{item.spell.tags.split(',').map((tag) => tag.trim()).filter(Boolean).map((tag) => <span key={tag} className="rounded-full border border-fuchsia-400/15 bg-fuchsia-500/10 px-3 py-1 text-xs font-bold text-fuchsia-100">{tag}</span>)}</div>}
+    <dl className="mb-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{metadata.filter(([, value]) => value).map(([label, value]) => <div key={label} className="rounded-xl border border-white/8 bg-slate-950/50 p-3"><dt className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">{label}</dt><dd className="mt-1 text-sm font-bold text-slate-200">{isSpell && (label === 'Source' || label === 'School') ? <ExplicitRuleLink ruleID="spell.tags">{value}</ExplicitRuleLink> : !isSpell && label === 'Category' ? <ExplicitRuleLink ruleID="maneuver.rules">{value}</ExplicitRuleLink> : <RuleAwareText text={value} />}</dd></div>)}</dl>
+    {isSpell && item.spell.tags && <div className="mb-7 flex flex-wrap gap-2" aria-label="Spell tags">{item.spell.tags.split(',').map((tag) => tag.trim()).filter(Boolean).map((tag) => <span key={tag} className="rounded-full border border-fuchsia-400/15 bg-fuchsia-500/10 px-3 py-1 text-xs font-bold text-fuchsia-100"><SpellTag tag={tag} /></span>)}</div>}
     {details.reaction && <p className="mb-5 rounded-lg border border-amber-400/15 bg-amber-500/10 px-3 py-2 text-sm font-bold text-amber-100">This power includes a Reaction timing option in its rules text.</p>}
     {details.sourceNote && <aside className="mb-5 rounded-lg border border-sky-400/15 bg-sky-500/10 px-3 py-2 text-sm leading-6 text-sky-100"><strong className="font-black">Source note:</strong> {details.sourceNote}</aside>}
     <section><h2 className="mb-3 text-xl font-black text-white">Description</h2><PowerRulesText text={details.description} /></section>

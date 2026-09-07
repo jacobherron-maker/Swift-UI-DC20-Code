@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { useCampaignStore } from '../../store/campaignStore';
-import type { EquipmentCatalogItem, EquipmentCategory, EquipmentSlot } from '../../types/models';
+import type { EquipmentCatalogItem, EquipmentCategory, EquipmentSlot, SemanticRuleReference } from '../../types/models';
 import { EquipmentCategoryValues, EquipmentSlotValues } from '../../types/models';
 import { addInventoryItem, defensiveEquipmentProfile, healingPotionAmount, isEquipmentEquippable, weaponMechanicalProfile, ROUTED_SHEET_EFFECTS } from '../../utils/equipmentRules';
 import { generateUUID, sortByName } from '../../utils/gameUtils';
 import { PillMultiSelect, toggleValue } from '../equipment/PillMultiSelect';
 import type { ContentFocusRequest } from '../../navigation/appNavigation';
+import { ExplicitRuleLink, RuleAwareText } from '../rules/RuleAwareText';
+import RuleLinkInspector from '../rules/RuleLinkInspector';
+import { weaponPropertyRuleID } from '../../rules/ruleRegistry';
 
 /* Navigation requests intentionally synchronize this view's local filters and dialog. */
 /* oxlint-disable react/set-state-in-effect */
@@ -22,6 +25,7 @@ interface CustomItemDraft {
   slot: EquipmentSlot;
   properties: string[];
   routedEffects: string[];
+  ruleReferences: SemanticRuleReference[];
 }
 
 function draftFromItem(item: EquipmentCatalogItem): CustomItemDraft {
@@ -33,6 +37,7 @@ function draftFromItem(item: EquipmentCatalogItem): CustomItemDraft {
     slot: item.slot,
     properties: item.properties.filter((tag) => !(tag in ROUTED_SHEET_EFFECTS)),
     routedEffects: item.properties.filter((tag) => tag in ROUTED_SHEET_EFFECTS),
+    ruleReferences: item.ruleReferences ?? [],
   };
 }
 
@@ -45,6 +50,7 @@ function emptyDraft(): CustomItemDraft {
     slot: EquipmentSlotValues.CARRIED,
     properties: [],
     routedEffects: [],
+    ruleReferences: [],
   };
 }
 
@@ -122,6 +128,7 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
       properties: [...draft.properties, ...draft.routedEffects],
       slot: draft.slot,
       sourcePage: 'Custom Item',
+      ruleReferences: draft.ruleReferences,
     };
     addCustomEquipment(item);
     setLibrary('standard');
@@ -142,6 +149,7 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
       mechanics: draft.description.trim(),
       properties: [...draft.properties, ...draft.routedEffects],
       slot: draft.slot,
+      ruleReferences: draft.ruleReferences,
     });
   };
 
@@ -283,14 +291,14 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
             ) : <p className="text-sm text-slate-500">Create a character to add this item to an inventory.</p>}
           </div>
         </div>
-        <p className="mt-5 max-w-3xl text-lg leading-7 text-violet-100">{item.summary}</p>
+        <p className="mt-5 max-w-3xl text-lg leading-7 text-violet-100"><RuleAwareText text={item.summary} references={item.ruleReferences} /></p>
       </div>
 
       {isCustom && <CustomItemEditor key={item.id} item={item} propertyOptions={propertyOptions} onSave={onCustomSave} onDelete={onCustomDelete} />}
 
       <section className="rounded-2xl border border-white/8 bg-slate-900/75 p-6">
         <h3 className="text-sm font-black uppercase tracking-[0.16em] text-violet-300">Mechanical Rules</h3>
-        <div className="mt-4 whitespace-pre-wrap leading-7 text-slate-300">{item.mechanics}</div>
+        <div className="mt-4 whitespace-pre-wrap leading-7 text-slate-300"><RuleAwareText text={item.mechanics} references={item.ruleReferences} /></div>
       </section>
 
       {routedEffects.length > 0 && <section className="rounded-2xl border border-emerald-400/15 bg-emerald-950/15 p-6"><h3 className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">Routed Character-Sheet Effects</h3><p className="mt-2 text-xs leading-5 text-slate-500">These effects become active when the item is equipped and any required Training is met, or when its use action is taken for carried supplies.</p><div className="mt-4 flex flex-wrap gap-2">{routedEffects.map((effect) => <span key={effect} className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm font-semibold text-emerald-100">{effect}</span>)}</div></section>}
@@ -300,7 +308,7 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
           <h3 className="text-sm font-black uppercase tracking-[0.16em] text-violet-300">Properties</h3>
           <div className="mt-3 flex flex-wrap gap-2">
             {displayProperties.length > 0
-              ? displayProperties.map((property) => <span key={property} className="rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1 text-sm font-semibold text-violet-200">{property}</span>)
+              ? displayProperties.map((property) => <span key={property} className="rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1 text-sm font-semibold text-violet-200"><ExplicitRuleLink ruleID={weaponPropertyRuleID(property)}>{property}</ExplicitRuleLink></span>)
               : <span className="text-sm text-slate-600">No additional properties.</span>}
           </div>
         </section>
@@ -332,6 +340,7 @@ function CustomItemModal({ propertyOptions, onCancel, onCreate }: {
         <label className="mt-4 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Name<input className={`${inputClass} mt-1 w-full`} value={draft.name} onChange={(event) => update({ name: event.target.value })} placeholder="Item name" /></label>
         <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Item Highlight (Optional)<input className={`${inputClass} mt-1 w-full`} value={draft.highlight} onChange={(event) => update({ highlight: event.target.value })} placeholder="A short standout detail…" /></label>
         <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Description<textarea className={`${inputClass} mt-1 min-h-24 w-full resize-y`} value={draft.description} onChange={(event) => update({ description: event.target.value })} placeholder="What the item is or does…" /></label>
+        <RuleLinkInspector text={draft.description} references={draft.ruleReferences} onChange={(ruleReferences) => update({ ruleReferences })} />
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Category<select className={`${inputClass} mt-1 w-full`} value={draft.category} onChange={(event) => update({ category: event.target.value as EquipmentCategory })}>{Object.values(EquipmentCategoryValues).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
           <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Slot<select className={`${inputClass} mt-1 w-full`} value={draft.slot} onChange={(event) => update({ slot: event.target.value as EquipmentSlot })}>{Object.values(EquipmentSlotValues).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
@@ -383,6 +392,7 @@ function CustomItemEditor({ item, propertyOptions, onSave, onDelete }: {
     <label className="mt-4 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Name<input className={`${inputClass} mt-1 w-full`} value={draft.name} onChange={(event) => update({ name: event.target.value })} /></label>
     <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Item Highlight (Optional)<input className={`${inputClass} mt-1 w-full`} value={draft.highlight} onChange={(event) => update({ highlight: event.target.value })} placeholder="A short standout detail…" /></label>
     <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Description<textarea className={`${inputClass} mt-1 min-h-28 w-full resize-y`} value={draft.description} onChange={(event) => update({ description: event.target.value })} /></label>
+    <RuleLinkInspector text={draft.description} references={draft.ruleReferences} onChange={(ruleReferences) => update({ ruleReferences })} />
     <div className="mt-3 grid grid-cols-2 gap-3">
       <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Category<select className={`${inputClass} mt-1 w-full`} value={draft.category} onChange={(event) => update({ category: event.target.value as EquipmentCategory })}>{Object.values(EquipmentCategoryValues).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
       <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Slot<select className={`${inputClass} mt-1 w-full`} value={draft.slot} onChange={(event) => update({ slot: event.target.value as EquipmentSlot })}>{Object.values(EquipmentSlotValues).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>

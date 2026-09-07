@@ -5,6 +5,7 @@ import { usePowerCatalog, type ManeuverReference } from '../../hooks/usePowerCat
 import { useCampaignStore } from '../../store/campaignStore';
 import { CharacterAvatarEditor } from '../character/CharacterAvatar';
 import { PowerRulesText } from '../powers/PowerRulesText';
+import { RuleAwareText } from '../rules/RuleAwareText';
 import type {
   AncestryTrait,
   AttributeSelectionMethod,
@@ -104,7 +105,7 @@ function InfoDetails({ summary, children }: { summary: React.ReactNode; children
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-slate-200">
         {summary}<span className="text-xs text-violet-300 group-open:hidden">More</span><span className="hidden text-xs text-violet-300 group-open:inline">Less</span>
       </summary>
-      <div className="mt-4 whitespace-pre-wrap border-t border-white/5 pt-4 text-sm leading-6 text-slate-400">{children}</div>
+      <div className="mt-4 whitespace-pre-wrap border-t border-white/5 pt-4 text-sm leading-6 text-slate-400">{React.Children.map(children, (child) => typeof child === 'string' ? <RuleAwareText text={child} /> : child)}</div>
     </details>
   );
 }

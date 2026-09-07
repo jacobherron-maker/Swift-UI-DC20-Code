@@ -12,6 +12,8 @@ import {
   MonsterTypeValues,
 } from '../../types/models';
 import { generateUUID } from '../../utils/gameUtils';
+import { ExplicitRuleLink, RuleAwareText } from '../rules/RuleAwareText';
+import RuleLinkInspector from '../rules/RuleLinkInspector';
 import {
   applyMonsterRecommendation,
   cloneMonsterAsCustom,
@@ -65,10 +67,10 @@ function TextField({ label, value, onChange, placeholder = '' }: {
   );
 }
 
-function StatTile({ label, value, detail }: { label: string; value: string | number; detail?: string }) {
+function StatTile({ label, value, detail, ruleID }: { label: string; value: string | number; detail?: string; ruleID?: string }) {
   return (
     <div className="rounded-xl border border-white/8 bg-slate-950/55 p-3 text-center">
-      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">{label}</div>
+      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">{ruleID ? <ExplicitRuleLink ruleID={ruleID}>{label}</ExplicitRuleLink> : label}</div>
       <div className="mt-1 text-xl font-black text-violet-200">{value}</div>
       {detail && <div className="mt-1 text-[10px] text-slate-500">{detail}</div>}
     </div>
@@ -113,13 +115,13 @@ function SourceMonsterDetail({ monster, onDuplicate }: { monster: Monster; onDup
           </div>
           <button type="button" onClick={onDuplicate} className="btn-primary font-semibold">Duplicate as Custom</button>
         </div>
-        {monster.descriptionText && <p className="mt-5 max-w-3xl leading-7 text-slate-300">{monster.descriptionText}</p>}
+        {monster.descriptionText && <p className="mt-5 max-w-3xl leading-7 text-slate-300"><RuleAwareText text={monster.descriptionText} /></p>}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
         <StatTile label="HP" value={monster.hp} />
-        <StatTile label="PD" value={monster.physicalDefense} detail={`${monster.physicalDefense + 5} / ${monster.physicalDefense + 10}`} />
-        <StatTile label="AD" value={monster.arcaneDefense} detail={`${monster.arcaneDefense + 5} / ${monster.arcaneDefense + 10}`} />
+        <StatTile label="PD" ruleID="defense.precisionDefense" value={monster.physicalDefense} detail={`${monster.physicalDefense + 5} / ${monster.physicalDefense + 10}`} />
+        <StatTile label="AD" ruleID="defense.areaDefense" value={monster.arcaneDefense} detail={`${monster.arcaneDefense + 5} / ${monster.arcaneDefense + 10}`} />
         <StatTile label="Attack" value={`+${monster.attackBonus}`} />
         <StatTile label="Save DC" value={monster.saveDC} />
         <StatTile label="Damage" value={monster.damage} />
@@ -153,7 +155,7 @@ function SourceMonsterDetail({ monster, onDuplicate }: { monster: Monster; onDup
         <details key={kind} open className="rounded-2xl border border-white/8 bg-slate-900/70">
           <summary className="cursor-pointer px-5 py-4 text-lg font-black text-violet-200">{kind} <span className="text-sm font-medium text-slate-500">({entries.length})</span></summary>
           <div className="space-y-3 border-t border-white/5 p-5">
-            {entries.map((ability) => <AbilityDisplay key={ability.id} ability={ability} />)}
+            {entries.map((ability) => <AbilityDisplay key={ability.id} ability={ability} rulesVersion={monster.sourceBook?.match(/\d+\.\d+\.\d+/)?.[0]} />)}
           </div>
         </details>
       ))}
@@ -165,25 +167,25 @@ function InfoPanel({ title, body }: { title: string; body: string }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-slate-900/70 p-5">
       <h3 className="text-sm font-black uppercase tracking-[0.14em] text-violet-300">{title}</h3>
-      <p className="mt-2 leading-7 text-slate-300">{body}</p>
+      <p className="mt-2 leading-7 text-slate-300"><RuleAwareText text={body} /></p>
     </div>
   );
 }
 
 function DetailLine({ label, value }: { label: string; value: string }) {
   if (!value) return null;
-  return <div><span className="font-bold text-slate-300">{label}:</span> <span className="text-slate-400">{value}</span></div>;
+  return <div><span className="font-bold text-slate-300">{label}:</span> <span className="text-slate-400"><RuleAwareText text={value} /></span></div>;
 }
 
-function AbilityDisplay({ ability }: { ability: MonsterAbility }) {
+function AbilityDisplay({ ability, rulesVersion }: { ability: MonsterAbility; rulesVersion?: string }) {
   return (
     <div className="rounded-xl border border-white/5 bg-slate-950/60 p-4">
       <div className="flex flex-wrap items-baseline gap-2">
         <h4 className="font-black text-slate-100">{ability.name}</h4>
-        {ability.cost && <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-bold text-violet-300">{ability.cost}</span>}
+        {ability.cost && <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-bold text-violet-300"><RuleAwareText text={ability.cost} /></span>}
         {ability.traitValue !== undefined && <span className="text-xs text-amber-300">Trait Value {signed(ability.traitValue)}</span>}
       </div>
-      <p className="mt-2 whitespace-pre-wrap leading-6 text-slate-300">{ability.details}</p>
+      <p className="mt-2 whitespace-pre-wrap leading-6 text-slate-300"><RuleAwareText text={ability.details} references={ability.ruleReferences} rulesVersion={rulesVersion} /></p>
     </div>
   );
 }
@@ -388,6 +390,7 @@ function AbilityEditor({ ability, onChange, onRemove }: {
         <span className={labelClass}>Full Rules Text</span>
         <textarea className={`${fieldClass} min-h-24 resize-y`} value={ability.details} onChange={(event) => onChange({ ...ability, details: event.target.value })} />
       </label>
+      <RuleLinkInspector text={ability.details} references={ability.ruleReferences ?? []} onChange={(ruleReferences) => onChange({ ...ability, ruleReferences })} />
     </div>
   );
 }

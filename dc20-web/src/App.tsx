@@ -20,8 +20,10 @@ import HomebrewView from './components/views/HomebrewView';
 import type { ContentFocusRequest, CreateTarget, PrimaryDestination } from './navigation/appNavigation';
 import { activeEncounterSection, activeLibrarySection, ENCOUNTER_SECTIONS, LIBRARY_SECTIONS, primaryDestinationForSection } from './navigation/appNavigation';
 import { HubSectionValues } from './types/models';
+import type { HubSection } from './types/models';
 import './App.css';
 import { themePalette } from './data/themePalettes';
+import { RulesCrossLinkProvider } from './rules/RulesCrossLinkContext';
 
 type GlobalOverlay = 'create' | 'search' | 'tools' | null;
 
@@ -30,6 +32,7 @@ function App() {
   const characterPanelRef = useRef<HTMLDivElement>(null);
   const [overlay, setOverlay] = useState<GlobalOverlay>(null);
   const [focusRequest, setFocusRequest] = useState<ContentFocusRequest | null>(null);
+  const [ruleReturnSection, setRuleReturnSection] = useState<HubSection | null>(null);
   const focusKey = useRef(0);
   const palette = themePalette(selectedPaletteID);
   const currentDestination = primaryDestinationForSection(currentSection);
@@ -97,11 +100,19 @@ function App() {
     else setCurrentSection(HubSectionValues.HOMEBREW);
   }, [navigateToContent, setCurrentSection]);
 
+  const openFullRule = useCallback((ruleEntryID: string) => {
+    if (currentDestination !== 'Library' || (currentSection !== HubSectionValues.RULES && currentSection !== HubSectionValues.CHARACTER_OPTIONS)) {
+      setRuleReturnSection(currentSection);
+    }
+    navigateToContent({ kind: 'rule', id: ruleEntryID });
+  }, [currentDestination, currentSection, navigateToContent]);
+
   const destinationClass = (destination: PrimaryDestination, overflow = 'overflow-auto') => currentDestination === destination ? `h-full min-h-0 ${overflow}` : 'hidden';
   const activeLibrary = activeLibrarySection(currentSection);
   const activeEncounter = activeEncounterSection(currentSection);
 
   return (
+    <RulesCrossLinkProvider onOpenFullRule={openFullRule}>
     <div data-palette={palette.id} style={themeStyle} className={`dc20-theme flex h-[100dvh] min-h-[100dvh] overflow-hidden ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar onOpenCreate={() => setOverlay('create')} onOpenSearch={() => setOverlay('search')} onOpenTools={() => setOverlay('tools')} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -119,7 +130,7 @@ function App() {
           <div className={destinationClass('Library', 'flex flex-col overflow-hidden')}>
             <WorkspaceTabs eyebrow="Library" tabs={LIBRARY_SECTIONS} active={activeLibrary} onChange={setCurrentSection} />
             <div className="min-h-0 flex-1 overflow-hidden">
-              <div className={activeLibrary === HubSectionValues.RULES ? 'h-full overflow-auto' : 'hidden'}><RulesView focusRequest={focusRequest?.kind === 'rule' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
+              <div className={activeLibrary === HubSectionValues.RULES ? 'h-full overflow-auto' : 'hidden'}><RulesView focusRequest={focusRequest?.kind === 'rule' ? focusRequest : null} onFocusHandled={clearFocus} returnContextLabel={ruleReturnSection ? `Return to ${ruleReturnSection}` : undefined} onReturnToContext={ruleReturnSection ? () => { setCurrentSection(ruleReturnSection); setRuleReturnSection(null); } : undefined} /></div>
               <div className={activeLibrary === HubSectionValues.MONSTERS ? 'h-full' : 'hidden'}><MonstersView focusRequest={focusRequest?.kind === 'monster' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
               <div className={activeLibrary === HubSectionValues.POWERS ? 'h-full overflow-auto' : 'hidden'}><PowersView focusRequest={focusRequest?.kind === 'power' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
               <div className={activeLibrary === HubSectionValues.EQUIPMENT ? 'h-full' : 'hidden'}><EquipmentView focusRequest={focusRequest?.kind === 'equipment' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
@@ -134,6 +145,7 @@ function App() {
       {overlay === 'search' && <GlobalSearchDialog onClose={() => setOverlay(null)} onNavigate={navigateToContent} />}
       {overlay === 'tools' && <GMToolsDialog onClose={() => setOverlay(null)} onOpenSearch={() => setOverlay('search')} />}
     </div>
+    </RulesCrossLinkProvider>
   );
 }
 

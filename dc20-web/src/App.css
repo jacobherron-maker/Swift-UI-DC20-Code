@@ -224,3 +224,10 @@ button,
     font-size: 16px !important;
   }
 }
+
+@media print {
+  .rule-term {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { usePowerCatalog } from '../../hooks/usePowerCatalog';
-import { useRulesReference } from '../../hooks/useRulesReference';
+import { useRulesCrossLink } from '../../rules/useRulesCrossLink';
 import { useSourceMonsters } from '../../hooks/useSourceMonsters';
 import type { ContentFocusRequest } from '../../navigation/appNavigation';
 import { useCampaignStore } from '../../store/campaignStore';
@@ -14,6 +14,7 @@ interface SearchResult {
   category: string;
   keywords: string;
   target: Omit<ContentFocusRequest, 'key'>;
+  ruleID?: string;
 }
 
 const categoryTone: Record<string, string> = {
@@ -26,7 +27,7 @@ const categoryTone: Record<string, string> = {
 };
 
 export default function GlobalSearchDialog({ onClose, onNavigate }: { onClose: () => void; onNavigate: (target: Omit<ContentFocusRequest, 'key'>) => void }) {
-  const { reference, isLoading: rulesLoading } = useRulesReference();
+  const { registry, isLoading: rulesLoading, openRule } = useRulesCrossLink();
   const { spells, maneuvers, isLoading: powersLoading } = usePowerCatalog();
   const { monsters: sourceMonsters, isLoading: monstersLoading } = useSourceMonsters();
   const { equipment, isLoading: equipmentLoading } = useEquipmentCatalog();
@@ -35,10 +36,10 @@ export default function GlobalSearchDialog({ onClose, onNavigate }: { onClose: (
   const [activeIndex, setActiveIndex] = useState(0);
 
   const allResults = useMemo<SearchResult[]>(() => {
-    const rules = (reference?.entries ?? []).filter(({ kind }) => kind !== 'Spell' && kind !== 'Maneuver').map((entry) => ({
-      key: `rule:${entry.id}`, title: entry.title, detail: `${entry.section} • ${entry.subsection} • ${entry.page}`,
-      category: entry.kind === 'Condition' ? 'Condition' : 'Rule', keywords: `${entry.summary} ${entry.text} ${entry.keywords}`,
-      target: { kind: 'rule' as const, id: entry.id, name: entry.title },
+    const rules = (registry?.entries ?? []).filter(({ ruleReference }) => ruleReference.kind !== 'Spell' && ruleReference.kind !== 'Maneuver').map((entry) => ({
+      key: `rule:${entry.id}`, title: entry.canonicalName, detail: `${entry.category} • ${entry.sourcePage}`,
+      category: entry.category === 'Condition' ? 'Condition' : 'Rule', keywords: `${entry.shortDefinition} ${entry.ruleReference.text} ${entry.ruleReference.keywords} ${entry.aliases.map(({ text }) => text).join(' ')}`,
+      target: { kind: 'rule' as const, id: entry.ruleEntryID, name: entry.canonicalName }, ruleID: entry.id,
     }));
     const powerResults: SearchResult[] = [
       ...spells.map((spell) => ({ key: `spell:${spell.name}`, title: spell.name, detail: `${spell.source} • ${spell.school} • ${spell.cost}`, category: 'Spell', keywords: `${spell.tags} ${spell.description} ${spell.enhancements}`, target: { kind: 'power' as const, name: spell.name, powerKind: 'Spell' as const } })),
@@ -51,7 +52,7 @@ export default function GlobalSearchDialog({ onClose, onNavigate }: { onClose: (
     const npcResults = campaignData.campaigns.flatMap((campaign) => campaign.notes.filter(({ title }) => /^NPC\b|^NPC\s*[—:-]/i.test(title.trim())).map((note) => ({ key: `npc:${campaign.id}:${note.id}`, title: note.title.replace(/^NPC\s*[—:-]?\s*/i, '') || 'Unnamed NPC', detail: `${campaign.name} • Campaign NPC`, category: 'NPC', keywords: note.body, target: { kind: 'campaign' as const, id: campaign.id, noteId: note.id, name: note.title } })));
     const equipmentResults = [...equipment, ...campaignData.customEquipment].map((item) => ({ key: `equipment:${item.id}`, title: item.name, detail: `${item.category} • ${item.subtype} • ${item.sourcePage}`, category: campaignData.customEquipment.some(({ id }) => id === item.id) ? 'Homebrew' : 'Equipment', keywords: `${item.summary} ${item.mechanics} ${item.properties.join(' ')}`, target: { kind: 'equipment' as const, id: item.id, name: item.name } }));
     return [...characterResults, ...encounterResults, ...campaignResults, ...npcResults, ...monsterResults, ...powerResults, ...equipmentResults, ...rules];
-  }, [campaignData.campaigns, campaignData.customEquipment, campaignData.customMonsters, campaignData.encounters, characters, equipment, maneuvers, reference?.entries, sourceMonsters, spells]);
+  }, [campaignData.campaigns, campaignData.customEquipment, campaignData.customMonsters, campaignData.encounters, characters, equipment, maneuvers, registry, sourceMonsters, spells]);
 
   const results = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -71,7 +72,8 @@ export default function GlobalSearchDialog({ onClose, onNavigate }: { onClose: (
 
   const choose = (result: SearchResult | undefined) => {
     if (!result) return;
-    onNavigate(result.target);
+    if (result.ruleID) openRule(result.ruleID);
+    else onNavigate(result.target);
     onClose();
   };
   const loading = rulesLoading || powersLoading || monstersLoading || equipmentLoading;
