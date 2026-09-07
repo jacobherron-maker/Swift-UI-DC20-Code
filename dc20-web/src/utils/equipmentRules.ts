@@ -18,23 +18,24 @@ export interface DefensiveEquipmentProfile {
   areaDefense: number;
   physicalDamageReduction: boolean;
   elementalDamageReduction: boolean;
+  mysticalDamageReduction: boolean;
   speedPenalty: number;
   agilityCheckDisadvantage: number;
 }
 
 const DEFENSIVE_EQUIPMENT: Record<string, DefensiveEquipmentProfile> = {
-  'Defensive Light Armor': { physicalDefense: 1, areaDefense: 1, physicalDamageReduction: false, elementalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
-  'Deflecting Light Armor': { physicalDefense: 2, areaDefense: 0, physicalDamageReduction: false, elementalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
-  'Fortified Light Armor': { physicalDefense: 0, areaDefense: 2, physicalDamageReduction: false, elementalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
-  'Defensive Heavy Armor': { physicalDefense: 1, areaDefense: 1, physicalDamageReduction: true, elementalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
-  'Deflecting Heavy Armor': { physicalDefense: 2, areaDefense: 0, physicalDamageReduction: true, elementalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
-  'Fortified Heavy Armor': { physicalDefense: 0, areaDefense: 2, physicalDamageReduction: true, elementalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
-  'Highly Defensive Heavy Armor': { physicalDefense: 2, areaDefense: 2, physicalDamageReduction: false, elementalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
-  Buckler: { physicalDefense: 1, areaDefense: 0, physicalDamageReduction: false, elementalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
-  'Round Shield': { physicalDefense: 0, areaDefense: 1, physicalDamageReduction: false, elementalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
-  'Heater Shield': { physicalDefense: 1, areaDefense: 1, physicalDamageReduction: false, elementalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
-  'Kite Shield': { physicalDefense: 1, areaDefense: 2, physicalDamageReduction: false, elementalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
-  'Tower Shield': { physicalDefense: 2, areaDefense: 2, physicalDamageReduction: false, elementalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
+  'Defensive Light Armor': { physicalDefense: 1, areaDefense: 1, physicalDamageReduction: false, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
+  'Deflecting Light Armor': { physicalDefense: 2, areaDefense: 0, physicalDamageReduction: false, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
+  'Fortified Light Armor': { physicalDefense: 0, areaDefense: 2, physicalDamageReduction: false, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
+  'Defensive Heavy Armor': { physicalDefense: 1, areaDefense: 1, physicalDamageReduction: true, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
+  'Deflecting Heavy Armor': { physicalDefense: 2, areaDefense: 0, physicalDamageReduction: true, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
+  'Fortified Heavy Armor': { physicalDefense: 0, areaDefense: 2, physicalDamageReduction: true, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
+  'Highly Defensive Heavy Armor': { physicalDefense: 2, areaDefense: 2, physicalDamageReduction: false, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
+  Buckler: { physicalDefense: 1, areaDefense: 0, physicalDamageReduction: false, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
+  'Round Shield': { physicalDefense: 0, areaDefense: 1, physicalDamageReduction: false, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
+  'Heater Shield': { physicalDefense: 1, areaDefense: 1, physicalDamageReduction: false, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 0, agilityCheckDisadvantage: 0 },
+  'Kite Shield': { physicalDefense: 1, areaDefense: 2, physicalDamageReduction: false, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
+  'Tower Shield': { physicalDefense: 2, areaDefense: 2, physicalDamageReduction: false, elementalDamageReduction: false, mysticalDamageReduction: false, speedPenalty: 1, agilityCheckDisadvantage: 1 },
 };
 
 export const WEAPON_ENHANCEMENTS: Record<string, string> = {
@@ -63,10 +64,26 @@ export const ROUTED_SHEET_EFFECTS: Record<string, Partial<DefensiveEquipmentProf
   '+2 Area Defense': { areaDefense: 2 },
   'Physical Damage Reduction': { physicalDamageReduction: true },
   'Elemental Damage Reduction': { elementalDamageReduction: true },
+  'Mystical Damage Reduction': { mysticalDamageReduction: true },
   'Speed Penalty (−1)': { speedPenalty: 1 },
   'Agility Check Disadvantage (−1)': { agilityCheckDisadvantage: 1 },
 };
 
+export const ZERO_DEFENSIVE_PROFILE: DefensiveEquipmentProfile = {
+  physicalDefense: 0,
+  areaDefense: 0,
+  physicalDamageReduction: false,
+  elementalDamageReduction: false,
+  mysticalDamageReduction: false,
+  speedPenalty: 0,
+  agilityCheckDisadvantage: 0,
+};
+
+/**
+ * Every Routed-Character Sheet Effect tag an item carries, regardless of its Category — a
+ * custom Weapon, Spell Focus, or Supply can route these exactly like a custom Armor or Shield.
+ * Named standard armor and shields (DEFENSIVE_EQUIPMENT above) take precedence over these tags.
+ */
 export function defensiveEquipmentProfile(item: EquipmentCatalogItem): DefensiveEquipmentProfile {
   const named = DEFENSIVE_EQUIPMENT[item.name];
   if (named) return named;
@@ -78,17 +95,27 @@ export function defensiveEquipmentProfile(item: EquipmentCatalogItem): Defensive
       areaDefense: profile.areaDefense + (effect.areaDefense ?? 0),
       physicalDamageReduction: profile.physicalDamageReduction || Boolean(effect.physicalDamageReduction),
       elementalDamageReduction: profile.elementalDamageReduction || Boolean(effect.elementalDamageReduction),
+      mysticalDamageReduction: profile.mysticalDamageReduction || Boolean(effect.mysticalDamageReduction),
       speedPenalty: profile.speedPenalty + (effect.speedPenalty ?? 0),
       agilityCheckDisadvantage: profile.agilityCheckDisadvantage + (effect.agilityCheckDisadvantage ?? 0),
     };
-  }, {
-    physicalDefense: 0,
-    areaDefense: 0,
-    physicalDamageReduction: false,
-    elementalDamageReduction: false,
-    speedPenalty: 0,
-    agilityCheckDisadvantage: 0,
-  });
+  }, ZERO_DEFENSIVE_PROFILE);
+}
+
+/** Sums Routed-Character Sheet Effect contributions across several equipped items (e.g. every equipped item that isn't already covered by the dedicated Armor/Shield selection logic in equipmentBonuses). */
+export function combinedDefensiveProfile(items: EquipmentCatalogItem[]): DefensiveEquipmentProfile {
+  return items.reduce<DefensiveEquipmentProfile>((total, item) => {
+    const profile = defensiveEquipmentProfile(item);
+    return {
+      physicalDefense: total.physicalDefense + profile.physicalDefense,
+      areaDefense: total.areaDefense + profile.areaDefense,
+      physicalDamageReduction: total.physicalDamageReduction || profile.physicalDamageReduction,
+      elementalDamageReduction: total.elementalDamageReduction || profile.elementalDamageReduction,
+      mysticalDamageReduction: total.mysticalDamageReduction || profile.mysticalDamageReduction,
+      speedPenalty: total.speedPenalty + profile.speedPenalty,
+      agilityCheckDisadvantage: total.agilityCheckDisadvantage + profile.agilityCheckDisadvantage,
+    };
+  }, ZERO_DEFENSIVE_PROFILE);
 }
 
 /** Structured combat data for every published Beta weapon example. */

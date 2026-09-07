@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { CharacterInventoryItem, EquipmentCatalogItem } from '../types/models';
 import {
   addInventoryItem,
+  combinedDefensiveProfile,
   consumeInventoryQuantity,
   defensiveEquipmentProfile,
   enforceEquipmentHandCapacity,
@@ -213,13 +214,14 @@ describe('character inventory equipment rules', () => {
       areaDefense: 1,
       physicalDamageReduction: true,
       elementalDamageReduction: false,
+      mysticalDamageReduction: false,
       speedPenalty: 1,
       agilityCheckDisadvantage: 1,
     });
     expect(healingPotionAmount(potion)).toBe(2);
   });
 
-  it('routes a custom item\'s chosen sheet-effect tags into its defensive profile', () => {
+  it('routes a custom item\'s chosen sheet-effect tags into its defensive profile regardless of Category', () => {
     const customArmor: EquipmentCatalogItem = {
       id: 'custom-equipment-1',
       name: 'Heirloom Cuirass',
@@ -236,7 +238,25 @@ describe('character inventory equipment rules', () => {
       areaDefense: 0,
       physicalDamageReduction: true,
       elementalDamageReduction: false,
+      mysticalDamageReduction: false,
       speedPenalty: 1,
+      agilityCheckDisadvantage: 0,
+    });
+
+    const customFocus: EquipmentCatalogItem = {
+      ...customArmor,
+      id: 'custom-equipment-2',
+      name: 'Warded Trinket',
+      category: 'Spell Focuses',
+      properties: ['+1 Area Defense', 'Mystical Damage Reduction'],
+    };
+    expect(defensiveEquipmentProfile(customFocus)).toEqual({
+      physicalDefense: 0,
+      areaDefense: 1,
+      physicalDamageReduction: false,
+      elementalDamageReduction: false,
+      mysticalDamageReduction: true,
+      speedPenalty: 0,
       agilityCheckDisadvantage: 0,
     });
   });
@@ -244,6 +264,26 @@ describe('character inventory equipment rules', () => {
   it('prefers a named standard armor entry over any routed-effect tags it happens to carry', () => {
     const impossibleHybrid: EquipmentCatalogItem = { ...heavyArmor, properties: ['+2 Physical Defense'] };
     expect(defensiveEquipmentProfile(impossibleHybrid)).toEqual(defensiveEquipmentProfile(heavyArmor));
+  });
+
+  it('sums routed-effect tags carried by several equipped items at once', () => {
+    const customWeapon: EquipmentCatalogItem = {
+      id: 'custom-equipment-3', name: 'Lucky Blade', category: 'Weapons', subtype: 'Custom Item',
+      summary: '', mechanics: '', properties: ['+1 Physical Defense'], slot: 'One Hand', sourcePage: 'Custom Item',
+    };
+    const customSupply: EquipmentCatalogItem = {
+      id: 'custom-equipment-4', name: 'Warding Charm', category: 'Adventuring Supplies', subtype: 'Custom Item',
+      summary: '', mechanics: '', properties: ['Mystical Damage Reduction', 'Speed Penalty (−1)'], slot: 'Worn', sourcePage: 'Custom Item',
+    };
+    expect(combinedDefensiveProfile([customWeapon, customSupply])).toEqual({
+      physicalDefense: 1,
+      areaDefense: 0,
+      physicalDamageReduction: false,
+      elementalDamageReduction: false,
+      mysticalDamageReduction: true,
+      speedPenalty: 1,
+      agilityCheckDisadvantage: 0,
+    });
   });
 
   it('tracks potion quantities and Medicine Kit uses', () => {

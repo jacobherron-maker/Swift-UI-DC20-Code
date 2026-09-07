@@ -5,6 +5,7 @@ import type { EquipmentCatalogItem, EquipmentCategory, EquipmentSlot } from '../
 import { EquipmentCategoryValues, EquipmentSlotValues } from '../../types/models';
 import { addInventoryItem, defensiveEquipmentProfile, healingPotionAmount, isEquipmentEquippable, weaponMechanicalProfile, ROUTED_SHEET_EFFECTS } from '../../utils/equipmentRules';
 import { generateUUID, sortByName } from '../../utils/gameUtils';
+import { PillMultiSelect, toggleValue } from '../equipment/PillMultiSelect';
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
 const ROUTED_EFFECT_NAMES = Object.keys(ROUTED_SHEET_EFFECTS);
@@ -227,19 +228,19 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
   const weapon = weaponMechanicalProfile(item);
   const defense = defensiveEquipmentProfile(item);
   const potionHealing = healingPotionAmount(item);
-  const showDefenseEffects = item.category === 'Armor' || item.category === 'Shields';
   const displayProperties = item.properties.filter((tag) => !(tag in ROUTED_SHEET_EFFECTS));
   const routedEffects = [
     weapon && `${weapon.baseDamage} ${weapon.damageTypes.join('/')} damage`,
     weapon && `Range ${weapon.range}`,
     weapon?.heavyHitDamageBonus ? '+1 damage on Heavy Hits' : '',
-    showDefenseEffects && defense.physicalDefense ? `+${defense.physicalDefense} PD` : '',
-    showDefenseEffects && defense.areaDefense ? `+${defense.areaDefense} AD` : '',
-    showDefenseEffects && defense.physicalDamageReduction ? 'PDR' : '',
-    showDefenseEffects && defense.elementalDamageReduction ? 'EDR' : '',
-    showDefenseEffects && defense.speedPenalty ? `Speed −${defense.speedPenalty}` : '',
-    showDefenseEffects && defense.agilityCheckDisadvantage ? 'DisADV on Agility Checks' : '',
-    item.category === 'Spell Focuses' ? item.properties.filter((property) => property !== 'Two-Handed').join(' • ') : '',
+    defense.physicalDefense ? `+${defense.physicalDefense} PD` : '',
+    defense.areaDefense ? `+${defense.areaDefense} AD` : '',
+    defense.physicalDamageReduction ? 'PDR' : '',
+    defense.elementalDamageReduction ? 'EDR' : '',
+    defense.mysticalDamageReduction ? 'MDR' : '',
+    defense.speedPenalty ? `Speed −${defense.speedPenalty}` : '',
+    defense.agilityCheckDisadvantage ? 'DisADV on Agility Checks' : '',
+    item.category === 'Spell Focuses' ? displayProperties.filter((property) => property !== 'Two-Handed').join(' • ') : '',
     potionHealing ? `Restores ${potionHealing} HP when consumed` : '',
     item.name === 'Medicine Kit' ? '5 tracked uses per kit' : '',
     item.category === 'Trade Tools' ? `Enables ${item.properties[0]} activities` : '',
@@ -302,44 +303,6 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
   );
 }
 
-function PillMultiSelect({ label, hint, options, selected, onToggle, tone = 'violet' }: {
-  label: string;
-  hint?: string;
-  options: string[];
-  selected: string[];
-  onToggle: (value: string) => void;
-  tone?: 'violet' | 'emerald';
-}) {
-  const activeClass = tone === 'emerald'
-    ? 'border-emerald-400 bg-emerald-500/15 text-emerald-200'
-    : 'border-violet-400 bg-violet-500/15 text-violet-200';
-  return (
-    <div className="mt-3">
-      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</span>
-      {hint && <p className="mt-1 text-xs text-slate-600">{hint}</p>}
-      <div className="mt-2 flex max-h-40 flex-wrap gap-2 overflow-y-auto pr-1">
-        {options.map((option) => {
-          const isSelected = selected.includes(option);
-          return (
-            <button
-              type="button"
-              key={option}
-              onClick={() => onToggle(option)}
-              className={`rounded-full border px-3 py-1 text-xs font-bold transition ${isSelected ? activeClass : 'border-slate-700 text-slate-400 hover:text-slate-200'}`}
-            >
-              {option}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function toggleValue(values: string[], value: string): string[] {
-  return values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
-}
-
 function CustomItemModal({ propertyOptions, onCancel, onCreate }: {
   propertyOptions: string[];
   onCancel: () => void;
@@ -369,7 +332,7 @@ function CustomItemModal({ propertyOptions, onCancel, onCreate }: {
         />
         <PillMultiSelect
           label="Routed-Character Sheet Effects"
-          hint="Only takes effect while the item is equipped and its Category is Armor or Shields."
+          hint="Applies while the item is equipped, no matter its Category."
           options={ROUTED_EFFECT_NAMES}
           selected={draft.routedEffects}
           onToggle={toggleRoutedEffect}
@@ -420,7 +383,7 @@ function CustomItemEditor({ item, propertyOptions, onSave, onDelete }: {
     />
     <PillMultiSelect
       label="Routed-Character Sheet Effects"
-      hint="Only takes effect while the item is equipped and its Category is Armor or Shields."
+      hint="Applies while the item is equipped, no matter its Category."
       options={ROUTED_EFFECT_NAMES}
       selected={draft.routedEffects}
       onToggle={toggleRoutedEffect}

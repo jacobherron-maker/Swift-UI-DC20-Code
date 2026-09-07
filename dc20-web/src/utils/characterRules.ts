@@ -9,7 +9,7 @@ import type {
   MasteryLevel,
   Spell,
 } from '../types/models';
-import { defensiveEquipmentProfile } from './equipmentRules';
+import { combinedDefensiveProfile, defensiveEquipmentProfile } from './equipmentRules';
 import { hasAutomaticMulticlassFlavor, hasDirectMulticlassFeature, hasMulticlassSubclass, multiclassParagonTalentSlotClasses, multiclassSubclassCount } from './talentRules';
 
 export const ATTRIBUTE_NAMES: DC20Attribute[] = ['Might', 'Agility', 'Charisma', 'Intelligence'];
@@ -1462,7 +1462,6 @@ export function equippedCombatModifiers(
     if (item.category === 'Shields') return item.subtype === 'Heavy Shield' ? !training.heavyShieldTraining : !training.lightShieldTraining;
     return false;
   }).length;
-  const heavyGear = equipped.filter(({ subtype }) => subtype === 'Heavy Armor' || subtype === 'Heavy Shield').length;
   const equippedArmor = equipped.find(({ category }) => category === 'Armor');
   const armorProfile = equippedArmor ? defensiveEquipmentProfile(equippedArmor) : null;
   const equippedShields = (character.inventoryItems ?? []).filter(({ isEquipped }) => isEquipped)
@@ -1485,6 +1484,11 @@ export function equippedCombatModifiers(
   const overloaded = (character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Overload Magic'))
     && Boolean(character.build?.sheetFeatureStates?.[SORCERER_OVERLOAD_ACTIVE]);
   const wildMagic = sorcererWildMagicProfile(character);
+  // Every equipped item's Routed-Character Sheet Effect tags apply here too, regardless of
+  // Category, so a custom Weapon/Spell Focus/Supply routes the same as a custom Armor/Shield.
+  // This also fully encodes the old "-1 per equipped Heavy Armor/Shield" rule, since every
+  // named Heavy entry already carries agilityCheckDisadvantage: 1 in DEFENSIVE_EQUIPMENT.
+  const routedProfile = combinedDefensiveProfile(equipped);
   return {
     spellCheckBonus: focuses.filter(({ properties }) => properties.includes('Channeling')).length
       + Number(innateFocusProperties.includes('Channeling')) + Number(overloaded) * 5 + wildMagic.spellCheckBonus,
@@ -1492,10 +1496,10 @@ export function equippedCombatModifiers(
       + Number(innateFocusProperties.includes('Vicious')) + Number(overloaded) * 5,
     spellAttackDamageBonus: focuses.filter(({ properties }) => properties.includes('Powerful')).length,
     attackAndSpellDisadvantage: untrainedGear > 0 ? -untrainedGear : 0,
-    agilityCheckDisadvantage: heavyGear > 0 ? -heavyGear : 0,
-    physicalDamageReduction: Boolean(armorProfile?.physicalDamageReduction),
-    elementalDamageReduction: Boolean(armorProfile?.elementalDamageReduction),
-    mysticalDamageReduction: hasPactArmor || focusProperties.includes('Warded'),
+    agilityCheckDisadvantage: -routedProfile.agilityCheckDisadvantage,
+    physicalDamageReduction: Boolean(armorProfile?.physicalDamageReduction || routedProfile.physicalDamageReduction),
+    elementalDamageReduction: Boolean(armorProfile?.elementalDamageReduction || routedProfile.elementalDamageReduction),
+    mysticalDamageReduction: hasPactArmor || focusProperties.includes('Warded') || routedProfile.mysticalDamageReduction,
     unarmedHeavyHitDamageBonus: Number(Boolean(equippedArmor?.subtype === 'Heavy Armor' || equipped.some(({ name }) => name === 'Gauntlet'))),
     immuneToFlanking: equipped.filter(({ category }) => category === 'Shields').length >= 2,
     focusProperties,
@@ -1529,14 +1533,20 @@ function equipmentBonuses(character: Character, catalog: EquipmentCatalogItem[],
   const innateFocusProperties = character.class === 'Sorcerer' || hasDirectMulticlassFeature(character, 'Sorcerer', 'Innate Power')
     ? character.build?.classFeatureSelections?.['sorcerer.focus'] ?? [] : [];
   const weaponPD = equipped.filter((item) => item.category === 'Weapons' && item.properties.includes('Guard')).length;
+  // Armor and Shields already route their Routed-Character Sheet Effect tags through `armor`/`shield`
+  // above (via defensiveEquipmentProfile's fallback for unnamed — i.e. custom — items). Every other
+  // equipped item (a custom Weapon, Spell Focus, or Supply) still routes the same tags here, so a
+  // custom item's chosen effects apply no matter what Category it was created with.
+  const otherEquipped = equipped.filter((item) => item.category !== 'Armor' && item.category !== 'Shields');
+  const routedElsewhere = combinedDefensiveProfile(otherEquipped);
   return {
-    pd: (armor?.physicalDefense ?? 0) + (shield?.physicalDefense ?? 0) + weaponPD,
-    ad: (armor?.areaDefense ?? 0) + (shield?.areaDefense ?? 0) + focusAD + Number(innateFocusProperties.includes('Protective')),
-    physicalDR: Number(Boolean(armor?.physicalDamageReduction || shield?.physicalDamageReduction)),
-    elementalDR: Number(Boolean(armor?.elementalDamageReduction || shield?.elementalDamageReduction)),
-    mysticalDR: Math.max(focusMDR, Number(innateFocusProperties.includes('Warded'))),
+    pd: (armor?.physicalDefense ?? 0) + (shield?.physicalDefense ?? 0) + weaponPD + routedElsewhere.physicalDefense,
+    ad: (armor?.areaDefense ?? 0) + (shield?.areaDefense ?? 0) + focusAD + Number(innateFocusProperties.includes('Protective')) + routedElsewhere.areaDefense,
+    physicalDR: Number(Boolean(armor?.physicalDamageReduction || shield?.physicalDamageReduction || routedElsewhere.physicalDamageReduction)),
+    elementalDR: Number(Boolean(armor?.elementalDamageReduction || shield?.elementalDamageReduction || routedElsewhere.elementalDamageReduction)),
+    mysticalDR: Math.max(focusMDR, Number(innateFocusProperties.includes('Warded')), Number(Boolean(armor?.mysticalDamageReduction || shield?.mysticalDamageReduction || routedElsewhere.mysticalDamageReduction))),
     hasArmor: Boolean(equippedArmor),
-    speedPenalty: (armor?.speedPenalty ?? 0) + equippedShields.reduce((sum, { profile }) => sum + profile.speedPenalty, 0),
+    speedPenalty: (armor?.speedPenalty ?? 0) + equippedShields.reduce((sum, { profile }) => sum + profile.speedPenalty, 0) + routedElsewhere.speedPenalty,
     isUnarmored: !equippedArmor,
   };
 }
