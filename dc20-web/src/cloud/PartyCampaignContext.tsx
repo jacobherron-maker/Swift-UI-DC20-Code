@@ -7,6 +7,7 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
+  runTransaction,
   setDoc,
   writeBatch,
 } from 'firebase/firestore';
@@ -58,6 +59,7 @@ interface PartyCampaignContextValue {
   addSharedInventoryItem: (partyId: string, item: PartyInventoryItem) => Promise<void>;
   updateSharedInventoryItem: (partyId: string, item: PartyInventoryItem) => Promise<void>;
   removeSharedInventoryItem: (partyId: string, itemId: string) => Promise<void>;
+  adjustSharedGold: (partyId: string, delta: number) => Promise<void>;
   removePartyMember: (partyId: string, memberId: string) => Promise<void>;
   leaveParty: (partyId: string) => Promise<void>;
   deleteParty: (partyId: string, inviteCode: string) => Promise<void>;
@@ -86,6 +88,7 @@ interface PartyInviteDocument {
 }
 
 const PartyCampaignContext = createContext<PartyCampaignContextValue | null>(null);
+const SHARED_GOLD_DOCUMENT_ID = '__gold__';
 
 function safeCharacter(character: Character): Character {
   return JSON.parse(JSON.stringify(character)) as Character;
@@ -108,6 +111,7 @@ function emptyParty(id: string, role: PartyCampaignRole): PartyCampaignSnapshot 
     members: [],
     notes: [],
     inventory: [],
+    gold: 0,
   };
 }
 
@@ -184,7 +188,10 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
       }, (caught) => reportError(caught, 'Shared notes could not be loaded.')));
 
       unsubscribers.push(onSnapshot(collection(partyReference, 'inventory'), (snapshot) => {
-        const inventory = snapshot.docs.map((itemDocument) => {
+        const goldDocument = snapshot.docs.find(({ id }) => id === SHARED_GOLD_DOCUMENT_ID);
+        const goldData = goldDocument?.data() as Record<string, unknown> | undefined;
+        const gold = Math.max(0, Math.trunc(Number(goldData?.amount) || 0));
+        const inventory = snapshot.docs.filter(({ id }) => id !== SHARED_GOLD_DOCUMENT_ID).map((itemDocument) => {
           const data = itemDocument.data() as Record<string, unknown>;
           return {
             id: itemDocument.id,
@@ -195,7 +202,7 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
             updatedAt: String(data.updated_at ?? ''),
           } satisfies PartyInventoryItem;
         }).sort((left, right) => left.name.localeCompare(right.name));
-        patchParty(link.partyId, link.role, { inventory });
+        patchParty(link.partyId, link.role, { inventory, gold });
       }, (caught) => reportError(caught, 'Shared inventory could not be loaded.')));
     }
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
@@ -380,6 +387,24 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
     await deleteDoc(doc(database, 'party_campaigns', partyId, 'inventory', itemId));
   }, [requireCloud]);
 
+  const adjustSharedGold = useCallback(async (partyId: string, delta: number) => {
+    const { database, currentUser } = requireCloud();
+    const adjustment = Math.trunc(Number(delta) || 0);
+    if (adjustment === 0) return;
+    const goldReference = doc(database, 'party_campaigns', partyId, 'inventory', SHARED_GOLD_DOCUMENT_ID);
+    await runTransaction(database, async (transaction) => {
+      const snapshot = await transaction.get(goldReference);
+      const current = snapshot.exists() ? Math.max(0, Math.trunc(Number(snapshot.data().amount) || 0)) : 0;
+      transaction.set(goldReference, {
+        id: SHARED_GOLD_DOCUMENT_ID,
+        type: 'currency',
+        amount: Math.max(0, current + adjustment),
+        updated_by: currentUser.uid,
+        updated_at: new Date().toISOString(),
+      });
+    });
+  }, [requireCloud]);
+
   const removePartyMember = useCallback(async (partyId: string, memberId: string) => {
     const { database } = requireCloud();
     await deleteDoc(doc(database, 'party_campaigns', partyId, 'members', memberId));
@@ -451,6 +476,7 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
     addSharedInventoryItem: saveSharedInventoryItem,
     updateSharedInventoryItem: saveSharedInventoryItem,
     removeSharedInventoryItem,
+    adjustSharedGold,
     removePartyMember,
     leaveParty,
     deleteParty,
@@ -461,7 +487,7 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
       return url.toString();
     },
     clearPendingInvite,
-  }), [clearPendingInvite, createPartyCampaign, deleteParty, error, isConfigured, joinPartyCampaign, leaveParty, parties, partyCharacters, pendingInvite, publishCharacter, refreshParty, removePartyMember, removeSharedInventoryItem, removeSharedNote, renameParty, saveSharedInventoryItem, saveSharedNote, status, user]);
+  }), [adjustSharedGold, clearPendingInvite, createPartyCampaign, deleteParty, error, isConfigured, joinPartyCampaign, leaveParty, parties, partyCharacters, pendingInvite, publishCharacter, refreshParty, removePartyMember, removeSharedInventoryItem, removeSharedNote, renameParty, saveSharedInventoryItem, saveSharedNote, status, user]);
 
   return <PartyCampaignContext.Provider value={value}>{children}</PartyCampaignContext.Provider>;
 }

@@ -6,6 +6,7 @@ import { PowerRulesText } from '../powers/PowerRulesText';
 import { useCampaignStore } from '../../store/campaignStore';
 import { CharacterAvatar, CharacterAvatarEditor } from '../character/CharacterAvatar';
 import { CharacterRestControls, CharacterSheetTabContent, type RedesignedSheetTab } from '../character/CharacterSheetTabs';
+import { GoldBalanceControl } from '../GoldBalanceControl';
 import type { AncestryTrait, CampaignNote, Character, CharacterInventoryItem, DC20Attribute, DruidWildFormRecord, EquipmentCatalogItem, MasteryLevel, Spell } from '../../types/models';
 import {
   ATTRIBUTE_NAMES,
@@ -2807,6 +2808,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
         {lastRoll && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-400/30 bg-violet-500/10 p-4"><div><span className="font-black text-violet-200">{lastRoll.label}</span><span className="ml-3 text-sm text-slate-400">Dice: {lastRoll.dice.join(', ')} • chosen {lastRoll.chosen} {lastRoll.modifier >= 0 ? '+' : '−'} {Math.abs(lastRoll.modifier)}{lastRoll.inspirationDie && lastRoll.inspirationRoll ? ` • Inspiration d${lastRoll.inspirationDie}: +${lastRoll.inspirationRoll}` : ''}</span></div><div className="text-3xl font-black text-white">{lastRoll.total}</div></div>}
 
         <main className={`${panelClass} min-h-[560px]`}>
+          {selectedTab === 'sheet-equipment' && <GoldBalanceControl currentGold={character.gold} onAdjust={(delta) => update({ gold: Math.max(0, Math.trunc((character.gold ?? 0) + delta)) })} description="Track coins carried by this character. Enter a transaction amount, then add or subtract it." />}
           {selectedTab.startsWith('sheet-') && <CharacterSheetTabContent
             tab={selectedTab as RedesignedSheetTab}
             character={character}

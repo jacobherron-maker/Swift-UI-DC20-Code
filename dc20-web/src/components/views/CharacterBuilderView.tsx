@@ -322,6 +322,7 @@ function emptyCharacter(): Character {
     skills: [],
     equipment: [],
     inventoryItems: [],
+    gold: 0,
     spells: [],
     maneuvers: [],
     notes: '',
@@ -450,7 +451,8 @@ function ancestryRequirementLabel(trait: AncestryTrait): string | undefined {
 const CharacterBuilderView: React.FC<{
   character?: Character | null;
   onCompleted?: (character: Character) => void;
-}> = ({ character: editingCharacter, onCompleted }) => {
+  onCancel?: () => void;
+}> = ({ character: editingCharacter, onCompleted, onCancel }) => {
   const { addCharacter, updateCharacter, selectCharacter } = useCampaignStore();
   const { reference, isLoading: rulesLoading, error: rulesError } = useCharacterReference();
   const { equipment, isLoading: equipmentLoading } = useEquipmentCatalog();
@@ -1460,7 +1462,7 @@ const CharacterBuilderView: React.FC<{
   };
 
   if (rulesLoading || !reference) {
-    return <div className="p-10 text-slate-300">{rulesError ? <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">{rulesError}</div> : 'Loading the DC20 character reference…'}</div>;
+    return <div className="p-10 text-slate-300"><button type="button" onClick={onCancel} className="mb-5 rounded-xl bg-slate-800 px-4 py-2 font-bold text-slate-200 hover:bg-slate-700">← Back to Characters</button>{rulesError ? <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-red-200">{rulesError}</div> : 'Loading the DC20 character reference…'}</div>;
   }
 
   const masteryMaximum = skillMasteryCap(draft);
@@ -1472,7 +1474,7 @@ const CharacterBuilderView: React.FC<{
       <div className="mx-auto max-w-[1500px]">
         <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
           <div><p className="text-xs font-bold uppercase tracking-[0.3em] text-violet-300">DC20 Beta 0.10.5</p><h1 className="mt-1 text-3xl font-black text-white lg:text-4xl">{editingCharacter ? `Edit ${editingCharacter.name}` : 'Build a Character'}</h1></div>
-          <div className="flex flex-wrap gap-2"><Metric label="Level" value={level} /><Metric label={className === 'Rogue' ? 'Skill Mastery Cap' : 'Mastery Cap'} value={masteryTitle(skillMasteryMaximum)} /><Metric label="Attribute Cap" value={`+${attributeCap(level)}`} /></div>
+          <div className="flex flex-wrap items-center gap-2"><button type="button" onClick={onCancel} className="min-h-11 rounded-xl border border-white/10 bg-slate-800 px-4 py-2 text-sm font-black text-slate-200 hover:bg-slate-700">← Back to Characters</button><Metric label="Level" value={level} /><Metric label={className === 'Rogue' ? 'Skill Mastery Cap' : 'Mastery Cap'} value={masteryTitle(skillMasteryMaximum)} /><Metric label="Attribute Cap" value={`+${attributeCap(level)}`} /></div>
         </header>
 
         <nav className="mb-5 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/60 p-2 sm:grid-cols-3 lg:grid-cols-6" aria-label="Character builder steps">

@@ -64,7 +64,7 @@ describe('campaign persistence migration', () => {
           Intelligence: { score: 13, modifier: 1 }, Charisma: { score: 12, modifier: 1 },
         },
         healthPoints: 20, maxHealthPoints: 20, stamina: 10, maxStamina: 10,
-        manaPoints: 0, maxManaPoints: 0, defense: 12,
+        manaPoints: 0, maxManaPoints: 0, defense: 12, gold: -25,
       }],
     });
     const hero = migrated.characters[0];
@@ -75,6 +75,7 @@ describe('campaign persistence migration', () => {
     expect(hero.build?.attributeMethod).toBe('Standard Array');
     expect(hero.physicalDefense).toBe(12);
     expect(hero.arcaneDefense).toBe(12);
+    expect(hero.gold).toBe(0);
   });
 
   it('restores a versioned backup and validates its selected palette', () => {
@@ -86,7 +87,7 @@ describe('campaign persistence migration', () => {
         currentSection: 'Campaign',
         selectedPaletteID: 'druid-verdant',
         campaignData: { title: 'The Green March' },
-        characters: [{ id: 'hero', name: 'Oak', avatarDataURL: 'data:image/webp;base64,UklGRg==', level: 2, class: 'Druid' }],
+        characters: [{ id: 'hero', name: 'Oak', avatarDataURL: 'data:image/webp;base64,UklGRg==', level: 2, class: 'Druid', gold: 125 }],
       },
     });
 
@@ -95,6 +96,7 @@ describe('campaign persistence migration', () => {
     expect(migrated.campaignData.title).toBe('The Green March');
     expect(migrated.characters[0].name).toBe('Oak');
     expect(migrated.characters[0].avatarDataURL).toBe('data:image/webp;base64,UklGRg==');
+    expect(migrated.characters[0].gold).toBe(125);
   });
 
   it('falls back to the default palette when an imported id is unknown', () => {

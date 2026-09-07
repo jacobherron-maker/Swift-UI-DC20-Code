@@ -485,6 +485,7 @@ function normalizeCharacter(value: unknown): Character {
     skills: Array.isArray(item.skills) ? item.skills as Character['skills'] : [],
     equipment: Array.isArray(item.equipment) ? item.equipment as Character['equipment'] : [],
     inventoryItems: Array.isArray(item.inventoryItems) ? item.inventoryItems as Character['inventoryItems'] : [],
+    gold: Math.max(0, Math.trunc(asNumber(item.gold, 0))),
     spells: Array.isArray(item.spells) ? item.spells as Character['spells'] : [],
     maneuvers: Array.isArray(item.maneuvers) ? item.maneuvers as Character['maneuvers'] : [],
     notes: typeof item.notes === 'string' ? item.notes : '',

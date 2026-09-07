@@ -94,6 +94,7 @@ export interface PartyCampaignSnapshot {
   members: PartyCampaignMember[];
   notes: CampaignNote[];
   inventory: PartyInventoryItem[];
+  gold: number;
 }
 
 export const CombatantTeamValues = {
@@ -405,6 +406,8 @@ export interface Character {
   skills: Skill[];
   equipment: Equipment[];
   inventoryItems?: CharacterInventoryItem[];
+  /** Current spendable gold. Older saved characters default to 0. */
+  gold?: number;
   spells: Spell[];
   maneuvers: Maneuver[];
   notes: string;

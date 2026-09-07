@@ -45,6 +45,7 @@ const CharactersView: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) =
       <CharacterBuilderView
         character={selectedCharacter}
         onCompleted={() => navigate('sheet')}
+        onCancel={() => navigate('list')}
       />
     );
   }

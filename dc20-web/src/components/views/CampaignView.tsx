@@ -14,6 +14,7 @@ import { CombatantTeamValues } from '../../types/models';
 import { generateUUID } from '../../utils/gameUtils';
 import { combatantFromCharacter } from '../../utils/monsterRules';
 import { CharacterAvatar } from '../character/CharacterAvatar';
+import { GoldBalanceControl } from '../GoldBalanceControl';
 import CharacterSheet from './CharacterSheet';
 
 /* oxlint-disable react/set-state-in-effect */
@@ -249,6 +250,7 @@ export default function CampaignView() {
             onAddInventory={(item) => campaign.party && performPartyAction(partyHub.addSharedInventoryItem(campaign.party.partyId, item))}
             onUpdateInventory={(item) => campaign.party && performPartyAction(partyHub.updateSharedInventoryItem(campaign.party.partyId, item))}
             onDeleteInventory={(id) => campaign.party && performPartyAction(partyHub.removeSharedInventoryItem(campaign.party.partyId, id))}
+            onAdjustGold={(delta) => campaign.party && performPartyAction(partyHub.adjustSharedGold(campaign.party.partyId, delta))}
             onLinkCharacter={(id) => void linkCharacter(id)}
             onViewMember={(memberId) => campaign.party && setViewedMember({ partyId: campaign.party.partyId, memberId })}
             onRemoveMember={(memberId) => campaign.party && performPartyAction(partyHub.removePartyMember(campaign.party.partyId, memberId))}
@@ -280,7 +282,7 @@ function PartyInvitation({ campaignName, gmDisplayName, characters, selectedChar
 
 type CampaignTab = 'party' | 'notes' | 'inventory';
 
-function CampaignEditor({ campaign, party, currentUserId, characters, combats, localNote, selectedNoteId, onSelectNote, onUpdateCampaign, onRenameParty, onCreateLocalNote, onUpdateLocalNote, onDeleteLocalNote, onCreateSharedNote, onUpdateSharedNote, onDeleteSharedNote, onAddInventory, onUpdateInventory, onDeleteInventory, onLinkCharacter, onViewMember, onRemoveMember, onAddMemberToCombat, onDeleteCampaign, inviteURL }: {
+function CampaignEditor({ campaign, party, currentUserId, characters, combats, localNote, selectedNoteId, onSelectNote, onUpdateCampaign, onRenameParty, onCreateLocalNote, onUpdateLocalNote, onDeleteLocalNote, onCreateSharedNote, onUpdateSharedNote, onDeleteSharedNote, onAddInventory, onUpdateInventory, onDeleteInventory, onAdjustGold, onLinkCharacter, onViewMember, onRemoveMember, onAddMemberToCombat, onDeleteCampaign, inviteURL }: {
   campaign: CampaignRecord;
   party: PartyCampaignSnapshot | null;
   currentUserId: string;
@@ -300,6 +302,7 @@ function CampaignEditor({ campaign, party, currentUserId, characters, combats, l
   onAddInventory: (item: PartyInventoryItem) => void;
   onUpdateInventory: (item: PartyInventoryItem) => void;
   onDeleteInventory: (id: string) => void;
+  onAdjustGold: (delta: number) => void;
   onLinkCharacter: (id: string) => void;
   onViewMember: (memberId: string) => void;
   onRemoveMember: (memberId: string) => void;
@@ -346,7 +349,7 @@ function CampaignEditor({ campaign, party, currentUserId, characters, combats, l
     />}
     {tab === 'party' && campaign.party && !party && <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-10 text-center text-slate-400">Loading the connected party…</div>}
     {tab === 'notes' && (party ? <SharedNotesEditor party={party} onCreate={onCreateSharedNote} onUpdate={onUpdateSharedNote} onDelete={onDeleteSharedNote} /> : <SoloNotesEditor campaign={campaign} note={localNote} selectedNoteId={selectedNoteId} onSelect={onSelectNote} onCreate={onCreateLocalNote} onUpdate={onUpdateLocalNote} onDelete={onDeleteLocalNote} />)}
-    {tab === 'inventory' && party && <SharedInventoryEditor party={party} currentUserId={currentUserId} onCreate={onAddInventory} onUpdate={onUpdateInventory} onDelete={onDeleteInventory} />}
+    {tab === 'inventory' && party && <><GoldBalanceControl currentGold={party.gold} onAdjust={onAdjustGold} title="Shared Gold" description="This balance is synchronized for every campaign member. Enter a transaction amount, then add or subtract it." /><SharedInventoryEditor party={party} currentUserId={currentUserId} onCreate={onAddInventory} onUpdate={onUpdateInventory} onDelete={onDeleteInventory} /></>}
   </div>;
 }
 
