@@ -1,0 +1,71 @@
+[
+  {
+    "id": "AdventureRewards-Monster-Raccoon",
+    "name": "Raccoon",
+    "level": 0,
+    "type": "Standard",
+    "role": "Soldier",
+    "hp": 4,
+    "physicalDefense": 11,
+    "arcaneDefense": 10,
+    "attackBonus": 3,
+    "saveDC": 13,
+    "damage": 1,
+    "notes": "Published defense line: PD 11/16/21 • AD 10/15/20.",
+    "sourceBook": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "sourcePage": 6,
+    "publishedRole": "Soldier",
+    "size": "Tiny",
+    "creatureType": "Beast",
+    "descriptionText": "In your Animal Form, you have the statistics of a Raccoon.",
+    "tactics": "",
+    "lore": "",
+    "actionPoints": 4,
+    "speed": 6,
+    "speedType": "Ground",
+    "primeModifier": 2,
+    "combatMastery": 1,
+    "might": 1,
+    "agility": 2,
+    "charisma": 0,
+    "intelligence": 0,
+    "skills": "Acrobatics +4, Awareness +4, Trickery +3",
+    "senses": "Passive Awareness 14, Darkvision 5",
+    "languages": "",
+    "otherSpeeds": "Climb 3",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "AdventureRewards-Raccoon-Nimble",
+        "kind": "Features",
+        "name": "Nimble",
+        "cost": "",
+        "details": "You don’t provoke Opportunity Attacks from moving."
+      },
+      {
+        "id": "AdventureRewards-Raccoon-Keen-Smell",
+        "kind": "Features",
+        "name": "Keen Smell",
+        "cost": "",
+        "details": "You have ADV on Awareness Checks using smell."
+      },
+      {
+        "id": "AdventureRewards-Raccoon-Bite-Scratch",
+        "kind": "Actions",
+        "name": "Bite or Scratch",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 1 Piercing or Slashing."
+      },
+      {
+        "id": "AdventureRewards-Raccoon-Skitter-Away",
+        "kind": "Reactions",
+        "name": "Skitter Away",
+        "cost": "",
+        "details": "When a creature moves within 2 Spaces of you, you can move up to half your Speed."
+      }
+    ]
+  }
+]

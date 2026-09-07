@@ -1,0 +1,236 @@
+[
+  {
+    "id": "Adventure Rewards|Wraithbane Edge",
+    "name": "Wraithbane Edge",
+    "category": "Weapons",
+    "subtype": "Sword",
+    "summary": "The blade of this silvery dagger gleams, reflecting light at impossible angles, despite its translucence. You almost expect your hand to go right through when touching it, but you easily find that it’s both solid and sharp.\n\nThis ethereal dagger can hit the very souls of ghostly creatures and cleaves through forces that animate the undead. While still effective against the living, its main application is disposing of those who walk (or hover) the earth beyond their natural lives.",
+    "mechanics": "STATISTICS\nMelee Weapon, Sword Style\n1 Slashing damage\nConcealable, Toss\n\nUNDEAD BANE (3)\nAttacks made with this Weapon deal +1 True damage to Undead creatures.\n\nWRAITHREND (2)\nWhen you damage an Undead creature with an Attack made using the Weapon, it bypasses Resistance to the damage dealt.",
+    "properties": ["Concealable", "Toss"],
+    "slot": "One Hand",
+    "sourcePage": "DC20 Magazine 20 p.3",
+    "sourceDocument": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "collection": "Magic",
+    "magicPower": 5,
+    "weaponProfile": { "baseDamage": 1, "damageTypes": ["Slashing"], "range": "1", "styles": ["Sword"], "isNativeRanged": false, "canBeThrown": true, "thrownRange": "5/10", "heavyHitDamageBonus": 0 },
+    "magicFeatures": [
+      { "name": "Undead Bane", "power": 3, "description": "Attacks made with this Weapon deal +1 True damage to Undead creatures." },
+      { "name": "Wraithrend", "power": 2, "description": "When you damage an Undead creature with an Attack made using the Weapon, it bypasses Resistance to the damage dealt." }
+    ],
+    "equippedEffects": { "conditionalRules": ["Attacks made with this Weapon deal +1 True damage to Undead creatures.", "Damage dealt to an Undead creature with this Weapon bypasses Resistance."] }
+  },
+  {
+    "id": "Adventure Rewards|Stinglash",
+    "name": "Stinglash",
+    "category": "Weapons",
+    "subtype": "Whip",
+    "summary": "This whip is formed from the headless body of a long serpent, its tail ending in a barb akin to a scorpion’s stinger. Its shiny, brown and black scales are thick and smooth, while the barb at its end is covered in tiny hairs that excrete a milky liquid.\n\nThis weapon was made to cause excruciating pain with its poisonous strikes, allowing its wielder to get the upper hand in battle.",
+    "mechanics": "STATISTICS\nMelee Weapon, Whip Style\n1 Slashing damage\nReach, Impact\n\nPOISON STING (3)\n(X Charges) When you Attack with this Weapon, the target must make a Repeated Might Save. Failure: Target takes 1 Poison damage per Charge at the start of its turn for 1 minute.",
+    "properties": ["Reach", "Impact"],
+    "slot": "One Hand",
+    "sourcePage": "DC20 Magazine 20 p.3",
+    "sourceDocument": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "collection": "Magic",
+    "magicPower": 3,
+    "charges": 3,
+    "weaponProfile": { "baseDamage": 1, "damageTypes": ["Slashing"], "range": "2", "styles": ["Whip"], "isNativeRanged": false, "canBeThrown": false, "heavyHitDamageBonus": 1 },
+    "magicFeatures": [
+      { "name": "Poison Sting", "power": 3, "description": "(X Charges) When you Attack with this Weapon, the target must make a Repeated Might Save. Failure: Target takes 1 Poison damage per Charge at the start of its turn for 1 minute.", "chargeCost": "X" }
+    ],
+    "equippedEffects": { "conditionalRules": ["Poison Sting can spend X Charges when you Attack; on a failed Repeated Might Save, the target takes 1 Poison damage per Charge at the start of its turn for 1 minute."] }
+  },
+  {
+    "id": "Adventure Rewards|Flameguard Gauntlets",
+    "name": "Flameguard Gauntlets",
+    "category": "Wondrous Items",
+    "subtype": "Gauntlets",
+    "summary": "These black gauntlets have a crimson sheen and are covered in etchings of stylized flame. They radiate warmth which flares into a scorching heat upon impact.\n\nThese gauntlets were crafted by dwarven blacksmiths to heat and handle metal without the use of a forge. After being quite effective in ending a drunken brawl, they have since become standard equipment among certain groups of warriors and monks.",
+    "mechanics": "STATISTICS\nGauntlets\n\nLIGHTBEARER (0)\nYou can spend a Minor Action to cause the item to shine or cease shining. This shine sheds Bright Light in a 3 Space Radius.\n\nCHANGE UNARMED DAMAGE TYPE: FIRE (1)\nYour Unarmed Strikes can deal Fire damage instead of its normal type. Choose each time you make an Attack with a hand equipped with this Gauntlet.\n\nSPELLCASTING (1)\nThe item is imbued with the following Spells: Fire Blast, Fire Imbued, Fire Torrent\n\nYou can take the Spell Action to cast an imbued Spell. When you do, you can spend Charges in place of MP, including for Spell Enhancements. The total amount of Charges and MP you spend can’t exceed your Mana Spend Limit.\n\nWHILE ATTUNED\nFIRE RESISTANCE (3)\nYou gain Fire Resistance (1).",
+    "properties": ["Lightbearer", "Fire Unarmed Strikes", "Imbued Spells"],
+    "slot": "Worn",
+    "sourcePage": "DC20 Magazine 20 p.3",
+    "sourceDocument": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "collection": "Magic",
+    "magicPower": 5,
+    "charges": 1,
+    "requiresAttunement": true,
+    "grantedSpells": ["Fire Blast", "Fire Imbued", "Fire Torrent"],
+    "magicFeatures": [
+      { "name": "Lightbearer", "power": 0, "description": "You can spend a Minor Action to cause the item to shine or cease shining. This shine sheds Bright Light in a 3 Space Radius." },
+      { "name": "Change Unarmed Damage Type: Fire", "power": 1, "description": "Your Unarmed Strikes can deal Fire damage instead of its normal type. Choose each time you make an Attack with a hand equipped with this Gauntlet." },
+      { "name": "Spellcasting", "power": 1, "description": "The item is imbued with the following Spells: Fire Blast, Fire Imbued, Fire Torrent\n\nYou can take the Spell Action to cast an imbued Spell. When you do, you can spend Charges in place of MP, including for Spell Enhancements. The total amount of Charges and MP you spend can’t exceed your Mana Spend Limit." },
+      { "name": "Fire Resistance", "power": 3, "description": "You gain Fire Resistance (1).", "requiresAttunement": true }
+    ],
+    "equippedEffects": { "conditionalRules": ["Unarmed Strikes made with an equipped Gauntlet can deal Fire damage instead of their normal type.", "The imbued Spells can spend Charges in place of MP, including for Spell Enhancements; total Charges and MP can’t exceed your Mana Spend Limit."] },
+    "attunedEffects": { "resistances": ["Fire (1)"] }
+  },
+  {
+    "id": "Adventure Rewards|Iron Mask of Stoicism",
+    "name": "Iron Mask of Stoicism",
+    "category": "Wondrous Items",
+    "subtype": "Mask",
+    "summary": "This solid iron mask has small slits cut for eyes, nostrils, and a mouth. It has several leather straps with iron buckles to fasten it in place.\n\nMasks of Stoicism are used by some monasteries to temper emotions and promote tranquility. Prolonged use during meditation can fully strip one of their emotions, which the monks see as the first step towards true enlightenment.",
+    "mechanics": "STOIC (2)\nCreatures have DisADV on Insight Checks against you.\n\nWHILE ATTUNED\nINTIMIDATION RESILIENCE (2)\nYou gain ADV on Saves against the Intimidated Condition.\n\nTAUNT RESILIENCE (2)\nYou gain ADV on Saves against the Taunted Condition.",
+    "properties": ["Stoic"],
+    "slot": "Worn",
+    "sourcePage": "DC20 Magazine 20 p.4",
+    "sourceDocument": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "collection": "Magic",
+    "magicPower": 6,
+    "requiresAttunement": true,
+    "magicFeatures": [
+      { "name": "Stoic", "power": 2, "description": "Creatures have DisADV on Insight Checks against you." },
+      { "name": "Intimidation Resilience", "power": 2, "description": "You gain ADV on Saves against the Intimidated Condition.", "requiresAttunement": true },
+      { "name": "Taunt Resilience", "power": 2, "description": "You gain ADV on Saves against the Taunted Condition.", "requiresAttunement": true }
+    ],
+    "equippedEffects": { "conditionalRules": ["Creatures have DisADV on Insight Checks against you."] },
+    "attunedEffects": { "conditionSaveAdvantages": ["Intimidated", "Taunted"] }
+  },
+  {
+    "id": "Adventure Rewards|Owl Cloak",
+    "name": "Owl Cloak",
+    "category": "Wondrous Items",
+    "subtype": "Cloak",
+    "summary": "This dark, feather-lined cloak drapes heavily across the shoulders, its hood cut to have the appearance of a horned owl’s silhouette. It’s reinforced with leather around the collar and along the cape. The hood itself is made of a durable and flexible fabric.\n\nThis cowl is used by scouts and sentries at night and in caves, but it’s ability to intensify light makes its use limited in daytime or in well-lit areas.",
+    "mechanics": "WHILE ATTUNED\nAWARENESS INCREASE (2)\nYou gain 1 level of Awareness Mastery, up to your Skill Mastery Cap. If your Awareness Mastery is already equal to your Skill Mastery Cap, you instead gain a +2 bonus to Awareness Checks.\n\nSWIVELING HEAD (1)\nYou’re immune to being Flanked.\n\nDARKVISION (1)\nYou have Darkvision 10 Spaces. If you already have Darkvision it increases by 5 Spaces.\n\nLIGHT SENSITIVITY (-2)\nWhile you or your target is in Bright Light, you have DisADV on Attacks and Awareness Checks that rely on sight.",
+    "properties": [],
+    "slot": "Worn",
+    "sourcePage": "DC20 Magazine 20 p.4",
+    "sourceDocument": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "collection": "Magic",
+    "magicPower": 2,
+    "requiresAttunement": true,
+    "magicFeatures": [
+      { "name": "Awareness Increase", "power": 2, "description": "You gain 1 level of Awareness Mastery, up to your Skill Mastery Cap. If your Awareness Mastery is already equal to your Skill Mastery Cap, you instead gain a +2 bonus to Awareness Checks.", "requiresAttunement": true },
+      { "name": "Swiveling Head", "power": 1, "description": "You’re immune to being Flanked.", "requiresAttunement": true },
+      { "name": "Darkvision", "power": 1, "description": "You have Darkvision 10 Spaces. If you already have Darkvision it increases by 5 Spaces.", "requiresAttunement": true },
+      { "name": "Light Sensitivity", "power": -2, "description": "While you or your target is in Bright Light, you have DisADV on Attacks and Awareness Checks that rely on sight.", "requiresAttunement": true }
+    ],
+    "attunedEffects": {
+      "skillMasteryIncreases": { "Awareness": 1 },
+      "skillBonusesAtCap": { "Awareness": 2 },
+      "immuneToFlanking": true,
+      "senses": ["Darkvision 10 Spaces; if you already have Darkvision, it increases by 5 Spaces."],
+      "conditionalRules": ["While you or your target is in Bright Light, you have DisADV on Attacks and Awareness Checks that rely on sight."]
+    }
+  },
+  {
+    "id": "Adventure Rewards|Shield of Ranged Reflection",
+    "name": "Shield of Ranged Reflection",
+    "category": "Shields",
+    "subtype": "Light Shield",
+    "summary": "The face of this small, round shield is made of polished silver that never blemishes. The face is so reflective that it could be used as a mirror.\n\nShields of Ranged Reflection are commonly used by soldiers to retaliate against archers and mages while they approach. Just wielding the shield can be enough of a deterrent to prevent ranged attacks.",
+    "mechanics": "STATISTICS\nLight Shield\n+2 PD\n\nRANGED REFLECTION (3)\n(1 Charge) When a creature misses you with a Ranged Attack that targets your PD, you can redirect the Attack as part of the same action at a different creature you can see within 10 Spaces. Make an Attack Check against the new target’s PD. Hit: The target takes the projectile’s normal damage.",
+    "properties": ["+2 Physical Defense"],
+    "slot": "One Hand",
+    "sourcePage": "DC20 Magazine 20 p.5",
+    "sourceDocument": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "collection": "Magic",
+    "magicPower": 3,
+    "charges": 3,
+    "magicFeatures": [
+      { "name": "Ranged Reflection", "power": 3, "description": "(1 Charge) When a creature misses you with a Ranged Attack that targets your PD, you can redirect the Attack as part of the same action at a different creature you can see within 10 Spaces. Make an Attack Check against the new target’s PD. Hit: The target takes the projectile’s normal damage.", "chargeCost": 1 }
+    ],
+    "equippedEffects": { "conditionalRules": ["Ranged Reflection can spend 1 Charge after a Ranged Attack misses your PD to redirect it at another visible creature within 10 Spaces."] }
+  },
+  {
+    "id": "Adventure Rewards|Flickerbolt Dart",
+    "name": "Flickerbolt Dart",
+    "category": "Weapons",
+    "subtype": "Sword",
+    "summary": "This golden dart is about a foot long with a simple, elegant design. It’s white metal fins have the jagged edge of a lightning bolt. Its surprisingly light for its size.\n\nFlickerbolt darts are forged of electrum plated mithril in the heart of a massive thunderstorm. The primal forces of electricity are channeled into the dart, which then infuses the wielder when used.",
+    "mechanics": "STATISTICS\nMelee Weapon, Sword Style\n1 Piercing damage\nThrown (10/20)\n\nWHILE ATTUNED\nLIGHTNING FLICKER (2)\n(2 Charges) When you make an Attack with this weapon, you can turn into lightning as a part of the attack, traveling with the weapon. The Attack deals +1 Lightning damage and you teleport to an unoccupied space of your choice within 1 Space of target. If the Attack was a Ranged Attack, you may reequip the weapon after you teleport.",
+    "properties": ["Thrown"],
+    "slot": "One Hand",
+    "sourcePage": "DC20 Magazine 20 p.5",
+    "sourceDocument": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "collection": "Magic",
+    "magicPower": 2,
+    "charges": 2,
+    "requiresAttunement": true,
+    "weaponProfile": { "baseDamage": 1, "damageTypes": ["Piercing"], "range": "1", "styles": ["Sword"], "isNativeRanged": false, "canBeThrown": true, "thrownRange": "10/20", "heavyHitDamageBonus": 0 },
+    "magicFeatures": [
+      { "name": "Lightning Flicker", "power": 2, "description": "(2 Charges) When you make an Attack with this weapon, you can turn into lightning as a part of the attack, traveling with the weapon. The Attack deals +1 Lightning damage and you teleport to an unoccupied space of your choice within 1 Space of target. If the Attack was a Ranged Attack, you may reequip the weapon after you teleport.", "requiresAttunement": true, "chargeCost": 2 }
+    ],
+    "attunedEffects": { "conditionalRules": ["Lightning Flicker can spend 2 Charges with an Attack to deal +1 Lightning damage, teleport within 1 Space of the target, and potentially reequip the Weapon after a Ranged Attack."] }
+  },
+  {
+    "id": "Adventure Rewards|Merfolk Trident",
+    "name": "Merfolk Trident",
+    "category": "Weapons",
+    "subtype": "Spear",
+    "summary": "This large, bronze trident has an oceanic design with embossed coral, seaweed, and fish along the haft and prongs. The tip of each prong is shaped like a thin, spiraling seashell.\n\nMerfolk Tridents were originally crafted by merfolk to allow them to travel on land as either envoys or raiders. Some have been granted to humanoid settlements to allow envoys into merfork civilizations.",
+    "mechanics": "STATISTICS\nMelee Weapon, Spear Style\n1 Piercing damage\nVersatile, Reach\n\nWHILE ATTUNED\nMERFOLK TRANSFORMATION (1)\nWhen you equip this weapon, you can breath underwater and undergo a transformation depending on your base form:\n• If you have a fish tail instead of legs, your tail splits in 2 to become legs. You can breathe air and your Speed becomes equal to your Swim Speed, but you’re Slowed when swimming. You can now equip foot items.\n• If you have legs, your legs merge together into a fish tail. You gain a Swim Speed equal to your Speed, but are Slowed when moving on the ground. Any pants or boots you were wearing fall off and you can’t equip anything on your feet.\n• If you have neither, you grow a fish tail and gain a Swim Speed equal to your Speed.\nThe transformation ends when you unequip the weapon.",
+    "properties": ["Versatile", "Reach"],
+    "slot": "One Hand",
+    "sourcePage": "DC20 Magazine 20 p.5",
+    "sourceDocument": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "collection": "Magic",
+    "magicPower": 1,
+    "requiresAttunement": true,
+    "weaponProfile": { "baseDamage": 1, "damageTypes": ["Piercing"], "range": "2", "styles": ["Spear"], "isNativeRanged": false, "canBeThrown": false, "heavyHitDamageBonus": 0 },
+    "magicFeatures": [
+      { "name": "Merfolk Transformation", "power": 1, "description": "When you equip this weapon, you can breath underwater and undergo a transformation depending on your base form:\n• If you have a fish tail instead of legs, your tail splits in 2 to become legs. You can breathe air and your Speed becomes equal to your Swim Speed, but you’re Slowed when swimming. You can now equip foot items.\n• If you have legs, your legs merge together into a fish tail. You gain a Swim Speed equal to your Speed, but are Slowed when moving on the ground. Any pants or boots you were wearing fall off and you can’t equip anything on your feet.\n• If you have neither, you grow a fish tail and gain a Swim Speed equal to your Speed.\nThe transformation ends when you unequip the weapon.", "requiresAttunement": true }
+    ],
+    "attunedEffects": { "conditionalRules": ["While equipped, you can breath underwater and apply Merfolk Transformation according to your base form."] }
+  },
+  {
+    "id": "Adventure Rewards|Raccoon Shifter Mask",
+    "name": "Raccoon Shifter Mask",
+    "category": "Wondrous Items",
+    "subtype": "Mask",
+    "summary": "A small fur raccoon mask with a leather strap.\n\nShifter Masks are commonly used by scouts and spies who aren’t able to magically shift on their own. Raccoons are popular among those who work in at night with their strong night vision and climbing abilities making it easy to spy from rooftops or trees.",
+    "mechanics": "WHILE ATTUNED\nRACCOON TRANSFORMATION (1)\n(1 AP, 1 Charge) You can transform into a raccoon for 1 hour. You can spend 1 AP on your turn to shift back and forth between your True Form and Animal Form. In your Animal Form, you have the statistics of a Raccoon.\n\nRACCOON\nTiny Beast | Level 0 Soldier\nHP 4 • PD 11/16/21 • AD 10/15/20\nMIG 1 • AGI 2 (4) • CHA 0 • INT 0\nSkills: Acrobatics +4, Awareness +4, Trickery +3\nSenses: Passive Awareness 14, Darkvision 5\nOther Speeds: Climb 3\nActions 4 • Attack +3 • Save DC 13 • Speed 6\n\nNIMBLE\nYou don’t provoke Opportunity Attacks from moving.\n\nKEEN SMELL\nYou have ADV on Awareness Checks using smell.\n\n(1) BITE OR SCRATCH\nMelee Martial Attack vs PD, 1 Piercing or Slashing.\n\nSKITTER AWAY\nWhen a creature moves within 2 Spaces of you, you can move up to half your Speed.",
+    "properties": [],
+    "slot": "Worn",
+    "sourcePage": "DC20 Magazine 20 p.6",
+    "sourceDocument": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "collection": "Magic",
+    "magicPower": 1,
+    "charges": 1,
+    "requiresAttunement": true,
+    "magicFeatures": [
+      { "name": "Raccoon Transformation", "power": 1, "description": "(1 AP, 1 Charge) You can transform into a raccoon for 1 hour. You can spend 1 AP on your turn to shift back and forth between your True Form and Animal Form. In your Animal Form, you have the statistics of a Raccoon.", "requiresAttunement": true, "chargeCost": 1 }
+    ],
+    "attunedEffects": { "conditionalRules": ["Raccoon Transformation can spend 1 AP and 1 Charge to transform for 1 hour; shifting between True Form and Animal Form costs 1 AP on your turn."] }
+  },
+  {
+    "id": "Adventure Rewards|Battlemage Staff",
+    "name": "Battlemage Staff",
+    "category": "Weapons",
+    "subtype": "Staff",
+    "summary": "This ironwood staff has a remarkably simple design. It has a durable leather handle and adamantine caps on both of its tips.\n\nThis staff was designed for battle with function over design. These staffs have crushed through much more ornate wizard staves or champion shields in the many wars they were used.",
+    "mechanics": "STATISTICS\nMelee Weapon, Staff Style\n2 Bludgeoning damage\nTwo-Handed, Guard, Heavy\n\nSPELL FOCUS (4)\nThis weapon is also a Spell Focus with the following properties: Two-Handed and Powerful.",
+    "properties": ["Two-Handed", "Guard", "Heavy", "Powerful"],
+    "slot": "Two Hands",
+    "sourcePage": "DC20 Magazine 20 p.6",
+    "sourceDocument": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "collection": "Magic",
+    "magicPower": 4,
+    "actsAsSpellFocus": true,
+    "weaponProfile": { "baseDamage": 2, "damageTypes": ["Bludgeoning"], "range": "1", "styles": ["Staff"], "isNativeRanged": false, "canBeThrown": false, "heavyHitDamageBonus": 0 },
+    "magicFeatures": [
+      { "name": "Spell Focus", "power": 4, "description": "This weapon is also a Spell Focus with the following properties: Two-Handed and Powerful." }
+    ]
+  },
+  {
+    "id": "Adventure Rewards|Floating Protector",
+    "name": "Floating Protector",
+    "category": "Shields",
+    "subtype": "Heavy Shield",
+    "summary": "This sentient tower shield is embossed by a massive moving face of a ruggedly handsome half dwarf with a plumed helm. It’s overly protective to a condescending degree, unable to fathom that anything but proper, heavy armor can provide sufficient safety.\n\nDespite being quite helpful in combat, the Floating Protector has changed hands many times due to sheer exasperation. It’s longest owners have been nobles who see its concerns as evidence of their own importance.",
+    "mechanics": "STATISTICS\nHeavy Shield\n+2 PD, +1 AD\nDisADV on Agility Checks\n\nDANCING (SHIELD) (3)\nYou can use a Minor Action to cause the Shield to begin hovering in the air. The Shield ceases to hover if you grab it or you end your turn more than 5 Spaces from it.\n\nWhile it’s within 5 Spaces of you and hovering, you can take the Object Action to move it to any Space within 5 Spaces of you. When you do, you can choose for it to protect a creature within 1 Space of it, following them as they move. A protected creature benefits from the Shield’s benefits (such as PDR, EDR, and Defense increases) even if it’s already wielding a Shield. A creature can only gain the bonuses of one Dancing Shield at a time (its choice). They can spend a Minor Action to change which wielded Shield to benefit from.\n\nYou can perform Maneuvers with the Shield as if you were standing in its Space.\n\nMINOR SENTIENCE (2)\nThe item has sentience with the following statistics:\n• It has a Charisma of 3 and an Intelligence of -2.\n• It has 10 Spaces of hearing, sight, and Telepathy.\n• It can read and speak Common and 1 additional language.",
+    "properties": ["+2 Physical Defense", "+1 Area Defense", "Agility Check Disadvantage (−1)"],
+    "slot": "One Hand",
+    "sourcePage": "DC20 Magazine 20 p.7",
+    "sourceDocument": "DC20 Magazine 20 — Adventure Rewards v1.0",
+    "collection": "Magic",
+    "magicPower": 5,
+    "requiresAttunement": true,
+    "magicFeatures": [
+      { "name": "Dancing (Shield)", "power": 3, "description": "You can use a Minor Action to cause the Shield to begin hovering in the air. The Shield ceases to hover if you grab it or you end your turn more than 5 Spaces from it.\n\nWhile it’s within 5 Spaces of you and hovering, you can take the Object Action to move it to any Space within 5 Spaces of you. When you do, you can choose for it to protect a creature within 1 Space of it, following them as they move. A protected creature benefits from the Shield’s benefits (such as PDR, EDR, and Defense increases) even if it’s already wielding a Shield. A creature can only gain the bonuses of one Dancing Shield at a time (its choice). They can spend a Minor Action to change which wielded Shield to benefit from.\n\nYou can perform Maneuvers with the Shield as if you were standing in its Space.", "requiresAttunement": true },
+      { "name": "Minor Sentience", "power": 2, "description": "The item has sentience with the following statistics:\n• It has a Charisma of 3 and an Intelligence of -2.\n• It has 10 Spaces of hearing, sight, and Telepathy.\n• It can read and speak Common and 1 additional language.", "requiresAttunement": true }
+    ],
+    "attunedEffects": { "conditionalRules": ["A hovering Floating Protector can be moved with the Object Action, protect a creature within 1 Space of it, and be used for Maneuvers as if you were standing in its Space.", "Minor Sentience: Charisma 3, Intelligence -2, 10 Spaces of hearing, sight, and Telepathy; reads and speaks Common and 1 additional language."] }
+  }
+]

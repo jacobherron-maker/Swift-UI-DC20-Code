@@ -9,7 +9,7 @@ import type {
   MasteryLevel,
   Spell,
 } from '../types/models';
-import { combinedDefensiveProfile, defensiveEquipmentProfile } from './equipmentRules';
+import { activeEquipmentSheetEffects, combinedDefensiveProfile, defensiveEquipmentProfile } from './equipmentRules';
 import { hasAutomaticMulticlassFlavor, hasDirectMulticlassFeature, hasMulticlassSubclass, multiclassParagonTalentSlotClasses, multiclassSubclassCount } from './talentRules';
 
 export const ATTRIBUTE_NAMES: DC20Attribute[] = ['Might', 'Agility', 'Charisma', 'Intelligence'];
@@ -1512,6 +1512,13 @@ export interface EquippedCombatModifiers {
   mysticalDamageReduction: boolean;
   unarmedHeavyHitDamageBonus: number;
   immuneToFlanking: boolean;
+  flankingImmunitySource: string;
+  resistances: string[];
+  senses: string[];
+  conditionalRules: string[];
+  conditionSaveAdvantages: string[];
+  skillMasteryIncreases: Record<string, number>;
+  skillBonusesAtCap: Record<string, number>;
   focusProperties: string[];
   mountedShieldDefense: { physicalDefense: number; areaDefense: number } | null;
 }
@@ -1526,7 +1533,8 @@ export function equippedCombatModifiers(
   const training = characterCombatTraining(character, classReference, allTraits);
   const equipped = (character.inventoryItems ?? []).filter(({ isEquipped }) => isEquipped)
     .flatMap(({ equipmentID }) => catalog.filter(({ id }) => id === equipmentID));
-  const focuses = training.spellFocusTraining ? equipped.filter(({ category }) => category === 'Spell Focuses') : [];
+  const focuses = training.spellFocusTraining ? equipped.filter(({ category, actsAsSpellFocus }) => category === 'Spell Focuses' || actsAsSpellFocus) : [];
+  const magicEffects = activeEquipmentSheetEffects(character.inventoryItems ?? [], catalog);
   const untrainedGear = equipped.filter((item) => {
     if (item.category === 'Armor') {
       if (training.pactArmorTraining) return false;
@@ -1580,7 +1588,14 @@ export function equippedCombatModifiers(
     elementalDamageReduction: Boolean(armorProfile?.elementalDamageReduction || routedProfile.elementalDamageReduction),
     mysticalDamageReduction: hasPactArmor || focusProperties.includes('Warded') || routedProfile.mysticalDamageReduction,
     unarmedHeavyHitDamageBonus: Number(Boolean(equippedArmor?.subtype === 'Heavy Armor' || equipped.some(({ name }) => name === 'Gauntlet'))),
-    immuneToFlanking: equipped.filter(({ category }) => category === 'Shields').length >= 2,
+    immuneToFlanking: equipped.filter(({ category }) => category === 'Shields').length >= 2 || magicEffects.immuneToFlanking,
+    flankingImmunitySource: magicEffects.immuneToFlanking ? 'Magic Item' : 'Two Shields',
+    resistances: magicEffects.resistances,
+    senses: magicEffects.senses,
+    conditionalRules: magicEffects.conditionalRules,
+    conditionSaveAdvantages: magicEffects.conditionSaveAdvantages,
+    skillMasteryIncreases: magicEffects.skillMasteryIncreases,
+    skillBonusesAtCap: magicEffects.skillBonusesAtCap,
     focusProperties,
     mountedShieldDefense: activeShield?.item.properties.includes('Mounted')
       ? { physicalDefense: activeShield.profile.physicalDefense, areaDefense: activeShield.profile.areaDefense }

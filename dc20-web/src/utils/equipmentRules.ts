@@ -1,4 +1,4 @@
-import type { CharacterInventoryItem, EquipmentCatalogItem, EquipmentSlot } from '../types/models';
+import type { CharacterInventoryItem, EquipmentCatalogItem, EquipmentSheetEffects, EquipmentSlot } from '../types/models';
 import { EquipmentSlotValues } from '../types/models';
 import { generateUUID } from './gameUtils';
 
@@ -123,6 +123,7 @@ export function combinedDefensiveProfile(items: EquipmentCatalogItem[]): Defensi
 /** Structured combat data for every published Beta weapon example. */
 export function weaponMechanicalProfile(item: EquipmentCatalogItem): WeaponMechanicalProfile | null {
   if (item.category !== 'Weapons') return null;
+  if (item.weaponProfile) return { ...item.weaponProfile, damageTypes: [...item.weaponProfile.damageTypes], styles: [...item.weaponProfile.styles] };
   const damage = item.summary.match(/^(\d+)(?: \(\d+\))? ([A-Za-z]+(?: or [A-Za-z]+)?) damage/);
   const range = item.summary.match(/Range ([0-9/]+)/)?.[1] ?? '1';
   const styles = item.subtype.replace(/^Two-Handed /, '').split('/');
@@ -141,7 +142,68 @@ export function weaponMechanicalProfile(item: EquipmentCatalogItem): WeaponMecha
 }
 
 export function equipmentUseCapacity(item: EquipmentCatalogItem): number | undefined {
-  return item.name === 'Medicine Kit' ? 5 : undefined;
+  return item.charges ?? (item.name === 'Medicine Kit' ? 5 : undefined);
+}
+
+export interface ActiveEquipmentSheetEffects {
+  resistances: string[];
+  skillMasteryIncreases: Record<string, number>;
+  skillBonusesAtCap: Record<string, number>;
+  immuneToFlanking: boolean;
+  senses: string[];
+  conditionalRules: string[];
+  conditionSaveAdvantages: string[];
+}
+
+const EMPTY_SHEET_EFFECTS: ActiveEquipmentSheetEffects = {
+  resistances: [],
+  skillMasteryIncreases: {},
+  skillBonusesAtCap: {},
+  immuneToFlanking: false,
+  senses: [],
+  conditionalRules: [],
+  conditionSaveAdvantages: [],
+};
+
+function mergeSheetEffect(target: ActiveEquipmentSheetEffects, effect: EquipmentSheetEffects | undefined) {
+  if (!effect) return;
+  target.resistances.push(...(effect.resistances ?? []));
+  target.senses.push(...(effect.senses ?? []));
+  target.conditionalRules.push(...(effect.conditionalRules ?? []));
+  target.conditionSaveAdvantages.push(...(effect.conditionSaveAdvantages ?? []));
+  target.immuneToFlanking ||= Boolean(effect.immuneToFlanking);
+  for (const [name, value] of Object.entries(effect.skillMasteryIncreases ?? {})) {
+    target.skillMasteryIncreases[name] = Math.max(target.skillMasteryIncreases[name] ?? 0, value);
+  }
+  for (const [name, value] of Object.entries(effect.skillBonusesAtCap ?? {})) {
+    target.skillBonusesAtCap[name] = Math.max(target.skillBonusesAtCap[name] ?? 0, value);
+  }
+}
+
+/** Published magic-item effects that are active for the character's current equip and attunement state. */
+export function activeEquipmentSheetEffects(items: CharacterInventoryItem[], catalog: EquipmentCatalogItem[]): ActiveEquipmentSheetEffects {
+  const equipmentByID = new Map(catalog.map((item) => [item.id, item]));
+  const result: ActiveEquipmentSheetEffects = {
+    ...EMPTY_SHEET_EFFECTS,
+    resistances: [],
+    skillMasteryIncreases: {},
+    skillBonusesAtCap: {},
+    senses: [],
+    conditionalRules: [],
+    conditionSaveAdvantages: [],
+  };
+  for (const inventory of items) {
+    if (!inventory.isEquipped) continue;
+    const equipment = equipmentByID.get(inventory.equipmentID);
+    if (!equipment) continue;
+    mergeSheetEffect(result, equipment.equippedEffects);
+    if (inventory.isAttuned) mergeSheetEffect(result, equipment.attunedEffects);
+  }
+  result.resistances = Array.from(new Set(result.resistances));
+  result.senses = Array.from(new Set(result.senses));
+  result.conditionalRules = Array.from(new Set(result.conditionalRules));
+  result.conditionSaveAdvantages = Array.from(new Set(result.conditionSaveAdvantages));
+  return result;
 }
 
 export function healingPotionAmount(item: EquipmentCatalogItem): number {
@@ -188,6 +250,7 @@ export function addInventoryItem(
     equipmentID: equipment.id,
     quantity: 1,
     isEquipped: false,
+    isAttuned: false,
     source: 'added',
     remainingUses: equipmentUseCapacity(equipment),
   }];
@@ -236,6 +299,17 @@ export function toggleInventoryEquipped(
   return updated;
 }
 
+export function toggleInventoryAttuned(
+  items: CharacterInventoryItem[],
+  inventoryID: string,
+  catalog: EquipmentCatalogItem[],
+): CharacterInventoryItem[] {
+  const inventory = items.find(({ id }) => id === inventoryID);
+  const equipment = inventory ? catalog.find(({ id }) => id === inventory.equipmentID) : undefined;
+  if (!inventory?.isEquipped || !equipment?.requiresAttunement) return items;
+  return items.map((item) => item.id === inventoryID ? { ...item, isAttuned: !item.isAttuned } : item);
+}
+
 /** AP spent by the complete equip/stow transition, including gear auto-stowed to free a hand. */
 export function equipmentTransitionActionPointCost(
   before: CharacterInventoryItem[],
@@ -256,13 +330,15 @@ export function setInventoryQuantity(
   items: CharacterInventoryItem[],
   inventoryID: string,
   quantity: number,
+  usesPerItem?: number,
 ): CharacterInventoryItem[] {
+  const effectiveUsesPerItem = usesPerItem ?? 5;
   return items.map((item) => {
     if (item.id !== inventoryID) return item;
     const nextQuantity = Math.max(1, Math.trunc(quantity));
     if (item.remainingUses === undefined) return { ...item, quantity: nextQuantity };
-    const useDifference = (nextQuantity - item.quantity) * 5;
-    return { ...item, quantity: nextQuantity, remainingUses: Math.max(0, Math.min(nextQuantity * 5, item.remainingUses + useDifference)) };
+    const useDifference = (nextQuantity - item.quantity) * effectiveUsesPerItem;
+    return { ...item, quantity: nextQuantity, remainingUses: Math.max(0, Math.min(nextQuantity * effectiveUsesPerItem, item.remainingUses + useDifference)) };
   });
 }
 

@@ -75,29 +75,31 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
   const categories = Object.values(EquipmentCategoryValues);
   const customEquipment = campaignData.customEquipment;
   const customIDs = useMemo(() => new Set(customEquipment.map(({ id }) => id)), [customEquipment]);
-  const standardEquipment = useMemo(() => sortByName([...equipment, ...customEquipment]), [customEquipment, equipment]);
+  const standardEquipment = useMemo(() => sortByName([...equipment.filter(({ collection }) => collection !== 'Magic'), ...customEquipment]), [customEquipment, equipment]);
+  const magicEquipment = useMemo(() => sortByName(equipment.filter(({ collection }) => collection === 'Magic')), [equipment]);
+  const activeEquipment = library === 'magic' ? magicEquipment : standardEquipment;
   const propertyOptions = useMemo(() => Array.from(new Set(equipment.flatMap((item) => item.properties))).sort((a, b) => a.localeCompare(b)), [equipment]);
   const effectiveTargetCharacterID = targetCharacterID || selectedCharacterId || characters[0]?.id || '';
 
   useEffect(() => {
     if (focusRequest?.kind !== 'equipment') return;
-    setLibrary('standard');
+    const requestedItem = [...equipment, ...customEquipment].find(({ id }) => id === focusRequest.id);
+    setLibrary(requestedItem?.collection === 'Magic' ? 'magic' : 'standard');
     setCategory(focusRequest.id && customIDs.has(focusRequest.id) ? 'Custom Items' : 'All');
     if (focusRequest.id) setSelectedEquipmentID(focusRequest.id);
     else setShowCustomModal(true);
     onFocusHandled?.();
-  }, [customIDs, focusRequest, onFocusHandled]);
+  }, [customEquipment, customIDs, equipment, focusRequest, onFocusHandled]);
 
   const filtered = useMemo(() => {
-    if (library === 'magic') return [];
     const query = search.trim().toLowerCase();
-    return standardEquipment.filter((item) => (
+    return activeEquipment.filter((item) => (
       (category === 'All' || (category === 'Custom Items' ? customIDs.has(item.id) : item.category === category))
       && (!query || [item.name, item.subtype, item.summary, item.mechanics, ...item.properties]
         .some((value) => value.toLowerCase().includes(query)))
     ));
-  }, [category, customIDs, library, search, standardEquipment]);
-  const requestedSelection = standardEquipment.find(({ id }) => id === selectedEquipmentID) ?? null;
+  }, [activeEquipment, category, customIDs, search]);
+  const requestedSelection = activeEquipment.find(({ id }) => id === selectedEquipmentID) ?? null;
   const selected = requestedSelection && filtered.some(({ id }) => id === requestedSelection.id)
     ? requestedSelection
     : filtered[0] ?? null;
@@ -168,23 +170,20 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
           <p className="text-xs text-slate-500">Rules equipment and player-created inventory items</p>
         </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-[auto_auto_1fr_14rem_auto]">
-          <button type="button" onClick={() => setLibrary('standard')} className={`rounded-lg px-4 py-2.5 text-sm font-black ${library === 'standard' ? 'theme-primary-button text-white' : 'bg-white/[0.03] text-slate-400 hover:bg-white/5'}`}>Standard Equipment</button>
-          <button type="button" onClick={() => setLibrary('magic')} className={`rounded-lg px-4 py-2.5 text-sm font-black ${library === 'magic' ? 'theme-primary-button text-white' : 'bg-white/[0.03] text-slate-400 hover:bg-white/5'}`}>Magic Items <span className="text-[9px] uppercase tracking-wider opacity-65">Coming Soon</span></button>
-          {library === 'standard' && <>
-            <input className={`${inputClass} min-w-0`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search equipment…" aria-label="Search equipment" />
+          <button type="button" onClick={() => { setLibrary('standard'); setCategory('All'); setSelectedEquipmentID(null); }} className={`rounded-lg px-4 py-2.5 text-sm font-black ${library === 'standard' ? 'theme-primary-button text-white' : 'bg-white/[0.03] text-slate-400 hover:bg-white/5'}`}>Standard Equipment</button>
+          <button type="button" onClick={() => { setLibrary('magic'); setCategory('All'); setSelectedEquipmentID(null); }} className={`rounded-lg px-4 py-2.5 text-sm font-black ${library === 'magic' ? 'theme-primary-button text-white' : 'bg-white/[0.03] text-slate-400 hover:bg-white/5'}`}>Magic Items <span className="text-[9px] uppercase tracking-wider opacity-65">{magicEquipment.length}</span></button>
+          <input className={`${inputClass} min-w-0`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${library === 'magic' ? 'magic items' : 'equipment'}…`} aria-label="Search equipment" />
             <select className={`${inputClass} min-w-0`} value={category} onChange={(event) => setCategory(event.target.value as EquipmentCategory | 'All' | 'Custom Items')} aria-label="Filter by category">
-              <option value="All">All categories ({standardEquipment.length})</option>
-              {categories.map((entry) => <option key={entry} value={entry}>{entry} ({standardEquipment.filter(({ category: itemCategory }) => itemCategory === entry).length})</option>)}
-              <option value="Custom Items">Custom Items ({customEquipment.length})</option>
+              <option value="All">All categories ({activeEquipment.length})</option>
+              {categories.filter((entry) => activeEquipment.some(({ category: itemCategory }) => itemCategory === entry)).map((entry) => <option key={entry} value={entry}>{entry} ({activeEquipment.filter(({ category: itemCategory }) => itemCategory === entry).length})</option>)}
+              {library === 'standard' && <option value="Custom Items">Custom Items ({customEquipment.length})</option>}
             </select>
-            <button type="button" onClick={() => setShowCustomModal(true)} className="btn-primary px-4 text-sm font-black">+ Custom</button>
-          </>}
+          {library === 'standard' ? <button type="button" onClick={() => setShowCustomModal(true)} className="btn-primary px-4 text-sm font-black">+ Custom</button> : <div className="flex items-center justify-center rounded-lg border border-amber-400/15 bg-amber-500/5 px-3 text-xs font-bold text-amber-200">Adventure Rewards</div>}
         </div>
         {notice && <p className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200" role="status">{notice}</p>}
       </div>
 
-      {library === 'standard' && (
-        <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:overflow-hidden">
           <aside className="w-full shrink-0 overflow-y-auto overscroll-contain border-b border-white/5 p-4 lg:w-[23rem] lg:border-b-0 lg:border-r">
             {isLoading && <div className="rounded-xl border border-white/5 p-4 text-sm text-slate-500">Loading the native catalog…</div>}
             {error && <div className="rounded-xl border border-red-400/20 bg-red-500/5 p-4 text-sm text-red-300">{error}</div>}
@@ -197,7 +196,7 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
                   onClick={() => setSelectedEquipmentID(item.id)}
                   className={`w-full rounded-xl border p-3 text-left transition ${item.id === effectiveSelectedEquipmentID ? 'border-violet-400/70 bg-violet-500/15' : 'border-white/5 bg-white/[0.025] hover:bg-white/[0.05]'}`}
                 >
-                  <div className="flex items-start justify-between gap-3"><span className="font-bold text-slate-100">{item.name}</span><span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-violet-300">{customIDs.has(item.id) ? 'Custom' : item.category}</span></div>
+                  <div className="flex items-start justify-between gap-3"><span className="font-bold text-slate-100">{item.name}</span><span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-violet-300">{customIDs.has(item.id) ? 'Custom' : item.collection === 'Magic' ? `Magic • ${item.category}` : item.category}</span></div>
                   <div className="mt-1 text-xs text-slate-500">{item.subtype}</div>
                   <div className="mt-1 line-clamp-2 text-xs text-slate-400">{item.summary}</div>
                 </button>
@@ -220,10 +219,7 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
               onCustomDelete={() => deleteCustomItem(selected)}
             />}
           </main>
-        </div>
-      )}
-
-      {library === 'magic' && <div className="flex min-h-0 flex-1 items-center justify-center p-8 text-center"><div><div className="text-5xl" aria-hidden="true">✨</div><h2 className="mt-4 text-3xl font-black text-white">Magic Items</h2><p className="mt-2 text-slate-400">Coming Soon</p></div></div>}
+      </div>
 
       {showCustomModal && <CustomItemModal
         propertyOptions={propertyOptions}
@@ -261,7 +257,10 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
     defense.mysticalDamageReduction ? 'MDR' : '',
     defense.speedPenalty ? `Speed −${defense.speedPenalty}` : '',
     defense.agilityCheckDisadvantage ? 'DisADV on Agility Checks' : '',
-    item.category === 'Spell Focuses' ? displayProperties.filter((property) => property !== 'Two-Handed').join(' • ') : '',
+    item.category === 'Spell Focuses' || item.actsAsSpellFocus ? displayProperties.filter((property) => property !== 'Two-Handed' && !['Guard', 'Heavy'].includes(property)).join(' • ') : '',
+    ...(item.equippedEffects?.conditionalRules ?? []),
+    ...(item.attunedEffects?.resistances?.map((value) => `${value} Resistance while Attuned`) ?? []),
+    ...(item.attunedEffects?.senses?.map((value) => `${value} while Attuned`) ?? []),
     potionHealing ? `Restores ${potionHealing} HP when consumed` : '',
     item.name === 'Medicine Kit' ? '5 tracked uses per kit' : '',
     item.category === 'Trade Tools' ? `Enables ${item.properties[0]} activities` : '',
@@ -271,7 +270,7 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
       <div className="rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-950/50 via-slate-900 to-slate-950 p-6">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
-            <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">{isCustom ? 'Custom Item' : item.category}</div>
+            <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">{isCustom ? 'Custom Item' : item.collection === 'Magic' ? `Magic Item • ${item.category}` : item.category}</div>
             <h2 className="mt-1 break-words text-3xl font-black tracking-tight text-white sm:text-4xl">{item.name}</h2>
             <p className="mt-2 text-slate-400">{item.subtype} • {item.slot}</p>
             <p className="mt-1 text-xs text-slate-600">{item.sourcePage}</p>
@@ -292,6 +291,7 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
           </div>
         </div>
         <p className="mt-5 max-w-3xl text-lg leading-7 text-violet-100"><RuleAwareText text={item.summary} references={item.ruleReferences} /></p>
+        {item.collection === 'Magic' && <div className="mt-5 grid gap-3 sm:grid-cols-3"><MiniFact label="Magic Power" value={String(item.magicPower ?? '—')} /><MiniFact label="Charges" value={item.charges === undefined ? 'None' : String(item.charges)} /><MiniFact label="Attunement" value={item.requiresAttunement ? 'Required for marked features' : 'Not required'} /></div>}
       </div>
 
       {isCustom && <CustomItemEditor key={item.id} item={item} propertyOptions={propertyOptions} onSave={onCustomSave} onDelete={onCustomDelete} />}
@@ -301,7 +301,9 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
         <div className="mt-4 whitespace-pre-wrap leading-7 text-slate-300"><RuleAwareText text={item.mechanics} references={item.ruleReferences} /></div>
       </section>
 
-      {routedEffects.length > 0 && <section className="rounded-2xl border border-emerald-400/15 bg-emerald-950/15 p-6"><h3 className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">Routed Character-Sheet Effects</h3><p className="mt-2 text-xs leading-5 text-slate-500">These effects become active when the item is equipped and any required Training is met, or when its use action is taken for carried supplies.</p><div className="mt-4 flex flex-wrap gap-2">{routedEffects.map((effect) => <span key={effect} className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm font-semibold text-emerald-100">{effect}</span>)}</div></section>}
+      {item.magicFeatures && item.magicFeatures.length > 0 && <section className="rounded-2xl border border-amber-400/15 bg-amber-950/15 p-6"><h3 className="text-sm font-black uppercase tracking-[0.16em] text-amber-300">Magic Properties</h3><div className="mt-4 space-y-3">{item.magicFeatures.map((feature) => <article key={feature.name} className="rounded-xl border border-amber-300/10 bg-slate-950/45 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><h4 className="font-black text-amber-100">{feature.name} <span className="text-amber-300/70">({feature.power})</span></h4><div className="flex gap-2">{feature.requiresAttunement && <span className="rounded-full bg-violet-500/10 px-2 py-1 text-[10px] font-black uppercase text-violet-200">While Attuned</span>}{feature.chargeCost !== undefined && <span className="rounded-full bg-sky-500/10 px-2 py-1 text-[10px] font-black uppercase text-sky-200">{feature.chargeCost} Charge{feature.chargeCost === 1 ? '' : 's'}</span>}</div></div><div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-300"><RuleAwareText text={feature.description} references={item.ruleReferences} /></div></article>)}</div></section>}
+
+      {routedEffects.length > 0 && <section className="rounded-2xl border border-emerald-400/15 bg-emerald-950/15 p-6"><h3 className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">Routed Character-Sheet Effects</h3><p className="mt-2 text-xs leading-5 text-slate-500">These effects become active when the item is equipped and any required Training or Attunement is met, or when its use action is taken for carried supplies.</p><div className="mt-4 flex flex-wrap gap-2">{routedEffects.map((effect) => <span key={effect} className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm font-semibold text-emerald-100">{effect}</span>)}</div></section>}
 
       <div className="grid gap-4 md:grid-cols-2">
         <section className="rounded-2xl border border-white/8 bg-slate-900/75 p-5">

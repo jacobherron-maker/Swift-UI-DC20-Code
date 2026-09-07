@@ -2344,6 +2344,11 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const activeAncestryTraits = selectedAncestryTraits(character, reference?.ancestryTraits ?? []);
   const fastReflexesReady = activeAncestryTraits.some(({ name }) => name === 'Fast Reflexes')
     && !featureStates['ancestry.fastReflexes.firstAttackUsed'];
+  const equipmentGrantedSpells = useMemo(() => (character.inventoryItems ?? [])
+    .filter(({ isEquipped, isAttuned }) => isEquipped && (isAttuned ?? true))
+    .flatMap(({ equipmentID }) => equipmentCatalog.filter(({ id }) => id === equipmentID)
+      .flatMap((item) => (item.grantedSpells ?? []).map((name) => ({ name, itemName: item.name })))),
+  [character.inventoryItems, equipmentCatalog]);
   const knownSpells = useMemo(() => {
     // Saved characters can contain an older snapshot of a power. Overlay the audited
     // catalog by name so source corrections and metadata reach existing sheets too.
@@ -2356,10 +2361,12 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       ...(character.build?.selectedCantrips ?? []),
       ...grantedSpells,
       ...ancestryGrantedSpells.map((entry) => entry.name),
+      ...equipmentGrantedSpells.map((entry) => entry.name),
     ]) {
       if (result.some((spell) => spell.name === name)) continue;
       const spell = spellCatalog.find((entry) => entry.name === name);
-      if (spell) result.push({ id: `spell|${spell.name}`, ...spell });
+      const equipmentGrant = equipmentGrantedSpells.find((entry) => entry.name === name);
+      if (spell) result.push({ id: `spell|${spell.name}`, ...spell, ...(equipmentGrant ? { source: `Magic Item — ${equipmentGrant.itemName}` } : {}) });
       else {
         const ancestryGrant = ancestryGrantedSpells.find((entry) => entry.name === name);
         if (ancestryGrant) result.push({
@@ -2383,7 +2390,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       }
     }
     return sortByName(result);
-  }, [ancestryGrantedSpells, character.build?.selectedCantrips, character.build?.selectedSpells, character.class, character.spells, grantedSpells, spellCatalog]);
+  }, [ancestryGrantedSpells, character.build?.selectedCantrips, character.build?.selectedSpells, character.class, character.spells, equipmentGrantedSpells, grantedSpells, spellCatalog]);
   const knownManeuvers = useMemo(() => {
     const result = character.maneuvers.map((saved) => {
       const current = maneuverCatalog.find(({ name }) => name === saved.name);

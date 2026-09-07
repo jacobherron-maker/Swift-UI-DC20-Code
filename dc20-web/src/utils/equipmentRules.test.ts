@@ -4,14 +4,18 @@ import { describe, expect, it } from 'vitest';
 import type { CharacterInventoryItem, EquipmentCatalogItem } from '../types/models';
 import {
   addInventoryItem,
+  activeEquipmentSheetEffects,
   combinedDefensiveProfile,
   consumeInventoryQuantity,
   defensiveEquipmentProfile,
   enforceEquipmentHandCapacity,
   equipmentTransitionActionPointCost,
+  equipmentUseCapacity,
   healingPotionAmount,
+  setInventoryQuantity,
   spendInventoryUse,
   toggleInventoryEquipped,
+  toggleInventoryAttuned,
   weaponMechanicalProfile,
   WEAPON_ENHANCEMENTS,
 } from './equipmentRules';
@@ -20,6 +24,8 @@ const catalogPath = fileURLToPath(new URL('../../public/data/EquipmentCatalog.js
 const catalog = JSON.parse(readFileSync(catalogPath, 'utf8')) as EquipmentCatalogItem[];
 const mundaneObjectsPath = fileURLToPath(new URL('../../public/data/MundaneObjects.json', import.meta.url));
 const mundaneObjects = JSON.parse(readFileSync(mundaneObjectsPath, 'utf8')) as EquipmentCatalogItem[];
+const adventureRewardsPath = fileURLToPath(new URL('../../public/data/AdventureRewards.json', import.meta.url));
+const adventureRewards = JSON.parse(readFileSync(adventureRewardsPath, 'utf8')) as EquipmentCatalogItem[];
 
 function inventory(item: EquipmentCatalogItem, id: string, equipped = false): CharacterInventoryItem {
   return { id, equipmentID: item.id, quantity: 1, isEquipped: equipped, source: 'added' };
@@ -189,6 +195,49 @@ describe('Mundane Objects sourcebook equipment', () => {
     expect(mundaneObjects.find(({ name }) => name === 'Fire Bottle')?.mechanics).toContain('3 Space diameter Sphere');
     expect(mundaneObjects.find(({ name }) => name === 'Climbing Boots')).toMatchObject({ slot: 'Worn', properties: ['Climb Speed', 'Slowed'] });
     expect(mundaneObjects.find(({ name }) => name === 'Mining Helm')?.mechanics).toContain('3 Space Cone of Bright Light');
+  });
+});
+
+describe('Adventure Rewards magic items', () => {
+  it('contains all eleven published items with magic metadata and source provenance', () => {
+    expect(adventureRewards).toHaveLength(11);
+    expect(adventureRewards.map(({ name }) => name).sort()).toEqual([
+      'Battlemage Staff', 'Flameguard Gauntlets', 'Flickerbolt Dart', 'Floating Protector',
+      'Iron Mask of Stoicism', 'Merfolk Trident', 'Owl Cloak', 'Raccoon Shifter Mask',
+      'Shield of Ranged Reflection', 'Stinglash', 'Wraithbane Edge',
+    ]);
+    for (const item of adventureRewards) {
+      expect(item.collection).toBe('Magic');
+      expect(item.magicPower).toBeTypeOf('number');
+      expect(item.sourcePage).toMatch(/^DC20 Magazine 20 p\.[3-7]$/);
+      expect(item.magicFeatures?.length ?? 0).toBeGreaterThan(0);
+    }
+  });
+
+  it('routes published weapon, shield, charge, focus, and attunement data', () => {
+    const wraithbane = adventureRewards.find(({ name }) => name === 'Wraithbane Edge')!;
+    const reflection = adventureRewards.find(({ name }) => name === 'Shield of Ranged Reflection')!;
+    const staff = adventureRewards.find(({ name }) => name === 'Battlemage Staff')!;
+    const cloak = adventureRewards.find(({ name }) => name === 'Owl Cloak')!;
+    expect(weaponMechanicalProfile(wraithbane)).toMatchObject({ baseDamage: 1, damageTypes: ['Slashing'], styles: ['Sword'], canBeThrown: true });
+    expect(defensiveEquipmentProfile(reflection).physicalDefense).toBe(2);
+    expect(equipmentUseCapacity(reflection)).toBe(3);
+    expect(staff.actsAsSpellFocus).toBe(true);
+
+    const added = addInventoryItem([], cloak);
+    expect(added[0]).toMatchObject({ isEquipped: false, isAttuned: false });
+    const equipped = toggleInventoryEquipped(added, added[0].id, adventureRewards);
+    expect(activeEquipmentSheetEffects(equipped, adventureRewards).immuneToFlanking).toBe(false);
+    const attuned = toggleInventoryAttuned(equipped, added[0].id, adventureRewards);
+    expect(activeEquipmentSheetEffects(attuned, adventureRewards)).toMatchObject({
+      immuneToFlanking: true,
+      skillMasteryIncreases: { Awareness: 1 },
+      skillBonusesAtCap: { Awareness: 2 },
+    });
+
+    const charged = addInventoryItem([], reflection);
+    const doubled = setInventoryQuantity(charged, charged[0].id, 2, equipmentUseCapacity(reflection));
+    expect(doubled[0]).toMatchObject({ quantity: 2, remainingUses: 6 });
   });
 });
 

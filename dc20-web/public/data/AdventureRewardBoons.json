@@ -1,0 +1,50 @@
+[
+  {
+    "id": "General Rules|Adventure Rewards|Boons",
+    "title": "Boons",
+    "section": "General Rules",
+    "subsection": "Adventure Rewards",
+    "summary": "Extra rewards a GM can provide players for completing a quest or goal.",
+    "text": "Boons are extra rewards that a GM can provide players for completing a quest or goal of some kind. In general, these are very low power effects that are specific to an area but come with flavorful opportunities, and they can be magical or mundane.\n\nBelow, we describe some questlines (in broad terms) you could use to provide Boons to PCs for their completion. You can also use this section to make up your own Boons as Party rewards for your own adventures!",
+    "page": "DC20 Magazine 20 p.8",
+    "kind": "Rule",
+    "keywords": "adventure reward rewards boon boons quest goal party magical mundane",
+    "details": [
+      { "label": "Reward Type", "value": "Magical or mundane Boon" },
+      { "label": "Scope", "value": "Low-power, area-specific reward" }
+    ]
+  },
+  {
+    "id": "General Rules|Adventure Rewards|Rampaging Monster",
+    "title": "Rampaging Monster",
+    "section": "General Rules",
+    "subsection": "Adventure Rewards — Example Questlines",
+    "summary": "A monster is rampaging through a small town, having greatly injured the town guard without significant injury.",
+    "text": "DESCRIPTION\nA monster is rampaging through a small town, having greatly injured the town guard without significant injury.\n\nPLOT HOOKS AND TWISTS\n• The town mayor posts an emergency bounty to fell the monster, with bonuses based on limiting casualties and collateral damage.\n• The monster was a human transformed in a twisted ritual gone wrong. They have no control over themselves. There’s a possibility to cure them of their affliction, should the PCs investigate.\n\nPOTENTIAL REWARDS\n• Items you purchase in the town are half cost.\n• Gain ADV on Charisma checks towards the townsfolk.\n• You can eat and rest at the inn without paying.",
+    "page": "DC20 Magazine 20 p.8",
+    "kind": "Rule",
+    "keywords": "boon questline monster town mayor bounty transformed ritual half cost charisma inn"
+  },
+  {
+    "id": "General Rules|Adventure Rewards|Cleanse an Ancient Forest",
+    "title": "Cleanse an Ancient Forest",
+    "section": "General Rules",
+    "subsection": "Adventure Rewards — Example Questlines",
+    "summary": "A magical blight is spreading throughout an ancient forest causing plants to wither and making even the most peaceful of creatures become vicious.",
+    "text": "DESCRIPTION\nA magical blight is spreading throughout an ancient forest causing plants to wither and making even the most peaceful of creatures become vicious.\n\nPLOT HOOKS AND TWISTS\n• A druid of the forest has called for aid in a neighboring settlement. If the blight isn’t stopped, it could spread beyond the forest and infect farmland causing a famine.\n• The blight is spreading from an ancient evil sealed deep within the forest, its seal weakening as it exerts its influence to break free.\n\nPOTENTIAL REWARDS\n• Rests in the forest will be undisturbed, take half as long, and require half as much supplies.\n• You can close your eyes while touching a tree in the forest to see from any space within the forest.\n• Once per day, you can cast the Command Spell on any Beast native to the forest without spending resources.",
+    "page": "DC20 Magazine 20 p.8",
+    "kind": "Rule",
+    "keywords": "boon questline forest blight druid famine ancient evil rests tree Command Beast"
+  },
+  {
+    "id": "General Rules|Adventure Rewards|Impress a Lake Goddess",
+    "title": "Impress a Lake Goddess",
+    "section": "General Rules",
+    "subsection": "Adventure Rewards — Example Questlines",
+    "summary": "A fishing village needs help procuring an offering worthy of their lake goddess to ensure bountiful fishing throughout the year.",
+    "text": "DESCRIPTION\nA fishing village needs help procuring an offering worthy of their lake goddess to ensure bountiful fishing throughout the year.\n\nPLOT HOOKS AND TWISTS\n• A village cleric has requested aid in procuring the pelt of a golden ram from a nearby mountain as an offering to their lake goddess.\n• The golden ram is blessed by a mountain god that has a rivalry with the lake goddess.\n\nPOTENTIAL REWARDS\n• Beasts native to the lake won’t attack you.\n• You can breath underwater and gain a Swim Speed equal to your Ground Speed while in the lake.\n• Fishing in the lake is guaranteed to provide enough rations for a day.",
+    "page": "DC20 Magazine 20 p.8",
+    "kind": "Rule",
+    "keywords": "boon questline lake goddess village golden ram mountain god underwater Swim Speed fishing rations"
+  }
+]

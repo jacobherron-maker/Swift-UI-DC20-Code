@@ -22,6 +22,15 @@ const maneuverDocument = readJSON<{ maneuvers: AuditedManeuverRecord[] }>('../..
 const characterReference = readJSON<CharacterReferenceData>('../../public/data/CharacterReference.json');
 const equipment = readJSON<EquipmentCatalogItem[]>('../../public/data/EquipmentCatalog.json');
 const audited = auditRulesReference(rawRules, spellDocument.spells, maneuverDocument.maneuvers, characterReference, equipment);
+const adventureRewards = readJSON<EquipmentCatalogItem[]>('../../public/data/AdventureRewards.json');
+const adventureBoons = readJSON<RulesReferenceData['entries']>('../../public/data/AdventureRewardBoons.json');
+const auditedWithAdventureRewards = auditRulesReference(
+  { ...rawRules, entries: [...rawRules.entries, ...adventureBoons] },
+  spellDocument.spells,
+  maneuverDocument.maneuvers,
+  characterReference,
+  [...equipment, ...adventureRewards],
+);
 
 function rule(title: string) {
   const entry = audited.entries.find((candidate) => candidate.title === title);
@@ -30,6 +39,17 @@ function rule(title: string) {
 }
 
 describe('source-audited rules library', () => {
+  it('indexes the Adventure Rewards Boons as supplemental source documents', () => {
+    const boons = auditedWithAdventureRewards.entries.filter(({ page }) => page.startsWith('DC20 Magazine 20'));
+    expect(boons).toHaveLength(4);
+    expect(boons.map(({ title }) => title)).toEqual(['Boons', 'Rampaging Monster', 'Cleanse an Ancient Forest', 'Impress a Lake Goddess']);
+    for (const entry of boons) {
+      expect(entry.sourceDocument).toBe('DC20 Magazine 20 — Adventure Rewards v1.0');
+      expect(entry.sourceStatus).toBe('Supplemental source verified');
+      expect(entry.sourcePages).toEqual([8]);
+    }
+  });
+
   it('retains every unique document and uses the corrected printed chapter ranges', () => {
     expect(audited.entries).toHaveLength(502);
     expect(new Set(audited.entries.map(({ id }) => id)).size).toBe(502);

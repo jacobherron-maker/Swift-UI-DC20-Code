@@ -448,6 +448,7 @@ export const EquipmentCategoryValues = {
   SPELL_FOCUSES: 'Spell Focuses',
   ARMOR: 'Armor',
   SHIELDS: 'Shields',
+  WONDROUS_ITEMS: 'Wondrous Items',
   ADVENTURING_SUPPLIES: 'Adventuring Supplies',
   TRADE_TOOLS: 'Trade Tools',
 } as const;
@@ -465,6 +466,24 @@ export const EquipmentSlotValues = {
 
 export type EquipmentSlot = (typeof EquipmentSlotValues)[keyof typeof EquipmentSlotValues];
 
+export interface MagicItemFeature {
+  name: string;
+  power: number;
+  description: string;
+  requiresAttunement?: boolean;
+  chargeCost?: number | 'X';
+}
+
+export interface EquipmentSheetEffects {
+  resistances?: string[];
+  skillMasteryIncreases?: Record<string, number>;
+  skillBonusesAtCap?: Record<string, number>;
+  immuneToFlanking?: boolean;
+  senses?: string[];
+  conditionalRules?: string[];
+  conditionSaveAdvantages?: string[];
+}
+
 export interface EquipmentCatalogItem {
   id: string;
   name: string;
@@ -476,6 +495,29 @@ export interface EquipmentCatalogItem {
   slot: EquipmentSlot;
   sourcePage: string;
   ruleReferences?: SemanticRuleReference[];
+  /** Separates ordinary gear from supplemental magic-item catalogs. */
+  collection?: 'Standard' | 'Magic';
+  sourceDocument?: string;
+  magicPower?: number;
+  charges?: number;
+  requiresAttunement?: boolean;
+  magicFeatures?: MagicItemFeature[];
+  /** A magic weapon can carry published statistics without replacing its source-accurate flavor summary. */
+  weaponProfile?: {
+    baseDamage: number;
+    damageTypes: string[];
+    range: string;
+    styles: string[];
+    isNativeRanged: boolean;
+    canBeThrown: boolean;
+    thrownRange?: string;
+    heavyHitDamageBonus: number;
+  };
+  /** Some magic weapons also function as Spell Focuses. */
+  actsAsSpellFocus?: boolean;
+  grantedSpells?: string[];
+  equippedEffects?: EquipmentSheetEffects;
+  attunedEffects?: EquipmentSheetEffects;
 }
 
 export interface CharacterInventoryItem {
@@ -486,6 +528,8 @@ export interface CharacterInventoryItem {
   source: 'startingEquipment' | 'added';
   /** Remaining charges for limited-use supplies such as a Medicine Kit. */
   remainingUses?: number;
+  /** Attunement is tracked separately from whether an item is currently equipped. */
+  isAttuned?: boolean;
 }
 
 export interface Spell {

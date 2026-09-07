@@ -49,6 +49,7 @@ export interface AuditedManeuverRecord {
 const BETA_SOURCE = 'DC20 RPG Beta 0.10.5';
 const PSION_SOURCE = 'DC20 Magazine 01 — Psion v2';
 const SUMMONER_SOURCE = 'DC20 Magazine 23 — The Summoner v1.0';
+const ADVENTURE_REWARDS_SOURCE = 'DC20 Magazine 20 — Adventure Rewards v1.0';
 
 export const AUDITED_SECTION_RANGES: RulesReferenceData['sections'] = [
   { name: 'Core Rules', pageRange: 'Beta 0.10.5 pp.9–39' },
@@ -321,6 +322,9 @@ function sourceFor(entry: RuleReferenceEntry): Pick<RuleReferenceEntry, 'sourceD
   }
   if (entry.characterClass === 'Summoner') {
     return { sourceDocument: SUMMONER_SOURCE, sourceStatus: 'Supplemental source verified' };
+  }
+  if (entry.page.startsWith('DC20 Magazine 20')) {
+    return { sourceDocument: ADVENTURE_REWARDS_SOURCE, sourceStatus: 'Supplemental source verified' };
   }
   return { sourceDocument: BETA_SOURCE, sourceStatus: 'Beta source verified' };
 }
@@ -665,7 +669,7 @@ export function auditRulesReference(
   const entries = sourceEntries.map((entry) => auditEntry(entry, spells, maneuvers, augmentedReference, equipment));
   return {
     ...document,
-    source: `${BETA_SOURCE}; ${PSION_SOURCE}; ${PSION_SUBCLASS_SOURCE}; ${SUMMONER_SOURCE}; ${ARTIFICER_SOURCE}`,
+    source: `${BETA_SOURCE}; ${PSION_SOURCE}; ${PSION_SUBCLASS_SOURCE}; ${SUMMONER_SOURCE}; ${ARTIFICER_SOURCE}; ${ADVENTURE_REWARDS_SOURCE}`,
     sections: AUDITED_SECTION_RANGES,
     entries: addRelationships(entries),
   };

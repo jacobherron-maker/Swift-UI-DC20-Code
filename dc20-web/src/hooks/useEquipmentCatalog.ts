@@ -17,6 +17,10 @@ function fetchEquipment(): Promise<EquipmentCatalogItem[]> {
       if (!response.ok) throw new Error(`Mundane Objects catalog returned ${response.status}.`);
       return response.json() as Promise<unknown>;
     }),
+    fetch('/data/AdventureRewards.json').then((response) => {
+      if (!response.ok) throw new Error(`Adventure Rewards catalog returned ${response.status}.`);
+      return response.json() as Promise<unknown>;
+    }),
   ])
     .then((documents) => {
       if (documents.some((document) => !Array.isArray(document))) throw new Error('An equipment catalog is not an array.');

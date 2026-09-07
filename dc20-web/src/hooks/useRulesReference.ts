@@ -20,8 +20,10 @@ function loadRules(): Promise<RulesReferenceData> {
     fetch('/data/CharacterReference.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Character reference returned ${response.status}.`))),
     fetch('/data/EquipmentCatalog.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Equipment catalog returned ${response.status}.`))),
     fetch('/data/MundaneObjects.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Mundane Objects catalog returned ${response.status}.`))),
+    fetch('/data/AdventureRewards.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Adventure Rewards catalog returned ${response.status}.`))),
+    fetch('/data/AdventureRewardBoons.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Adventure Rewards Boons returned ${response.status}.`))),
   ])
-    .then(([rulesValue, spellValue, maneuverValue, characterValue, equipmentValue, mundaneObjectsValue]: unknown[]) => {
+    .then(([rulesValue, spellValue, maneuverValue, characterValue, equipmentValue, mundaneObjectsValue, adventureRewardsValue, adventureBoonsValue]: unknown[]) => {
       const document = rulesValue as RulesReferenceData;
       if (!document || document.sections?.length !== 5 || !Array.isArray(document.entries) || document.entries.length < 400) {
         throw new Error('Rules reference is incomplete.');
@@ -29,11 +31,12 @@ function loadRules(): Promise<RulesReferenceData> {
       const spells = (spellValue as { spells?: AuditedSpellRecord[] }).spells ?? [];
       const maneuvers = (maneuverValue as { maneuvers?: AuditedManeuverRecord[] }).maneuvers ?? [];
       const characterReference = augmentCharacterReference(characterValue as CharacterReferenceData);
-      const equipment = [...(equipmentValue as EquipmentCatalogItem[]), ...(mundaneObjectsValue as EquipmentCatalogItem[])];
-      if (spells.length !== 160 || maneuvers.length !== 30 || characterReference.classes?.length !== 16 || !Array.isArray(equipment)) {
+      const equipment = [...(equipmentValue as EquipmentCatalogItem[]), ...(mundaneObjectsValue as EquipmentCatalogItem[]), ...(adventureRewardsValue as EquipmentCatalogItem[])];
+      const adventureBoons = adventureBoonsValue as RulesReferenceData['entries'];
+      if (spells.length !== 160 || maneuvers.length !== 30 || characterReference.classes?.length !== 16 || !Array.isArray(equipment) || !Array.isArray(adventureBoons)) {
         throw new Error('One or more audited rules catalogs are incomplete.');
       }
-      const audited = auditRulesReference(document, spells, maneuvers, characterReference, equipment);
+      const audited = auditRulesReference({ ...document, entries: [...document.entries, ...adventureBoons] }, spells, maneuvers, characterReference, equipment);
       cache = audited;
       return audited;
     })

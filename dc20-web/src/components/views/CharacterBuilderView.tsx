@@ -1188,12 +1188,14 @@ const CharacterBuilderView: React.FC<{
   const startingEquipment = (() => {
     if (!classReference) return { arsenal: [], armor: [], tools: [] };
     const training = classReference.startingEquipment;
+    // Supplemental magic items belong in inventories and rewards, never in class starting selections.
+    const startingCatalog = equipment.filter(({ collection }) => collection !== 'Magic');
     const hasWarriorDiscipline = className === 'Spellblade'
       && [
         ...(featureChoices['spellblade.disciplines'] ?? []),
         ...(featureChoices['spellblade.paladinDiscipline'] ?? []),
       ].includes('Warrior');
-    const arsenal = equipment.filter((item) => (
+    const arsenal = startingCatalog.filter((item) => (
       (training.arsenal.includes('Weapon') && item.category === 'Weapons')
       || (hasPactWeapon && item.category === 'Weapons')
       || (training.arsenal.includes('Light Weapon') && item.category === 'Weapons' && item.slot === 'One Hand')
@@ -1203,12 +1205,12 @@ const CharacterBuilderView: React.FC<{
       || (clericHasPeaceDomain && item.category === 'Shields' && item.subtype === 'Heavy Shield')
       || training.arsenal.includes(item.name)
     )).sort((a, b) => a.name.localeCompare(b.name));
-    const armor = equipment.filter((item) => item.category === 'Armor' && (
+    const armor = startingCatalog.filter((item) => item.category === 'Armor' && (
       training.armor.includes(item.name) || (hasWarriorDiscipline && item.subtype === 'Heavy Armor')
       || (hasPactArmor && item.subtype === 'Heavy Armor')
       || (clericHasPeaceDomain && item.subtype === 'Heavy Armor')
     )).sort((a, b) => a.name.localeCompare(b.name));
-    const tools = equipment.filter((item) => item.category === 'Trade Tools' && training.tradeTools.some((tool) => item.name.includes(tool) || item.subtype.includes(tool))).sort((a, b) => a.name.localeCompare(b.name));
+    const tools = startingCatalog.filter((item) => item.category === 'Trade Tools' && training.tradeTools.some((tool) => item.name.includes(tool) || item.subtype.includes(tool))).sort((a, b) => a.name.localeCompare(b.name));
     return { arsenal, armor, tools };
   })();
 
