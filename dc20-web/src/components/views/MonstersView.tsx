@@ -285,7 +285,7 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
         <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-6">
           <NumberField label="HP" value={monster.hp} min={1} onChange={(value) => update('hp', value)} />
           <NumberField label="Physical Defense" value={monster.physicalDefense} onChange={(value) => update('physicalDefense', value)} />
-          <NumberField label="Arcane Defense" value={monster.arcaneDefense} onChange={(value) => update('arcaneDefense', value)} />
+          <NumberField label="Area Defense" value={monster.arcaneDefense} onChange={(value) => update('arcaneDefense', value)} />
           <NumberField label="Attack Bonus" value={monster.attackBonus} onChange={(value) => update('attackBonus', value)} />
           <NumberField label="Save DC" value={monster.saveDC} onChange={(value) => update('saveDC', value)} />
           <NumberField label="Damage" value={monster.damage} step={0.25} min={0} onChange={(value) => update('damage', value)} />
