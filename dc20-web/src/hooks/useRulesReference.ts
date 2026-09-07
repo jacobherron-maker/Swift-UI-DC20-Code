@@ -19,8 +19,9 @@ function loadRules(): Promise<RulesReferenceData> {
     fetch('/data/BetaManeuvers.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Maneuver catalog returned ${response.status}.`))),
     fetch('/data/CharacterReference.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Character reference returned ${response.status}.`))),
     fetch('/data/EquipmentCatalog.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Equipment catalog returned ${response.status}.`))),
+    fetch('/data/MundaneObjects.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Mundane Objects catalog returned ${response.status}.`))),
   ])
-    .then(([rulesValue, spellValue, maneuverValue, characterValue, equipmentValue]: unknown[]) => {
+    .then(([rulesValue, spellValue, maneuverValue, characterValue, equipmentValue, mundaneObjectsValue]: unknown[]) => {
       const document = rulesValue as RulesReferenceData;
       if (!document || document.sections?.length !== 5 || !Array.isArray(document.entries) || document.entries.length < 400) {
         throw new Error('Rules reference is incomplete.');
@@ -28,7 +29,7 @@ function loadRules(): Promise<RulesReferenceData> {
       const spells = (spellValue as { spells?: AuditedSpellRecord[] }).spells ?? [];
       const maneuvers = (maneuverValue as { maneuvers?: AuditedManeuverRecord[] }).maneuvers ?? [];
       const characterReference = augmentCharacterReference(characterValue as CharacterReferenceData);
-      const equipment = equipmentValue as EquipmentCatalogItem[];
+      const equipment = [...(equipmentValue as EquipmentCatalogItem[]), ...(mundaneObjectsValue as EquipmentCatalogItem[])];
       if (spells.length !== 160 || maneuvers.length !== 30 || characterReference.classes?.length !== 16 || !Array.isArray(equipment)) {
         throw new Error('One or more audited rules catalogs are incomplete.');
       }

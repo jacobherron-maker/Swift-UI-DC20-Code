@@ -438,6 +438,7 @@ export interface Equipment {
 
 export const EquipmentCategoryValues = {
   WEAPONS: 'Weapons',
+  SIEGE_WEAPONS: 'Siege Weapons',
   SPELL_FOCUSES: 'Spell Focuses',
   ARMOR: 'Armor',
   SHIELDS: 'Shields',

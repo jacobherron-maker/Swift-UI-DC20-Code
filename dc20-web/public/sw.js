@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dc20-hub-v3';
+const CACHE_NAME = 'dc20-hub-v4';
 const PRECACHE = [
   '/',
   '/manifest.webmanifest',
@@ -7,6 +7,7 @@ const PRECACHE = [
   '/data/BetaManeuvers.json',
   '/data/CharacterReference.json',
   '/data/EquipmentCatalog.json',
+  '/data/MundaneObjects.json',
   '/data/MonsterSourceLibrary.json',
   '/data/BetaBestiaryVol4.json',
   '/data/StrongSimpleMonsters.json',

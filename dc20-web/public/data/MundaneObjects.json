@@ -1,0 +1,222 @@
+[
+  {
+    "id": "Mundane Objects|Bolas",
+    "name": "Bolas",
+    "category": "Weapons",
+    "subtype": "Trap",
+    "summary": "1 Bludgeoning damage • Thrown • Range 10/20",
+    "mechanics": "Trap • Melee, Bludgeoning • 1 Bludgeoning damage • Thrown • Range 10/20\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Trap — Immobilize: The target makes a Might or Agility Save (their choice). Failure: The target is Immobilized. While Immobilized this way, you can’t make Attacks with the Weapon. If you stop wielding the Weapon, the target is no longer Immobilized. The target can spend 1 AP to make a Might or Agility Check (their choice) against your Save DC. Success: The target is no longer Immobilized.\n\nMechanical Properties:\n• Thrown: You can throw it as a Ranged Martial Attack at 10/20; beyond that range it is an Improvised Weapon.",
+    "properties": ["Thrown"],
+    "slot": "One Hand",
+    "sourcePage": "DC20 Magazine 27 p.3"
+  },
+  {
+    "id": "Mundane Objects|Catcher Pole",
+    "name": "Catcher Pole",
+    "category": "Weapons",
+    "subtype": "Two-Handed Trap",
+    "summary": "1 Bludgeoning damage • Two-Handed, Guard, Reach • Range 2",
+    "mechanics": "Trap • Melee, Bludgeoning • 1 Bludgeoning damage • Two-Handed, Guard, Reach • Range 2\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Trap — Immobilize: The target makes a Might or Agility Save (their choice). Failure: The target is Immobilized. While Immobilized this way, you can’t make Attacks with the Weapon. If you stop wielding the Weapon, the target is no longer Immobilized. The target can spend 1 AP to make a Might or Agility Check (their choice) against your Save DC. Success: The target is no longer Immobilized.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands to wield.\n• Guard: While wielding it, you gain +1 PD.\n• Reach: It has +1 Space of Melee Range.",
+    "properties": ["Two-Handed", "Guard", "Reach"],
+    "slot": "Two Hands",
+    "sourcePage": "DC20 Magazine 27 p.3"
+  },
+  {
+    "id": "Mundane Objects|Double Bladed Sword",
+    "name": "Double Bladed Sword",
+    "category": "Weapons",
+    "subtype": "Two-Handed Sword",
+    "summary": "1 Slashing damage • Two-Handed, Double Sided, Guard, Pinpoint • Range 1",
+    "mechanics": "Sword • 1 Slashing damage • Two-Handed, Double Sided, Guard, Pinpoint • Range 1\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Sword — Accuracy: Add a d4 to your Attack Check.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands to wield.\n• Double Sided: While wielding this Weapon with two hands, you’re considered to be Dual Wielding. This means your second Attack with this Weapon on each of your turns can ignore the Multiple Check Penalty and does not advance that penalty.\n• Guard: While wielding it, you gain +1 PD.\n• Pinpoint: Attacks with the Weapon gain +2 to Attack Checks against targets that are Flanked.",
+    "properties": ["Two-Handed", "Double Sided", "Guard", "Pinpoint"],
+    "slot": "Two Hands",
+    "sourcePage": "DC20 Magazine 27 p.3"
+  },
+  {
+    "id": "Mundane Objects|Harpoon Crossbow",
+    "name": "Harpoon Crossbow",
+    "category": "Weapons",
+    "subtype": "Two-Handed Harpoon",
+    "summary": "2 (3) Piercing damage • Two-Handed, Ammo, Reload, Deft, Impact, Cumbersome • Range 15/45",
+    "mechanics": "Harpoon • Ranged, Piercing • 2 (3) Piercing damage • Two-Handed, Ammo, Reload, Deft, Impact, Cumbersome • Range 15/45\n\nWeapon Enhancement (requires Weapon Training; spend 1 AP or 1 SP when you Attack):\n• Harpoon — Tether: The target makes a Might Save. Failure: The target is Tethered X to you, where X is the target’s distance from you. While Tethered this way, you can’t make Attacks with the Weapon; if you stop wielding it, the target is no longer Tethered. You may spend 1 AP to make a Might Check contested by the target’s Might Check. Success: Pull the target 1 Space toward you and reduce its Tethered distance by 1 (minimum 1). Success (each 5): Up to +1 Space pulled and Tethered distance reduced. The target can spend 1 AP to make a Might Check against your Save DC. Success: The target is no longer Tethered.\n\nMechanical Properties:\n• Two-Handed: It requires 2 hands to wield.\n• Ammo: It requires ammunition to make Attacks.\n• Reload: After making an Attack, it must be reloaded with 1 AP or 1 SP and a free hand before it can Attack again.\n• Deft: You don’t have DisADV on Ranged Attacks with it while Prone.\n• Impact: It deals +1 damage on Heavy Hits.\n• Cumbersome: It costs 1 AP to draw, stow, or pick up.",
+    "properties": ["Two-Handed", "Ammo", "Reload", "Deft", "Impact", "Cumbersome"],
+    "slot": "Two Hands",
+    "sourcePage": "DC20 Magazine 27 p.3"
+  },
+  {
+    "id": "Mundane Objects|Ballista",
+    "name": "Ballista",
+    "category": "Siege Weapons",
+    "subtype": "Large Siege Weapon",
+    "summary": "5 Piercing damage • Crossbow Style • Range 30/90 • Reload 2 AP",
+    "mechanics": "A Ballista is a Large crossbow set on wheels or a swiveling platform. Siege Weapons can’t be wielded and are used through interaction. Their AP requirements can be split among multiple characters, though the Siege Weapon uses the Attack Check of a single user.\n\nUsing a Ballista: While operating the Ballista, it’s considered a Ranged Weapon with the Crossbow Style, the Two-Handed Property, and a range of 30/90 that deals 5 Piercing damage on a Hit. The Ballista can’t be used to perform Maneuvers.\n\nReloading the Ballista: A creature must spend 2 AP and use two free hands to load a special pike-sized bolt on the Ballista.",
+    "properties": ["Crossbow", "Two-Handed", "Reload 2 AP", "No Maneuvers"],
+    "slot": "Carried",
+    "sourcePage": "DC20 Magazine 27 p.3"
+  },
+  {
+    "id": "Mundane Objects|Portable Barricade",
+    "name": "Portable Barricade",
+    "category": "Adventuring Supplies",
+    "subtype": "Portable Cover",
+    "summary": "Medium object • Scaling Cover • 15 PD/AD • 5 HP • Repairable",
+    "mechanics": "A Portable Barricade is a movable, Medium wooden object that provides 1/2 Cover to Large creatures, 3/4 Cover to Medium creatures, and Full Cover to Small or smaller creatures.\n\nMovement: Use 2 free hands and 1 AP to pick it up or place it within your Melee Range. You must use 2 hands to hold it.\n\nDestruction: It has 15 PD and AD and 5 HP, with Poison and Mystical Damage Immunity. At 0 HP, it is broken and provides no Cover until repaired.\n\nRepair: Spend 10 minutes of Light Activity with Carpenter’s Tools and make a DC 15 Carpentry Check. Success: It regains 1 HP. Success (each 5): +1 HP. A GM may allow reinforcement for higher defenses or base HP, potentially requiring unique or magical materials.",
+    "properties": ["Cover", "15 PD", "15 AD", "5 HP", "Poison Immunity", "Mystical Damage Immunity", "Repairable"],
+    "slot": "Carried",
+    "sourcePage": "DC20 Magazine 27 p.4"
+  },
+  {
+    "id": "Mundane Objects|Alchemical Oil",
+    "name": "Alchemical Oil",
+    "category": "Adventuring Supplies",
+    "subtype": "Alchemical Consumable",
+    "summary": "1 use • 1 AP • Weapon gains +1 Fire damage for 1 minute",
+    "mechanics": "Alchemical Oil is a Tiny container of flammable oil with an attached flint igniter.\n\nUses: 1 use.\n\nUsing Alchemical Oil: Spend 1 AP to apply it to a Weapon and light it on fire. The fire lasts for 1 minute and adds +1 Fire damage to all Martial Attacks made with the Weapon. This fire can’t be put out by smothering it or submerging it in water.",
+    "properties": ["Consumable", "1 Use", "+1 Fire Damage", "1 Minute"],
+    "slot": "Carried",
+    "sourcePage": "DC20 Magazine 27 p.4"
+  },
+  {
+    "id": "Mundane Objects|Fire Bottle",
+    "name": "Fire Bottle",
+    "category": "Adventuring Supplies",
+    "subtype": "Thrown Consumable",
+    "summary": "1 use • 2 AP • 3 Space diameter Area Martial Attack • 1 Fire damage and Burning",
+    "mechanics": "A Fire Bottle is a Tiny bottle of flammable liquid with a rag on top.\n\nUses: 1 use.\n\nUsing a Fire Bottle: Spend 1 AP to light the rag, then 1 AP to throw the bottle. It shatters on impact and creates a small blast of fire.\n\nAttack: Make an Area Martial Attack against the AD of each creature within a 3 Space diameter Sphere centered on the Space where it shattered. Each target makes an Agility Save against your Save DC. Hit: The target takes 1 Fire damage. Save Failure: The target begins Burning.",
+    "properties": ["Consumable", "1 Use", "Area Martial Attack", "Fire", "Burning"],
+    "slot": "Carried",
+    "sourcePage": "DC20 Magazine 27 p.4"
+  },
+  {
+    "id": "Mundane Objects|Acid Vial",
+    "name": "Acid Vial",
+    "category": "Adventuring Supplies",
+    "subtype": "Thrown Consumable",
+    "summary": "1 use • 1 AP • Ranged Martial Attack • 1 Corrosion damage and suppresses PDR/EDR",
+    "mechanics": "An Acid Vial is a Tiny vial of corrosive acid.\n\nUses: 1 use.\n\nUsing an Acid Vial: Spend 1 AP to throw it at a creature. It shatters on impact and covers the target with acid.\n\nAttack: Make a Ranged Martial Attack against the target’s PD, and it makes a Repeated Agility Save against your Save DC. Hit: The target takes 1 Corrosion damage. Save Failure: The target no longer benefits from PDR or EDR for 1 minute.",
+    "properties": ["Consumable", "1 Use", "Ranged Martial Attack", "Corrosion", "Suppresses PDR/EDR"],
+    "slot": "Carried",
+    "sourcePage": "DC20 Magazine 27 p.4"
+  },
+  {
+    "id": "Mundane Objects|Bag of Marbles",
+    "name": "Bag of Marbles",
+    "category": "Adventuring Supplies",
+    "subtype": "Refillable Hazard",
+    "summary": "1 refillable use • 1 AP • Difficult Terrain • DC 15 Agility Save or Prone",
+    "mechanics": "A Bag of Marbles is a Tiny bag filled with marbles, used to cover the floor to slow or trip enemies.\n\nUses: 1 use, regained when the bag is refilled.\n\nUsing Marbles: Spend 1 AP to spread them in a 3 Space Cone, 2 Space Arc, or 1 Space Aura. Covered Spaces are Difficult Terrain. The first time per turn a creature enters a Space in the area, it makes a DC 15 Agility Save. Save Failure: The target falls Prone.\n\nPicking Up: Spend 1 minute to pick up all the marbles and refill the bag.",
+    "properties": ["Refillable", "1 Use", "Difficult Terrain", "DC 15 Agility Save", "Prone"],
+    "slot": "Carried",
+    "sourcePage": "DC20 Magazine 27 p.4"
+  },
+  {
+    "id": "Mundane Objects|Bag of Caltrops",
+    "name": "Bag of Caltrops",
+    "category": "Adventuring Supplies",
+    "subtype": "Refillable Hazard",
+    "summary": "1 refillable use • 1 AP • Difficult Terrain • DC 15 Agility Save or Bleeding",
+    "mechanics": "A Bag of Caltrops is a Tiny bag filled with caltrops, used to cover the floor to slow or damage enemies.\n\nUses: 1 use, regained when the bag is refilled.\n\nUsing Caltrops: Spend 1 AP to spread them in a 3 Space Cone, 2 Space Arc, or 1 Space Aura. Covered Spaces are Difficult Terrain. The first time per turn a creature enters a Space in the area, it makes a DC 15 Agility Save. Save Failure: The target begins Bleeding.\n\nPicking Up: Spend 1 minute to pick up all the caltrops and refill the bag.",
+    "properties": ["Refillable", "1 Use", "Difficult Terrain", "DC 15 Agility Save", "Bleeding"],
+    "slot": "Carried",
+    "sourcePage": "DC20 Magazine 27 p.4"
+  },
+  {
+    "id": "Mundane Objects|Glue",
+    "name": "Glue",
+    "category": "Adventuring Supplies",
+    "subtype": "Utility Consumable",
+    "summary": "3 uses • Attach Tiny objects • DC 10–20 Might Check to separate",
+    "mechanics": "Glue is used to bind 2 objects together.\n\nUses: A full bottle has 3 uses.\n\nUsing Glue: Spend 1 minute to apply 1 or more uses to attach a Tiny or smaller object to another object until they’re pulled apart. A creature can spend 1 AP to make a DC 10 Might Check to separate them. The DC increases by 5 for each additional use applied, to a maximum of DC 20.",
+    "properties": ["Consumable", "3 Uses", "Utility", "Might Check"],
+    "slot": "Carried",
+    "sourcePage": "DC20 Magazine 27 p.4"
+  },
+  {
+    "id": "Mundane Objects|Energizing Brew",
+    "name": "Energizing Brew",
+    "category": "Adventuring Supplies",
+    "subtype": "Drinkable Consumable",
+    "summary": "1 use per cup • 1 AP • Rest using Strenuous Activity • Exhaustion afterward",
+    "mechanics": "Energizing Brew is an energizing beverage that can lead to further fatigue after its effects wear off.\n\nUses: 1 use per cup of liquid.\n\nUsing Energizing Brew: Spend 1 AP to drink 1 cup. For 1 hour, you can perform Strenuous Activity in place of Light Activity or No Activity while Resting. Drinking another cup while under its effects extends the duration by 1 hour, up to 4 hours. When the effect ends, you gain 1 level of Exhaustion per cup drank.",
+    "properties": ["Consumable", "Drink", "Rest", "Exhaustion"],
+    "slot": "Carried",
+    "sourcePage": "DC20 Magazine 27 p.5"
+  },
+  {
+    "id": "Mundane Objects|Climbing Boots",
+    "name": "Climbing Boots",
+    "category": "Adventuring Supplies",
+    "subtype": "Worn Climbing Gear",
+    "summary": "Gain Climb Speed equal to Speed • Slowed while worn",
+    "mechanics": "Climbing Boots are boots with large spikes used to climb vertical surfaces. While wearing them, you’re Slowed and gain a Climb Speed equal to your Speed.",
+    "properties": ["Climb Speed", "Slowed"],
+    "slot": "Worn",
+    "sourcePage": "DC20 Magazine 27 p.5"
+  },
+  {
+    "id": "Mundane Objects|Spyglass",
+    "name": "Spyglass",
+    "category": "Adventuring Supplies",
+    "subtype": "Optical Tool",
+    "summary": "ADV on observation Checks beyond 20 Spaces",
+    "mechanics": "A Spyglass is a long, retractable cylinder with a lens on both ends. While looking through it, you have ADV on Checks made to observe things that are more than 20 Spaces away.",
+    "properties": ["Observation", "Advantage", "Long Range"],
+    "slot": "One Hand",
+    "sourcePage": "DC20 Magazine 27 p.5"
+  },
+  {
+    "id": "Mundane Objects|Magnifying Glass",
+    "name": "Magnifying Glass",
+    "category": "Adventuring Supplies",
+    "subtype": "Optical Tool",
+    "summary": "ADV on observation Checks within 1 Space",
+    "mechanics": "A Magnifying Glass is a glass lens with a rim and handle. While looking through it, you have ADV on Checks made to observe things within 1 Space.",
+    "properties": ["Observation", "Advantage", "Close Range"],
+    "slot": "One Hand",
+    "sourcePage": "DC20 Magazine 27 p.5"
+  },
+  {
+    "id": "Mundane Objects|Torch",
+    "name": "Torch",
+    "category": "Adventuring Supplies",
+    "subtype": "Light Source",
+    "summary": "1 hour • 1 AP to light • 3 Space Aura of Bright Light",
+    "mechanics": "A Torch is a large stick with a flammable tip.\n\nUse: It can burn for a total of 1 hour.\n\nUsing a Torch: Spend 1 AP to use a fire starter kit or a fire within your Melee Range to light it. It produces a 3 Space Aura of Bright Light. A creature holding it can spend 1 AP to smother the flame and put it out.",
+    "properties": ["Bright Light", "3 Space Aura", "1 Hour"],
+    "slot": "One Hand",
+    "sourcePage": "DC20 Magazine 27 p.5"
+  },
+  {
+    "id": "Mundane Objects|Hip Lantern",
+    "name": "Hip Lantern",
+    "category": "Adventuring Supplies",
+    "subtype": "Worn Light Source",
+    "summary": "6 hours • 1 AP to light • 2 Space Aura of Bright Light • Hands-free",
+    "mechanics": "A Hip Lantern attaches to your belt and can be used without holding it.\n\nUse: It burns for 6 hours before running out of fuel and can be refilled with a pint of oil.\n\nUsing a Hip Lantern: Spend 1 AP to use a fire starter kit or a fire within your Melee Range to light it. It produces a 2 Space Aura of Bright Light. A creature holding or wearing it can spend 1 AP to smother the flame.\n\nAttaching a Hip Lantern: Spend 1 AP to attach it to your hip or detach it, allowing you to travel with it lit without using your hands.",
+    "properties": ["Bright Light", "2 Space Aura", "6 Hours", "Refillable", "Hands-Free"],
+    "slot": "Worn",
+    "sourcePage": "DC20 Magazine 27 p.5"
+  },
+  {
+    "id": "Mundane Objects|Bullseye Lantern",
+    "name": "Bullseye Lantern",
+    "category": "Adventuring Supplies",
+    "subtype": "Directional Light Source",
+    "summary": "6 hours • 1 AP to light • 5 Space Cone of Bright Light",
+    "mechanics": "A Bullseye Lantern is fully encased in metal except for a glass lens that focuses its light.\n\nUse: It burns for 6 hours before running out of fuel and can be refilled with a pint of oil.\n\nUsing a Bullseye Lantern: Spend 1 AP to use a fire starter kit or a fire within your Melee Range to light it. It produces a 5 Space Cone of Bright Light. A creature holding it can spend 1 AP to smother the flame.\n\nChanging the Direction: On your turn, you can change the direction of the Cone at any time for free.",
+    "properties": ["Bright Light", "5 Space Cone", "6 Hours", "Refillable"],
+    "slot": "One Hand",
+    "sourcePage": "DC20 Magazine 27 p.5"
+  },
+  {
+    "id": "Mundane Objects|Mining Helm",
+    "name": "Mining Helm",
+    "category": "Adventuring Supplies",
+    "subtype": "Worn Directional Light Source",
+    "summary": "6 hours • 1 AP to light • 3 Space Cone of Bright Light • Hands-free",
+    "mechanics": "A Mining Helm is a helm with a small bullseye lantern attached.\n\nUse: It burns for 6 hours before running out of fuel and can be refilled with a pint of oil.\n\nUsing a Mining Helm: Spend 1 AP to use a fire starter kit or a fire within your Melee Range to light it. It produces a 3 Space Cone of Bright Light. A creature holding or wearing it can spend 1 AP to smother the flame.\n\nChanging the Direction: On your turn, you can change the direction of the Cone at any time for free.",
+    "properties": ["Bright Light", "3 Space Cone", "6 Hours", "Refillable", "Hands-Free"],
+    "slot": "Worn",
+    "sourcePage": "DC20 Magazine 27 p.5"
+  }
+]

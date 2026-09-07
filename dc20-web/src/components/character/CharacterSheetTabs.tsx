@@ -168,6 +168,7 @@ function WeaponAttackCard({ item, modifier, adjustment, damageBonus, heavyHitDam
   const [longRange, setLongRange] = useState(false);
   const [unwieldyRange, setUnwieldyRange] = useState(false);
   const [concealedDraw, setConcealedDraw] = useState(false);
+  const [targetFlanked, setTargetFlanked] = useState(false);
   const [activeEnhancements, setActiveEnhancements] = useState<string[]>([]);
   const [enhancementResource, setEnhancementResource] = useState<'AP' | 'SP'>('AP');
   const [loaded, setLoaded] = useState(false);
@@ -176,6 +177,7 @@ function WeaponAttackCard({ item, modifier, adjustment, damageBonus, heavyHitDam
   const versatile = item.properties.includes('Versatile');
   const unwieldy = item.properties.includes('Unwieldy');
   const concealable = item.properties.includes('Concealable');
+  const pinpoint = item.properties.includes('Pinpoint');
   const hasAccuracy = activeEnhancements.some((style) => style === 'Sword' || style === 'Crossbow');
   const isRangedAttack = Boolean(profile?.isNativeRanged || (profile?.canBeThrown && thrown));
   const activeRange = isRangedAttack ? (profile?.isNativeRanged ? profile.range : profile?.thrownRange) : String((item.properties.includes('Reach') ? 2 : 1) + meleeRangeBonus);
@@ -198,9 +200,10 @@ function WeaponAttackCard({ item, modifier, adjustment, damageBonus, heavyHitDam
       - Number(isRangedAttack && enemyInMelee)
       - Number(isRangedAttack && longRange)
       - Number(prone && !(isRangedAttack && item.properties.includes('Deft')))
-      + Number(concealable && concealedDraw);
+      + Number(concealable && concealedDraw)
+      + Number(pinpoint && targetFlanked) * 2;
     const enhancements = activeEnhancements.map((style) => `${style}: ${WEAPON_ENHANCEMENTS[style]?.split(' — ')[0] ?? 'Enhancement'}`).join(', ');
-    onRoll(`${item.name} ${isRangedAttack ? 'Ranged' : 'Melee'} Martial Attack • ${hitDamage} ${damageType} damage${accuracyDie ? ` • Accuracy d4: ${accuracyDie}` : ''}${enhancements ? ` • ${enhancements}` : ''}`, displayedModifier + accuracyDie, situational);
+    onRoll(`${item.name} ${isRangedAttack ? 'Ranged' : 'Melee'} Martial Attack • ${hitDamage} ${damageType} damage${accuracyDie ? ` • Accuracy d4: ${accuracyDie}` : ''}${pinpoint && targetFlanked ? ' • Pinpoint +2 vs Flanked' : ''}${enhancements ? ` • ${enhancements}` : ''}`, displayedModifier + accuracyDie, situational);
     const weaponWasThrown = Boolean(profile?.canBeThrown && thrown);
     if (enhancementCost > 0) onSpendEnhancements(enhancementResource, enhancementCost, weaponWasThrown);
     setActiveEnhancements([]);
@@ -221,6 +224,7 @@ function WeaponAttackCard({ item, modifier, adjustment, damageBonus, heavyHitDam
       {isRangedAttack && <label className="flex items-center gap-2 rounded-lg bg-slate-900/70 p-2 text-slate-300"><input type="checkbox" checked={longRange} onChange={(event) => setLongRange(event.target.checked)} />Target in long range • DisADV</label>}
       {unwieldy && <label className="flex items-center gap-2 rounded-lg bg-slate-900/70 p-2 text-slate-300"><input type="checkbox" checked={unwieldyRange} onChange={(event) => setUnwieldyRange(event.target.checked)} />Target within 1 Space • DisADV</label>}
       {concealable && <label className="flex items-center gap-2 rounded-lg bg-slate-900/70 p-2 text-slate-300"><input type="checkbox" checked={concealedDraw} onChange={(event) => setConcealedDraw(event.target.checked)} />Draw as part of Attack • ADV once per creature per Combat</label>}
+      {pinpoint && <label className="flex items-center gap-2 rounded-lg bg-slate-900/70 p-2 text-slate-300"><input type="checkbox" checked={targetFlanked} onChange={(event) => setTargetFlanked(event.target.checked)} />Target is Flanked • +2 Attack Check</label>}
       {profile && <div className="rounded-lg bg-slate-900/70 p-2 sm:col-span-2"><div className="font-bold text-slate-300">Weapon Enhancements <span className="text-slate-500">• 1 AP or 1 SP each</span></div><div className="mt-2 space-y-2">{profile.styles.map((style) => <label key={style} className={`flex items-start gap-2 ${trained ? 'text-slate-300' : 'text-slate-600'}`}><input type="checkbox" disabled={!trained} checked={activeEnhancements.includes(style)} onChange={(event) => setActiveEnhancements((selected) => event.target.checked ? [...selected, style] : selected.filter((entry) => entry !== style))} /><span><strong>{style}</strong> • {WEAPON_ENHANCEMENTS[style]}</span></label>)}</div>{activeEnhancements.length > 0 && <label className="mt-2 flex items-center gap-2 text-slate-300">Pay {enhancementCost} with<select value={enhancementResource} onChange={(event) => setEnhancementResource(event.target.value as 'AP' | 'SP')} className="rounded border border-slate-600 bg-slate-950 px-2 py-1"><option value="AP">AP ({availableAP})</option><option value="SP">SP ({availableSP})</option></select></label>}{enhancementCost > enhancementResourceAvailable && <p className="mt-1 font-bold text-rose-300">Not enough {enhancementResource} for the selected enhancements.</p>}</div>}
       {item.properties.includes('Ammo') && <label className="flex items-center gap-2 rounded-lg bg-slate-900/70 p-2 text-slate-300"><input type="checkbox" checked={hasAmmo} onChange={(event) => setHasAmmo(event.target.checked)} />Ammunition available</label>}
       {item.properties.includes('Reload') && loaded && <div className="rounded-lg bg-emerald-500/10 p-2 font-bold text-emerald-200">Loaded • becomes unloaded after an Attack</div>}

@@ -8,13 +8,19 @@ let pending: Promise<EquipmentCatalogItem[]> | null = null;
 function fetchEquipment(): Promise<EquipmentCatalogItem[]> {
   if (cache) return Promise.resolve(cache);
   if (pending) return pending;
-  pending = fetch('/data/EquipmentCatalog.json')
-    .then((response) => {
+  pending = Promise.all([
+    fetch('/data/EquipmentCatalog.json').then((response) => {
       if (!response.ok) throw new Error(`Equipment catalog returned ${response.status}.`);
       return response.json() as Promise<unknown>;
-    })
-    .then((value) => {
-      if (!Array.isArray(value)) throw new Error('Equipment catalog is not an array.');
+    }),
+    fetch('/data/MundaneObjects.json').then((response) => {
+      if (!response.ok) throw new Error(`Mundane Objects catalog returned ${response.status}.`);
+      return response.json() as Promise<unknown>;
+    }),
+  ])
+    .then((documents) => {
+      if (documents.some((document) => !Array.isArray(document))) throw new Error('An equipment catalog is not an array.');
+      const value = documents.flatMap((document) => document as unknown[]);
       const records = value.filter((entry): entry is EquipmentCatalogItem => (
         Boolean(entry)
         && typeof entry === 'object'

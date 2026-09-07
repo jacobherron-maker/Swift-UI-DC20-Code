@@ -43,12 +43,14 @@ export const WEAPON_ENHANCEMENTS: Record<string, string> = {
   Bow: 'Slow — the target makes an Agility Save. Failure: The target becomes Slowed until the end of its next turn.',
   Crossbow: 'Accuracy — add a d4 to your Attack Check.',
   Fist: 'Grapple — the target makes a Physical Save. Failure: The target becomes Grappled by you. Fist Weapons count as a free hand for Grappling.',
+  Harpoon: 'Tether — the target makes a Might Save. Failure: The target is Tethered X to you, where X is its distance from you. While Tethered, you can’t make Attacks with the Weapon. You can spend 1 AP to make a contested Might Check to pull it 1 Space closer and reduce the Tethered distance by 1 (minimum 1), plus 1 Space for each 5 by which you succeed. The target can spend 1 AP to make a Might Check against your Save DC to break free. Stopping wielding the Weapon ends this Tether.',
   Hammer: 'Knockback — the target makes a Might Save. Failure: The target is pushed 1 Space away, plus 1 Space each time you use this Enhancement.',
   Pick: 'Hinder — the target makes an Agility Save. Failure: The target becomes Hindered until the end of its next turn.',
   Sling: 'Hinder — the target makes an Agility Save. Failure: The target becomes Hindered until the end of its next turn.',
   Spear: 'Slow — the target makes an Agility Save. Failure: The target becomes Slowed until the end of its next turn.',
   Staff: 'Trip — the target makes a Physical Save. Failure: The target falls Prone.',
   Sword: 'Accuracy — add a d4 to your Attack Check.',
+  Trap: 'Immobilize — the target makes a Might or Agility Save (its choice). Failure: The target is Immobilized. While Immobilized, you can’t make Attacks with the Weapon. The target can spend 1 AP to make a Might or Agility Check (its choice) against your Save DC to break free. Stopping wielding the Weapon ends this Immobilization.',
   Whip: 'Pull — the target makes a Might Save. Failure: Move it horizontally 1 Space toward you or to either side, plus 1 Space each time you use this Enhancement.',
 };
 
@@ -121,7 +123,7 @@ export function combinedDefensiveProfile(items: EquipmentCatalogItem[]): Defensi
 /** Structured combat data for every published Beta weapon example. */
 export function weaponMechanicalProfile(item: EquipmentCatalogItem): WeaponMechanicalProfile | null {
   if (item.category !== 'Weapons') return null;
-  const damage = item.summary.match(/^(\d+) ([A-Za-z]+(?: or [A-Za-z]+)?) damage/);
+  const damage = item.summary.match(/^(\d+)(?: \(\d+\))? ([A-Za-z]+(?: or [A-Za-z]+)?) damage/);
   const range = item.summary.match(/Range ([0-9/]+)/)?.[1] ?? '1';
   const styles = item.subtype.replace(/^Two-Handed /, '').split('/');
   const isNativeRanged = item.properties.includes('Ammo');

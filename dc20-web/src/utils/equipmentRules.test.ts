@@ -18,6 +18,8 @@ import {
 
 const catalogPath = fileURLToPath(new URL('../../public/data/EquipmentCatalog.json', import.meta.url));
 const catalog = JSON.parse(readFileSync(catalogPath, 'utf8')) as EquipmentCatalogItem[];
+const mundaneObjectsPath = fileURLToPath(new URL('../../public/data/MundaneObjects.json', import.meta.url));
+const mundaneObjects = JSON.parse(readFileSync(mundaneObjectsPath, 'utf8')) as EquipmentCatalogItem[];
 
 function inventory(item: EquipmentCatalogItem, id: string, equipped = false): CharacterInventoryItem {
   return { id, equipmentID: item.id, quantity: 1, isEquipped: equipped, source: 'added' };
@@ -147,6 +149,46 @@ describe('native equipment catalog export', () => {
       expect(item.mechanics).toContain(`Associated Attribute:`);
       expect(item.mechanics).toContain(`perform ${item.properties[0]} activities`);
     }
+  });
+});
+
+describe('Mundane Objects sourcebook equipment', () => {
+  it('includes all four weapons, the Ballista, and all fifteen adventuring supplies', () => {
+    expect(mundaneObjects).toHaveLength(20);
+    expect(mundaneObjects.reduce<Record<string, number>>((counts, item) => {
+      counts[item.category] = (counts[item.category] ?? 0) + 1;
+      return counts;
+    }, {})).toEqual({ Weapons: 4, 'Siege Weapons': 1, 'Adventuring Supplies': 15 });
+    expect(mundaneObjects.map(({ name }) => name)).toEqual([
+      'Bolas', 'Catcher Pole', 'Double Bladed Sword', 'Harpoon Crossbow', 'Ballista',
+      'Portable Barricade', 'Alchemical Oil', 'Fire Bottle', 'Acid Vial', 'Bag of Marbles',
+      'Bag of Caltrops', 'Glue', 'Energizing Brew', 'Climbing Boots', 'Spyglass',
+      'Magnifying Glass', 'Torch', 'Hip Lantern', 'Bullseye Lantern', 'Mining Helm',
+    ]);
+    for (const item of mundaneObjects) expect(item.sourcePage).toMatch(/^DC20 Magazine 27 p\.[3-5]$/);
+  });
+
+  it('routes the new weapon styles and combat properties into attack cards', () => {
+    const bolas = mundaneObjects.find(({ name }) => name === 'Bolas')!;
+    const catcherPole = mundaneObjects.find(({ name }) => name === 'Catcher Pole')!;
+    const doubleBladedSword = mundaneObjects.find(({ name }) => name === 'Double Bladed Sword')!;
+    const harpoonCrossbow = mundaneObjects.find(({ name }) => name === 'Harpoon Crossbow')!;
+    expect(weaponMechanicalProfile(bolas)).toMatchObject({ baseDamage: 1, styles: ['Trap'], canBeThrown: true, thrownRange: '10/20' });
+    expect(weaponMechanicalProfile(catcherPole)).toMatchObject({ baseDamage: 1, styles: ['Trap'], range: '2' });
+    expect(weaponMechanicalProfile(doubleBladedSword)).toMatchObject({ baseDamage: 1, styles: ['Sword'], range: '1' });
+    expect(doubleBladedSword.properties).toEqual(expect.arrayContaining(['Double Sided', 'Guard', 'Pinpoint']));
+    expect(weaponMechanicalProfile(harpoonCrossbow)).toMatchObject({ baseDamage: 2, styles: ['Harpoon'], isNativeRanged: true, range: '15/45', heavyHitDamageBonus: 1 });
+    expect(WEAPON_ENHANCEMENTS.Trap).toContain('Immobilize');
+    expect(WEAPON_ENHANCEMENTS.Harpoon).toContain('Tether');
+  });
+
+  it('records the source mechanics for representative supplies and the siege weapon', () => {
+    expect(mundaneObjects.find(({ name }) => name === 'Ballista')).toMatchObject({ category: 'Siege Weapons', slot: 'Carried' });
+    expect(mundaneObjects.find(({ name }) => name === 'Ballista')?.mechanics).toContain('5 Piercing damage');
+    expect(mundaneObjects.find(({ name }) => name === 'Portable Barricade')?.mechanics).toContain('15 PD and AD and 5 HP');
+    expect(mundaneObjects.find(({ name }) => name === 'Fire Bottle')?.mechanics).toContain('3 Space diameter Sphere');
+    expect(mundaneObjects.find(({ name }) => name === 'Climbing Boots')).toMatchObject({ slot: 'Worn', properties: ['Climb Speed', 'Slowed'] });
+    expect(mundaneObjects.find(({ name }) => name === 'Mining Helm')?.mechanics).toContain('3 Space Cone of Bright Light');
   });
 });
 
