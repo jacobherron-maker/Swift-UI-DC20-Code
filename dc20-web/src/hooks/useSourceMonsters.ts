@@ -7,25 +7,35 @@ let pendingRequest: Promise<Monster[]> | null = null;
 function loadSourceMonsters(): Promise<Monster[]> {
   if (cachedMonsters) return Promise.resolve(cachedMonsters);
   if (pendingRequest) return pendingRequest;
-  pendingRequest = fetch('/data/MonsterSourceLibrary.json')
-    .then((response) => {
-      if (!response.ok) throw new Error(`Monster library returned ${response.status}.`);
-      return response.json() as Promise<unknown>;
-    })
-    .then((value) => {
-      if (!Array.isArray(value)) throw new Error('Monster library is not an array.');
-      const monsters = value.filter((entry): entry is Monster => (
-        Boolean(entry)
-        && typeof entry === 'object'
-        && typeof (entry as Monster).id === 'string'
-        && typeof (entry as Monster).name === 'string'
-        && Array.isArray((entry as Monster).abilities)
-      ));
-      if (monsters.length !== value.length) {
-        throw new Error('One or more sourcebook monster records are malformed.');
+  const sourceFiles = [
+    '/data/MonsterSourceLibrary.json',
+    '/data/BetaBestiaryVol4.json',
+  ];
+  pendingRequest = Promise.all(sourceFiles.map(async (path) => {
+    const response = await fetch(path);
+    if (!response.ok) throw new Error(`Monster library returned ${response.status} for ${path}.`);
+    return response.json() as Promise<unknown>;
+  }))
+    .then((libraries) => {
+      const monsters = libraries.flatMap((value) => {
+        if (!Array.isArray(value)) throw new Error('Monster library is not an array.');
+        const validEntries = value.filter((entry): entry is Monster => (
+          Boolean(entry)
+          && typeof entry === 'object'
+          && typeof (entry as Monster).id === 'string'
+          && typeof (entry as Monster).name === 'string'
+          && Array.isArray((entry as Monster).abilities)
+        ));
+        if (validEntries.length !== value.length) {
+          throw new Error('One or more sourcebook monster records are malformed.');
+        }
+        return validEntries;
+      });
+      if (new Set(monsters.map(({ id }) => id)).size !== monsters.length) {
+        throw new Error('Sourcebook monster IDs must be unique.');
       }
-      cachedMonsters = monsters;
-      return monsters;
+      cachedMonsters = [...monsters].sort((left, right) => left.name.localeCompare(right.name));
+      return cachedMonsters;
     })
     .finally(() => {
       pendingRequest = null;

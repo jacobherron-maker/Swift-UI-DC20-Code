@@ -1,0 +1,919 @@
+[
+  {
+    "id": "BBV40000-0000-4000-8000-000000000001",
+    "name": "Arcane Tome",
+    "level": 4,
+    "type": "Epic",
+    "role": "Tactician",
+    "hp": 34,
+    "physicalDefense": 14,
+    "arcaneDefense": 12,
+    "attackBonus": 5,
+    "saveDC": 15,
+    "damage": 2,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 21: Beta Bestiary Vol. 4",
+    "sourcePage": 3,
+    "publishedRole": "Tactician",
+    "size": "Tiny",
+    "creatureType": "Construct",
+    "descriptionText": "A large arcane spell book covered in glowing glyphs, runes, and wards, hovering above the ground. Its pages rustle as it flips to different spells.",
+    "tactics": "Uses Fear and Shattered Reality against creatures that get too close and uses Slumber to incapacitate enemies next to their Chaos Bomb. After a big attack, they’ll try to get to a safe location or attack from afar with Arcane Bolts.",
+    "lore": "Arcane Tomes are created when a well-used spell book of a powerful wizard is abandoned. A faint reflection of the wizard is imprinted on the book, causing the book to move and act as the wizard would.",
+    "actionPoints": 4,
+    "reactionPoints": 3,
+    "speed": 5,
+    "speedType": "Fly",
+    "primeModifier": 3,
+    "combatMastery": 2,
+    "might": -2,
+    "agility": 1,
+    "charisma": 3,
+    "intelligence": 3,
+    "skills": "Awareness +5, Arcana +7, Occultism +7",
+    "senses": "Passive Awareness 15, Blindsight 10",
+    "languages": "Languages of its creator, but doesn’t speak",
+    "otherSpeeds": "",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "",
+    "immunities": "Prone",
+    "abilities": [
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000101",
+        "kind": "Features",
+        "name": "Hover",
+        "cost": "",
+        "details": "You’re Hovering while Flying."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000102",
+        "kind": "Features",
+        "name": "Empowering Runes",
+        "cost": "",
+        "details": "You have ADV on Spell Attacks and Spell Checks."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000103",
+        "kind": "Features",
+        "name": "Spell Pages",
+        "cost": "",
+        "details": "When you’re Grappled, you’re held open to a single spell page and can only use your last used MP Effect until you’re no longer Grappled. Choose an MP Effect when Grappled if you have not yet used one. When you’re Restrained, you can’t use MP Effects at all."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000104",
+        "kind": "Features",
+        "name": "MP Effects",
+        "cost": "",
+        "details": "For the purpose of Spell Duels, your MP Effects have a +4 bonus to their Check."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000105",
+        "kind": "Actions",
+        "name": "Arcane Bolt",
+        "cost": "1 AP",
+        "details": "Ranged Spell Attack vs AD, 15 Spaces, 2 Bludgeoning, Piercing, or Slashing (your choice)."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000106",
+        "kind": "Actions",
+        "name": "Fear (MP Effect)",
+        "cost": "1 AP",
+        "details": "Contest, 10 Spaces, Spell Check vs Repeated Charisma Save. Success: Target is Frightened of you for 1 minute.\n\nFlee (+1 AP): Each time the target fails this Save, it spends 1 AP immediately to run from you, moving its full Speed away from you."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000107",
+        "kind": "Actions",
+        "name": "Shatter Reality",
+        "cost": "2 AP",
+        "details": "Area Spell Attack vs AD, 10 Spaces, 2 Space Sphere, 1 Psychic.\n\nDistorted Perception (+1 AP): Target makes a Repeated Charisma Save. Failure: Target rolls a d4 to determine the Distortion Effect that alters its body or perception for 1 minute.\n\n1 — It sees its body twist. It is Immobilized.\n2 — Its senses collapse inward. It is Blinded.\n3 — Its mind fractures. It is Stunned and can’t take Reactions.\n4 — It becomes confused. At the start of each of its turns, it must spend 1 AP to move up to its Speed in a random direction."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000108",
+        "kind": "Actions",
+        "name": "Slumber (MP Effect)",
+        "cost": "2 AP • Sustained",
+        "details": "Contest, 10 Spaces, 2 Space Sphere, Spell Check vs Repeated Intelligence Save. Success: Target is Incapacitated for 1 minute or until it takes damage, makes a Save (other than from this effect), or another creature within 1 Space spends 1 AP to remove the Condition."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000109",
+        "kind": "Reactions",
+        "name": "Arcane Shield (MP Effect)",
+        "cost": "1 AP",
+        "details": "When you’re targeted by an Attack vs your AD, you can increase your AD by 5 against the Attack. Immediately after the Attack, you gain 2 Temp HP."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000110",
+        "kind": "Reactions",
+        "name": "Spell Duel",
+        "cost": "X AP",
+        "details": "When a creature uses an MP effect with a base AP cost of X, you can attempt to Spell Duel it with a +4 bonus to your Check."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000111",
+        "kind": "Round Actions",
+        "name": "Every Round: Chaos Bomb",
+        "cost": "",
+        "details": "You conjure a Tiny sized Chaos Bomb in a Space within 10 Spaces. At the start of the next round, it detonates. When it detonates, it’s destroyed and you make an Attack from its location as a Reaction for free. Roll a d12 to determine the bomb’s damage type and secondary effect.\n\nArea Spell Attack vs AD, 1 Space Aura, 2 damage of the rolled damage type and target makes a Repeated Intelligence Save. Failure: Target is subjected to the rolled secondary effect.\n\n1 Bludgeoning — The target is pushed 1 Space away. Failure (each 5): The target is pushed 1 additional Space.\n2 Piercing — The target can’t take Reactions for 1 round.\n3 Slashing — The target begins Bleeding for 1 minute.\n4 Cold — The target is Slowed for 1 round.\n5 Corrosive — The target is Hindered for 1 round.\n6 Fire — The target begins Burning for 1 minute.\n7 Lightning — The target is Stunned until the start of their turn.\n8 Poison — The target is Impaired for 1 round.\n9 Psychic — The target is Dazed for 1 round.\n10 Radiant — Attacks made against the target add a d4 to the check for 1 round.\n11 Umbral — The target is Doomed for 1 round.\n12 True — The target is Exposed for 1 round."
+      }
+    ]
+  },
+  {
+    "id": "BBV40000-0000-4000-8000-000000000002",
+    "name": "Boulder Drake",
+    "level": 5,
+    "type": "Epic",
+    "role": "Brute",
+    "hp": 53,
+    "physicalDefense": 12,
+    "arcaneDefense": 18,
+    "attackBonus": 7,
+    "saveDC": 17,
+    "damage": 2,
+    "notes": "Falling Collision: All targets the creature collides with share an amount of Bludgeoning damage equal to half the number of Spaces the creature fell and fall Prone. If a target is a creature, they can make a Physical Save to avoid falling Prone. The DC equals 10 + the damage taken.",
+    "sourceBook": "DC20 Magazine 21: Beta Bestiary Vol. 4",
+    "sourcePage": 5,
+    "publishedRole": "Brute",
+    "size": "Huge",
+    "creatureType": "Dragon",
+    "descriptionText": "A massive brown dragon with the body of an armadillo, its back covered by interconnected slabs of stone. When it rolls up, it is indistinguishable from a boulder.",
+    "tactics": "They’ll Curl Up and lay in ambush until a creature is detected through Tremorsense, then Roll over them or off a cliff, landing atop enemies (see Falling Boulder). When enemies are positioned in a line, they Curl Up and Roll over them. They Swipe at enemies that get close and try to position themselves to hit as many enemies as possible with their Rock Breath.",
+    "lore": "Rocks exposed to dragon magic over prolonged periods grow into massive boulders that then uncurl into fully grown Boulder Drakes.",
+    "actionPoints": 4,
+    "reactionPoints": 3,
+    "speed": 4,
+    "speedType": "Ground",
+    "primeModifier": 4,
+    "combatMastery": 3,
+    "might": 4,
+    "agility": 1,
+    "charisma": 2,
+    "intelligence": -1,
+    "skills": "Awareness +6, Athletics +8, Intimidation +8",
+    "senses": "Passive Awareness 16, Darkvision 10, Tremorsense 10",
+    "languages": "",
+    "otherSpeeds": "",
+    "reductions": "EDR",
+    "resistances": "Piercing (3), Slashing (3)",
+    "vulnerabilities": "",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000201",
+        "kind": "Features",
+        "name": "False Appearance",
+        "cost": "",
+        "details": "While you’re Curled Up and remain motionless, you’re indistinguishable from a boulder."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000202",
+        "kind": "Actions",
+        "name": "Swipe",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 2 Bludgeoning + 1 extra damage on Heavy Hits.\n\nShove (+1 AP): Target makes a Physical Save. Failure: Target is pushed up to 1 Space to the side or backwards and lands Prone. Failure (each 5): +1 Space."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000203",
+        "kind": "Actions",
+        "name": "Curl Up",
+        "cost": "1 AP",
+        "details": "You become Curled Up, gaining +5 PD, +5 AD, ADV on Might Saves, and Resistance (Half) to damage from Falling. The only Actions you can take are Roll, Falling Boulder, and spending 1 AP to Uncurl, ending this effect."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000204",
+        "kind": "Actions",
+        "name": "Roll",
+        "cost": "2 AP",
+        "details": "Requires: You must be Curled Up. You move in a Line up to 5 Spaces. You can move through Spaces occupied by creatures your size or smaller and they aren’t considered Difficult Terrain. Make an Attack Check against every creature whose Space you moved through. Melee Martial Attack vs AD, 2 Bludgeoning and target makes a Physical Save. Failure: Target is knocked Prone. You may Uncurl for free after this Action.\n\nExtended Roll (+1 AP): You move in a Line up to 10 Spaces instead."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000205",
+        "kind": "Reactions",
+        "name": "Falling Boulder",
+        "cost": "1 AP",
+        "details": "When you fall, you can use the Curl Up Action. When you land, you deal +3 Falling Collision damage, shared by creatures in a 2 Space Aura."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000206",
+        "kind": "Round Actions",
+        "name": "Odd Rounds: Eat Rocks",
+        "cost": "",
+        "details": "You eat nearby dirt and rocks, swelling slightly."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000207",
+        "kind": "Round Actions",
+        "name": "Even Rounds: Rock Breath",
+        "cost": "",
+        "details": "You breathe out a torrent of jagged rocks. Area Martial Attack vs AD, 10 Space Cone, 1 Piercing + 1 extra damage on Heavy Hits and target makes an Agility Save. Failure: Target is Impaired for 1 Round."
+      }
+    ]
+  },
+  {
+    "id": "BBV40000-0000-4000-8000-000000000003",
+    "name": "Divine Justiciar",
+    "level": 6,
+    "type": "Legendary",
+    "role": "Brute",
+    "hp": 110,
+    "physicalDefense": 12,
+    "arcaneDefense": 17,
+    "attackBonus": 7,
+    "saveDC": 17,
+    "damage": 3,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 21: Beta Bestiary Vol. 4",
+    "sourcePage": 6,
+    "publishedRole": "Brute",
+    "size": "Large",
+    "creatureType": "Celestial",
+    "descriptionText": "A hulking, four-winged angel covered entirely in golden plate armor without eye holes. It holds the scales of justice in one hand and an executioner’s sword in the other. It seems to radiate power and authority.",
+    "tactics": "These angels will start off a fight by ordering their enemies to submit (see Command Surrender), then use their intense speed to close the gap (see Swift Justice and Flying Impact) before delivering a Divine Smite. They utilize their Aura of Silence against enemy casters and punish enemies that use trickery in a fight (see Rebuke Deception). Justiciars also carry Scales of Justice they can use to absorb enemies’ healing or an ally’s damage.",
+    "lore": "A divine spirit of law and order, Divine Justiciars judge the actions of others and deliver corporal punishment for those they find guilty of breaking a land’s laws. They’re frequently tasked as guards for communities of powerful magical creatures, or to hunt down dangerous fugitives.",
+    "actionPoints": 4,
+    "reactionPoints": 6,
+    "speed": 4,
+    "speedType": "Fly",
+    "primeModifier": 4,
+    "combatMastery": 3,
+    "might": 3,
+    "agility": -2,
+    "charisma": 4,
+    "intelligence": 1,
+    "skills": "Awareness +6, Athletics +5, Influence +8, Insight +8, Intimidation +7",
+    "senses": "Truesight 10",
+    "languages": "All",
+    "otherSpeeds": "Ground 4",
+    "reductions": "PDR",
+    "resistances": "",
+    "vulnerabilities": "Umbral (3)",
+    "immunities": "Radiant",
+    "abilities": [
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000301",
+        "kind": "Features",
+        "name": "MP Effects",
+        "cost": "",
+        "details": "For the purpose of Spell Duels, your MP Effects have a +6 bonus to their Check."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000302",
+        "kind": "Actions",
+        "name": "Divine Smite (MP Effect)",
+        "cost": "1 AP",
+        "details": "Melee Spell Attack vs PD, 3 Radiant.\n\nBlinding Strike (+1 AP): Target makes a Physical Save. Failure: Target is Blinded for 1 Round."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000303",
+        "kind": "Actions",
+        "name": "Swift Justice",
+        "cost": "1 AP",
+        "details": "You can move up to your Speed, then make an attack against a target within 1 Space of any Space you moved through. Melee Martial Attack vs PD, 2 Slashing + 1 extra damage on Heavy Hits.\n\nSubsequent Strike (+1 AP): You gain additional movement equal to half your Speed and can target an additional creature using the same Attack Check."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000304",
+        "kind": "Actions",
+        "name": "Flying Impact",
+        "cost": "2 AP",
+        "details": "Fly up to twice your Speed, landing on the ground. Contest, 1 Space Aura around landing spot, Martial Check vs Physical Save. Failure: Target falls Prone."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000305",
+        "kind": "Actions",
+        "name": "Command Surrender (MP Effect)",
+        "cost": "2 AP",
+        "details": "Contest, 10 Spaces, Spell Check vs Charisma Save. Success: Target must spend 2 AP to drop what it’s holding and fall Prone. If the target can’t spend the AP, it becomes Stunned 2 until the start of its turn."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000306",
+        "kind": "Actions",
+        "name": "Aura of Silence (MP Effect)",
+        "cost": "2 AP • Sustained",
+        "details": "You create a 5 Space Aura of silence around yourself. All other creatures in the Aura can’t produce sound or perform Verbal Components."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000307",
+        "kind": "Reactions",
+        "name": "Rebuke Deception",
+        "cost": "1 AP",
+        "details": "When a creature within 5 Spaces makes a Trickery Check, the check gains DisADV and the creature makes an Intelligence Save. Failure: Target takes 2 Psychic damage."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000308",
+        "kind": "Reactions",
+        "name": "Scales of Justice",
+        "cost": "2 AP",
+        "details": "When another creature within 5 Spaces takes damage or regains HP, that creature makes a Charisma Save. Failure: You and the target share the damage taken or regained."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000309",
+        "kind": "Reactions",
+        "name": "Spell Duel",
+        "cost": "X AP",
+        "details": "When a creature uses an MP effect with a base AP cost of X, you can attempt to Spell Duel it with a +6 bonus to your Check."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000310",
+        "kind": "Round Actions",
+        "name": "Odd Rounds: Divine Restraints",
+        "cost": "",
+        "details": "You summon radiant chains to wrap around a creature. Contest, 10 Spaces, Spell Check vs Repeated Might Save. Success: Target is Restrained for 1 minute."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000311",
+        "kind": "Round Actions",
+        "name": "Even Rounds: Burning Judgement",
+        "cost": "",
+        "details": "The chains burn with a radiant fire. Each creature Restrained by Divine Restraints makes a Might Save. Failure: Target is Burning (Radiant damage instead)."
+      }
+    ]
+  },
+  {
+    "id": "BBV40000-0000-4000-8000-000000000004",
+    "name": "Drakus",
+    "level": 4,
+    "type": "Standard",
+    "role": "Defender",
+    "hp": 20,
+    "physicalDefense": 14,
+    "arcaneDefense": 14,
+    "attackBonus": 5,
+    "saveDC": 15,
+    "damage": 2,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 21: Beta Bestiary Vol. 4",
+    "sourcePage": 7,
+    "publishedRole": "Defender",
+    "size": "Large",
+    "creatureType": "Dragon",
+    "descriptionText": "A white dragon with the body of a winged horse and long, feather-like scales. It’s incredibly graceful and proud.",
+    "tactics": "Moves their rider to wherever they’re most useful, then uses Fire Spit or Fire Breath. If surrounded, it uses a Heavy Gust before flying away. Anytime its rider is Attacked, it immediately protects them (see Heroic Protect and Draconic Shield).",
+    "lore": "Draki were first spawned from pegasi that lived in proximity to dragons. Their instinct to protect along with their equine bodies makes them amazing mounts. Some armies breed Draki to provide steeds to their knights, though a Drakus must form a strong bond with its rider before it can be used to its highest ability.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 7,
+    "speedType": "Fly",
+    "primeModifier": 3,
+    "combatMastery": 2,
+    "might": 0,
+    "agility": 3,
+    "charisma": 2,
+    "intelligence": 0,
+    "skills": "Awareness +3, Acrobatics +7",
+    "senses": "",
+    "languages": "",
+    "otherSpeeds": "Ground 7",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000401",
+        "kind": "Features",
+        "name": "Natural Mount",
+        "cost": "",
+        "details": "While a creature is mounted on you, they have ADV on Saves against being moved or knocked Prone."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000402",
+        "kind": "Actions",
+        "name": "Talon",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 2 Slashing."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000403",
+        "kind": "Actions",
+        "name": "Fire Spit",
+        "cost": "1 AP",
+        "details": "Ranged Spell Attack vs PD, 10 Spaces, 1 Fire + 1 extra damage on Heavy Hits and target makes a Repeated Physical Save. Failure: Target is Burning for 1 minute."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000404",
+        "kind": "Actions",
+        "name": "Fire Breath",
+        "cost": "2 AP",
+        "details": "Area Spell Attack vs AD, 5 Space Cone, 1 Fire + 1 extra damage on Heavy Hits."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000405",
+        "kind": "Actions",
+        "name": "Heavy Gust",
+        "cost": "2 AP",
+        "details": "Creatures not mounting you: Contest, Martial Check vs Acrobatics or Athletics Check, 1 Space Aura. Success: Target is pushed back 2 Spaces. Success (each 5): +1 Space."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000406",
+        "kind": "Reactions",
+        "name": "Heroic Protect",
+        "cost": "1 AP",
+        "details": "When a creature within 1 Space of you is Hit by an Attack, you become the target of the Attack, taking all of the damage and effects instead of the target. If the Attack is accompanied by a Save, you make the Save instead of the target."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000407",
+        "kind": "Reactions",
+        "name": "Draconic Shield",
+        "cost": "1 AP",
+        "details": "When a Bloodied creature within 10 Spaces is Attacked, they gain a +5 bonus to their PD and AD against this Attack. If they’re Well-Bloodied, the bonus lasts for 1 Round. This effect can’t stack."
+      }
+    ]
+  },
+  {
+    "id": "BBV40000-0000-4000-8000-000000000005",
+    "name": "Formacyde Soldier",
+    "level": 3,
+    "type": "Standard",
+    "role": "Soldier",
+    "hp": 16,
+    "physicalDefense": 13,
+    "arcaneDefense": 13,
+    "attackBonus": 5,
+    "saveDC": 15,
+    "damage": 2,
+    "notes": "Burrowing: Creatures with a Burrow Speed can Burrow through soft, solid ground (such as dirt or compacted snow). When a creature Burrows, it can either leave a hole where it burrows or fill in the hole behind it. If it fills the hole behind it, it is buried.\n\nBuried Combat — Full Cover: There is Full Cover between the buried creature and all other creatures.\n\nBuried Combat — Holding Breath: Buried creatures that need to breathe must hold their breath or begin Suffocating. Creatures that attempt to speak while holding their breath, such as to satisfy the Verbal Component required to cast a Spell, reduce their Breath Duration by 1.",
+    "sourceBook": "DC20 Magazine 21: Beta Bestiary Vol. 4",
+    "sourcePage": 8,
+    "publishedRole": "Soldier",
+    "size": "Large",
+    "creatureType": "Giant",
+    "descriptionText": "A hulking, bipedal red ant holding a spear in each of its four arms with a bundle of spears attached to its back.",
+    "tactics": "Uses their Mandible Clamp to trap enemies with lower Might, Burying them underground. They use Spear Attacks primarily, hitting as many creatures as possible, and use their Dissolving Acid against well-armored enemies.",
+    "lore": "Formacydes live in massive colonies led by a queen, creating huge underground complexes and cave systems. While each member of the colony has independent thought, they act like a hivemind in service to their queen and can telepathically communicate with other members of their hive.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 5,
+    "speedType": "Ground",
+    "primeModifier": 3,
+    "combatMastery": 2,
+    "might": 3,
+    "agility": -1,
+    "charisma": 1,
+    "intelligence": 2,
+    "skills": "Awareness +3, Athletics +5",
+    "senses": "Darkvision 10, Tremorsense 5",
+    "languages": "Common, Giant; can speak with insects and anyone who has the ability to speak with insects",
+    "otherSpeeds": "Burrow 3",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000501",
+        "kind": "Features",
+        "name": "Hive Connection",
+        "cost": "",
+        "details": "You can telepathically connect to and communicate with any other Formacyde within 10 Spaces, or who’s telepathically connected to another Formacyde you’re also connected to."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000502",
+        "kind": "Features",
+        "name": "Thick Carapace",
+        "cost": "",
+        "details": "You’re immune to being Flanked."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000503",
+        "kind": "Actions",
+        "name": "Mandible Clamp",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 2 Slashing Damage and target makes a Physical Save. Failure: Target is Grappled."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000504",
+        "kind": "Actions",
+        "name": "Bury",
+        "cost": "1 AP",
+        "details": "Grappled target: Contest, Martial Check vs Might Save. Success: Target is buried 1 Space underground and is no longer Grappled. The target can spend 1 AP to make a DC 15 Athletics Check. Success: Target digs their way to the surface, emerging Prone."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000505",
+        "kind": "Actions",
+        "name": "Spear Attack",
+        "cost": "2 AP",
+        "details": "Select 4 targets within range (you can select the same creature multiple times). Melee Martial Attack vs PD, 2 Spaces, 1 Piercing damage for each time they’re selected.\n\nThrow Spears (+1 AP): This becomes a Ranged Martial Attack with a range of 5/10."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000506",
+        "kind": "Actions",
+        "name": "Dissolving Acid Spray",
+        "cost": "2 AP",
+        "details": "Area Spell Attack vs AD, 1 Corrosion and target makes a Repeated Agility Save. Failure: Target no longer benefits from PDR or EDR for 1 minute."
+      }
+    ]
+  },
+  {
+    "id": "BBV40000-0000-4000-8000-000000000006",
+    "name": "Lifeleech",
+    "level": 1,
+    "type": "Standard",
+    "role": "Soldier",
+    "hp": 10,
+    "physicalDefense": 14,
+    "arcaneDefense": 10,
+    "attackBonus": 4,
+    "saveDC": 14,
+    "damage": 1,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 21: Beta Bestiary Vol. 4",
+    "sourcePage": 9,
+    "publishedRole": "Soldier",
+    "size": "Tiny",
+    "creatureType": "Aberration",
+    "descriptionText": "A long, slimy worm that glides through the water with a gaping, pitch-black mouth.",
+    "tactics": "Latches to a creature, then Drains them until they die.",
+    "lore": "Lifeleech are strange creatures that infest swamps, draining the life from all creatures in the area before going dormant until the swamp repopulates.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 5,
+    "speedType": "Swim",
+    "primeModifier": 3,
+    "combatMastery": 1,
+    "might": 1,
+    "agility": 3,
+    "charisma": -1,
+    "intelligence": 2,
+    "skills": "Awareness +5, Stealth +5",
+    "senses": "",
+    "languages": "",
+    "otherSpeeds": "Ground 1",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000601",
+        "kind": "Actions",
+        "name": "Latch",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 1 Piercing and target makes an Agility Save. Failure: You’re Latched to the target. While Latched:\n• You move with the target, even if they teleport.\n• If the target is Small or smaller, they’re Slowed.\n• A creature within 1 Space of the target can spend 1 AP to make a DC 14 Might Check. Success: You’re no longer Latched.\n\nThis effect ends if you move away from the target. You have ADV on Checks or Saves against effects that forcibly move you away."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000602",
+        "kind": "Actions",
+        "name": "Drain",
+        "cost": "1 AP",
+        "details": "Target you are Latched to: Contest, 1 Space, Spell Check vs Charisma Save. Success: Target is Doomed and you regain 1 HP. Success (each 10): +1 Doomed and you regain +1 HP.\n\nReserves (+1 AP): If this would heal you beyond your HP Maximum, you gain an amount of Temp HP equal to the remaining healing."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000603",
+        "kind": "Reactions",
+        "name": "Flail",
+        "cost": "1 AP",
+        "details": "If a creature you’re not Latched to succeeds in ending the Latch by spending AP, you can use Latch against that creature."
+      }
+    ]
+  },
+  {
+    "id": "BBV40000-0000-4000-8000-000000000007",
+    "name": "Poison Puddle",
+    "level": 1,
+    "type": "Standard",
+    "role": "Striker",
+    "hp": 7,
+    "physicalDefense": 10,
+    "arcaneDefense": 8,
+    "attackBonus": 4,
+    "saveDC": 14,
+    "damage": 1,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 21: Beta Bestiary Vol. 4",
+    "sourcePage": 10,
+    "publishedRole": "Striker",
+    "size": "Tiny",
+    "creatureType": "Ooze",
+    "descriptionText": "A highly fluid ooze that’s translucent with a green tinge. It moves like flowing water but sticks to things it touches for a moment.",
+    "tactics": "Ambushes prey that walks by or through them, latching onto them (see Poison Latch) before trying to Suffocate them and poison them (see Poison Splash). They lob poison at creatures that try to run away (see Poison Glob).",
+    "lore": "Poison Puddles are small oozes infused with poison that are frequently disguised as a green-tinted puddle, ambushing prey that tries to walk through or drink from it.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 3,
+    "speedType": "Ground",
+    "primeModifier": 3,
+    "combatMastery": 1,
+    "might": 1,
+    "agility": 3,
+    "charisma": 2,
+    "intelligence": -2,
+    "skills": "Awareness +5, Stealth +5",
+    "senses": "Blindsight 10 (can’t see beyond this)",
+    "languages": "",
+    "otherSpeeds": "Swim 3",
+    "reductions": "",
+    "resistances": "Physical (1)",
+    "vulnerabilities": "Lightning (Double), Radiant (Double)",
+    "immunities": "Corrosion (Absorb), Poison (Absorb) | Bleeding, Charmed, Deafened, Grappled, Prone, Restrained",
+    "abilities": [
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000701",
+        "kind": "Features",
+        "name": "False Appearance",
+        "cost": "",
+        "details": "While you remain motionless, you’re indistinguishable from a green-tinted puddle."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000702",
+        "kind": "Features",
+        "name": "Amorphous",
+        "cost": "",
+        "details": "You’re unaffected by mundane Difficult Terrain and can move through a Space as narrow as 1 inch wide without squeezing."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000703",
+        "kind": "Features",
+        "name": "Anaerobic",
+        "cost": "",
+        "details": "You don’t need to breathe. You’re immune to hazardous air and Suffocating."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000704",
+        "kind": "Actions",
+        "name": "Poison Latch",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 1 Poison and target makes an Agility Save. Failure: You’re Latched to the target. While Latched:\n• You move with the target, even if they teleport.\n• If the target is Small or smaller, they’re Slowed.\n• The target takes 1 Poison damage at the start of each of their turns.\n• A creature within 1 Space of the target can spend 1 AP to make a DC 14 Might Check. Success: You’re no longer Latched.\n• This effect ends if you move away from the target. You have ADV on Checks or Saves against effects that forcibly move you away."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000705",
+        "kind": "Actions",
+        "name": "Suffocate",
+        "cost": "1 AP",
+        "details": "Latched target: Contest, Martial Check vs Agility Save. Success: Target can’t speak or breathe until you’re no longer Latched."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000706",
+        "kind": "Actions",
+        "name": "Poison Splash",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs AD, 1 Poison + 1 extra damage on Heavy Hits.\n\nDeadly Poison (+1 AP): Target makes a Repeated Might Save. Failure: Target is afflicted by a Basic Poison for 1 minute. While Poisoned by this effect, the target takes 1 Poison damage at the start of each of their turns."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000707",
+        "kind": "Actions",
+        "name": "Poison Glob",
+        "cost": "1 AP",
+        "details": "Ranged Martial Attack vs PD, 10 Spaces, 1 Poison."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000708",
+        "kind": "Reactions",
+        "name": "Sticky",
+        "cost": "1 AP",
+        "details": "When a creature spends AP to end your Latch, you can impose DisADV on their Check."
+      }
+    ]
+  },
+  {
+    "id": "BBV40000-0000-4000-8000-000000000008",
+    "name": "Starfly Swarm",
+    "level": 3,
+    "type": "Standard",
+    "role": "Striker",
+    "hp": 12,
+    "physicalDefense": 17,
+    "arcaneDefense": 8,
+    "attackBonus": 5,
+    "saveDC": 15,
+    "damage": 2,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 21: Beta Bestiary Vol. 4",
+    "sourcePage": 11,
+    "publishedRole": "Striker",
+    "size": "Large Swarm of Tiny",
+    "creatureType": "Elementals",
+    "descriptionText": "A swarm of tiny motes of light, indistinguishable from stars at a distance. They emit a faint warmth when gathered in such numbers.",
+    "tactics": "Flies toward the nearest hostile creature and Swarms then Exposes them. They’ll use a Luminous Burst if they can hit 3 or more enemies.",
+    "lore": "Starflies are tiny elementals made up of heat and light. Starfly Swarms gather at night and aren’t hostile unless provoked. They’re frequently mistaken for a meteor swarm when streaking through the sky.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 5,
+    "speedType": "Fly",
+    "primeModifier": 3,
+    "combatMastery": 2,
+    "might": -2,
+    "agility": 3,
+    "charisma": 0,
+    "intelligence": -2,
+    "skills": "Awareness +3",
+    "senses": "",
+    "languages": "",
+    "otherSpeeds": "",
+    "reductions": "",
+    "resistances": "Physical (2)",
+    "vulnerabilities": "Umbral (Double)",
+    "immunities": "Corrosion, Poison, Radiant (Absorb) | Bleeding, Burning, Exhausted, Frightened, Grappled, Intimidated, Immobilized, Paralyzed, Petrified, Poisoned, Prone, Restrained, Tethered",
+    "abilities": [
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000801",
+        "kind": "Features",
+        "name": "Bright Energy",
+        "cost": "",
+        "details": "You emit a 3 Space Aura of Bright Light."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000802",
+        "kind": "Features",
+        "name": "Swarm",
+        "cost": "",
+        "details": "You can occupy other creatures’ Spaces and vice versa (without a Check or being Slowed). You can move through a gap as narrow as the size of the creatures that make up your swarm but treat it as Difficult Terrain."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000803",
+        "kind": "Features",
+        "name": "Significant Diminishing Numbers",
+        "cost": "",
+        "details": "You can’t heal or gain Temp HP. When you become Bloodied, you become 1 Size smaller and your Attacks have DisADV. When you become Well-Bloodied, this becomes 2 Sizes smaller and DisADV 2."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000804",
+        "kind": "Actions",
+        "name": "Swarm",
+        "cost": "1 AP",
+        "details": "Melee Spell Attack vs AD, 2 Radiant.\n\nExpose (+1 AP): Target makes a Repeated Physical Save. Failure: Target is Exposed and emits a 1 Space Aura of Bright Light for 1 minute."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000805",
+        "kind": "Actions",
+        "name": "Luminous Burst",
+        "cost": "2 AP",
+        "details": "Area Spell Attack vs AD, 3 Space Aura, 1 Radiant + 1 extra damage on Heavy Hits."
+      }
+    ]
+  },
+  {
+    "id": "BBV40000-0000-4000-8000-000000000009",
+    "name": "Unicorn",
+    "level": 4,
+    "type": "Standard",
+    "role": "Leader",
+    "hp": 20,
+    "physicalDefense": 14,
+    "arcaneDefense": 14,
+    "attackBonus": 5,
+    "saveDC": 15,
+    "damage": 1,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 21: Beta Bestiary Vol. 4",
+    "sourcePage": 12,
+    "publishedRole": "Leader",
+    "size": "Large",
+    "creatureType": "Celestial",
+    "descriptionText": "A beautiful white horse with a dazzling, multi-hued horn. Its every move is serene and graceful.",
+    "tactics": "Kicks enemies that get close and uses its Healing Touch on itself and allies. When surrounded, it uses its radiant powers to summon a Gleaming Beacon that Blinds enemies.",
+    "lore": "Unicorns are wild horses infused with divine magic, such as when blessed by a god or powerful Celestial or by living in a consecrated area for a prolonged time.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 7,
+    "speedType": "Ground",
+    "primeModifier": 3,
+    "combatMastery": 2,
+    "might": 0,
+    "agility": 2,
+    "charisma": 3,
+    "intelligence": 0,
+    "skills": "Awareness +5, Animal +7, Insight +7",
+    "senses": "",
+    "languages": "Celestial, but doesn’t speak",
+    "otherSpeeds": "",
+    "reductions": "",
+    "resistances": "Radiant (2), Poison (Half) | Cursed, Diseased, Poisoned",
+    "vulnerabilities": "Umbral (2)",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000901",
+        "kind": "Features",
+        "name": "MP Effects",
+        "cost": "",
+        "details": "For the purpose of Spell Duels, your MP Effects have a +4 bonus to their Check."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000902",
+        "kind": "Actions",
+        "name": "Kick",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 1 Bludgeoning and target makes a Physical Save. Failure: Target is knocked back 1 Space and falls Prone."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000903",
+        "kind": "Actions",
+        "name": "Healing Touch (MP Effect)",
+        "cost": "1 AP",
+        "details": "Make a DC 15 Spell Check. Failure: A creature within 1 Space of you (including yourself) regains 1 HP. Success: A creature within 1 Space of you (including yourself) regains 2 HP. Success (each 5): Target regains +1 HP.\n\nCure (+1 AP): Target regains +1 HP and can repeat the Save of any effect it is subject to.\n\nInspire (+1 AP): Target gains a d12 Inspiration Die that can be added to 1 Check or Save of their choice in the next minute."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000904",
+        "kind": "Actions",
+        "name": "Gleaming Beacon (MP Effect)",
+        "cost": "4 AP",
+        "details": "Contest, 5 Space Aura (creatures of your choice), Spell Check vs Charisma Save. Failure: Target is Blinded for 1 round. Creatures of your choice in the Aura gain 1 Temp HP."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000000905",
+        "kind": "Reactions",
+        "name": "Divine Presence",
+        "cost": "1 AP",
+        "details": "When you are targeted by an Attack, the Attacker must make a Charisma Save against your Save DC. Failure: The Attacker must choose a new target for the Attack. If there are no other targets, then the Attack is wasted."
+      }
+    ]
+  },
+  {
+    "id": "BBV40000-0000-4000-8000-000000000010",
+    "name": "Yeti Hunter",
+    "level": 4,
+    "type": "Standard",
+    "role": "Striker",
+    "hp": 14,
+    "physicalDefense": 16,
+    "arcaneDefense": 13,
+    "attackBonus": 6,
+    "saveDC": 16,
+    "damage": 3,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 21: Beta Bestiary Vol. 4",
+    "sourcePage": 13,
+    "publishedRole": "Striker",
+    "size": "Large",
+    "creatureType": "Giant",
+    "descriptionText": "A large apish giant covered in white fur with wide, flat feet. Yeti Hunters have spears of ice strapped to their backs but wear nothing else. They’re silent as they prowl in the snow looking for prey.",
+    "tactics": "Ambushes from the snow. They create Walls of Snow then cause Avalanches for large Area Attacks or use Ice Spears to pick off the largest threats before hiding behind cover or in the snow (see Snow Camouflage).",
+    "lore": "Yetis are elusive creatures who specialize in stealth. Many people go missing when they travel through frozen mountains, but no one knows if they die from the environment or the creatures who live there.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 8,
+    "speedType": "Ground",
+    "primeModifier": 3,
+    "combatMastery": 2,
+    "might": 1,
+    "agility": 3,
+    "charisma": 0,
+    "intelligence": 1,
+    "skills": "Awareness +7, Stealth +7, Survival +5",
+    "senses": "Darkvision 10",
+    "languages": "Giant",
+    "otherSpeeds": "",
+    "reductions": "",
+    "resistances": "Cold (2)",
+    "vulnerabilities": "Fire (2)",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "BBV4A000-0000-4000-8000-000000001001",
+        "kind": "Features",
+        "name": "Snow Walker",
+        "cost": "",
+        "details": "You’re not affected by Difficult Terrain created by snow."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000001002",
+        "kind": "Features",
+        "name": "Vigilance",
+        "cost": "",
+        "details": "At the start of each of your turns, you can take the Search Action for free."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000001003",
+        "kind": "Features",
+        "name": "MP Effects",
+        "cost": "",
+        "details": "For the purpose of Spell Duels, your MP Effects have a +4 bonus to their Check."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000001004",
+        "kind": "Actions",
+        "name": "Snow Camouflage",
+        "cost": "1 AP",
+        "details": "Requires: You’re in Difficult Terrain created by snow. Contest, Creatures of your choice that can see or hear you, Stealth Check vs Awareness Check. Success: You’re Hidden from the target.\n• You lose this effect if you take any Action or Reaction besides the Move, Dodge, or Hide Action, or if you move outside the Difficult Terrain.\n• Creatures who succeed on the Search Action to locate you can see you."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000001005",
+        "kind": "Actions",
+        "name": "Ice Spear",
+        "cost": "1 AP",
+        "details": "Melee or Ranged Martial Attack vs PD, 1 or 10/20 Spaces, 3 Piercing + 1 extra damage on Heavy Hits.\n\nChill (+1 AP): +1 Cold damage and target makes a Might Save. Failure: Target is Slowed for 1 round."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000001006",
+        "kind": "Actions",
+        "name": "Wall of Snow (MP Effect)",
+        "cost": "2 AP",
+        "details": "You conjure an up to 4 Space long, 2 Space tall Wall of snow that fills an unoccupied area within 5 Spaces.\n• The Wall is a solid surface that is Full Cover.\n• Each Space of the Wall can be broken if it or a Space of Wall below it is reduced to 0 HP.\n• The Wall has 16 PD, 16 AD, 2 HP, Resistance (1) to Slashing and Piercing damage, Vulnerability (1) to Fire damage, and Immunity to Cold, Poison, and Psychic Damage.\n• When a Space of Wall is broken, the area the snow used to occupy becomes Difficult Terrain until a creature spends 1 AP to clear it or if the area is dealt Fire damage."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000001007",
+        "kind": "Actions",
+        "name": "Avalanche (MP Effect)",
+        "cost": "1 AP",
+        "details": "Destroy a Wall of Snow you created. Spell Attack vs AD of each creature within 2 Spaces of the Wall, 2 Cold + 1 extra damage on Heavy Hits. Each Space of the area becomes Difficult Terrain until a creature spends 1 AP to clear it or if the Space is dealt Fire damage."
+      },
+      {
+        "id": "BBV4A000-0000-4000-8000-000000001008",
+        "kind": "Reactions",
+        "name": "Snowy Escape",
+        "cost": "1 AP",
+        "details": "When you’re Hit by an Attack while in Difficult Terrain created by snow, you can use Snow Camouflage and move up to half your Speed."
+      }
+    ]
+  }
+]

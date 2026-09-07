@@ -144,4 +144,38 @@ describe('audited sourcebook library', () => {
     expect(monsters.at(-1)?.name).toBe('Zombie');
     expect(monsters.every(({ sourceBook, abilities }) => Boolean(sourceBook) && Array.isArray(abilities))).toBe(true);
   });
+
+  it('includes all ten Beta Bestiary Vol. 4 monsters with complete encounter metadata', () => {
+    const libraryPath = fileURLToPath(new URL('../../public/data/BetaBestiaryVol4.json', import.meta.url));
+    const monsters = JSON.parse(readFileSync(libraryPath, 'utf8')) as Monster[];
+    expect(monsters.map(({ name }) => name)).toEqual([
+      'Arcane Tome',
+      'Boulder Drake',
+      'Divine Justiciar',
+      'Drakus',
+      'Formacyde Soldier',
+      'Lifeleech',
+      'Poison Puddle',
+      'Starfly Swarm',
+      'Unicorn',
+      'Yeti Hunter',
+    ]);
+    expect(new Set(monsters.map(({ id }) => id)).size).toBe(10);
+    expect(monsters.every((monster) => (
+      monster.sourceBook === 'DC20 Magazine 21: Beta Bestiary Vol. 4'
+      && Boolean(monster.sourcePage)
+      && monster.actionPoints === 4
+      && monster.abilities.length > 0
+    ))).toBe(true);
+    expect(monsters.find(({ name }) => name === 'Arcane Tome')).toMatchObject({
+      type: MonsterTypeValues.EPIC,
+      role: MonsterRoleValues.TACTICIAN,
+      reactionPoints: 3,
+    });
+    expect(monsters.find(({ name }) => name === 'Divine Justiciar')).toMatchObject({
+      type: MonsterTypeValues.LEGENDARY,
+      role: MonsterRoleValues.BRUTE,
+      reactionPoints: 6,
+    });
+  });
 });

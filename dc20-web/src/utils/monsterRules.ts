@@ -270,6 +270,7 @@ export function createCustomMonster(
     actionPoints: monsterActionPoints(type),
     reactionPoints: monsterReactionPoints(type),
     speed: 5,
+    speedType: 'Ground',
     primeModifier: recommendation.prime,
     combatMastery: recommendation.mastery,
     might: 0,

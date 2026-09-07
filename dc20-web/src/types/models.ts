@@ -720,6 +720,7 @@ export interface Monster {
   actionPoints?: number;
   reactionPoints?: number;
   speed: number;
+  speedType?: string;
   primeModifier: number;
   combatMastery: number;
   might: number;

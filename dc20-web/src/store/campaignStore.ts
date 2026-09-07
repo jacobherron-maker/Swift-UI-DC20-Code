@@ -240,6 +240,7 @@ function normalizeMonster(value: unknown): Monster {
     actionPoints: asNumber(item.actionPoints, monsterActionPoints(type)),
     reactionPoints: asNumber(item.reactionPoints, monsterReactionPoints(type)),
     speed: asNumber(legacySpeed, baseline.speed),
+    speedType: typeof item.speedType === 'string' ? item.speedType : baseline.speedType,
     primeModifier: asNumber(item.primeModifier, baseline.primeModifier),
     combatMastery: asNumber(item.combatMastery, baseline.combatMastery),
     might: asNumber(item.might, baseline.might),

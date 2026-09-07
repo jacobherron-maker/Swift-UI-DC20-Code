@@ -120,12 +120,13 @@ function SourceMonsterDetail({ monster, onDuplicate }: { monster: Monster; onDup
         <StatTile label="Save DC" value={monster.saveDC} />
         <StatTile label="Damage" value={monster.damage} />
         <StatTile label="AP / RP" value={`${monster.actionPoints ?? 4} / ${monster.reactionPoints ?? 0}`} />
-        <StatTile label="Speed" value={monster.speed} />
+        <StatTile label={monster.speedType ? `${monster.speedType} Speed` : 'Speed'} value={monster.speed} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         {monster.tactics && <InfoPanel title="Tactics" body={monster.tactics} />}
         {monster.lore && <InfoPanel title="Lore" body={monster.lore} />}
+        {monster.notes && <InfoPanel title="Related Rules" body={monster.notes} />}
       </div>
 
       <div className="rounded-2xl border border-white/8 bg-slate-900/70 p-5">
@@ -266,6 +267,7 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
           <NumberField label="Action Points" value={monster.actionPoints ?? 4} min={0} onChange={(value) => update('actionPoints', value)} />
           <NumberField label="Reaction Points" value={monster.reactionPoints ?? 0} min={0} onChange={(value) => update('reactionPoints', value)} />
           <NumberField label="Speed" value={monster.speed} min={0} onChange={(value) => update('speed', value)} />
+          <TextField label="Primary Speed Type" value={monster.speedType ?? ''} onChange={(value) => update('speedType', value)} placeholder="Ground, Fly, Swim…" />
           <NumberField label="Prime Modifier" value={monster.primeModifier} onChange={(value) => update('primeModifier', value)} />
           <NumberField label="Combat Mastery" value={monster.combatMastery} min={0} onChange={(value) => update('combatMastery', value)} />
           <div className="rounded-xl border border-violet-400/15 bg-violet-500/5 p-3 text-center">
