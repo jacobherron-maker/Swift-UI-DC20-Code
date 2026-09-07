@@ -10,6 +10,7 @@ function loadSourceMonsters(): Promise<Monster[]> {
   const sourceFiles = [
     '/data/MonsterSourceLibrary.json',
     '/data/BetaBestiaryVol4.json',
+    '/data/StrongSimpleMonsters.json',
   ];
   pendingRequest = Promise.all(sourceFiles.map(async (path) => {
     const response = await fetch(path);

@@ -178,4 +178,41 @@ describe('audited sourcebook library', () => {
       reactionPoints: 6,
     });
   });
+
+  it('includes the complete Strong and Simple Monsters roster and its special mechanics', () => {
+    const libraryPath = fileURLToPath(new URL('../../public/data/StrongSimpleMonsters.json', import.meta.url));
+    const monsters = JSON.parse(readFileSync(libraryPath, 'utf8')) as Monster[];
+    expect(monsters.map(({ name }) => name)).toEqual([
+      'Animated Hut',
+      'Bloated Zombie',
+      'Dire Viper',
+      'Divine Conduit',
+      'Dune Beast',
+      'Ettin Knight',
+      'Giant Webspitter',
+      'Paladin Commander',
+      'Psionic Squidling',
+      'Shadow Guardian',
+      'Skeleton Sharpshooter',
+      'Yeti Frostrager',
+    ]);
+    expect(new Set(monsters.map(({ id }) => id)).size).toBe(12);
+    expect(monsters.every((monster) => (
+      monster.sourceBook === 'DC20 Magazine 25: Strong and Simple Monsters'
+      && Boolean(monster.sourcePage)
+      && monster.type === MonsterTypeValues.STANDARD
+      && monster.actionPoints === 4
+      && monster.reactionPoints === 0
+      && monster.abilities.length > 0
+    ))).toBe(true);
+    expect(monsters.find(({ name }) => name === 'Psionic Squidling')).toMatchObject({
+      speed: 5,
+      speedType: 'Hover',
+      immunities: 'Psychic (Absorb)',
+    });
+    expect(monsters.find(({ name }) => name === 'Bloated Zombie')?.abilities).toContainEqual(expect.objectContaining({
+      name: 'Death Burst',
+      cost: 'Auto',
+    }));
+  });
 });

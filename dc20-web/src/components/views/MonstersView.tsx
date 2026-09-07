@@ -222,6 +222,25 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
         </div>
       </div>
 
+      <details className="rounded-2xl border border-amber-400/15 bg-amber-400/[0.04]">
+        <summary className="cursor-pointer px-5 py-4 text-lg font-black text-amber-200">Strong & Simple Monster Guidance</summary>
+        <div className="grid gap-4 border-t border-amber-400/10 p-5 md:grid-cols-3">
+          <div className="rounded-xl border border-white/8 bg-slate-950/45 p-4">
+            <h3 className="font-black text-slate-100">1. Reflavor</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-400">Start with a simple monster that is mechanically close to your idea, then make only the necessary size, defense, resistance, vulnerability, feature, and damage-type adjustments.</p>
+          </div>
+          <div className="rounded-xl border border-white/8 bg-slate-950/45 p-4">
+            <h3 className="font-black text-slate-100">2. Simplify</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-400">Remove or replace complicated Actions and Reactions when their power is accounted for. Replace Features instead of simply removing them so the monster’s Trait Value remains balanced.</p>
+          </div>
+          <div className="rounded-xl border border-white/8 bg-slate-950/45 p-4">
+            <h3 className="font-black text-slate-100">3. Level Up</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-400">Raise a weaker simple monster to the intended level, rebalance its Actions, and add straightforward Monster Traits as needed. Dune Beast is the volume’s worked example.</p>
+          </div>
+          <p className="text-xs leading-5 text-slate-500 md:col-span-3">Source: DC20 Magazine 25, page 3. Use the Monster Collection baselines and Trait Values shown elsewhere in this builder for final balancing.</p>
+        </div>
+      </details>
+
       <section className="rounded-2xl border border-violet-400/15 bg-slate-900/75 p-5">
         <h3 className="text-lg font-black text-violet-200">Identity & Baseline</h3>
         <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
