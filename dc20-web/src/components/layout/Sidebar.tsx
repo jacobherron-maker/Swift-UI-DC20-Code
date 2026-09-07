@@ -93,7 +93,7 @@ const Sidebar: React.FC = () => {
         >
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
-              <h1 className="hub-logo text-2xl font-extrabold">DC20 Hub</h1>
+              <img src="/DC20-Logo.png" alt="DC20 Hub" className="h-16 w-auto" />
               <p className="text-muted mt-1 text-sm">TTRPG Assistant</p>
             </div>
             <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close navigation menu" className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-slate-800 text-xl text-slate-200">×</button>
@@ -105,7 +105,7 @@ const Sidebar: React.FC = () => {
 
       <aside className="sidebar hidden w-72 shrink-0 flex-col overflow-hidden lg:flex">
         <div className="mb-4">
-          <h1 className="hub-logo text-2xl font-extrabold">DC20 Hub</h1>
+          <img src="/DC20-Logo.png" alt="DC20 Hub" className="h-20 w-auto" />
           <p className="text-muted mt-1 text-sm">TTRPG Assistant</p>
         </div>
         {navigation()}

@@ -627,6 +627,23 @@ describe('character-sheet combat training and equipment modifiers', () => {
       mountedShieldDefense: { physicalDefense: 1, areaDefense: 2 },
     });
   });
+
+  it('routes a custom item\'s chosen sheet effects into derived stats no matter its Category', () => {
+    const customFocus: EquipmentCatalogItem = {
+      id: 'custom-equipment-focus', name: 'Warded Trinket', category: 'Spell Focuses', subtype: 'Custom Item',
+      summary: '', mechanics: '', properties: ['+1 Physical Defense', '+1 Area Defense', 'Mystical Damage Reduction'],
+      slot: 'Carried', sourcePage: 'Custom Item',
+    };
+    const catalogWithCustom = [...equipmentCatalog, customFocus];
+    const hero = character('Wizard');
+    hero.inventoryItems = [{ id: 'trinket', equipmentID: customFocus.id, quantity: 1, isEquipped: true, source: 'added' }];
+    const base = deriveCharacter({ ...hero, inventoryItems: [] }, wizard, reference.ancestryTraits, catalogWithCustom);
+    const derived = deriveCharacter(hero, wizard, reference.ancestryTraits, catalogWithCustom);
+    expect(derived.physicalDefense - base.physicalDefense).toBe(1);
+    expect(derived.arcaneDefense - base.arcaneDefense).toBe(1);
+    expect(derived.mysticalDR).toBe(1);
+    expect(equippedCombatModifiers(hero, catalogWithCustom, wizard)).toMatchObject({ mysticalDamageReduction: true });
+  });
 });
 
 describe('Bard Beta 0.10.5 source audit', () => {
