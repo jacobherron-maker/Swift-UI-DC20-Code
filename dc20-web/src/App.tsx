@@ -17,6 +17,7 @@ import EncountersView from './components/views/EncountersView';
 import CombatView from './components/views/CombatView';
 import CampaignView from './components/views/CampaignView';
 import HomebrewView from './components/views/HomebrewView';
+import RulesVersionComingSoon from './components/views/RulesVersionComingSoon';
 import type { ContentFocusRequest, CreateTarget, PrimaryDestination } from './navigation/appNavigation';
 import { activeEncounterSection, activeLibrarySection, ENCOUNTER_SECTIONS, LIBRARY_SECTIONS, primaryDestinationForSection } from './navigation/appNavigation';
 import { HubSectionValues } from './types/models';
@@ -24,6 +25,8 @@ import type { HubSection } from './types/models';
 import './App.css';
 import { themePalette } from './data/themePalettes';
 import { RulesCrossLinkProvider } from './rules/RulesCrossLinkContext';
+import { DEFAULT_RULES_VERSION, RulesVersionValues } from './data/rulesVersions';
+import type { RulesVersion } from './data/rulesVersions';
 
 type GlobalOverlay = 'create' | 'search' | 'tools' | null;
 
@@ -33,6 +36,7 @@ function App() {
   const [overlay, setOverlay] = useState<GlobalOverlay>(null);
   const [focusRequest, setFocusRequest] = useState<ContentFocusRequest | null>(null);
   const [ruleReturnSection, setRuleReturnSection] = useState<HubSection | null>(null);
+  const [rulesVersion, setRulesVersion] = useState<RulesVersion>(DEFAULT_RULES_VERSION);
   const focusKey = useRef(0);
   const palette = themePalette(selectedPaletteID);
   const currentDestination = primaryDestinationForSection(currentSection);
@@ -116,16 +120,23 @@ function App() {
     <div data-palette={palette.id} style={themeStyle} className={`dc20-theme flex h-[100dvh] min-h-[100dvh] overflow-hidden ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar onOpenCreate={() => setOverlay('create')} onOpenSearch={() => setOverlay('search')} onOpenTools={() => setOverlay('tools')} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Header onOpenCreate={() => setOverlay('create')} onOpenSearch={() => setOverlay('search')} onOpenTools={() => setOverlay('tools')} />
+        <Header
+          onOpenCreate={() => setOverlay('create')}
+          onOpenSearch={() => setOverlay('search')}
+          onOpenTools={() => setOverlay('tools')}
+          rulesVersion={rulesVersion}
+          onRulesVersionChange={(version) => { setRulesVersion(version); setOverlay(null); }}
+        />
         <main className="app-main min-h-0 flex-1 overflow-hidden">
+          {rulesVersion === RulesVersionValues.BETA_0_11 ? <RulesVersionComingSoon onReturnToCurrent={() => setRulesVersion(DEFAULT_RULES_VERSION)} /> : <>
           <div className={destinationClass('Dashboard')}><DashboardView onOpenCreate={() => setOverlay('create')} onOpenSearch={() => setOverlay('search')} onOpenTools={() => setOverlay('tools')} /></div>
           <div ref={characterPanelRef} className={destinationClass('Characters')}><CharactersView focusRequest={focusRequest?.kind === 'character' ? focusRequest : null} onFocusHandled={clearFocus} onNavigate={() => characterPanelRef.current?.scrollTo({ top: 0 })} /></div>
           <div className={destinationClass('Encounters', 'flex flex-col overflow-hidden')}>
             <WorkspaceTabs eyebrow="Encounters" tabs={ENCOUNTER_SECTIONS} active={activeEncounter} onChange={setCurrentSection} />
             <div className="min-h-0 flex-1 overflow-hidden">
-              <div className={activeEncounter === HubSectionValues.ENCOUNTERS ? 'h-full' : 'hidden'}><EncountersView focusRequest={focusRequest?.kind === 'encounter' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
-              <div className={activeEncounter === HubSectionValues.MONSTERS ? 'h-full' : 'hidden'}><MonstersView focusRequest={focusRequest?.kind === 'monster' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
-              <div className={activeEncounter === HubSectionValues.COMBAT ? 'h-full' : 'hidden'}><CombatView /></div>
+              <div className={activeEncounter === HubSectionValues.ENCOUNTERS ? 'h-full overflow-y-auto overscroll-contain lg:overflow-hidden' : 'hidden'}><EncountersView focusRequest={focusRequest?.kind === 'encounter' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
+              <div className={activeEncounter === HubSectionValues.MONSTERS ? 'h-full overflow-y-auto overscroll-contain lg:overflow-hidden' : 'hidden'}><MonstersView focusRequest={focusRequest?.kind === 'monster' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
+              <div className={activeEncounter === HubSectionValues.COMBAT ? 'h-full overflow-y-auto overscroll-contain lg:overflow-hidden' : 'hidden'}><CombatView /></div>
             </div>
           </div>
           <div className={destinationClass('Library', 'flex flex-col overflow-hidden')}>
@@ -138,7 +149,8 @@ function App() {
               <div className={activeLibrary === HubSectionValues.HOMEBREW ? 'h-full overflow-auto' : 'hidden'}><HomebrewView onCreateMonster={() => navigateToContent({ kind: 'monster' })} onCreateItem={() => navigateToContent({ kind: 'equipment' })} onOpenMonster={(id) => navigateToContent({ kind: 'monster', id })} onOpenItem={(id) => navigateToContent({ kind: 'equipment', id })} /></div>
             </div>
           </div>
-          <div className={destinationClass('Campaigns', 'overflow-hidden')}><CampaignView focusRequest={focusRequest && (focusRequest.kind === 'campaign' || focusRequest.kind === 'npc') ? focusRequest : null} onFocusHandled={clearFocus} /></div>
+          <div className={destinationClass('Campaigns', 'overflow-y-auto overscroll-contain lg:overflow-hidden')}><CampaignView focusRequest={focusRequest && (focusRequest.kind === 'campaign' || focusRequest.kind === 'npc') ? focusRequest : null} onFocusHandled={clearFocus} /></div>
+          </>}
         </main>
       </div>
       {overlay === 'create' && <GlobalCreateDialog onChoose={create} onClose={() => setOverlay(null)} />}

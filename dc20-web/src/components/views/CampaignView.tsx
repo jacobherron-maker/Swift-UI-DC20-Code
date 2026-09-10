@@ -189,7 +189,7 @@ export default function CampaignView({ focusRequest, onFocusHandled }: { focusRe
   };
 
   if (viewedCharacter) {
-    return <CharacterSheet character={viewedCharacter} readOnly onClose={() => setViewedMember(null)} />;
+    return <div className="h-full min-h-0 overflow-y-auto overscroll-contain"><CharacterSheet character={viewedCharacter} readOnly onClose={() => setViewedMember(null)} /></div>;
   }
 
   const localNote = campaign?.notes.find(({ id }) => id === selectedNoteId) ?? campaign?.notes[0] ?? null;
