@@ -122,7 +122,8 @@ describe('source-audited rules library', () => {
     expect(rule('Resting').page).toBe('Beta 0.10.5 p.177');
     expect(rule('Step 10: Weapons & Inventory').page).toBe('Beta 0.10.5 p.184');
     expect(rule('Ancestry System').page).toBe('Beta 0.10.5 pp.194–196');
-    expect(rule('Bleeding X').page).toBe('Beta 0.10.5 p.173');
+    expect(rule('Bleeding X').page).toBe('Beta 0.10.5 pp.35, 173');
+    expect(rule('Bleeding X').sourceNote).toContain('expanded Medicine outcome');
     expect(rule('Unconscious').page).toBe('Beta 0.10.5 p.174');
   });
 
@@ -182,6 +183,22 @@ describe('source-audited rules library', () => {
     expect(rule('Elemental Fury').text).toContain(elementalFury.description);
     expect(rule('Martial Expansion').details).toContainEqual({ label: 'Repeatable', value: 'No' });
     expect(rule('Unfathomable Strength').details).toContainEqual({ label: 'Requirements', value: 'Rage' });
+  });
+
+  it('uses source-grounded summaries instead of labels and catalog counts', () => {
+    expect(rule('Athletics').summary).toContain('physical prowess');
+    expect(rule('Blacksmithing').summary).toContain('melting and shaping metal');
+    expect(rule('Bleeding X').summary).toBe('You take X True damage at the start of each of your turns.');
+    expect(rule('Martial Expansion').summary).toContain('Combat Training');
+    expect(rule('Barbarian').summary).toContain('reckless abandon');
+    expect(rule('Elemental Fury').summary).toContain(':');
+    expect(rule('Weapons').summary).toContain('Weapon Type');
+    expect(rule('Spell Focuses').summary).toContain('Somatic Components');
+    expect(rule('Armor').summary).toContain('Damage Reduction');
+    expect(rule('Shields').summary).toContain('equip or stow');
+    for (const entry of audited.entries.filter(({ kind }) => ['Skill', 'Trade', 'Language', 'Condition', 'Talent', 'Equipment'].includes(kind))) {
+      expect(entry.summary).not.toMatch(/^(?:Condition|Stacking Condition|Talent|\d+ published catalog entries)$/i);
+    }
   });
 
   it('builds useful in-library cross references', () => {

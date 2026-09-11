@@ -321,7 +321,7 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
           <h3 className="text-sm font-black uppercase tracking-[0.16em] text-violet-300">Properties</h3>
           <div className="mt-3 flex flex-wrap gap-2">
             {displayProperties.length > 0
-              ? displayProperties.map((property) => <span key={property} className="rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1 text-sm font-semibold text-violet-200"><ExplicitRuleLink ruleID={weaponPropertyRuleID(property)}>{property}</ExplicitRuleLink></span>)
+              ? displayProperties.map((property) => <span key={property} className="rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1 text-sm font-semibold text-violet-200"><ExplicitRuleLink ruleID={weaponPropertyRuleID(property, item.category)}>{property}</ExplicitRuleLink></span>)
               : <span className="text-sm text-slate-600">No additional properties.</span>}
           </div>
         </section>

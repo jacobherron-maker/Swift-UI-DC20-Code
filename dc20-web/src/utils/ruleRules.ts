@@ -241,6 +241,15 @@ The following Conditions don’t stack or overlap in any way: Blinded, Deafened,
   Invisible: 'Creatures can’t see you unless they have the ability to see the Invisible (see “Unseen” on page 163 for more information).',
 };
 
+const EQUIPMENT_SUMMARIES: Readonly<Record<string, string>> = {
+  Weapons: 'Every Weapon has a Weapon Type, a Weapon Style, and Weapon Properties. You can only use a Weapon’s Enhancement if you have Weapon Training.',
+  'Spell Focuses': 'You must hold a Spell Focus to benefit from its Properties. Holding one satisfies Somatic Components, but still counts as noticeably casting a Spell.',
+  Armor: 'Wearing Armor can improve your Defense and provide Damage Reduction. Without Training in worn Armor, you have DisADV on Attack Checks and Spell Checks.',
+  Shields: 'Spend 1 AP to equip or stow a Shield. You gain its benefits while wielding it, but lacking its Training gives DisADV on Attack Checks and Spell Checks.',
+  'Adventuring Supplies': 'Adventuring Supplies use their listed Charges, ranges, Actions, Checks, and effects.',
+  'Trade Tools': 'A creature must use the specified Trade Tools for a Trade Check. Using tools not designed for the task gives DisADV on that Check.',
+};
+
 const RELATED: Readonly<Record<string, string[]>> = {
   Attributes: ['Prime Modifier', 'Check Formulas', 'Step 1: Attributes & Prime Modifier'],
   'Prime Modifier': ['Attributes', 'Check Formulas', 'Saves, Save Categories, & Save DC'],
@@ -309,6 +318,21 @@ export function ruleTextBlocks(text: string): RuleTextBlock[] {
 
 function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
+}
+
+/** Selects a concise, mechanically meaningful sentence without rewriting it. */
+function sourceSummary(text: string, fallback: string): string {
+  const lines = text.replace(/\r/g, '').split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const candidate = lines.find((line) => !(
+    /^(?:LEVEL \d+|DESCRIPTION|ENHANCEMENTS|CLASS FEATURES|CLASS TABLE)$/i.test(line)
+    || /^(?:Requirements?|Requires):/i.test(line)
+    || /^You can (?:only gain|take) this Talent/i.test(line)
+    || /^You gain the following benefits:?$/i.test(line)
+    || /^(?:DC Tip|Beta Note|Source note):/i.test(line)
+  ));
+  if (!candidate) return fallback;
+  const cleaned = candidate.replace(/^•\s*/, '');
+  return cleaned.match(/^.*?[.!?](?=\s|$)/)?.[0] ?? cleaned;
 }
 
 function normalizeCitation(value: string): string {
@@ -529,7 +553,7 @@ function canonicalMasteryEntry(entry: RuleReferenceEntry, reference: CharacterRe
   const page = entry.kind === 'Skill' ? 'Beta 0.10.5 pp.12–14' : entry.kind === 'Trade' ? 'Beta 0.10.5 pp.15–18' : 'Beta 0.10.5 p.19';
   return {
     ...entry,
-    summary: entry.kind === 'Skill' ? `${record.attribute ?? record.group} Skill` : entry.kind === 'Trade' ? `${record.group} Trade` : `${record.group} Language`,
+    summary: sourceSummary(record.description, entry.summary),
     text: record.description,
     page,
     details,
@@ -587,8 +611,11 @@ function auditEntry(
     };
   } else if (entry.kind === 'Subclass') {
     const canonical = canonicalSubclassText(entry, characterReference);
+    const classRecord = characterReference.classes.find(({ name }) => name === entry.characterClass);
+    const firstFeature = classRecord?.subclassFeatures[entry.title]?.[0];
     entry = {
       ...entry,
+      summary: firstFeature ? `${firstFeature.name}: ${sourceSummary(firstFeature.description, entry.summary)}` : entry.summary,
       text: canonical ?? entry.text,
       details: [{ label: 'Class', value: entry.characterClass ?? 'Universal' }, { label: 'Progression', value: 'Levels 3, 7, and 10' }],
     };
@@ -596,6 +623,7 @@ function auditEntry(
     const classRecord = characterReference.classes.find(({ name }) => name === entry.title);
     if (classRecord) entry = {
       ...entry,
+      summary: sourceSummary(classRecord.description, entry.summary),
       details: [
         { label: 'Path', value: classRecord.path }, { label: 'Level 1 HP', value: String(classRecord.baseHP) },
         { label: 'Level 1 Resources', value: classRecord.levelOneResource },
@@ -606,6 +634,7 @@ function auditEntry(
     const talent = talentDefinitions(characterReference).find(({ name }) => name === entry.title);
     if (talent) entry = {
       ...entry,
+      summary: sourceSummary(talent.description, entry.summary),
       text: talent.description,
       details: [
         { label: 'Category', value: talent.category },
@@ -618,6 +647,7 @@ function auditEntry(
     const canonical = equipmentText(entry.title, equipment);
     entry = {
       ...entry,
+      summary: EQUIPMENT_SUMMARIES[entry.title] ?? entry.summary,
       text: canonical ?? entry.text,
       details: canonical ? [{ label: 'Catalog Records', value: String(equipment.filter(({ category }) => category === entry.title).length) }] : entry.details,
     };
@@ -628,8 +658,16 @@ function auditEntry(
   if (entry.kind === 'Condition' && entry.title !== 'Condition Rules') {
     const page = CONDITION_PAGE[entry.title];
     if (page) entry = { ...entry, page: `Beta 0.10.5 p.${page}` };
+    if (entry.title === 'Bleeding X') entry = {
+      ...entry,
+      page: 'Beta 0.10.5 pp.35, 173',
+      sourceNote: 'The Death’s Door sidebar on p.35 supplies the expanded Medicine outcome used here: Success ends 1 stack, plus 1 additional stack for each 5.',
+    };
   }
   if (TEXT_OVERRIDES[entry.title]) entry = { ...entry, text: TEXT_OVERRIDES[entry.title] };
+  if (entry.kind === 'Condition' && entry.title !== 'Condition Rules') {
+    entry = { ...entry, summary: sourceSummary(entry.text, entry.summary) };
+  }
   entry = { ...entry, page: normalizeCitation(entry.page) };
 
   const source = sourceFor(entry);
@@ -665,10 +703,11 @@ function addRelationships(entries: RuleReferenceEntry[]): RuleReferenceEntry[] {
     if (entry.kind === 'Ancestry') targetTitles.push('Ancestry System', 'Step 8: Ancestry');
     if (entry.kind === 'Talent') targetTitles.push('Talents & Requirements', ...(entry.characterClass ? [entry.characterClass] : []));
 
-    const haystack = `${entry.summary} ${entry.text}`.toLowerCase();
+    const haystack = `${entry.summary} ${entry.text}`;
     for (const condition of conditions) {
-      const term = condition.title.replace(/ X$/, '').toLowerCase();
-      if (term.length >= 5 && haystack.includes(term)) targetTitles.push(condition.title);
+      const term = condition.title.replace(/ X$/, '');
+      const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (term.length >= 5 && new RegExp(`(?<![\\p{L}\\p{N}])${escapedTerm}(?![\\p{L}\\p{N}])`, 'iu').test(haystack)) targetTitles.push(condition.title);
     }
     const relatedIDs = unique(targetTitles)
       .filter((title) => title && title !== entry.title)
