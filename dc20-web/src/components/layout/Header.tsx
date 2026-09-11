@@ -40,7 +40,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenCreate, onOpenSearch, onOpenTools
         <h2 className="truncate text-base font-semibold text-white lg:text-lg">{campaignData.title}</h2>
       </div>
 
-      <div className="flex min-w-0 shrink-0 items-center justify-end gap-1.5 sm:gap-2">
+      <div className="flex min-w-0 shrink-0 items-center justify-end gap-1 sm:gap-2">
         <label className="shrink-0 sm:hidden" title="DC20 rules version">
           <span className="sr-only">Rules version</span>
           <select value={rulesVersion} onChange={(event) => onRulesVersionChange(event.target.value as RulesVersion)} aria-label="Rules version" className="min-h-11 w-[3.75rem] rounded-lg border border-violet-400/25 bg-slate-950 px-1.5 text-xs font-black text-violet-200 outline-none focus:border-violet-300">

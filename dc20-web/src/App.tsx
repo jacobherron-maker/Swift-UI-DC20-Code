@@ -142,10 +142,10 @@ function App() {
           <div className={destinationClass('Library', 'flex flex-col overflow-hidden')}>
             <WorkspaceTabs eyebrow="Library" tabs={LIBRARY_SECTIONS} active={activeLibrary} onChange={setCurrentSection} />
             <div className="min-h-0 flex-1 overflow-hidden">
-              <div className={activeLibrary === HubSectionValues.RULES ? 'h-full overflow-auto' : 'hidden'}><RulesView focusRequest={focusRequest?.kind === 'rule' ? focusRequest : null} onFocusHandled={clearFocus} returnContextLabel={ruleReturnSection ? `Return to ${ruleReturnSection}` : undefined} onReturnToContext={ruleReturnSection ? () => { setCurrentSection(ruleReturnSection); setRuleReturnSection(null); } : undefined} /></div>
-              <div className={activeLibrary === HubSectionValues.POWERS ? 'h-full overflow-auto' : 'hidden'}><PowersView focusRequest={focusRequest?.kind === 'power' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
-              <div className={activeLibrary === HubSectionValues.EQUIPMENT ? 'h-full' : 'hidden'}><EquipmentView focusRequest={focusRequest?.kind === 'equipment' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
-              <div className={activeLibrary === HubSectionValues.CHARACTER_OPTIONS ? 'h-full overflow-auto' : 'hidden'}><RulesView preset="character-options" /></div>
+              <div className={activeLibrary === HubSectionValues.RULES ? 'h-full overflow-auto overscroll-contain' : 'hidden'}><RulesView focusRequest={focusRequest?.kind === 'rule' ? focusRequest : null} onFocusHandled={clearFocus} returnContextLabel={ruleReturnSection ? `Return to ${ruleReturnSection}` : undefined} onReturnToContext={ruleReturnSection ? () => { setCurrentSection(ruleReturnSection); setRuleReturnSection(null); } : undefined} /></div>
+              <div className={activeLibrary === HubSectionValues.POWERS ? 'h-full overflow-auto overscroll-contain' : 'hidden'}><PowersView focusRequest={focusRequest?.kind === 'power' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
+              <div className={activeLibrary === HubSectionValues.EQUIPMENT ? 'h-full overflow-y-auto overscroll-contain lg:overflow-hidden' : 'hidden'}><EquipmentView focusRequest={focusRequest?.kind === 'equipment' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
+              <div className={activeLibrary === HubSectionValues.CHARACTER_OPTIONS ? 'h-full overflow-auto overscroll-contain' : 'hidden'}><RulesView preset="character-options" /></div>
               <div className={activeLibrary === HubSectionValues.HOMEBREW ? 'h-full overflow-auto' : 'hidden'}><HomebrewView onCreateMonster={() => navigateToContent({ kind: 'monster' })} onCreateItem={() => navigateToContent({ kind: 'equipment' })} onOpenMonster={(id) => navigateToContent({ kind: 'monster', id })} onOpenItem={(id) => navigateToContent({ kind: 'equipment', id })} /></div>
             </div>
           </div>
