@@ -10,6 +10,7 @@ import type {
   CombatantTeam,
   Encounter,
   EquipmentCatalogItem,
+  GmVaultEntry,
   HubSection,
   HubState,
   Monster,
@@ -38,8 +39,9 @@ import {
 } from '../utils/monsterRules';
 import { generateUUID } from '../utils/gameUtils';
 import { DEFAULT_PALETTE_ID, themePalette } from '../data/themePalettes';
+import { normalizeVaultEntry } from '../utils/vaultRules';
 
-const STORE_VERSION = 9;
+const STORE_VERSION = 10;
 
 export const defaultCampaignData: CampaignData = {
   title: 'DC20 Hub',
@@ -48,6 +50,7 @@ export const defaultCampaignData: CampaignData = {
   campaigns: [],
   customMonsters: [],
   customEquipment: [],
+  vaultEntries: [],
   encounters: [],
 };
 
@@ -84,6 +87,9 @@ interface CampaignStore extends HubState {
   addCustomEquipment: (item: EquipmentCatalogItem) => void;
   updateCustomEquipment: (item: EquipmentCatalogItem) => void;
   removeCustomEquipment: (id: string) => void;
+  addVaultEntry: (entry: GmVaultEntry) => void;
+  updateVaultEntry: (entry: GmVaultEntry) => void;
+  removeVaultEntry: (id: string) => void;
 }
 
 type PersistedCampaignState = Pick<
@@ -483,6 +489,7 @@ function normalizeCharacter(value: unknown): Character {
     physicalDefense: asNumber(item.physicalDefense ?? item.defense, 8 + combatMastery(level) + agility + intelligence),
     arcaneDefense: asNumber(item.arcaneDefense, 8 + combatMastery(level) + might + charisma),
     combatMastery: combatMastery(level),
+    saveDC: asNumber(item.saveDC, 10 + Math.max(might, agility, charisma, intelligence) + combatMastery(level)),
     speed: Math.max(0, asNumber(item.speed, 5)),
     defense: asNumber(item.defense ?? item.physicalDefense, 8 + combatMastery(level) + agility + intelligence),
     injuries: Array.isArray(item.injuries) ? item.injuries as Character['injuries'] : [],
@@ -492,6 +499,9 @@ function normalizeCharacter(value: unknown): Character {
     gold: Math.max(0, Math.trunc(asNumber(item.gold, 0))),
     spells: Array.isArray(item.spells) ? item.spells as Character['spells'] : [],
     maneuvers: Array.isArray(item.maneuvers) ? item.maneuvers as Character['maneuvers'] : [],
+    vaultEntries: Array.isArray(item.vaultEntries)
+      ? item.vaultEntries.map(normalizeVaultEntry).filter((entry): entry is GmVaultEntry => entry !== null)
+      : [],
     notes: typeof item.notes === 'string' ? item.notes : '',
     build,
   };
@@ -520,6 +530,9 @@ export function migratePersistedState(value: unknown): PersistedCampaignState {
         : [],
       customEquipment: Array.isArray(rawCampaignData.customEquipment)
         ? rawCampaignData.customEquipment.map(normalizeCustomEquipment).filter((item): item is EquipmentCatalogItem => item !== null)
+        : [],
+      vaultEntries: Array.isArray(rawCampaignData.vaultEntries)
+        ? rawCampaignData.vaultEntries.map(normalizeVaultEntry).filter((entry): entry is GmVaultEntry => entry !== null)
         : [],
       encounters: Array.isArray(rawCampaignData.encounters)
         ? rawCampaignData.encounters.map(normalizeEncounter)
@@ -588,7 +601,7 @@ export const useCampaignStore = create<CampaignStore>()(
               physicalDefense: character.physicalDefense,
               arcaneDefense: character.arcaneDefense,
               attackBonus: character.primeModifier + character.combatMastery,
-              saveDC: 10 + character.primeModifier + character.combatMastery,
+              saveDC: character.saveDC ?? 10 + character.primeModifier + character.combatMastery,
               speed: character.speed,
             };
           }),
@@ -712,6 +725,18 @@ export const useCampaignStore = create<CampaignStore>()(
           ...character,
           inventoryItems: (character.inventoryItems ?? []).filter(({ equipmentID }) => equipmentID !== id),
         })),
+      })),
+      addVaultEntry: (entry) => set((state) => ({
+        campaignData: { ...state.campaignData, vaultEntries: [...state.campaignData.vaultEntries, entry] },
+      })),
+      updateVaultEntry: (entry) => set((state) => ({
+        campaignData: {
+          ...state.campaignData,
+          vaultEntries: state.campaignData.vaultEntries.map((existing) => existing.id === entry.id ? entry : existing),
+        },
+      })),
+      removeVaultEntry: (id) => set((state) => ({
+        campaignData: { ...state.campaignData, vaultEntries: state.campaignData.vaultEntries.filter((entry) => entry.id !== id) },
       })),
     }),
     {

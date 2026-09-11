@@ -54,6 +54,10 @@ describe('DC20 Hub information architecture', () => {
       HubSectionValues.CHARACTER_OPTIONS,
       HubSectionValues.HOMEBREW,
     ]);
+    expect(LIBRARY_SECTIONS.find(({ section }) => section === HubSectionValues.HOMEBREW)).toMatchObject({
+      label: 'GM Vault',
+      shortLabel: 'Vault',
+    });
     expect(activeEncounterSection(HubSectionValues.COMBAT)).toBe(HubSectionValues.COMBAT);
     expect(activeEncounterSection(HubSectionValues.MONSTERS)).toBe(HubSectionValues.MONSTERS);
     expect(activeEncounterSection(HubSectionValues.DASHBOARD)).toBe(HubSectionValues.ENCOUNTERS);

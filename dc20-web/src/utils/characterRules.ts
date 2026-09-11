@@ -10,6 +10,7 @@ import type {
   Spell,
 } from '../types/models';
 import { activeEquipmentSheetEffects, combinedDefensiveProfile, defensiveEquipmentProfile } from './equipmentRules';
+import { activeCharacterVaultEffects } from './vaultRules';
 import { hasAutomaticMulticlassFlavor, hasDirectMulticlassFeature, hasMulticlassSubclass, multiclassParagonTalentSlotClasses, multiclassSubclassCount } from './talentRules';
 
 export const ATTRIBUTE_NAMES: DC20Attribute[] = ['Might', 'Agility', 'Charisma', 'Intelligence'];
@@ -1503,8 +1504,12 @@ export function characterCombatTraining(
 }
 
 export interface EquippedCombatModifiers {
+  allCheckBonus: number;
+  martialCheckBonus: number;
   spellCheckBonus: number;
   spellAttackBonus: number;
+  saveDCBonus: number;
+  weaponDamageBonus: number;
   spellAttackDamageBonus: number;
   attackAndSpellDisadvantage: number;
   agilityCheckDisadvantage: number;
@@ -1520,6 +1525,10 @@ export interface EquippedCombatModifiers {
   conditionSaveAdvantages: string[];
   skillMasteryIncreases: Record<string, number>;
   skillBonusesAtCap: Record<string, number>;
+  skillBonuses: Record<string, number>;
+  tradeBonuses: Record<string, number>;
+  saveBonuses: Record<string, number>;
+  immunities: string[];
   focusProperties: string[];
   mountedShieldDefense: { physicalDefense: number; areaDefense: number } | null;
 }
@@ -1536,6 +1545,7 @@ export function equippedCombatModifiers(
     .flatMap(({ equipmentID }) => catalog.filter(({ id }) => id === equipmentID));
   const focuses = training.spellFocusTraining ? equipped.filter(({ category, actsAsSpellFocus }) => category === 'Spell Focuses' || actsAsSpellFocus) : [];
   const magicEffects = activeEquipmentSheetEffects(character.inventoryItems ?? [], catalog);
+  const vaultEffects = activeCharacterVaultEffects(character);
   const untrainedGear = equipped.filter((item) => {
     if (item.category === 'Armor') {
       if (training.pactArmorTraining) return false;
@@ -1576,13 +1586,18 @@ export function equippedCombatModifiers(
   // named Heavy entry already carries agilityCheckDisadvantage: 1 in DEFENSIVE_EQUIPMENT.
   const routedProfile = combinedDefensiveProfile(equipped);
   return {
+    allCheckBonus: magicEffects.allCheckBonus + (vaultEffects.allCheckBonus ?? 0),
+    martialCheckBonus: magicEffects.martialCheckBonus + (vaultEffects.martialCheckBonus ?? 0),
     spellCheckBonus: focuses.filter(({ properties }) => properties.includes('Channeling')).length
       + Number(innateFocusProperties.includes('Channeling')) + Number(artificerFocusProperties.includes('Channeling'))
-      + Number(overloaded) * 5 + wildMagic.spellCheckBonus,
+      + Number(overloaded) * 5 + wildMagic.spellCheckBonus + magicEffects.spellCheckBonus + (vaultEffects.spellCheckBonus ?? 0),
     spellAttackBonus: focuses.filter(({ properties }) => properties.includes('Vicious')).length
-      + Number(innateFocusProperties.includes('Vicious')) + Number(artificerFocusProperties.includes('Vicious')) + Number(overloaded) * 5,
+      + Number(innateFocusProperties.includes('Vicious')) + Number(artificerFocusProperties.includes('Vicious')) + Number(overloaded) * 5
+      + magicEffects.spellAttackBonus + (vaultEffects.spellAttackBonus ?? 0),
+    saveDCBonus: magicEffects.saveDCBonus + (vaultEffects.saveDCBonus ?? 0),
+    weaponDamageBonus: magicEffects.weaponDamageBonus + (vaultEffects.weaponDamageBonus ?? 0),
     spellAttackDamageBonus: focuses.filter(({ properties }) => properties.includes('Powerful')).length
-      + Number(artificerFocusProperties.includes('Powerful')),
+      + Number(artificerFocusProperties.includes('Powerful')) + magicEffects.spellDamageBonus + (vaultEffects.spellDamageBonus ?? 0),
     attackAndSpellDisadvantage: untrainedGear > 0 ? -untrainedGear : 0,
     agilityCheckDisadvantage: -routedProfile.agilityCheckDisadvantage,
     physicalDamageReduction: Boolean(armorProfile?.physicalDamageReduction || routedProfile.physicalDamageReduction),
@@ -1591,12 +1606,16 @@ export function equippedCombatModifiers(
     unarmedHeavyHitDamageBonus: Number(Boolean(equippedArmor?.subtype === 'Heavy Armor' || equipped.some(({ name }) => name === 'Gauntlet'))),
     immuneToFlanking: equipped.filter(({ category }) => category === 'Shields').length >= 2 || magicEffects.immuneToFlanking,
     flankingImmunitySource: magicEffects.immuneToFlanking ? 'Magic Item' : 'Two Shields',
-    resistances: magicEffects.resistances,
-    senses: magicEffects.senses,
-    conditionalRules: magicEffects.conditionalRules,
+    resistances: Array.from(new Set([...magicEffects.resistances, ...(vaultEffects.resistances ?? [])])),
+    immunities: Array.from(new Set([...magicEffects.immunities, ...(vaultEffects.immunities ?? [])])),
+    senses: Array.from(new Set([...magicEffects.senses, ...(vaultEffects.senses ?? [])])),
+    conditionalRules: Array.from(new Set([...magicEffects.conditionalRules, ...(vaultEffects.conditionalRules ?? [])])),
     conditionSaveAdvantages: magicEffects.conditionSaveAdvantages,
     skillMasteryIncreases: magicEffects.skillMasteryIncreases,
     skillBonusesAtCap: magicEffects.skillBonusesAtCap,
+    skillBonuses: Object.fromEntries(Array.from(new Set([...Object.keys(magicEffects.skillBonuses), ...Object.keys(vaultEffects.skillBonuses ?? {})])).map((name) => [name, (magicEffects.skillBonuses[name] ?? 0) + (vaultEffects.skillBonuses?.[name] ?? 0)])),
+    tradeBonuses: Object.fromEntries(Array.from(new Set([...Object.keys(magicEffects.tradeBonuses), ...Object.keys(vaultEffects.tradeBonuses ?? {})])).map((name) => [name, (magicEffects.tradeBonuses[name] ?? 0) + (vaultEffects.tradeBonuses?.[name] ?? 0)])),
+    saveBonuses: Object.fromEntries(Array.from(new Set([...Object.keys(magicEffects.saveBonuses), ...Object.keys(vaultEffects.saveBonuses ?? {})])).map((name) => [name, (magicEffects.saveBonuses[name] ?? 0) + ((vaultEffects.saveBonuses as Record<string, number> | undefined)?.[name] ?? 0)])),
     focusProperties,
     mountedShieldDefense: activeShield?.item.properties.includes('Mounted')
       ? { physicalDefense: activeShield.profile.physicalDefense, areaDefense: activeShield.profile.areaDefense }
@@ -1637,12 +1656,13 @@ function equipmentBonuses(character: Character, catalog: EquipmentCatalogItem[],
   // custom item's chosen effects apply no matter what Category it was created with.
   const otherEquipped = equipped.filter((item) => item.category !== 'Armor' && item.category !== 'Shields');
   const routedElsewhere = combinedDefensiveProfile(otherEquipped);
+  const sheetEffects = activeEquipmentSheetEffects(character.inventoryItems ?? [], catalog);
   return {
-    pd: (armor?.physicalDefense ?? 0) + (shield?.physicalDefense ?? 0) + weaponPD + routedElsewhere.physicalDefense,
+    pd: (armor?.physicalDefense ?? 0) + (shield?.physicalDefense ?? 0) + weaponPD + routedElsewhere.physicalDefense + sheetEffects.physicalDefenseBonus,
     ad: (armor?.areaDefense ?? 0) + (shield?.areaDefense ?? 0) + focusAD
       + Number(innateFocusProperties.includes('Protective'))
       + Number(artificerFocusProperties.includes('Protective'))
-      + routedElsewhere.areaDefense,
+      + routedElsewhere.areaDefense + sheetEffects.areaDefenseBonus,
     physicalDR: Number(Boolean(armor?.physicalDamageReduction || shield?.physicalDamageReduction || routedElsewhere.physicalDamageReduction)),
     elementalDR: Number(Boolean(armor?.elementalDamageReduction || shield?.elementalDamageReduction || routedElsewhere.elementalDamageReduction)),
     mysticalDR: Math.max(
@@ -1652,7 +1672,7 @@ function equipmentBonuses(character: Character, catalog: EquipmentCatalogItem[],
       Number(Boolean(armor?.mysticalDamageReduction || shield?.mysticalDamageReduction || routedElsewhere.mysticalDamageReduction)),
     ),
     hasArmor: Boolean(equippedArmor),
-    speedPenalty: (armor?.speedPenalty ?? 0) + equippedShields.reduce((sum, { profile }) => sum + profile.speedPenalty, 0) + routedElsewhere.speedPenalty,
+    speedPenalty: (armor?.speedPenalty ?? 0) + equippedShields.reduce((sum, { profile }) => sum + profile.speedPenalty, 0) + routedElsewhere.speedPenalty - sheetEffects.speedBonus,
     isUnarmored: !equippedArmor,
   };
 }
@@ -1691,6 +1711,8 @@ export function deriveCharacter(
 ): CharacterDerivedSummary {
   const chosenTraits = selectedAncestryTraits(character, allTraits);
   const cap = attributeCap(character.level);
+  const vaultEffects = activeCharacterVaultEffects(character);
+  const itemEffects = activeEquipmentSheetEffects(character.inventoryItems ?? [], equipmentCatalog);
   const effectiveAttributes = Object.fromEntries(ATTRIBUTE_NAMES.map((attribute) => {
     let adjustment = 0;
     for (const trait of chosenTraits) {
@@ -1700,7 +1722,9 @@ export function deriveCharacter(
       if (trait.name === `${attribute} Attribute Decrease`) adjustment -= 1;
     }
     const base = character.attributes?.[attribute]?.score ?? 0;
-    return [attribute, Math.min(cap, Math.max(-2, base + adjustment))];
+    return [attribute, Math.min(cap, Math.max(-2, base + adjustment))
+      + (vaultEffects.attributeBonuses?.[attribute] ?? 0)
+      + (itemEffects.attributeBonuses[attribute] ?? 0)];
   })) as Record<DC20Attribute, number>;
   const primeModifier = Math.max(...Object.values(effectiveAttributes));
   const mastery = combatMastery(character.level);
@@ -1777,16 +1801,16 @@ export function deriveCharacter(
     effectiveAttributes,
     primeModifier,
     combatMastery: mastery,
-    maxHP: Math.max(1, classHealth(character.class, character.level) + effectiveAttributes.Might + ancestryHP + classFeatureHP),
-    maxStamina: totals.stamina + martialPaths,
-    maxMana: Math.max(0, totals.mana + spellcasterPaths * 3 + manaTraits + featureMana - reservedInfusionMana),
-    physicalDefense: 8 + mastery + effectiveAttributes.Agility + effectiveAttributes.Intelligence + equipment.pd + ancestryPD + classPD,
-    arcaneDefense: 8 + mastery + effectiveAttributes.Might + effectiveAttributes.Charisma + equipment.ad + ancestryAD + classAD + Number(pactArmorActive),
+    maxHP: Math.max(1, classHealth(character.class, character.level) + effectiveAttributes.Might + ancestryHP + classFeatureHP + (vaultEffects.maxHPBonus ?? 0) + itemEffects.maxHPBonus),
+    maxStamina: Math.max(0, totals.stamina + martialPaths + (vaultEffects.maxStaminaBonus ?? 0) + itemEffects.maxStaminaBonus),
+    maxMana: Math.max(0, totals.mana + spellcasterPaths * 3 + manaTraits + featureMana - reservedInfusionMana + (vaultEffects.maxManaBonus ?? 0) + itemEffects.maxManaBonus),
+    physicalDefense: 8 + mastery + effectiveAttributes.Agility + effectiveAttributes.Intelligence + equipment.pd + ancestryPD + classPD + (vaultEffects.physicalDefenseBonus ?? 0),
+    arcaneDefense: 8 + mastery + effectiveAttributes.Might + effectiveAttributes.Charisma + equipment.ad + ancestryAD + classAD + Number(pactArmorActive) + (vaultEffects.areaDefenseBonus ?? 0),
     speed: Math.max(0, 5 + traitCount(character, chosenTraits, 'Speed Increase') - traitCount(character, chosenTraits, 'Short-Legged')
-      - traitCount(character, chosenTraits, 'Hard Shell') - equipment.speedPenalty + classSpeed),
-    saveDC: 10 + primeModifier + mastery,
-    martialCheck: primeModifier + mastery,
-    spellCheck: primeModifier + mastery,
+      - traitCount(character, chosenTraits, 'Hard Shell') - equipment.speedPenalty + classSpeed + (vaultEffects.speedBonus ?? 0)),
+    saveDC: 10 + primeModifier + mastery + (vaultEffects.saveDCBonus ?? 0) + itemEffects.saveDCBonus,
+    martialCheck: primeModifier + mastery + (vaultEffects.allCheckBonus ?? 0) + (vaultEffects.martialCheckBonus ?? 0) + itemEffects.allCheckBonus + itemEffects.martialCheckBonus,
+    spellCheck: primeModifier + mastery + (vaultEffects.allCheckBonus ?? 0) + (vaultEffects.spellCheckBonus ?? 0) + itemEffects.allCheckBonus + itemEffects.spellCheckBonus,
     skillPointBudget: Math.max(0, 5 + effectiveAttributes.Intelligence + totals.skill + skillFeaturePoints + skillTalentPoints - skillConversions),
     tradePointBudget: Math.max(0, 3 + totals.trade + paragonTradePoints + artificerTradePoints + apothecaryTradePoints + skillConversions * 2 - tradeConversions),
     languagePointBudget: 2 + tradeConversions * 2,
@@ -1823,6 +1847,7 @@ export function applyDerivedCharacter(character: Character, derived: CharacterDe
     }])) as Character['attributes'],
     primeModifier: derived.primeModifier,
     combatMastery: derived.combatMastery,
+    saveDC: derived.saveDC,
     maxHealthPoints: derived.maxHP,
     healthPoints: Math.max(0, derived.maxHP - damage),
     maxStamina: derived.maxStamina,

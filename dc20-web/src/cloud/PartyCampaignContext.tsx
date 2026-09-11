@@ -17,12 +17,14 @@ import type {
   CampaignNote,
   CampaignPartyLink,
   Character,
+  GmVaultEntry,
   PartyCampaignMember,
   PartyCampaignRole,
   PartyCampaignSnapshot,
   PartyInventoryItem,
 } from '../types/models';
 import { generateUUID } from '../utils/gameUtils';
+import { normalizeVaultEntry, prepareVaultEntry } from '../utils/vaultRules';
 
 /* oxlint-disable react/only-export-components */
 /* oxlint-disable react/set-state-in-effect */
@@ -60,6 +62,8 @@ interface PartyCampaignContextValue {
   updateSharedInventoryItem: (partyId: string, item: PartyInventoryItem) => Promise<void>;
   removeSharedInventoryItem: (partyId: string, itemId: string) => Promise<void>;
   adjustSharedGold: (partyId: string, delta: number) => Promise<void>;
+  shareVaultEntry: (partyId: string, entry: GmVaultEntry) => Promise<void>;
+  removeSharedVaultEntry: (partyId: string, entryId: string) => Promise<void>;
   removePartyMember: (partyId: string, memberId: string) => Promise<void>;
   leaveParty: (partyId: string) => Promise<void>;
   deleteParty: (partyId: string, inviteCode: string) => Promise<void>;
@@ -111,6 +115,7 @@ function emptyParty(id: string, role: PartyCampaignRole): PartyCampaignSnapshot 
     members: [],
     notes: [],
     inventory: [],
+    vaultEntries: [],
     gold: 0,
   };
 }
@@ -204,6 +209,14 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
         }).sort((left, right) => left.name.localeCompare(right.name));
         patchParty(link.partyId, link.role, { inventory, gold });
       }, (caught) => reportError(caught, 'Shared inventory could not be loaded.')));
+
+      unsubscribers.push(onSnapshot(collection(partyReference, 'vault'), (snapshot) => {
+        const vaultEntries = snapshot.docs
+          .map((entryDocument) => normalizeVaultEntry(entryDocument.data()))
+          .filter((entry): entry is GmVaultEntry => entry !== null)
+          .sort((left, right) => left.name.localeCompare(right.name));
+        patchParty(link.partyId, link.role, { vaultEntries });
+      }, (caught) => reportError(caught, 'Shared GM Vault content could not be loaded.')));
     }
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, [linkSignature, links, patchParty, reportError, user]);
@@ -405,6 +418,21 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
     });
   }, [requireCloud]);
 
+  const shareVaultEntry = useCallback(async (partyId: string, entry: GmVaultEntry) => {
+    const { database, currentUser } = requireCloud();
+    const prepared = prepareVaultEntry(entry);
+    await setDoc(doc(database, 'party_campaigns', partyId, 'vault', prepared.id), {
+      ...JSON.parse(JSON.stringify(prepared)) as GmVaultEntry,
+      sharedBy: currentUser.uid,
+      sharedAt: new Date().toISOString(),
+    });
+  }, [requireCloud]);
+
+  const removeSharedVaultEntry = useCallback(async (partyId: string, entryId: string) => {
+    const { database } = requireCloud();
+    await deleteDoc(doc(database, 'party_campaigns', partyId, 'vault', entryId));
+  }, [requireCloud]);
+
   const removePartyMember = useCallback(async (partyId: string, memberId: string) => {
     const { database } = requireCloud();
     await deleteDoc(doc(database, 'party_campaigns', partyId, 'members', memberId));
@@ -418,7 +446,7 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
   const deleteParty = useCallback(async (partyId: string, inviteCode: string) => {
     const { database } = requireCloud();
     const batch = writeBatch(database);
-    for (const subcollection of ['members', 'notes', 'inventory']) {
+    for (const subcollection of ['members', 'notes', 'inventory', 'vault']) {
       const snapshot = await getDocs(collection(database, 'party_campaigns', partyId, subcollection));
       snapshot.docs.forEach((entry) => batch.delete(entry.ref));
     }
@@ -477,6 +505,8 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
     updateSharedInventoryItem: saveSharedInventoryItem,
     removeSharedInventoryItem,
     adjustSharedGold,
+    shareVaultEntry,
+    removeSharedVaultEntry,
     removePartyMember,
     leaveParty,
     deleteParty,
@@ -487,7 +517,7 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
       return url.toString();
     },
     clearPendingInvite,
-  }), [adjustSharedGold, clearPendingInvite, createPartyCampaign, deleteParty, error, isConfigured, joinPartyCampaign, leaveParty, parties, partyCharacters, pendingInvite, publishCharacter, refreshParty, removePartyMember, removeSharedInventoryItem, removeSharedNote, renameParty, saveSharedInventoryItem, saveSharedNote, status, user]);
+  }), [adjustSharedGold, clearPendingInvite, createPartyCampaign, deleteParty, error, isConfigured, joinPartyCampaign, leaveParty, parties, partyCharacters, pendingInvite, publishCharacter, refreshParty, removePartyMember, removeSharedInventoryItem, removeSharedNote, removeSharedVaultEntry, renameParty, saveSharedInventoryItem, saveSharedNote, shareVaultEntry, status, user]);
 
   return <PartyCampaignContext.Provider value={value}>{children}</PartyCampaignContext.Provider>;
 }

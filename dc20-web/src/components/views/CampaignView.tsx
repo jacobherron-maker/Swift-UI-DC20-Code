@@ -6,6 +6,7 @@ import type {
   CampaignNote,
   CampaignRecord,
   Character,
+  GmVaultEntry,
   PartyCampaignMember,
   PartyCampaignSnapshot,
   PartyInventoryItem,
@@ -17,6 +18,7 @@ import { CharacterAvatar } from '../character/CharacterAvatar';
 import { GoldBalanceControl } from '../GoldBalanceControl';
 import CharacterSheet from './CharacterSheet';
 import type { ContentFocusRequest } from '../../navigation/appNavigation';
+import { addVaultEntryToCharacter, vaultEffectSummary, vaultEntryEligibility } from '../../utils/vaultRules';
 
 /* Navigation requests and live party records intentionally synchronize local campaign state. */
 /* oxlint-disable react/set-state-in-effect, react-hooks/exhaustive-deps */
@@ -30,6 +32,7 @@ export default function CampaignView({ focusRequest, onFocusHandled }: { focusRe
     selectedCampaignId,
     selectCampaign,
     updateCampaignData,
+    updateCharacter,
     addCampaign,
     updateCampaign,
     removeCampaign,
@@ -170,6 +173,23 @@ export default function CampaignView({ focusRequest, onFocusHandled }: { focusRe
     setNotice(`${member.character.name} was added to ${combat.name}. Their HP will display from the party sheet.`);
   };
 
+  const addSharedVaultEntry = async (entry: GmVaultEntry) => {
+    if (!campaign?.party?.characterId) { setNotice('Choose your shared character on the Party tab first.'); return; }
+    const character = characters.find(({ id }) => id === campaign.party?.characterId);
+    if (!character) { setNotice('The character linked to this campaign is not available on this device.'); return; }
+    const eligibility = vaultEntryEligibility(character, entry);
+    if (!eligibility.eligible) { setNotice(eligibility.reason); return; }
+    if ((character.vaultEntries ?? []).some(({ id }) => id === entry.id)) { setNotice(`${entry.name} is already on ${character.name}'s sheet.`); return; }
+    const updated = addVaultEntryToCharacter(character, entry);
+    updateCharacter(updated);
+    try {
+      await partyHub.publishCharacter(campaign.party.partyId, campaign.party.role, updated);
+      setNotice(`${entry.name} was added to ${character.name}${entry.item ? ' unequipped' : ''}.`);
+    } catch (caught) {
+      setNotice(caught instanceof Error ? caught.message : 'The character was updated locally, but the party copy could not be published.');
+    }
+  };
+
   const deleteCurrentCampaign = async () => {
     if (!campaign) return;
     const groupCopy = campaign.party;
@@ -277,6 +297,7 @@ export default function CampaignView({ focusRequest, onFocusHandled }: { focusRe
             onUpdateInventory={(item) => campaign.party && performPartyAction(partyHub.updateSharedInventoryItem(campaign.party.partyId, item))}
             onDeleteInventory={(id) => campaign.party && performPartyAction(partyHub.removeSharedInventoryItem(campaign.party.partyId, id))}
             onAdjustGold={(delta) => campaign.party && performPartyAction(partyHub.adjustSharedGold(campaign.party.partyId, delta))}
+            onAddVaultEntry={(entry) => void addSharedVaultEntry(entry)}
             onLinkCharacter={(id) => void linkCharacter(id)}
             onViewMember={(memberId) => campaign.party && setViewedMember({ partyId: campaign.party.partyId, memberId })}
             onRemoveMember={(memberId) => campaign.party && performPartyAction(partyHub.removePartyMember(campaign.party.partyId, memberId))}
@@ -306,9 +327,9 @@ function PartyInvitation({ campaignName, gmDisplayName, characters, selectedChar
   </section>;
 }
 
-type CampaignTab = 'party' | 'notes' | 'inventory';
+type CampaignTab = 'party' | 'notes' | 'inventory' | 'vault';
 
-function CampaignEditor({ campaign, party, currentUserId, characters, combats, localNote, selectedNoteId, onSelectNote, onUpdateCampaign, onRenameParty, onCreateLocalNote, onUpdateLocalNote, onDeleteLocalNote, onCreateSharedNote, onUpdateSharedNote, onDeleteSharedNote, onAddInventory, onUpdateInventory, onDeleteInventory, onAdjustGold, onLinkCharacter, onViewMember, onRemoveMember, onAddMemberToCombat, onDeleteCampaign, inviteURL }: {
+function CampaignEditor({ campaign, party, currentUserId, characters, combats, localNote, selectedNoteId, onSelectNote, onUpdateCampaign, onRenameParty, onCreateLocalNote, onUpdateLocalNote, onDeleteLocalNote, onCreateSharedNote, onUpdateSharedNote, onDeleteSharedNote, onAddInventory, onUpdateInventory, onDeleteInventory, onAdjustGold, onAddVaultEntry, onLinkCharacter, onViewMember, onRemoveMember, onAddMemberToCombat, onDeleteCampaign, inviteURL }: {
   campaign: CampaignRecord;
   party: PartyCampaignSnapshot | null;
   currentUserId: string;
@@ -329,6 +350,7 @@ function CampaignEditor({ campaign, party, currentUserId, characters, combats, l
   onUpdateInventory: (item: PartyInventoryItem) => void;
   onDeleteInventory: (id: string) => void;
   onAdjustGold: (delta: number) => void;
+  onAddVaultEntry: (entry: GmVaultEntry) => void;
   onLinkCharacter: (id: string) => void;
   onViewMember: (memberId: string) => void;
   onRemoveMember: (memberId: string) => void;
@@ -353,10 +375,11 @@ function CampaignEditor({ campaign, party, currentUserId, characters, combats, l
       <button type="button" onClick={onDeleteCampaign} className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/20">{campaign.party && !isGM ? 'Leave Campaign' : 'Delete Campaign'}</button>
     </div>
 
-    <nav className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/55 p-2 sm:grid-cols-3">
+    <nav className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/55 p-2 sm:grid-cols-4">
       {campaign.party && <button type="button" onClick={() => setTab('party')} className={`rounded-xl px-4 py-3 text-sm font-black ${tab === 'party' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-white/5'}`}>Party</button>}
       <button type="button" onClick={() => setTab('notes')} className={`rounded-xl px-4 py-3 text-sm font-black ${tab === 'notes' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-white/5'}`}>{campaign.party ? 'Shared Notes' : 'Notes'}</button>
       {campaign.party && <button type="button" onClick={() => setTab('inventory')} className={`rounded-xl px-4 py-3 text-sm font-black ${tab === 'inventory' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-white/5'}`}>Shared Inventory</button>}
+      {campaign.party && <button type="button" onClick={() => setTab('vault')} className={`rounded-xl px-4 py-3 text-sm font-black ${tab === 'vault' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-white/5'}`}>GM Vault</button>}
     </nav>
 
     {tab === 'party' && party && <PartyPanel
@@ -376,7 +399,12 @@ function CampaignEditor({ campaign, party, currentUserId, characters, combats, l
     {tab === 'party' && campaign.party && !party && <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-10 text-center text-slate-400">Loading the connected party…</div>}
     {tab === 'notes' && (party ? <SharedNotesEditor party={party} onCreate={onCreateSharedNote} onUpdate={onUpdateSharedNote} onDelete={onDeleteSharedNote} /> : <SoloNotesEditor campaign={campaign} note={localNote} selectedNoteId={selectedNoteId} onSelect={onSelectNote} onCreate={onCreateLocalNote} onUpdate={onUpdateLocalNote} onDelete={onDeleteLocalNote} />)}
     {tab === 'inventory' && party && <><GoldBalanceControl currentGold={party.gold} onAdjust={onAdjustGold} title="Shared Gold" description="This balance is synchronized for every campaign member. Enter a transaction amount, then add or subtract it." /><SharedInventoryEditor party={party} currentUserId={currentUserId} onCreate={onAddInventory} onUpdate={onUpdateInventory} onDelete={onDeleteInventory} /></>}
+    {tab === 'vault' && party && <CampaignVaultPanel party={party} character={characters.find(({ id }) => id === campaign.party?.characterId)} onAdd={onAddVaultEntry} />}
   </div>;
+}
+
+function CampaignVaultPanel({ party, character, onAdd }: { party: PartyCampaignSnapshot; character?: Character; onAdd: (entry: GmVaultEntry) => void }) {
+  return <section className="rounded-2xl border border-fuchsia-400/20 bg-slate-900/70 p-4 sm:p-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-300">Campaign Rewards</p><h2 className="mt-1 text-xl font-black text-white">Shared GM Vault</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Your GM shared these options with this campaign. Review the complete rules, then add an eligible entry to your linked character. Items enter inventory unequipped.</p></div>{character ? <span className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-200">Adding to {character.name}</span> : <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-200">Choose a shared character first</span>}</div><div className="mt-5 grid gap-4 md:grid-cols-2">{party.vaultEntries.map((entry) => { const eligibility = character ? vaultEntryEligibility(character, entry) : { eligible: false, reason: 'Choose your shared character on the Party tab.' }; const added = Boolean(character?.vaultEntries?.some(({ id }) => id === entry.id)); const effects = vaultEffectSummary(entry.effects); return <article key={entry.id} className="rounded-xl border border-white/10 bg-slate-950/55 p-4"><div className="flex items-start justify-between gap-3"><div><span className="text-[10px] font-black uppercase tracking-wider text-fuchsia-300">{entry.kind}</span><h3 className="mt-1 text-lg font-black text-slate-100">{entry.name}</h3></div>{added && <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-black text-emerald-200">On sheet</span>}</div>{entry.summary && <p className="mt-2 text-sm text-slate-400">{entry.summary}</p>}<details className="group mt-3 rounded-lg border border-white/5 bg-white/[0.025] p-3"><summary className="cursor-pointer text-xs font-black text-violet-200"><span className="group-open:hidden">More details</span><span className="hidden group-open:inline">Less details</span></summary><p className="mt-3 whitespace-pre-wrap border-t border-white/5 pt-3 text-sm leading-6 text-slate-300">{entry.description || 'No additional description.'}</p>{effects.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{effects.map((effect) => <span key={effect} className="rounded-full bg-violet-500/10 px-2 py-1 text-[10px] font-bold text-violet-200">{effect}</span>)}</div>}{entry.requirements.notes && <p className="mt-3 text-xs text-amber-200">{entry.requirements.notes}</p>}</details><button type="button" disabled={!eligibility.eligible || added} onClick={() => onAdd(entry)} className="mt-4 w-full rounded-lg bg-fuchsia-700 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500">{added ? 'Already Added' : eligibility.eligible ? `Add to ${character?.name}` : eligibility.reason}</button></article>; })}{party.vaultEntries.length === 0 && <div className="rounded-xl border border-dashed border-white/10 p-10 text-center text-slate-500 md:col-span-2">The GM has not shared any Vault content with this campaign yet.</div>}</div></section>;
 }
 
 function PartyPanel({ campaign, party, currentUserId, characters, combats, combatId, inviteURL, onSelectCombat, onLinkCharacter, onViewMember, onRemoveMember, onAddMemberToCombat }: {

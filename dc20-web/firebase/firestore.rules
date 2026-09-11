@@ -77,6 +77,11 @@ service cloud.firestore {
       match /inventory/{itemId} {
         allow read, create, update, delete: if isPartyGM(campaignId) || isPartyMember(campaignId);
       }
+
+      match /vault/{entryId} {
+        allow read: if isPartyGM(campaignId) || isPartyMember(campaignId);
+        allow create, update, delete: if isPartyGM(campaignId);
+      }
     }
   }
 }

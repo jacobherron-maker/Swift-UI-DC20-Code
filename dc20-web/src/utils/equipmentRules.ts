@@ -153,20 +153,56 @@ export interface ActiveEquipmentSheetEffects {
   resistances: string[];
   skillMasteryIncreases: Record<string, number>;
   skillBonusesAtCap: Record<string, number>;
+  attributeBonuses: Record<string, number>;
+  skillBonuses: Record<string, number>;
+  tradeBonuses: Record<string, number>;
+  saveBonuses: Record<string, number>;
+  allCheckBonus: number;
+  martialCheckBonus: number;
+  spellCheckBonus: number;
+  spellAttackBonus: number;
+  saveDCBonus: number;
+  weaponDamageBonus: number;
+  spellDamageBonus: number;
+  maxHPBonus: number;
+  maxStaminaBonus: number;
+  maxManaBonus: number;
+  physicalDefenseBonus: number;
+  areaDefenseBonus: number;
+  speedBonus: number;
   immuneToFlanking: boolean;
   senses: string[];
   conditionalRules: string[];
   conditionSaveAdvantages: string[];
+  immunities: string[];
 }
 
 const EMPTY_SHEET_EFFECTS: ActiveEquipmentSheetEffects = {
   resistances: [],
   skillMasteryIncreases: {},
   skillBonusesAtCap: {},
+  attributeBonuses: {},
+  skillBonuses: {},
+  tradeBonuses: {},
+  saveBonuses: {},
+  allCheckBonus: 0,
+  martialCheckBonus: 0,
+  spellCheckBonus: 0,
+  spellAttackBonus: 0,
+  saveDCBonus: 0,
+  weaponDamageBonus: 0,
+  spellDamageBonus: 0,
+  maxHPBonus: 0,
+  maxStaminaBonus: 0,
+  maxManaBonus: 0,
+  physicalDefenseBonus: 0,
+  areaDefenseBonus: 0,
+  speedBonus: 0,
   immuneToFlanking: false,
   senses: [],
   conditionalRules: [],
   conditionSaveAdvantages: [],
+  immunities: [],
 };
 
 function mergeSheetEffect(target: ActiveEquipmentSheetEffects, effect: EquipmentSheetEffects | undefined) {
@@ -175,12 +211,21 @@ function mergeSheetEffect(target: ActiveEquipmentSheetEffects, effect: Equipment
   target.senses.push(...(effect.senses ?? []));
   target.conditionalRules.push(...(effect.conditionalRules ?? []));
   target.conditionSaveAdvantages.push(...(effect.conditionSaveAdvantages ?? []));
+  target.immunities.push(...(effect.immunities ?? []));
   target.immuneToFlanking ||= Boolean(effect.immuneToFlanking);
   for (const [name, value] of Object.entries(effect.skillMasteryIncreases ?? {})) {
     target.skillMasteryIncreases[name] = Math.max(target.skillMasteryIncreases[name] ?? 0, value);
   }
   for (const [name, value] of Object.entries(effect.skillBonusesAtCap ?? {})) {
     target.skillBonusesAtCap[name] = Math.max(target.skillBonusesAtCap[name] ?? 0, value);
+  }
+  for (const key of ['attributeBonuses', 'skillBonuses', 'tradeBonuses', 'saveBonuses'] as const) {
+    for (const [name, value] of Object.entries(effect[key] ?? {})) {
+      target[key][name] = (target[key][name] ?? 0) + value;
+    }
+  }
+  for (const key of ['allCheckBonus', 'martialCheckBonus', 'spellCheckBonus', 'spellAttackBonus', 'saveDCBonus', 'weaponDamageBonus', 'spellDamageBonus', 'maxHPBonus', 'maxStaminaBonus', 'maxManaBonus', 'physicalDefenseBonus', 'areaDefenseBonus', 'speedBonus'] as const) {
+    target[key] += effect[key] ?? 0;
   }
 }
 
@@ -192,9 +237,14 @@ export function activeEquipmentSheetEffects(items: CharacterInventoryItem[], cat
     resistances: [],
     skillMasteryIncreases: {},
     skillBonusesAtCap: {},
+    attributeBonuses: {},
+    skillBonuses: {},
+    tradeBonuses: {},
+    saveBonuses: {},
     senses: [],
     conditionalRules: [],
     conditionSaveAdvantages: [],
+    immunities: [],
   };
   for (const inventory of items) {
     if (!inventory.isEquipped) continue;
@@ -207,6 +257,7 @@ export function activeEquipmentSheetEffects(items: CharacterInventoryItem[], cat
   result.senses = Array.from(new Set(result.senses));
   result.conditionalRules = Array.from(new Set(result.conditionalRules));
   result.conditionSaveAdvantages = Array.from(new Set(result.conditionSaveAdvantages));
+  result.immunities = Array.from(new Set(result.immunities));
   return result;
 }
 

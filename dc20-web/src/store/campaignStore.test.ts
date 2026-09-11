@@ -104,6 +104,35 @@ describe('campaign persistence migration', () => {
     expect(migrated.selectedPaletteID).toBe('amethyst-archive');
   });
 
+  it('preserves private and character-accepted GM Vault entries across migration', () => {
+    const vaultEntry = {
+      id: 'vault-feature',
+      kind: 'Feature',
+      name: 'Moonlit Grace',
+      summary: 'A private campaign reward.',
+      description: 'Gain the listed benefits while this feature is on your sheet.',
+      tags: ['Reward'],
+      requirements: { minimumLevel: 2, classes: ['Druid'] },
+      effects: { speedBonus: 1, skillBonuses: { Awareness: 2 } },
+      createdAt: '2026-09-11T00:00:00.000Z',
+      updatedAt: '2026-09-11T00:00:00.000Z',
+    };
+    const migrated = migratePersistedState({
+      campaignData: { vaultEntries: [vaultEntry] },
+      characters: [{ id: 'hero', name: 'Luna', level: 2, class: 'Druid', vaultEntries: [vaultEntry] }],
+    });
+
+    expect(migrated.campaignData.vaultEntries[0]).toMatchObject({
+      id: 'vault-feature',
+      name: 'Moonlit Grace',
+      effects: { speedBonus: 1, skillBonuses: { Awareness: 2 } },
+    });
+    expect(migrated.characters[0].vaultEntries?.[0]).toMatchObject({
+      id: 'vault-feature',
+      kind: 'Feature',
+    });
+  });
+
   it('migrates the former default title and legacy language mastery to fluency', () => {
     const migrated = migratePersistedState({
       campaignData: { title: 'The Amethyst Chronicle' },

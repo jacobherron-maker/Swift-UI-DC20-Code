@@ -429,7 +429,7 @@ export function combatantFromCharacter(character: Character): Combatant {
     physicalDefense: character.physicalDefense ?? character.defense,
     arcaneDefense: character.arcaneDefense ?? character.defense,
     attackBonus: character.primeModifier + character.combatMastery,
-    saveDC: 10 + character.primeModifier + character.combatMastery,
+    saveDC: character.saveDC ?? 10 + character.primeModifier + character.combatMastery,
     speed: character.speed,
   };
 }

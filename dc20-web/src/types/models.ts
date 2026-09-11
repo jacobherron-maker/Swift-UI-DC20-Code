@@ -88,6 +88,66 @@ export interface PartyInventoryItem {
   updatedAt: string;
 }
 
+export const VaultContentKindValues = {
+  ITEM: 'Magic Item',
+  TALENT: 'Talent',
+  FEATURE: 'Feature',
+  SPELL: 'Spell',
+  COMPANION: 'Pet / Summon / Familiar',
+  OTHER: 'Other',
+} as const;
+
+export type VaultContentKind = (typeof VaultContentKindValues)[keyof typeof VaultContentKindValues];
+
+/** Numeric and reference effects that custom Vault content can route into a character sheet. */
+export interface VaultMechanicalEffects {
+  attributeBonuses?: Partial<Record<DC20Attribute, number>>;
+  skillBonuses?: Record<string, number>;
+  tradeBonuses?: Record<string, number>;
+  saveBonuses?: Partial<Record<DC20Attribute | 'Physical' | 'Mental', number>>;
+  allCheckBonus?: number;
+  martialCheckBonus?: number;
+  spellCheckBonus?: number;
+  spellAttackBonus?: number;
+  saveDCBonus?: number;
+  weaponDamageBonus?: number;
+  spellDamageBonus?: number;
+  maxHPBonus?: number;
+  maxStaminaBonus?: number;
+  maxManaBonus?: number;
+  physicalDefenseBonus?: number;
+  areaDefenseBonus?: number;
+  speedBonus?: number;
+  resistances?: string[];
+  immunities?: string[];
+  senses?: string[];
+  conditionalRules?: string[];
+}
+
+export interface VaultRequirements {
+  minimumLevel?: number;
+  classes?: string[];
+  ancestries?: string[];
+  notes?: string;
+}
+
+/** Private GM-authored content. A campaign receives a copy, never edit access to this original. */
+export interface GmVaultEntry {
+  id: string;
+  kind: VaultContentKind;
+  name: string;
+  summary: string;
+  description: string;
+  tags: string[];
+  requirements: VaultRequirements;
+  effects: VaultMechanicalEffects;
+  item?: EquipmentCatalogItem;
+  spell?: Spell;
+  companion?: CharacterCompanion;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PartyCampaignSnapshot {
   id: string;
   name: string;
@@ -100,6 +160,7 @@ export interface PartyCampaignSnapshot {
   members: PartyCampaignMember[];
   notes: CampaignNote[];
   inventory: PartyInventoryItem[];
+  vaultEntries: GmVaultEntry[];
   gold: number;
 }
 
@@ -152,6 +213,7 @@ export interface CampaignData {
   campaigns: CampaignRecord[];
   customMonsters: Monster[];
   customEquipment: EquipmentCatalogItem[];
+  vaultEntries: GmVaultEntry[];
   encounters: Encounter[];
 }
 
@@ -288,6 +350,8 @@ export type CharacterCompanionKind = 'Familiar' | 'Summon' | 'Pet';
 /** A persistent, player-editable stat sheet for a familiar, summon, or other companion. */
 export interface CharacterCompanion {
   id: string;
+  /** Links a copied campaign companion back to the accepted GM Vault entry. */
+  sourceVaultEntryID?: string;
   name: string;
   kind: CharacterCompanionKind;
   source: string;
@@ -422,6 +486,8 @@ export interface Character {
   physicalDefense: number;
   arcaneDefense: number;
   combatMastery: number;
+  /** Fully derived Class Save DC, including active custom bonuses. */
+  saveDC?: number;
   speed: number;
   defense: number;
   // Character details
@@ -433,6 +499,8 @@ export interface Character {
   gold?: number;
   spells: Spell[];
   maneuvers: Maneuver[];
+  /** Self-contained snapshots accepted from a campaign's shared GM Vault. */
+  vaultEntries?: GmVaultEntry[];
   notes: string;
   build?: CharacterBuildData;
 }
@@ -499,6 +567,24 @@ export interface EquipmentSheetEffects {
   senses?: string[];
   conditionalRules?: string[];
   conditionSaveAdvantages?: string[];
+  attributeBonuses?: Partial<Record<DC20Attribute, number>>;
+  skillBonuses?: Record<string, number>;
+  tradeBonuses?: Record<string, number>;
+  saveBonuses?: Partial<Record<DC20Attribute | 'Physical' | 'Mental', number>>;
+  allCheckBonus?: number;
+  martialCheckBonus?: number;
+  spellCheckBonus?: number;
+  spellAttackBonus?: number;
+  saveDCBonus?: number;
+  weaponDamageBonus?: number;
+  spellDamageBonus?: number;
+  maxHPBonus?: number;
+  maxStaminaBonus?: number;
+  maxManaBonus?: number;
+  physicalDefenseBonus?: number;
+  areaDefenseBonus?: number;
+  speedBonus?: number;
+  immunities?: string[];
 }
 
 export interface EquipmentCatalogItem {

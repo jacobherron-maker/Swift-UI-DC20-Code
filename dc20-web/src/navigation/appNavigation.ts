@@ -42,7 +42,7 @@ export const LIBRARY_SECTIONS: Array<{ section: HubSection; label: string; short
   { section: HubSectionValues.POWERS, label: 'Spells & Maneuvers', shortLabel: 'Powers' },
   { section: HubSectionValues.EQUIPMENT, label: 'Items & Equipment', shortLabel: 'Equipment' },
   { section: HubSectionValues.CHARACTER_OPTIONS, label: 'Character Options', shortLabel: 'Options' },
-  { section: HubSectionValues.HOMEBREW, label: 'Homebrew', shortLabel: 'Homebrew' },
+  { section: HubSectionValues.HOMEBREW, label: 'GM Vault', shortLabel: 'Vault' },
 ];
 
 export const ENCOUNTER_SECTIONS: Array<{ section: HubSection; label: string; shortLabel: string }> = [
