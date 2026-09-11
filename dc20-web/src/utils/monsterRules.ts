@@ -56,6 +56,11 @@ export interface EncounterMetrics {
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Very Hard' | 'Deadly';
 }
 
+/** The sourcebook-facing role label. Internal mapped roles remain available for builder math. */
+export function monsterDisplayRole(monster: Pick<Monster, 'publishedRole' | 'role'>): string {
+  return monster.publishedRole?.trim() || monster.role;
+}
+
 const MONSTER_BASELINES: Record<number, MonsterBaseline> = {
   [-1]: { hp: 7, defense: 10, attack: 2, save: 12, prime: 2, mastery: 0, traits: 2 },
   0: { hp: 11, defense: 11, attack: 3, save: 13, prime: 2, mastery: 1, traits: 4 },

@@ -309,6 +309,21 @@ export interface CharacterCompanion {
   notes: string;
 }
 
+/** A consumable or poison currently being resolved from the character sheet. */
+export interface CharacterTrackedEffect {
+  id: string;
+  name: string;
+  sourceItemID: string;
+  kind: 'Consumable' | 'Poison';
+  target: string;
+  description: string;
+  durationLabel: string;
+  /** Source tags retained so cures and other item interactions can distinguish effect tiers. */
+  tags?: string[];
+  remainingRounds?: number;
+  healingPerTurn?: number;
+}
+
 /** A Druid Wild Form remains available with its own HP and Traits until it reaches 0 HP or the Druid Long Rests. */
 export interface DruidWildFormRecord {
   id: string;
@@ -368,6 +383,8 @@ export interface CharacterBuildData {
   sheetFeatureCounters: Record<string, number>;
   characterNotes: CampaignNote[];
   sheetCompanions?: CharacterCompanion[];
+  /** Active item effects with targets and optional round-by-round duration tracking. */
+  sheetTrackedEffects?: CharacterTrackedEffect[];
   /** Persistent, independently damaged Wild Forms currently available to a Druid. */
   druidWildForms?: DruidWildFormRecord[];
   rollAdjustment: number;

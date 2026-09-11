@@ -392,10 +392,20 @@ describe('DC20 character calculations', () => {
       sheetFeatureStates: { 'cleric.channel.used': true },
       sheetFeatureSelections: { 'spellblade.rune.active': 'Flame Rune' },
       sheetFeatureCounters: { 'cleric.omen.count': 2 },
+      sheetTrackedEffects: [{
+        id: 'effect-1',
+        name: 'Enhance Attribute: Agility',
+        sourceItemID: 'potion-agility',
+        kind: 'Consumable',
+        target: 'Self',
+        description: 'ADV on Agility Checks and Saves.',
+        durationLabel: 'Until the target Long Rests',
+      }],
     };
 
     const quick = completeCharacterRest(hero, 'Quick', 3);
     expect([quick.healthPoints, quick.stamina, quick.manaPoints, characterRestPoints(quick)]).toEqual([8, 0, 1, 1]);
+    expect(quick.build?.sheetTrackedEffects).toHaveLength(1);
 
     const short = completeCharacterRest(hero, 'Short', 2);
     expect([short.healthPoints, short.stamina, short.manaPoints, characterRestPoints(short), short.build?.shortRestsTaken]).toEqual([7, 4, 1, 4, 1]);
@@ -412,6 +422,7 @@ describe('DC20 character calculations', () => {
     expect(long.build?.sheetConditionLevels).toEqual({ Poisoned: 1 });
     expect(long.build?.sheetFeatureStates['cleric.channel.used']).toBe(false);
     expect(long.build?.sheetFeatureCounters).toEqual({});
+    expect(long.build?.sheetTrackedEffects).toEqual([]);
   });
 
   it('resets AP and only turn-limited character-sheet state on Reset Turn', () => {

@@ -1212,6 +1212,7 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
       sheetFeatureSelections,
       classFeatureSelections,
       druidWildForms: type === 'Long' && (character.class === 'Druid' || hasDirectMulticlassFeature(character, 'Druid', 'Wild Form')) ? [] : build.druidWildForms,
+      sheetTrackedEffects: type === 'Long' ? [] : build.sheetTrackedEffects,
     },
   };
 }
@@ -1871,6 +1872,7 @@ export function defaultBuild(): CharacterBuildData {
     sheetFeatureCounters: {},
     characterNotes: [],
     sheetCompanions: [],
+    sheetTrackedEffects: [],
     druidWildForms: [],
     rollAdjustment: 0,
     isFinalized: false,

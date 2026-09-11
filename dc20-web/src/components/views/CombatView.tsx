@@ -5,7 +5,7 @@ import { useCampaignStore } from '../../store/campaignStore';
 import type { Combatant, CombatantTeam, SavedCombat } from '../../types/models';
 import { CombatantTeamValues } from '../../types/models';
 import { generateUUID } from '../../utils/gameUtils';
-import { combatantFromCharacter, combatantFromMonster, combatFromEncounter } from '../../utils/monsterRules';
+import { combatantFromCharacter, combatantFromMonster, combatFromEncounter, monsterDisplayRole } from '../../utils/monsterRules';
 import { ExplicitRuleLink, RuleAwareText } from '../rules/RuleAwareText';
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
@@ -193,7 +193,7 @@ function CombatEditor({ combat, participantChoice, setParticipantChoice, sourceM
               {partyCharacters.map((entry) => <option key={`${entry.partyId}:${entry.memberId}`} value={`party:${entry.partyId}:${entry.memberId}`}>{entry.character.name} — {entry.partyName} • HP {entry.character.healthPoints}/{entry.character.maxHealthPoints}</option>)}
             </optgroup>}
             <optgroup label="Sourcebook Monsters">
-              {sourceMonsters.map((monster) => <option key={monster.id} value={`source:${monster.id}`}>{monster.name} — Level {monster.level} {monster.role}</option>)}
+              {sourceMonsters.map((monster) => <option key={monster.id} value={`source:${monster.id}`}>{monster.name} — Level {monster.level} {monsterDisplayRole(monster)}</option>)}
             </optgroup>
             {customMonsters.length > 0 && <optgroup label="Custom Monsters">
               {customMonsters.map((monster) => <option key={monster.id} value={`custom:${monster.id}`}>{monster.name} — Level {monster.level} {monster.role}</option>)}

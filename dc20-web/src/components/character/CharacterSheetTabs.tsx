@@ -6,6 +6,7 @@ import type {
   CharacterCompanionKind,
   CharacterInventoryItem,
   CharacterReferenceData,
+  CharacterTrackedEffect,
   ClassReference,
   DC20Attribute,
   EquipmentCatalogItem,
@@ -13,12 +14,14 @@ import type {
   EquipmentSlot,
   Maneuver,
   MasteryLevel,
+  Monster,
   Spell,
 } from '../../types/models';
 import { EquipmentCategoryValues, EquipmentSlotValues } from '../../types/models';
 import { PillMultiSelect, toggleValue } from '../equipment/PillMultiSelect';
 import { PowerRulesText } from '../powers/PowerRulesText';
 import { useCampaignStore } from '../../store/campaignStore';
+import { useSourceMonsters } from '../../hooks/useSourceMonsters';
 import {
   ATTRIBUTE_NAMES,
   BARBARIAN_RAGE_STATE,
@@ -1003,6 +1006,231 @@ function CustomItemActions({ item, propertyOptions, onSave, onDeletePermanently,
   </>;
 }
 
+const MAGICAL_CONSUMABLES_SOURCE = 'DC20 Magazine 24 — Magical Consumables';
+const POISONS_SOURCE = 'DC20 Magazine 15 — Poisons';
+
+function isManagedSourceConsumable(item: EquipmentCatalogItem): boolean {
+  return item.sourceDocument === MAGICAL_CONSUMABLES_SOURCE || item.sourceDocument === POISONS_SOURCE;
+}
+
+function sourceItemActionPointCost(item: EquipmentCatalogItem): number {
+  if (item.sourceDocument === POISONS_SOURCE || /Object Action/i.test(item.mechanics)) return 1;
+  return Number(item.mechanics.match(/\b(?:spend|use(?: the)?) (\d+) AP\b/i)?.[1] ?? 0);
+}
+
+interface SourceItemActionChoice {
+  label: string;
+  actionPointCost: number;
+}
+
+function sourceItemActionChoices(item: EquipmentCatalogItem): SourceItemActionChoice[] {
+  if (item.name === 'Holy Water') return [
+    { label: 'Apply to Creature', actionPointCost: 1 },
+    { label: 'Throw', actionPointCost: 2 },
+    { label: 'Coat Weapon', actionPointCost: 1 },
+  ];
+  const label = item.sourceDocument === POISONS_SOURCE
+    ? item.properties.includes('Attack') ? 'Coat / Apply Poison' : 'Release / Apply Poison'
+    : /When you Attack using|When you Attack with/i.test(item.mechanics) ? 'Resolve Ammunition Use' : 'Use Item';
+  return [{ label, actionPointCost: sourceItemActionPointCost(item) }];
+}
+
+function trackedDuration(item: EquipmentCatalogItem): { label: string; rounds?: number } {
+  if (item.sourceDocument === POISONS_SOURCE && item.properties.includes('Attack')) {
+    return { label: '1 minute or until the coated item Attacks', rounds: 10 };
+  }
+  const printedDuration = item.mechanics.match(/• Duration:\s*([^\n]+)/i)?.[1]?.trim();
+  const text = printedDuration ?? item.mechanics.match(/\b(?:for|lasts? for)\s+(1 Round|1 minute|1 hour)\b/i)?.[1];
+  if (/1 Round/i.test(text ?? '')) return { label: text ?? '1 Round', rounds: 1 };
+  if (/1 minute/i.test(text ?? '')) return { label: text ?? '1 minute', rounds: 10 };
+  if (text) return { label: text };
+  if (/until (?:the target|they|you) Long Rest/i.test(item.mechanics)) return { label: 'Until the target Long Rests' };
+  return { label: 'Resolve immediately, then end this effect' };
+}
+
+function sourceMonsterCompanion(monster: Monster): CharacterCompanion {
+  const features = [
+    monster.descriptionText,
+    `Tactics\n${monster.tactics}`,
+    ...monster.abilities.map((ability) => `${ability.name}${ability.cost ? ` (${ability.cost})` : ''}\n${ability.details}`),
+  ].filter(Boolean).join('\n\n');
+  return {
+    id: generateUUID(),
+    name: monster.name,
+    kind: 'Summon',
+    source: 'Bag of Badger Beads',
+    size: monster.size,
+    currentHP: monster.hp,
+    maxHP: monster.hp,
+    sharesHealthWithCharacter: false,
+    currentAP: monster.actionPoints ?? 2,
+    maxAP: monster.actionPoints ?? 2,
+    physicalDefense: monster.physicalDefense,
+    areaDefense: monster.arcaneDefense,
+    speed: monster.speed,
+    primeModifier: monster.primeModifier,
+    combatMastery: monster.combatMastery,
+    attackCheck: monster.attackBonus,
+    saveDC: monster.saveDC,
+    attributes: {
+      Might: monster.might,
+      Agility: monster.agility,
+      Charisma: monster.charisma,
+      Intelligence: monster.intelligence,
+    },
+    features,
+    notes: `${monster.notes}\n\nSource: ${monster.sourceBook} p.${monster.sourcePage}`.trim(),
+  };
+}
+
+function TrackedEquipmentEffects({ character, onChange, setNotice }: {
+  character: Character;
+  onChange: CharacterSheetTabContentProps['onChange'];
+  setNotice: React.Dispatch<React.SetStateAction<string>>;
+}) {
+  const build = character.build;
+  const effects = build?.sheetTrackedEffects ?? [];
+  if (!build || effects.length === 0) return null;
+  const save = (sheetTrackedEffects: CharacterTrackedEffect[], values: Partial<Character> = {}) => onChange({
+    ...values,
+    build: { ...build, sheetTrackedEffects },
+  });
+  const updateTarget = (effect: CharacterTrackedEffect, target: string) => save(effects.map((entry) => entry.id === effect.id ? { ...entry, target } : entry));
+  const advance = (effect: CharacterTrackedEffect) => {
+    const selfTarget = ['self', character.name.trim().toLowerCase()].includes(effect.target.trim().toLowerCase());
+    const healed = effect.healingPerTurn && selfTarget
+      ? Math.min(character.maxHealthPoints, character.healthPoints + effect.healingPerTurn)
+      : character.healthPoints;
+    const remainingRounds = Math.max(0, (effect.remainingRounds ?? 1) - 1);
+    const next = remainingRounds === 0
+      ? effects.filter(({ id }) => id !== effect.id)
+      : effects.map((entry) => entry.id === effect.id ? { ...entry, remainingRounds } : entry);
+    save(next, { healthPoints: healed });
+    setNotice(`${effect.name}: ${effect.healingPerTurn ? `${selfTarget ? `restored ${healed - character.healthPoints} HP; ` : 'apply healing to the tracked target; '}` : ''}${remainingRounds ? `${remainingRounds} rounds remain.` : 'effect completed.'}`);
+  };
+  return <section className="mb-6 rounded-2xl border border-cyan-400/20 bg-cyan-950/15 p-4 sm:p-5">
+    <SectionHeading eyebrow="Active Item Effects" title="Consumables & Poisons" tone="text-cyan-300" />
+    <div className="mt-4 space-y-3">{effects.map((effect) => <MoreDetails key={effect.id} title={effect.name} subtitle={`${effect.kind} • ${effect.durationLabel}${effect.remainingRounds !== undefined ? ` • ${effect.remainingRounds} rounds remaining` : ''}`}>
+      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">Tracked target<input value={effect.target} onChange={(event) => updateTarget(effect, event.target.value)} className={`${fieldClass} mt-1`} /></label>
+      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-300"><RuleAwareText text={effect.description} /></p>
+      <div className="mt-4 flex flex-wrap gap-2">{effect.remainingRounds !== undefined && <button type="button" onClick={() => advance(effect)} className="rounded-lg bg-cyan-700 px-3 py-2 text-xs font-black text-white">{effect.healingPerTurn ? `Start of Turn • Heal ${effect.healingPerTurn} HP` : 'Advance 1 Round'}</button>}<button type="button" onClick={() => save(effects.filter(({ id }) => id !== effect.id))} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">End Effect</button></div>
+    </MoreDetails>)}</div>
+  </section>;
+}
+
+function SourceConsumableActions({ character, entry, item, inventory, badger, spellCheck, onChange, onRoll, setNotice }: {
+  character: Character;
+  entry: CharacterInventoryItem;
+  item: EquipmentCatalogItem;
+  inventory: CharacterInventoryItem[];
+  badger?: Monster;
+  spellCheck?: number;
+  onChange: CharacterSheetTabContentProps['onChange'];
+  onRoll?: CharacterSheetTabContentProps['onRoll'];
+  setNotice: React.Dispatch<React.SetStateAction<string>>;
+}) {
+  const [target, setTarget] = useState(item.sourceDocument === POISONS_SOURCE ? '' : 'Self');
+  const actionChoices = sourceItemActionChoices(item);
+  const [actionLabel, setActionLabel] = useState(actionChoices[0].label);
+  const build = character.build;
+  if (!build || !isManagedSourceConsumable(item)) return null;
+  const itemSpellCheck = spellCheck ?? character.primeModifier + character.combatMastery;
+  const useCapacity = equipmentUseCapacity(item) ?? 1;
+  const remainingUses = entry.remainingUses ?? entry.quantity * useCapacity;
+  const isPoison = item.sourceDocument === POISONS_SOURCE;
+  const actionPointCost = actionChoices.find(({ label }) => label === actionLabel)?.actionPointCost ?? actionChoices[0].actionPointCost;
+  const outOfAP = character.currentAP < actionPointCost;
+  const spendUse = () => spendInventoryUse(inventory, entry.id, useCapacity);
+  const failIfUnavailable = () => {
+    if (remainingUses <= 0) { setNotice(`${item.name} has no uses remaining.`); return true; }
+    if (outOfAP) { setNotice(`${item.name} requires ${actionPointCost} AP.`); return true; }
+    return false;
+  };
+  if (item.name === 'Graveward Brooch') {
+    const canTrigger = entry.isEquipped && character.healthPoints === 0 && remainingUses > 0;
+    return <button type="button" disabled={!canTrigger} onClick={() => {
+      if (!canTrigger) return;
+      const healthPoints = Math.min(character.maxHealthPoints, character.healthPoints + 3);
+      onChange({ healthPoints, inventoryItems: spendUse() });
+      setNotice('Graveward triggered: regained 3 HP and its use was spent. Do not gain Exhaustion from this drop below 0 HP.');
+    }} className="rounded-lg bg-rose-700 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">Trigger Graveward • at 0 HP</button>;
+  }
+  if (item.name === 'Bag of Badger Beads') return <button type="button" disabled={remainingUses <= 0 || outOfAP || !badger} onClick={() => {
+    if (failIfUnavailable() || !badger) return;
+    onChange({
+      currentAP: character.currentAP - actionPointCost,
+      inventoryItems: spendUse(),
+      build: { ...build, sheetCompanions: [...(build.sheetCompanions ?? []), sourceMonsterCompanion(badger)] },
+    });
+    setNotice('Badger summoned in Misc → Pets & Summons. Sustain it each Turn; it disappears after 1 hour if maintained.');
+  }} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">Throw Bead • {actionPointCost} AP • Summon Badger</button>;
+
+  const apply = () => {
+    if (failIfUnavailable()) return;
+    const effectTarget = target.trim() || 'Self';
+    if (isPoison && !target.trim()) { setNotice('Enter the poisoned target, coated weapon, ammunition, or affected area first.'); return; }
+    const duration = trackedDuration(item);
+    const healingPerTurn = item.name === 'Elixir of Hydrablood' ? 3 : undefined;
+    const selfTarget = ['self', character.name.trim().toLowerCase()].includes(effectTarget.toLowerCase());
+    const healthPoints = healingPerTurn && selfTarget
+      ? Math.min(character.maxHealthPoints, character.healthPoints + healingPerTurn)
+      : character.healthPoints;
+    const effect: CharacterTrackedEffect = {
+      id: generateUUID(),
+      name: item.magicFeatures?.[0]?.name ?? item.name,
+      sourceItemID: item.id,
+      kind: isPoison ? 'Poison' : 'Consumable',
+      target: effectTarget,
+      description: item.magicFeatures?.map(({ name, description }) => `${name}\n${description}`).join('\n\n') || item.mechanics,
+      durationLabel: duration.label,
+      tags: item.properties,
+      remainingRounds: duration.rounds,
+      healingPerTurn,
+    };
+    let sheetTrackedEffects = [...(build.sheetTrackedEffects ?? []), effect];
+    let sheetConditionLevels = build.sheetConditionLevels;
+    let notice = `${item.name} used on ${effectTarget}${healingPerTurn && selfTarget ? `: restored ${healthPoints - character.healthPoints} HP immediately` : ''}.`;
+    if (item.name === 'Golden Medicinal Apple') {
+      const before = build.sheetTrackedEffects?.length ?? 0;
+      sheetTrackedEffects = (build.sheetTrackedEffects ?? []).filter(({ kind, tags }) => kind !== 'Poison' || !tags?.includes('Basic Poison'));
+      notice = `${item.name} used on ${effectTarget}: cured all qualifying Basic Poisons and Diseases${selfTarget ? `; removed ${before - sheetTrackedEffects.length} tracked Basic Poison effect(s)` : ''}.`;
+    } else if (item.name === 'Holy Water' && actionLabel === 'Apply to Creature') {
+      sheetTrackedEffects = build.sheetTrackedEffects ?? [];
+      if (selfTarget) {
+        sheetConditionLevels = { ...build.sheetConditionLevels };
+        ['Dazed', 'Deafened', 'Exposed', 'Hindered', 'Impaired', 'Intimidated', 'Slowed', 'Stunned', 'Taunted'].forEach((condition) => {
+          const remaining = Math.max(0, (sheetConditionLevels[condition] ?? 0) - 1);
+          if (remaining) sheetConditionLevels[condition] = remaining;
+          else delete sheetConditionLevels[condition];
+        });
+      }
+      notice = `${item.name} applied to ${effectTarget}: remove 1 stack of each listed Condition${selfTarget ? ' (the sheet has been updated)' : ''}.`;
+    } else if (item.name === 'Holy Water' && actionLabel === 'Throw') {
+      sheetTrackedEffects = build.sheetTrackedEffects ?? [];
+      onRoll?.('Holy Water — Spell Attack vs Fiend/Undead AD • 3 Radiant damage', itemSpellCheck);
+      notice = `${item.name} thrown at ${effectTarget}: roll the Spell Attack against each Fiend or Undead in the 1 Space Aura.`;
+    } else if (duration.label.startsWith('Resolve immediately')) {
+      sheetTrackedEffects = build.sheetTrackedEffects ?? [];
+      if (/Make a Spell Check/i.test(item.mechanics)) onRoll?.(`${item.name} — Spell Check`, itemSpellCheck);
+      notice += ' Resolve its printed effect now.';
+    } else {
+      notice += ' Track the effect above.';
+    }
+    onChange({
+      currentAP: character.currentAP - actionPointCost,
+      healthPoints,
+      inventoryItems: spendUse(),
+      build: { ...build, sheetTrackedEffects, sheetConditionLevels },
+    });
+    setNotice(notice);
+  };
+  return <div className="flex min-w-[16rem] grow flex-wrap gap-2 rounded-xl border border-cyan-400/15 bg-cyan-950/10 p-2">
+    {actionChoices.length > 1 && <select value={actionLabel} onChange={(event) => setActionLabel(event.target.value)} className={`${fieldClass} min-w-40`} aria-label={`${item.name} action`}>{actionChoices.map(({ label }) => <option key={label}>{label}</option>)}</select>}
+    <input value={target} onChange={(event) => setTarget(event.target.value)} className={`${fieldClass} min-w-40 grow`} placeholder={isPoison ? 'Target, coated item, or area…' : 'Target (defaults to Self)…'} aria-label={`${item.name} target`} />
+    <button type="button" disabled={remainingUses <= 0 || outOfAP || (isPoison && !target.trim())} onClick={apply} className="rounded-lg bg-cyan-700 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">{actionLabel}{actionPointCost ? ` • ${actionPointCost} AP` : ''}</button>
+  </div>;
+}
+
 function EquipmentTab({ character, equipmentCatalog, onChange, onRoll }: { character: Character; equipmentCatalog: EquipmentCatalogItem[]; onChange: CharacterSheetTabContentProps['onChange']; onRoll: CharacterSheetTabContentProps['onRoll'] }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<EquipmentCategory | 'All' | 'Custom Items'>('All');
@@ -1019,6 +1247,8 @@ function EquipmentTab({ character, equipmentCatalog, onChange, onRoll }: { chara
   const addCustomEquipment = useCampaignStore((state) => state.addCustomEquipment);
   const updateCustomEquipment = useCampaignStore((state) => state.updateCustomEquipment);
   const removeCustomEquipment = useCampaignStore((state) => state.removeCustomEquipment);
+  const { monsters: sourceMonsters } = useSourceMonsters();
+  const badger = sourceMonsters.find(({ id }) => id === 'MagicalConsumables-Monster-Badger');
   const customItemIDs = useMemo(() => new Set(customEquipmentList.map(({ id }) => id)), [customEquipmentList]);
   const propertyOptions = useMemo(() => Array.from(new Set(
     equipmentCatalog.filter((item) => !customItemIDs.has(item.id)).flatMap((item) => item.properties),
@@ -1107,7 +1337,7 @@ function EquipmentTab({ character, equipmentCatalog, onChange, onRoll }: { chara
     });
     setNotice(`${item.name} ${entry.isEquipped ? 'stowed' : `equipped${item.requiresAttunement ? ' and Attuned' : ''}`}${actionPointCost ? ` for ${actionPointCost} AP` : ''}.`);
   };
-  return <div><div className="mb-6"><SectionHeading eyebrow="Carried Gear" title="Inventory & Equipped Gear" /><p className="mt-1 text-sm text-slate-500">Add items here or from the main Equipment directory. New items enter your inventory unequipped; armor and hand limits are enforced when equipping.</p></div><details ref={catalogDetailsRef} className="group mb-6 rounded-2xl border border-violet-400/20 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-center justify-between gap-3"><span className="font-black text-violet-100">+ Add Equipment</span><span className="flex items-center gap-3"><button type="button" onClick={openCustomItemForm} className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-xs font-bold text-violet-200 hover:bg-violet-500/20">+ Add Custom Item</button><span className="text-xs font-bold text-violet-300 group-open:hidden">Open catalog</span><span className="hidden text-xs font-bold text-violet-300 group-open:inline">Close catalog</span></span></summary><div className="mt-4 border-t border-white/5 pt-4">{showCustomItemForm && <div className="mb-4 rounded-xl border border-violet-400/20 bg-violet-500/5 p-3"><h3 className="text-sm font-black text-violet-200">Create Custom Item</h3><label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Name<input value={customItemName} onChange={(event) => setCustomItemName(event.target.value)} className={`${fieldClass} mt-1 w-full`} placeholder="Item name" /></label><label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Item Highlight (optional)<input value={customItemHighlight} onChange={(event) => setCustomItemHighlight(event.target.value)} className={`${fieldClass} mt-1 w-full`} placeholder="A short standout detail…" /></label><label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Description<textarea value={customItemDescription} onChange={(event) => setCustomItemDescription(event.target.value)} className={`${fieldClass} mt-1 min-h-20 w-full resize-y`} placeholder="What the item is or does…" /></label><div className="mt-3 grid grid-cols-2 gap-3"><label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Category<select value={customItemCategory} onChange={(event) => setCustomItemCategory(event.target.value as EquipmentCategory)} className={`${fieldClass} mt-1 w-full`}>{Object.values(EquipmentCategoryValues).map((value) => <option key={value} value={value}>{value}</option>)}</select></label><label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Slot<select value={customItemSlot} onChange={(event) => setCustomItemSlot(event.target.value as EquipmentSlot)} className={`${fieldClass} mt-1 w-full`}>{Object.values(EquipmentSlotValues).map((value) => <option key={value} value={value}>{value}</option>)}</select></label></div><PillMultiSelect label="Properties" hint="Some Properties apply automatic effects — e.g. Weapons: Guard; Spell Focuses: Channeling, Vicious, Powerful, Protective, Warded." options={propertyOptions} selected={customItemProperties} onToggle={(value) => setCustomItemProperties((current) => toggleValue(current, value))} /><PillMultiSelect label="Routed-Character Sheet Effects" hint="Applies while the item is equipped, no matter its Category." options={routedEffectOptions} selected={customItemRoutedEffects} onToggle={(value) => setCustomItemRoutedEffects((current) => toggleValue(current, value))} tone="emerald" /><div className="mt-3 flex justify-end gap-2"><button type="button" onClick={() => setShowCustomItemForm(false)} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Cancel</button><button type="button" disabled={!customItemName.trim()} onClick={createCustomItem} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-35">Create &amp; Add to Inventory</button></div></div>}<div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]"><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} className={fieldClass} placeholder="Search names, types, properties, or uses…" /><select value={category} onChange={(event) => setCategory(event.target.value as EquipmentCategory | 'All' | 'Custom Items')} className={fieldClass}><option value="All">All categories</option>{Object.values(EquipmentCategoryValues).map((value) => <option key={value} value={value}>{value}</option>)}<option value="Custom Items">Custom Items</option></select></div>{notice && <p className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200" role="status">{notice}</p>}<div className="mt-4 grid max-h-[28rem] gap-3 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">{filtered.map((item) => <div key={item.id} className="rounded-xl border border-white/10 bg-slate-900/75 p-3"><div className="flex items-start justify-between gap-2"><div><h3 className="font-black text-slate-100">{item.name}</h3><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">{item.category} • {item.subtype}</p></div><span className="rounded-full bg-slate-800 px-2 py-1 text-[10px] font-bold text-slate-300">{item.slot}</span></div><p className="mt-3 whitespace-pre-wrap text-xs leading-5 text-slate-400">{item.summary}</p><div className="mt-3 flex gap-2"><button type="button" onClick={() => addItem(item)} className="flex-1 rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white hover:bg-violet-600">Add Unequipped</button>{customItemIDs.has(item.id) && <button type="button" onClick={() => { if (window.confirm(`Permanently delete ${item.name}? It will also be removed from every character's inventory.`)) removeCustomEquipment(item.id); }} className="rounded-lg border border-red-400/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-300 hover:bg-red-500/20">Delete</button>}</div></div>)}</div>{filtered.length === 0 && <p className="mt-4 rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">No equipment matches those filters.</p>}</div></details>{inventory.length + character.equipment.length > 0 ? <div className="space-y-2">{inventory.map((entry) => { const item = equipmentCatalog.find(({ id }) => id === entry.equipmentID); if (!item) return <div key={entry.id} className="rounded-lg border border-amber-400/20 bg-amber-500/5 p-3 text-amber-200">Missing catalog item: {entry.equipmentID}</div>; const potionHealing = healingPotionAmount(item); const useCapacity = equipmentUseCapacity(item); const usageLabel = equipmentUsageLabel(item); const medicineUses = item.name === 'Medicine Kit' ? entry.remainingUses ?? entry.quantity * 5 : undefined; const trackedUses = item.charges !== undefined ? entry.remainingUses ?? entry.quantity * item.charges : undefined; const maximumUses = entry.quantity * (useCapacity ?? 0); return <MoreDetails key={entry.id} title={item.name} subtitle={`${item.category} • ${item.subtype} • ${item.slot}${entry.isEquipped ? ' • Equipped' : ' • Unequipped'}${entry.isAttuned ? ' • Attuned' : ''}${medicineUses !== undefined ? ` • ${medicineUses}/${maximumUses} uses` : ''}${trackedUses !== undefined ? ` • ${trackedUses}/${maximumUses} ${usageLabel}` : ''}`}><p className="whitespace-pre-wrap font-semibold text-violet-200">{item.summary}</p><p className="mt-3 whitespace-pre-wrap">{item.mechanics}</p><div className="mt-4 flex flex-wrap items-center gap-2"><button type="button" onClick={() => updateInventory(setInventoryQuantity(inventory, entry.id, entry.quantity - 1, useCapacity))} className="h-8 w-8 rounded bg-slate-800">−</button><span className="font-black text-slate-200">Quantity {entry.quantity}</span><button type="button" onClick={() => updateInventory(setInventoryQuantity(inventory, entry.id, entry.quantity + 1, useCapacity))} className="h-8 w-8 rounded bg-slate-800">+</button>{trackedUses !== undefined && <button type="button" disabled={trackedUses <= 0} onClick={() => updateInventory(spendInventoryUse(inventory, entry.id, useCapacity))} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Spend {usageLabel === 'Uses' ? 'Use' : 'Charge'}</button>}{trackedUses !== undefined && <button type="button" disabled={trackedUses >= maximumUses} onClick={() => updateInventory(inventory.map((candidate) => candidate.id === entry.id ? { ...candidate, remainingUses: Math.min(maximumUses, trackedUses + 1) } : candidate))} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Restore {usageLabel === 'Uses' ? 'Use' : 'Charge'}</button>}{potionHealing > 0 && <button type="button" onClick={() => drinkPotion(entry, item)} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Drink • Heal {potionHealing} HP</button>}{medicineUses !== undefined && <button type="button" disabled={medicineUses <= 0 || character.currentAP < 1} onClick={() => spendMedicineKitUse(entry, 'Wound')} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Treat Wound • 1 AP + Roll</button>}{medicineUses !== undefined && <button type="button" disabled={medicineUses <= 0 || character.currentAP < 1} onClick={() => spendMedicineKitUse(entry, 'Poison or Disease')} className="rounded-lg bg-teal-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Treat Poison/Disease • 1 AP + Roll</button>}{medicineUses !== undefined && medicineUses < maximumUses && <button type="button" onClick={() => resupplyMedicineKit(entry)} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold text-white">Resupply +1 Use</button>}{isEquipmentEquippable(item) && <button type="button" disabled={(item.category === EquipmentCategoryValues.SHIELDS || item.properties.includes('Cumbersome')) && character.currentAP < 1} onClick={() => toggleGear(entry, item)} className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">{entry.isEquipped ? 'Stow' : 'Equip'}{item.category === EquipmentCategoryValues.SHIELDS || item.properties.includes('Cumbersome') ? ' • 1 AP' : ''}</button>}{customItemIDs.has(item.id) ? <CustomItemActions item={item} propertyOptions={propertyOptions} onSave={(values) => updateCustomEquipment({ ...item, ...values })} onDeletePermanently={() => removeCustomEquipment(item.id)} onRemoveFromCharacter={() => updateInventory(inventory.filter(({ id }) => id !== entry.id))} /> : <button type="button" onClick={() => updateInventory(inventory.filter(({ id }) => id !== entry.id))} className="rounded-lg px-3 py-2 text-xs font-bold text-red-300">Remove</button>}</div></MoreDetails>; })}{character.equipment.map((item) => <div key={item.id} className="rounded-lg bg-slate-950/45 p-3 text-slate-300">{item.name} ×{item.quantity} <span className="text-xs text-slate-500">legacy item</span></div>)}</div> : <p className="text-slate-500">No equipment in inventory.</p>}</div>;
+  return <div><TrackedEquipmentEffects character={character} onChange={onChange} setNotice={setNotice} /><div className="mb-6"><SectionHeading eyebrow="Carried Gear" title="Inventory & Equipped Gear" /><p className="mt-1 text-sm text-slate-500">Add items here or from the main Equipment directory. New items enter your inventory unequipped; armor and hand limits are enforced when equipping.</p></div><details ref={catalogDetailsRef} className="group mb-6 rounded-2xl border border-violet-400/20 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-center justify-between gap-3"><span className="font-black text-violet-100">+ Add Equipment</span><span className="flex items-center gap-3"><button type="button" onClick={openCustomItemForm} className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-xs font-bold text-violet-200 hover:bg-violet-500/20">+ Add Custom Item</button><span className="text-xs font-bold text-violet-300 group-open:hidden">Open catalog</span><span className="hidden text-xs font-bold text-violet-300 group-open:inline">Close catalog</span></span></summary><div className="mt-4 border-t border-white/5 pt-4">{showCustomItemForm && <div className="mb-4 rounded-xl border border-violet-400/20 bg-violet-500/5 p-3"><h3 className="text-sm font-black text-violet-200">Create Custom Item</h3><label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Name<input value={customItemName} onChange={(event) => setCustomItemName(event.target.value)} className={`${fieldClass} mt-1 w-full`} placeholder="Item name" /></label><label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Item Highlight (optional)<input value={customItemHighlight} onChange={(event) => setCustomItemHighlight(event.target.value)} className={`${fieldClass} mt-1 w-full`} placeholder="A short standout detail…" /></label><label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Description<textarea value={customItemDescription} onChange={(event) => setCustomItemDescription(event.target.value)} className={`${fieldClass} mt-1 min-h-20 w-full resize-y`} placeholder="What the item is or does…" /></label><div className="mt-3 grid grid-cols-2 gap-3"><label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Category<select value={customItemCategory} onChange={(event) => setCustomItemCategory(event.target.value as EquipmentCategory)} className={`${fieldClass} mt-1 w-full`}>{Object.values(EquipmentCategoryValues).map((value) => <option key={value} value={value}>{value}</option>)}</select></label><label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Slot<select value={customItemSlot} onChange={(event) => setCustomItemSlot(event.target.value as EquipmentSlot)} className={`${fieldClass} mt-1 w-full`}>{Object.values(EquipmentSlotValues).map((value) => <option key={value} value={value}>{value}</option>)}</select></label></div><PillMultiSelect label="Properties" hint="Some Properties apply automatic effects — e.g. Weapons: Guard; Spell Focuses: Channeling, Vicious, Powerful, Protective, Warded." options={propertyOptions} selected={customItemProperties} onToggle={(value) => setCustomItemProperties((current) => toggleValue(current, value))} /><PillMultiSelect label="Routed-Character Sheet Effects" hint="Applies while the item is equipped, no matter its Category." options={routedEffectOptions} selected={customItemRoutedEffects} onToggle={(value) => setCustomItemRoutedEffects((current) => toggleValue(current, value))} tone="emerald" /><div className="mt-3 flex justify-end gap-2"><button type="button" onClick={() => setShowCustomItemForm(false)} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Cancel</button><button type="button" disabled={!customItemName.trim()} onClick={createCustomItem} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-35">Create &amp; Add to Inventory</button></div></div>}<div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]"><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} className={fieldClass} placeholder="Search names, types, properties, or uses…" /><select value={category} onChange={(event) => setCategory(event.target.value as EquipmentCategory | 'All' | 'Custom Items')} className={fieldClass}><option value="All">All categories</option>{Object.values(EquipmentCategoryValues).map((value) => <option key={value} value={value}>{value}</option>)}<option value="Custom Items">Custom Items</option></select></div>{notice && <p className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200" role="status">{notice}</p>}<div className="mt-4 grid max-h-[28rem] gap-3 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">{filtered.map((item) => <div key={item.id} className="rounded-xl border border-white/10 bg-slate-900/75 p-3"><div className="flex items-start justify-between gap-2"><div><h3 className="font-black text-slate-100">{item.name}</h3><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">{item.category} • {item.subtype}</p></div><span className="rounded-full bg-slate-800 px-2 py-1 text-[10px] font-bold text-slate-300">{item.slot}</span></div><p className="mt-3 whitespace-pre-wrap text-xs leading-5 text-slate-400">{item.summary}</p><div className="mt-3 flex gap-2"><button type="button" onClick={() => addItem(item)} className="flex-1 rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white hover:bg-violet-600">Add Unequipped</button>{customItemIDs.has(item.id) && <button type="button" onClick={() => { if (window.confirm(`Permanently delete ${item.name}? It will also be removed from every character's inventory.`)) removeCustomEquipment(item.id); }} className="rounded-lg border border-red-400/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-300 hover:bg-red-500/20">Delete</button>}</div></div>)}</div>{filtered.length === 0 && <p className="mt-4 rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">No equipment matches those filters.</p>}</div></details>{inventory.length + character.equipment.length > 0 ? <div className="space-y-2">{inventory.map((entry) => { const item = equipmentCatalog.find(({ id }) => id === entry.equipmentID); if (!item) return <div key={entry.id} className="rounded-lg border border-amber-400/20 bg-amber-500/5 p-3 text-amber-200">Missing catalog item: {entry.equipmentID}</div>; const potionHealing = healingPotionAmount(item); const useCapacity = equipmentUseCapacity(item); const usageLabel = equipmentUsageLabel(item); const medicineUses = item.name === 'Medicine Kit' ? entry.remainingUses ?? entry.quantity * 5 : undefined; const trackedUses = item.charges !== undefined ? entry.remainingUses ?? entry.quantity * item.charges : undefined; const maximumUses = entry.quantity * (useCapacity ?? 0); return <MoreDetails key={entry.id} title={item.name} subtitle={`${item.category} • ${item.subtype} • ${item.slot}${entry.isEquipped ? ' • Equipped' : ' • Unequipped'}${entry.isAttuned ? ' • Attuned' : ''}${medicineUses !== undefined ? ` • ${medicineUses}/${maximumUses} uses` : ''}${trackedUses !== undefined ? ` • ${trackedUses}/${maximumUses} ${usageLabel}` : ''}`}><p className="whitespace-pre-wrap font-semibold text-violet-200">{item.summary}</p><p className="mt-3 whitespace-pre-wrap">{item.mechanics}</p><div className="mt-4 flex flex-wrap items-center gap-2"><button type="button" onClick={() => updateInventory(setInventoryQuantity(inventory, entry.id, entry.quantity - 1, useCapacity))} className="h-8 w-8 rounded bg-slate-800">−</button><span className="font-black text-slate-200">Quantity {entry.quantity}</span><button type="button" onClick={() => updateInventory(setInventoryQuantity(inventory, entry.id, entry.quantity + 1, useCapacity))} className="h-8 w-8 rounded bg-slate-800">+</button>{trackedUses !== undefined && !isManagedSourceConsumable(item) && <button type="button" disabled={trackedUses <= 0} onClick={() => updateInventory(spendInventoryUse(inventory, entry.id, useCapacity))} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Spend {usageLabel === 'Uses' ? 'Use' : 'Charge'}</button>}{trackedUses !== undefined && <button type="button" disabled={trackedUses >= maximumUses} onClick={() => updateInventory(inventory.map((candidate) => candidate.id === entry.id ? { ...candidate, remainingUses: Math.min(maximumUses, trackedUses + 1) } : candidate))} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Restore {usageLabel === 'Uses' ? 'Use' : 'Charge'}</button>}{potionHealing > 0 && !isManagedSourceConsumable(item) && <button type="button" onClick={() => drinkPotion(entry, item)} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Drink • Heal {potionHealing} HP</button>}<SourceConsumableActions character={character} entry={entry} item={item} inventory={inventory} badger={badger} onChange={onChange} setNotice={setNotice} />{medicineUses !== undefined && <button type="button" disabled={medicineUses <= 0 || character.currentAP < 1} onClick={() => spendMedicineKitUse(entry, 'Wound')} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Treat Wound • 1 AP + Roll</button>}{medicineUses !== undefined && <button type="button" disabled={medicineUses <= 0 || character.currentAP < 1} onClick={() => spendMedicineKitUse(entry, 'Poison or Disease')} className="rounded-lg bg-teal-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Treat Poison/Disease • 1 AP + Roll</button>}{medicineUses !== undefined && medicineUses < maximumUses && <button type="button" onClick={() => resupplyMedicineKit(entry)} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold text-white">Resupply +1 Use</button>}{isEquipmentEquippable(item) && <button type="button" disabled={(item.category === EquipmentCategoryValues.SHIELDS || item.properties.includes('Cumbersome')) && character.currentAP < 1} onClick={() => toggleGear(entry, item)} className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">{entry.isEquipped ? 'Stow' : 'Equip'}{item.category === EquipmentCategoryValues.SHIELDS || item.properties.includes('Cumbersome') ? ' • 1 AP' : ''}</button>}{customItemIDs.has(item.id) ? <CustomItemActions item={item} propertyOptions={propertyOptions} onSave={(values) => updateCustomEquipment({ ...item, ...values })} onDeletePermanently={() => removeCustomEquipment(item.id)} onRemoveFromCharacter={() => updateInventory(inventory.filter(({ id }) => id !== entry.id))} /> : <button type="button" onClick={() => updateInventory(inventory.filter(({ id }) => id !== entry.id))} className="rounded-lg px-3 py-2 text-xs font-bold text-red-300">Remove</button>}</div></MoreDetails>; })}{character.equipment.map((item) => <div key={item.id} className="rounded-lg bg-slate-950/45 p-3 text-slate-300">{item.name} ×{item.quantity} <span className="text-xs text-slate-500">legacy item</span></div>)}</div> : <p className="text-slate-500">No equipment in inventory.</p>}</div>;
 }
 
 const familiarRules = `Familiar Bond: Your Familiar shares your HP. If you both take damage from the same source, you only take 1 instance of that damage. While your Familiar occupies your Space, it can't be targeted by Attacks.

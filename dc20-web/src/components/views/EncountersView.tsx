@@ -6,7 +6,7 @@ import { useCampaignStore } from '../../store/campaignStore';
 import type { Encounter, Monster } from '../../types/models';
 import { generateUUID } from '../../utils/gameUtils';
 import { RuleAwareText } from '../rules/RuleAwareText';
-import { combatFromEncounter, encounterMetrics, monsterBudget, monsterLevelLabel } from '../../utils/monsterRules';
+import { combatFromEncounter, encounterMetrics, monsterBudget, monsterDisplayRole, monsterLevelLabel } from '../../utils/monsterRules';
 import { CharacterAvatar } from '../character/CharacterAvatar';
 import type { ContentFocusRequest } from '../../navigation/appNavigation';
 
@@ -284,7 +284,7 @@ function EncounterEditor({ encounter, sourceMonsters, customMonsters, monsterToA
           <select className={`${inputClass} min-w-0 grow`} value={monsterToAdd} onChange={(event) => onMonsterChoice(event.target.value)}>
             <option value="">Choose a monster…</option>
             <optgroup label="Sourcebook Monsters">
-              {sourceMonsters.map((monster) => <option key={monster.id} value={monster.id}>{monster.name} — {monsterLevelLabel(monster.level)} {monster.type} {monster.role}</option>)}
+              {sourceMonsters.map((monster) => <option key={monster.id} value={monster.id}>{monster.name} — {monsterLevelLabel(monster.level)} {monster.type} {monsterDisplayRole(monster)}</option>)}
             </optgroup>
             {customMonsters.length > 0 && <optgroup label="Custom Monsters">
               {customMonsters.map((monster) => <option key={monster.id} value={monster.id}>{monster.name} — {monsterLevelLabel(monster.level)} {monster.type} {monster.role}</option>)}
@@ -299,7 +299,7 @@ function EncounterEditor({ encounter, sourceMonsters, customMonsters, monsterToA
             <div key={entry.id} className="grid items-center gap-3 rounded-xl border border-white/8 bg-slate-950/55 p-4 md:grid-cols-[1fr_auto_auto_auto]">
               <div>
                 <div className="font-black text-slate-100">{entry.monster.name}</div>
-                <div className="mt-1 text-xs text-slate-500">{monsterLevelLabel(entry.monster.level)} • {entry.monster.type} • {entry.monster.role} • {formatBudget(monsterBudget(entry.monster))} budget each</div>
+                <div className="mt-1 text-xs text-slate-500">{monsterLevelLabel(entry.monster.level)} • {entry.monster.type} • {monsterDisplayRole(entry.monster)} • {formatBudget(monsterBudget(entry.monster))} budget each</div>
               </div>
               <div className="flex items-center rounded-lg border border-white/8 bg-slate-900 p-1">
                 <button type="button" onClick={() => setEntryCount(entry.id, entry.count - 1)} className="h-8 w-8 rounded text-slate-300 hover:bg-white/5">−</button>

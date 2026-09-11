@@ -10,6 +10,7 @@ import {
   encounterMetrics,
   getMonsterRecommendation,
   monsterBudget,
+  monsterDisplayRole,
   synchronizeCombatant,
 } from './monsterRules';
 
@@ -177,6 +178,15 @@ describe('audited sourcebook library', () => {
       'Zombie',
     ]);
     expect(collection.every(({ sourcePage }) => sourcePage !== undefined && sourcePage >= 16 && sourcePage <= 37)).toBe(true);
+    expect(collection.find(({ name }) => name === 'Angelic Herald')).toMatchObject({
+      descriptionText: 'Humanoid celestials with skin tones ranging from bronze to gold, four large, feathered wings, and shining with a bright halo, Angelic Heralds wear elegant robes with golden adornments and wield long, golden spears.',
+      tactics: expect.stringContaining('They expose their foes with their Radiant Aura'),
+      lore: expect.stringContaining('The Heralds are the first line of offense in angelic armies.'),
+    });
+    expect(collection.find(({ name }) => name === 'Animated Armor')?.abilities).toContainEqual(expect.objectContaining({
+      name: 'Pathcarver',
+      details: expect.stringContaining('Area Martial Attack vs AD, 4 Space Line'),
+    }));
     expect(collection.filter(({ speedType }) => speedType === 'Fly').map(({ name }) => name)).toEqual([
       'Angelic Herald',
       'Cherub',
@@ -261,6 +271,8 @@ describe('audited sourcebook library', () => {
       speed: 7,
       speedType: 'Fly',
     });
+    expect(monsterDisplayRole(monsters.find(({ name }) => name === 'Oculoth')!)).toBe('Lurker');
+    expect(monsterDisplayRole(createCustomMonster())).toBe(MonsterRoleValues.SOLDIER);
     expect(monsters.find(({ name }) => name === 'Psymanta')).toMatchObject({
       role: MonsterRoleValues.SOLDIER,
       publishedRole: 'Skirmisher',

@@ -10,14 +10,14 @@
       },
       {
         "cost": "1 AP",
-        "details": "Heal a creature within 5 Spaces. Make a DC 15 Spell Check: Failure restores 1 HP; Success restores 2 HP; Success (each 5) restores +1 HP.",
+        "details": "You heal a creature within 5 Spaces. Make a DC 15 Spell Check. Failure: Target regains 1 HP. Success: Target regains 2 HP. Success (each 5): +1 HP.",
         "id": "DC20A000-0000-4000-8000-000000000102",
         "kind": "Actions",
         "name": "Healing Word"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 2 Spaces, 1 Piercing +1 extra damage on Heavy Hits. Guiding Strike (+1 AP): Physical Save failure causes Attacks against the target to add a d4 for 1 Round.",
+        "details": "Melee Martial Attack vs PD, 2 Spaces, 1 Piercing + 1 extra damage on Heavy Hits.\n\n• (+1) Guiding Strike: Target makes a Physical Save. Failure: Attacks made against the target add a d4 to the Check for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000000103",
         "kind": "Actions",
         "name": "Spear"
@@ -31,14 +31,14 @@
       },
       {
         "cost": "3 AP",
-        "details": "MP Effect; Contest in a 5 Space Aura, Spell Check vs Repeated Charisma Save. Success: Frightened of you for 1 Round. Failure: immune for 1 day.",
+        "details": "(MP Effect) Contest, 5 Space Aura, Spell Check vs Repeated Charisma Save. Success: Target is Frightened of you for 1 Round. Failure: Target is immune to this effect for 1 day.",
         "id": "DC20A000-0000-4000-8000-000000000105",
         "kind": "Actions",
         "name": "Divine Proclamation"
       },
       {
         "cost": "1 AP",
-        "details": "When another creature within 5 Spaces makes a Save, it can add a d8 bonus die.",
+        "details": "When another creature within 5 Spaces makes a Save, they can add a d8 bonus die to that Save.",
         "id": "DC20A000-0000-4000-8000-000000000106",
         "kind": "Reactions",
         "name": "Divine Grace"
@@ -52,14 +52,14 @@
     "combatMastery": 2,
     "creatureType": "Celestial",
     "damage": 1,
-    "descriptionText": "A bronze-to-gold humanoid celestial with four feathered wings, a bright halo, elegant robes, and a long golden spear.",
+    "descriptionText": "Humanoid celestials with skin tones ranging from bronze to gold, four large, feathered wings, and shining with a bright halo, Angelic Heralds wear elegant robes with golden adornments and wield long, golden spears.",
     "hp": 19,
     "id": "DC200000-0000-4000-8000-000000000001",
     "immunities": "",
     "intelligence": 0,
     "languages": "All",
     "level": 3,
-    "lore": "Heralds form the first line of angelic armies and arrive early to warn mortals before cosmic battles.",
+    "lore": "The Heralds are the first line of offense in angelic armies. They’re deemed heralds, as they’re always seen first when a battle of otherworldly powers begins. If a cosmic fight is to happen somewhere populated by mortals, they arrive early to warn the people and clear out the area.",
     "might": 0,
     "name": "Angelic Herald",
     "notes": "",
@@ -79,7 +79,7 @@
     "sourcePage": 16,
     "speed": 8,
     "speedType": "Fly",
-    "tactics": "Exposes foes with radiant magic, controls groups with auras, heals Bloodied allies, and supports them with Inspire.",
+    "tactics": "They expose their foes with their Radiant Aura, then strike them with their Spears. When surrounded, they use Auras to control and harm their enemies. If they have an ally, they’ll heal them with their Healing Word when they become Bloodied and give them Inspiration to keep fighting.",
     "type": "Standard",
     "vulnerabilities": "Umbral (2)"
   },
@@ -87,42 +87,42 @@
     "abilities": [
       {
         "cost": "",
-        "details": "While motionless, you’re indistinguishable from a suit of armor.",
+        "details": "While you remain motionless, you’re indistinguishable from a suit of armor.",
         "id": "DC20A000-0000-4000-8000-000000000201",
         "kind": "Features",
         "name": "False Appearance"
       },
       {
         "cost": "",
-        "details": "While Bloodied, Speed increases by 2 and PD and AD are reduced by 2.",
+        "details": "While you’re Bloodied, your Speed is increased by 2 and your PD and AD are reduced by 2.",
         "id": "DC20A000-0000-4000-8000-000000000202",
         "kind": "Features",
         "name": "Lost Bulk"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 1 Bludgeoning +1 extra damage on a Heavy Hit. Bash (+1 AP): Might Save failure pushes the target 1 Space, +1 Space per Failure (each 5).",
+        "details": "Melee Martial Attack vs PD, 1 Bludgeoning + 1 extra damage on a Heavy Hit.\n\n• (+1) Bash: Target makes a Might Save. Failure: Target is pushed 1 Space away from you. Failure (each 5): +1 Space.",
         "id": "DC20A000-0000-4000-8000-000000000203",
         "kind": "Actions",
         "name": "Mace"
       },
       {
         "cost": "2 AP",
-        "details": "Area Martial Attack vs AD, 4 Space Line, 1 Bludgeoning +1 extra damage on a Heavy Hit. Move to a Space adjacent to the area without provoking from targets or spending movement.",
+        "details": "Area Martial Attack vs AD, 4 Space Line, 1 Bludgeoning + 1 extra damage on a Heavy Hit. After Attacking, you can move to any Space within 1 Space of the area without provoking Opportunity Attacks from the targets and without spending your movement.",
         "id": "DC20A000-0000-4000-8000-000000000204",
         "kind": "Actions",
         "name": "Pathcarver"
       },
       {
         "cost": "2 AP",
-        "details": "Equip to a Medium or smaller non-Construct within 1 Space. You share its Space and movement, both become Slowed, and it gains +2 PD and +2 AD until the effect ends.",
+        "details": "Equip yourself to a Medium or smaller non-Construct creature within 1 Space that isn’t equipped by another Animated Armor. While equipped:\n\n• You and the target are Slowed. You occupy the same Space and move together.\n\n• The target has +2 PD and +2 AD.\n\n• This effect ends when you or the target dies, you use Equip on another creature, or you spend 1 AP unequip from the target and move into an unoccupied Space adjacent to it.",
         "id": "DC20A000-0000-4000-8000-000000000205",
         "kind": "Actions",
         "name": "Equip"
       },
       {
         "cost": "1 AP",
-        "details": "When another creature within 1 Space is Hit, share the damage; you have Resistance (Half) to your share.",
+        "details": "When another creature within 1 Space is Hit by an Attack, the damage is shared between you and the target. You have Resistance (Half) to any damage you take from the Attack.",
         "id": "DC20A000-0000-4000-8000-000000000206",
         "kind": "Reactions",
         "name": "Protect"
@@ -136,14 +136,14 @@
     "combatMastery": 1,
     "creatureType": "Construct",
     "damage": 1,
-    "descriptionText": "A hollow suit of armor animated by magic, most often made from sturdy plate mail.",
+    "descriptionText": "These mobile suits of armor are usually completely hollow on the inside, animated by magic that gives them a semblance of life. The types of armor they’re made from vary widely, but a sturdy plate mail is the most popular and most effective.",
     "hp": 10,
     "id": "DC200000-0000-4000-8000-000000000002",
     "immunities": "Poison; Bleeding, Exhausted, Poisoned",
     "intelligence": -2,
     "languages": "Languages of its creator; cannot speak",
     "level": 1,
-    "lore": "Animated Armors serve as tireless guards for mages, wealthy patrons, and undisturbed locations.",
+    "lore": "An Animated Armor makes for a great guard for a location that someone wants to keep undisturbed. They’re usually used by mages who make them themselves or by those who are wealthy enough to have someone make the construct for them. They’re kept as resolute watchers who can guard an area at all times, attacking anyone who should pass that doesn’t have clearance by their master.",
     "might": 3,
     "name": "Animated Armor",
     "notes": "",
@@ -162,7 +162,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 17,
     "speed": 4,
-    "tactics": "Pushes enemies into position, carves through lines, equips itself to allies, and protects nearby creatures.",
+    "tactics": "They control the battlefield with attacks that push targets into each other (Mace Bash), and then running through lines of enemies (Pathcarver). If they have a humanoid ally, they’ll Equip themselves to their ally to give them extra defense. When an ally is targeted, they Protect them every chance they get.",
     "type": "Standard",
     "vulnerabilities": "Corrosion (Double)"
   },
@@ -170,7 +170,7 @@
     "abilities": [
       {
         "cost": "",
-        "details": "While motionless, you’re indistinguishable from a doll.",
+        "details": "While you remain motionless, you’re indistinguishable from a doll",
         "id": "DC20A000-0000-4000-8000-000000000301",
         "kind": "Features",
         "name": "False Appearance"
@@ -198,7 +198,7 @@
       },
       {
         "cost": "1 AP",
-        "details": "When another creature within 1 Space is Hit, share the damage; you have Resistance (Half) to your share.",
+        "details": "When another creature within 1 Space is Hit by an Attack, the damage is shared between you and the target. You have Resistance (Half) to any damage you take from the Attack.",
         "id": "DC20A000-0000-4000-8000-000000000305",
         "kind": "Reactions",
         "name": "Protect"
@@ -211,14 +211,14 @@
     "charisma": 2,
     "creatureType": "Construct",
     "damage": 1,
-    "descriptionText": "A beautiful porcelain doll in fine but durable clothes whose feet clatter as it moves.",
+    "descriptionText": "A beautiful porcelain doll in fine but durable clothes. It’s feet gently clatter against the floor as it moves.",
     "hp": 7,
     "id": "DC200000-0000-4000-8000-000000000003",
     "immunities": "Poison; Bleeding, Exhausted, Poisoned",
     "intelligence": 0,
     "languages": "Languages of its creator; cannot speak",
     "level": -1,
-    "lore": "Animated Dolls are companions and protectors often created for noble children.",
+    "lore": "Animated Dolls are frequently companions to noble children. They’re created to be caring and supportive of their owner’s needs, and to protect their owner should there be danger.",
     "might": -2,
     "name": "Animated Doll",
     "notes": "",
@@ -236,7 +236,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 18,
     "speed": 4,
-    "tactics": "Stays close to its owner, protects them, and uses Encourage and Help to provide support.",
+    "tactics": "They try to stay close to their owners, Protecting them from any harm. When possible, they Encourage and Help their owners.",
     "type": "Standard",
     "vulnerabilities": "Bludgeoning (Double)"
   },
@@ -244,28 +244,28 @@
     "abilities": [
       {
         "cost": "",
-        "details": "Deal +1 damage to creatures you’re Hidden from or that are Flanked, Prone, or subjected to at least one Condition other than Invisible.",
+        "details": "You deal +1 damage to creatures you’re Hidden from or are Flanked, Prone, or subjected to at least 1 Condition other than Invisible.",
         "id": "DC20A000-0000-4000-8000-000000000401",
         "kind": "Features",
         "name": "Cheap Shot"
       },
       {
         "cost": "1 AP",
-        "details": "Move up to Speed, then make a Melee Martial Attack vs PD for 1 Slashing. Savage Cuts (+1 AP): Physical Save failure begins Bleeding that cannot be removed by regaining HP. Sunder (+1 AP): Physical Save failure gives Physical Vulnerability (1) for 1 Round.",
+        "details": "Move up to your Speed, then make a Melee Martial Attack vs PD, 1 Slashing.\n\n• (+1) Savage Cuts: Physical Save. Failure: Target begins Bleeding. While Bleeding from this, the target can’t remove Bleeding by regaining HP.\n\n• (+1) Sunder: Physical Save. Failure: Target gains Physical Vulnerability (1) for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000000402",
         "kind": "Actions",
         "name": "Charging Axe"
       },
       {
         "cost": "2 AP",
-        "details": "Move up to Speed, then make an Area Martial Attack vs AD, 1 Space Aura, 1 Slashing. The next Attack against you has ADV.",
+        "details": "Move up to your Speed, then make an Area Martial Attack vs AD, 1 Space Aura, 1 Slashing. The next Attack against you has ADV.",
         "id": "DC20A000-0000-4000-8000-000000000403",
         "kind": "Actions",
         "name": "Reckless Whirlwind"
       },
       {
         "cost": "2 AP",
-        "details": "Ranged Martial Attack vs PD, 15/45 Spaces, 2 Piercing. Piercing Round (+2 AP): becomes an Area Attack vs PD in a 3 Space Line from the target away from you.",
+        "details": "Ranged Martial Attack vs PD, 15/45 Spaces, 2 Piercing.\n\n• (+2) Piercing Round: The Attack becomes an Area Attack vs PD, 3 Space Line originating from the target, pointing away from you.",
         "id": "DC20A000-0000-4000-8000-000000000404",
         "kind": "Actions",
         "name": "Crossbow"
@@ -279,14 +279,14 @@
     "combatMastery": 1,
     "creatureType": "Humanoid",
     "damage": 1,
-    "descriptionText": "A battle-worn criminal with scars, tattoos, weapons, and a terse manner.",
+    "descriptionText": "Bandits are as diverse as the many cultures they come from, but all are well armed and battle worn. They frequently have scars and tattoos, and speak in gruff, terse tones.",
     "hp": 9,
     "id": "DC200000-0000-4000-8000-000000000004",
     "immunities": "",
     "intelligence": 0,
     "languages": "",
     "level": 0,
-    "lore": "Bandits prey on travelers from hidden bases near roads and trade routes.",
+    "lore": "Bandits are hardened criminals, abandoning civilization to prey on innocent travelers. They frequently set up a base of operations, then ambush travelers on nearby roads.",
     "might": 1,
     "name": "Bandit",
     "notes": "",
@@ -305,7 +305,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 18,
     "speed": 5,
-    "tactics": "Focuses fire on weak targets, uses Reckless Whirlwind while Flanked, and flees when heavily injured or outnumbered two to one.",
+    "tactics": "Focus fire on the weakest targets in range first. Will Reckless Whirlwind if Flanked, and will flee if heavily injured or outnumbered 2 to 1.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -313,7 +313,7 @@
     "abilities": [
       {
         "cost": "",
-        "details": "Other creatures of your choice within a 5 Space Aura have ADV on Saves against Intimidated.",
+        "details": "(5 Space Aura) Other creatures of your choice within the Aura have ADV on Saves against Intimidated.",
         "id": "DC20A000-0000-4000-8000-000000000501",
         "kind": "Features",
         "name": "Inspiring Aura"
@@ -327,28 +327,28 @@
       },
       {
         "cost": "1 AP",
-        "details": "Take the Help Action with a range of 5 Spaces.",
+        "details": "You take the Help Action with a range of 5 Spaces.",
         "id": "DC20A000-0000-4000-8000-000000000503",
         "kind": "Actions",
         "name": "Help"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 1 Slashing. Bleed (+1 AP): Repeated Physical Save failure causes Bleeding. Order Attack (+1 AP): an ally within 1 Space of the target makes an Opportunity Attack against it.",
+        "details": "Melee Martial Attack vs PD, 1 Slashing.\n\n• (+1) Bleed: Repeated Physical Save. Failure: Target is Bleeding.\n\n• (+1) Order Attack: An allied creature within 1 Space of the target makes an Opportunity Attack against the target.",
         "id": "DC20A000-0000-4000-8000-000000000504",
         "kind": "Actions",
         "name": "Axe"
       },
       {
         "cost": "2 AP",
-        "details": "Area Martial Attack vs AD, 10 Spaces, 3 Space Sphere, 1 Corrosion. Hinder (+1 AP): Agility Save failure causes Hindered for 1 Round.",
+        "details": "Area Martial Attack vs AD, 10 Spaces, 3 Space Sphere, 1 Corrosion.\n\n• (+1) Hinder: Agility Save. Failure: Target becomes Hindered for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000000505",
         "kind": "Actions",
         "name": "Acid Vial"
       },
       {
         "cost": "1 AP",
-        "details": "When a creature within 1 Space misses you with a Melee Attack, force an Agility Save; failure knocks it Prone.",
+        "details": "When a creature within 1 Space of you misses with a Melee Attack, you can force the attacker to make an Agility Save. Failure: Target is knocked Prone.",
         "id": "DC20A000-0000-4000-8000-000000000506",
         "kind": "Reactions",
         "name": "Undermine"
@@ -362,14 +362,14 @@
     "combatMastery": 1,
     "creatureType": "Humanoid",
     "damage": 1,
-    "descriptionText": "A larger, more scarred and commanding battle-worn bandit leader.",
+    "descriptionText": "Bandit Captains are as diverse as the many cultures they come from, but all well armed and battle worn. They frequently have more scars and tattoos than their fellow bandits and are frequently larger with commanding tones.",
     "hp": 11,
     "id": "DC200000-0000-4000-8000-000000000005",
     "immunities": "",
     "intelligence": 0,
     "languages": "",
     "level": 1,
-    "lore": "Bandit Captains organize hardened criminals and ambush travelers from established bases.",
+    "lore": "Bandit Captains lead a group of hardened criminals, abandoning civilization to prey on innocent travelers. They frequently set up a base of operations, then ambush travelers on nearby roads.",
     "might": 1,
     "name": "Bandit Captain",
     "notes": "",
@@ -388,7 +388,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 19,
     "speed": 5,
-    "tactics": "Uses Rally and Help to support allies, flanks enemies, and throws Acid Vials when it can catch multiple foes without hitting allies.",
+    "tactics": "Uses Rally and Help to support allies, then flank an enemy to attack. Uses Acid Vial if it can hit at least 2 enemies without hitting allies.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -403,28 +403,28 @@
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 2 Slashing or Piercing +1 extra damage on a Heavy Hit. Grapple (+1 AP): Might Save failure Grapples. Prone (+1 AP): Physical Save failure knocks Prone.",
+        "details": "Melee Martial Attack vs PD, 2 Slashing or Piercing + 1 extra damage on a Heavy Hit.\n\n• (+1) Grapple: Might Save. Failure: Target is Grappled.\n\n• (+1) Prone: Physical Save. Failure: Target is knocked Prone.",
         "id": "DC20A000-0000-4000-8000-000000000602",
         "kind": "Actions",
         "name": "Bite or Claw"
       },
       {
         "cost": "2 AP",
-        "details": "Area Martial Attack vs AD, 1 Space Arc, 2 Slashing and a Physical Save; failure causes Bleeding. Knockback (+1 AP): Might Save failure pushes 1 Space.",
+        "details": "Area Martial Attack vs AD, 1 Space Arc, 2 Slashing and target makes a Physical Save. Failure: Target is Bleeding.\n\n• (+1) Knockback: Might Save. Failure: Target is pushed 1 Space away.",
         "id": "DC20A000-0000-4000-8000-000000000603",
         "kind": "Actions",
         "name": "Swipe"
       },
       {
         "cost": "2 AP",
-        "details": "Contest in a 5 Space Aura against creatures of your choice, Intimidation vs Charisma Save. Success: Intimidated by you for 1 Round.",
+        "details": "Contest, 5 Space Aura (creatures of your choice), Intimidation vs Charisma Save. Success: Target is Intimidated by you for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000000604",
         "kind": "Actions",
         "name": "Intimidating Roar"
       },
       {
         "cost": "1 AP",
-        "details": "After an Opportunity Attack against a creature leaving your Melee range, move up to Speed following it and make another Opportunity Attack.",
+        "details": "When you make an Opportunity Attack against a creature leaving your Melee range, you can move up to your Speed following the creature and make another Opportunity Attack at the end of your movement.",
         "id": "DC20A000-0000-4000-8000-000000000605",
         "kind": "Reactions",
         "name": "Chase"
@@ -438,14 +438,14 @@
     "combatMastery": 1,
     "creatureType": "Beast",
     "damage": 2.5,
-    "descriptionText": "A massive beast with brown fur, a thick hide, and a loud warning roar.",
+    "descriptionText": "A massive beast with brown fur covering a thick hide and a load roar warning of imminent combat.",
     "hp": 17,
     "id": "DC200000-0000-4000-8000-000000000006",
     "immunities": "",
     "intelligence": -3,
     "languages": "",
     "level": 2,
-    "lore": "Brown bears are territorial solitary or paired predators that become dangerous when provoked or hungry.",
+    "lore": "These piles of muscle and teeth typically travel alone or in pairs. While usually peaceful, they’re incredibly territorial and dangerous when provoked or hungry.",
     "might": 3,
     "name": "Brown Bear",
     "notes": "",
@@ -464,7 +464,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 19,
     "speed": 6,
-    "tactics": "Roars when surrounded, attacks the greatest threat or weakest foe, and uses Swipe against clustered enemies.",
+    "tactics": "When surrounded, they’ll Roar to intimidate creatures around them. Otherwise, they’ll attack any creature that has hurt them most or seems weakest, using Swipe Attacks when their enemies are close to each other.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -472,21 +472,21 @@
     "abilities": [
       {
         "cost": "1 AP",
-        "details": "Ranged Martial Attack vs PD, 15/45 Spaces, 1 Piercing. Charm (+1 AP): Charisma Save failure causes Charmed by a creature of your choice for 1 minute or until that creature Attacks or forces a Save.",
+        "details": "Ranged Martial Attack vs PD, 15/45 Spaces, 1 Piercing.\n\n• (+1) Charm: Target makes a Charisma Save. Failure: Target is Charmed by a creature of your choice for 1 minute or until that creature Attacks them or forces them to make a Save.",
         "id": "DC20A000-0000-4000-8000-000000000701",
         "kind": "Actions",
         "name": "Cupid Arrow"
       },
       {
         "cost": "1 AP",
-        "details": "Against a Charmed creature: Ranged Spell Attack vs AD, 10 Spaces, 1 Psychic; Mental Save failure subtracts a d4 from every Check for 1 Round.",
+        "details": "[Charmed creature], Ranged Spell Attack vs AD, 10 Spaces, 1 Psychic and target makes a Mental Save. Failure: Target subtracts a d4 on every Check it makes for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000000702",
         "kind": "Actions",
         "name": "Provoke Insecurities"
       },
       {
         "cost": "1 AP",
-        "details": "When Attacked, force the attacker to make a Charisma Save; failure Charms it for 1 minute or until you Attack it or force a Save.",
+        "details": "When you’re Attacked, you force the Attacker to make a Charisma Save. Failure: Target is Charmed by you for 1 minute or until you Attack them or force them to make a Save.",
         "id": "DC20A000-0000-4000-8000-000000000703",
         "kind": "Reactions",
         "name": "Reactive Charm"
@@ -500,14 +500,14 @@
     "combatMastery": 1,
     "creatureType": "Celestial",
     "damage": 1,
-    "descriptionText": "A tiny celestial that appears as a precious child of the viewer’s ancestry.",
+    "descriptionText": "This small angel appears as the ancestry of whoever is viewing it without changing its size, showing itself as the picture of preciousness to the viewer. Their vocal mannerisms emulate the sound of children.",
     "hp": 8,
     "id": "DC200000-0000-4000-8000-000000000007",
     "immunities": "",
     "intelligence": 1,
     "languages": "Celestial",
     "level": 0,
-    "lore": "Cherubs serve greater Celestials and meddle in mortal relationships.",
+    "lore": "Cherubs are servants to greater Celestials. They enjoy helping people find love, but rarely ask, and are commonly blamed for the actions of unfaithful partners.",
     "might": -2,
     "name": "Cherub",
     "notes": "",
@@ -527,7 +527,7 @@
     "sourcePage": 20,
     "speed": 8,
     "speedType": "Fly",
-    "tactics": "Avoids combat, attacks from range, provokes insecurity, and Charms attackers to stay safe.",
+    "tactics": "Cherubs try to avoid combat, but when they find themselves in a fight, they try to attack from range, using arrows (Cupid Arrow) and charming magic (Provoke Insecurities). To avoid being hurt, they try to Charm their enemies (see Cupid Arrow’s Charm Enhancement and Reactive Charm).",
     "type": "Standard",
     "vulnerabilities": "Umbral (1)"
   },
@@ -535,28 +535,28 @@
     "abilities": [
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 1 Bludgeoning +1 extra damage on a Heavy Hit; Physical Save failure knocks Prone.",
+        "details": "Melee Martial Attack vs PD, 1 Bludgeoning + 1 extra damage on a Heavy Hit and target makes a Physical Save. Failure: Target falls Prone.",
         "id": "DC20A000-0000-4000-8000-000000000801",
         "kind": "Actions",
         "name": "Slam"
       },
       {
         "cost": "1 AP",
-        "details": "Against a Prone creature: Melee Martial Attack vs AD, 3 Bludgeoning +1 extra damage on a Heavy Hit.",
+        "details": "[Prone creature], Melee Martial Attack vs AD, 3 Bludgeoning + 1 extra damage on a Heavy Hit.",
         "id": "DC20A000-0000-4000-8000-000000000802",
         "kind": "Actions",
         "name": "Stomp"
       },
       {
         "cost": "2 AP",
-        "details": "Area Martial Attack vs AD, 1 Space Aura, 1 Bludgeoning +1 extra damage if the target is Prone; Physical Save failure knocks Prone.",
+        "details": "Area Martial Attack vs AD, 1 Space Aura, 1 Bludgeoning + 1 extra damage if the target is Prone and target must make a Physical Save. Failure: Target falls Prone.",
         "id": "DC20A000-0000-4000-8000-000000000803",
         "kind": "Actions",
         "name": "Rampage"
       },
       {
         "cost": "1 AP",
-        "details": "When Hit by an Attack, take 3 less damage from it.",
+        "details": "When you are Hit by an Attack, you can take 3 less damage from the Attack.",
         "id": "DC20A000-0000-4000-8000-000000000804",
         "kind": "Reactions",
         "name": "Endure"
@@ -570,14 +570,14 @@
     "combatMastery": 3,
     "creatureType": "Elemental",
     "damage": 1.5,
-    "descriptionText": "A huge turtle with a stone shell and skin whose slow steps shake the ground.",
+    "descriptionText": "A huge turtle with a stone shell and skin. Its slow, steady steps shake the ground around it.",
     "hp": 30,
     "id": "DC200000-0000-4000-8000-000000000008",
     "immunities": "Poison; Bleeding, Burning, Poisoned, Slowed",
     "intelligence": -1,
     "languages": "",
     "level": 5,
-    "lore": "Earth Tortoises inhabit crags and mountains and fiercely protect their territory.",
+    "lore": "Earth tortoises are usually found near crags or mountains. They’re territorial, quick to protect their land against perceived external threats.",
     "might": 4,
     "name": "Earth Tortoise",
     "notes": "",
@@ -596,7 +596,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 20,
     "speed": 3,
-    "tactics": "Slams enemies Prone, Stomps fallen targets, Rampages when surrounded, and Endures Heavy Hits.",
+    "tactics": "It Slams enemies Prone then Stomps on them. If it’s surrounded, it attacks everyone near it in a Rampage. When it receives a Heavy Hit, it’ll Endure it and try to reduce the damage taken.",
     "type": "Standard",
     "vulnerabilities": "Bludgeoning (Double)"
   },
@@ -604,35 +604,35 @@
     "abilities": [
       {
         "cost": "",
-        "details": "At the start of Combat, you may use Illusory Split and move up to Speed.",
+        "details": "At the start of Combat, you may use Illusory Split and move up to your Speed.",
         "id": "DC20A000-0000-4000-8000-000000000901",
         "kind": "Features",
         "name": "Tricky Start"
       },
       {
         "cost": "1 AP",
-        "details": "Ranged Spell Attack vs AD, 10 Spaces, 1 Psychic. Taunt (+1 AP): Charisma Save failure Taunts for 1 Round.",
+        "details": "Ranged Spell Attack vs AD, 10 Spaces, 1 Psychic.\n\n• (+1) Taunt: Target makes a Charisma Save. Failure: Target is Taunted by you for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000000902",
         "kind": "Actions",
         "name": "Mockery"
       },
       {
         "cost": "1 AP",
-        "details": "Create an illusion of yourself in your Space for 1 minute. It can move when you move but cannot Attack or affect the world. Attacking it reveals it; a creature can spend 1 AP on Investigation against your Save DC to identify it.",
+        "details": "You create an illusion of yourself in your Space. The illusion has your mannerisms but can’t Attack or affect the world physically. It lasts for 1 minute, until you use this ability again, or you end your turn more than 10 Spaces away from the illusion.\n\n• When you move, you can move the illusion up to that many Spaces in any direction.\n\n• Attacking the illusion reveals it to be an illusion. A creature can also spend 1 AP to make an Investigation Check against your Save DC. Success: The creature knows it’s an illusion.",
         "id": "DC20A000-0000-4000-8000-000000000903",
         "kind": "Actions",
         "name": "Illusory Split"
       },
       {
         "cost": "2 AP",
-        "details": "MP Effect; Contest, 10 Spaces, 3 Space Sphere, Spell Check vs Repeated Intelligence Save. Success: Incapacitated for 1 minute until damage, another Save, or an adjacent creature spends 1 AP.",
+        "details": "(MP Effect) Contest, 10 Spaces, 3 Space Sphere, Spell Check vs Repeated Intelligence Save. Success: The target is Incapacitated for 1 minute or until it takes damage, makes a Save (other than from this effect), or another creature within 1 Space spends 1 AP to remove the condition.",
         "id": "DC20A000-0000-4000-8000-000000000904",
         "kind": "Actions",
         "name": "Slumber"
       },
       {
         "cost": "1 AP",
-        "details": "When Hit, become Invisible for 1 Round or until taking an Action other than Move, Dodge, or Hide.",
+        "details": "When you’re Hit by an Attack, you can become Invisible for 1 Round or until you take any Action besides the Move, Dodge, or Hide Actions.",
         "id": "DC20A000-0000-4000-8000-000000000905",
         "kind": "Reactions",
         "name": "Vanish"
@@ -646,14 +646,14 @@
     "combatMastery": 1,
     "creatureType": "Dragon",
     "damage": 1,
-    "descriptionText": "A lithe, iridescent dragon with butterfly wings and the scent of fresh flowers.",
+    "descriptionText": "A small species of dragon with a lithe body, iridescent scales, and butterfly wings that rapidly flutter to keep it aloft. It gives off the scent of fresh flowers.",
     "hp": 15,
     "id": "DC200000-0000-4000-8000-000000000009",
     "immunities": "",
     "intelligence": 1,
     "languages": "Draconic, Fey",
     "level": 1,
-    "lore": "Fairy Dragons guard entrances to fey realms and play pranks with pixies and sprites.",
+    "lore": "Fairy Dragons act as sentries, typically stationed near entrances to the fey realms and reporting any crossings that occur. They like to play pranks on passersby, frequently teaming up with pixies or sprites.",
     "might": -2,
     "name": "Fairy Dragon",
     "notes": "",
@@ -673,7 +673,7 @@
     "sourcePage": 21,
     "speed": 5,
     "speedType": "Fly",
-    "tactics": "Creates an Illusory Split at combat start, mocks foes, puts groups to sleep, and Vanishes when struck.",
+    "tactics": "Able to create illusions, Fairy Dragons start off Combat by making a copy of themselves (Illusory Duplicate) to trick foes into attacking their copy. During a fight, they’ll use Mockery on their enemies, try to put them to sleep (Slumber), and they’ll Vanish when hit by an Attack, turning themselves Invisible for a short time.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -688,35 +688,35 @@
       },
       {
         "cost": "1 AP",
-        "details": "Contest, 5 Spaces, Spell Check vs Charisma Save. Failure: target is Doomed.",
+        "details": "Contest, 5 Spaces, Spell Check vs Charisma Save. Failure: Target is Doomed.",
         "id": "DC20A000-0000-4000-8000-000000001002",
         "kind": "Actions",
         "name": "Doom"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 2 Spaces, 2 Piercing. Cursed Strike (+1 AP): Repeated Charisma Save failure subtracts a d4 from all Checks for 1 minute.",
+        "details": "Melee Martial Attack vs PD, 2 Spaces, 2 Piercing.\n\n• (+1) Cursed Strike: Target makes a Repeated Charisma Save. Failure: Target subtracts a d4 from all its Checks for 1 minute.",
         "id": "DC20A000-0000-4000-8000-000000001003",
         "kind": "Actions",
         "name": "Trident"
       },
       {
         "cost": "2 AP",
-        "details": "Area Spell Attack vs AD, 2 Space Aura, 1 Umbral +1 extra damage on Heavy Hits.",
+        "details": "Area Spell Attack vs AD, 2 Space Aura, 1 Umbral + 1 extra damage on Heavy Hits.",
         "id": "DC20A000-0000-4000-8000-000000001004",
         "kind": "Actions",
         "name": "Umbral Burst"
       },
       {
         "cost": "3 AP",
-        "details": "MP Effect; Contest in a 5 Space Aura, Spell Check vs Charisma Save. Success: Doomed. Failure: immune for 1 day.",
+        "details": "(MP Effect) Contest, 5 Space Aura, Spell Check vs Charisma Save. Success: Target is Doomed. Failure: Target is immune to this effect for 1 day.",
         "id": "DC20A000-0000-4000-8000-000000001005",
         "kind": "Actions",
         "name": "Infernal Declaration"
       },
       {
         "cost": "1 AP",
-        "details": "When a creature within 5 Spaces regains HP, use Doom on it as a Reaction.",
+        "details": "When a creature within 5 Spaces of you regains HP, you can use Doom on them as a Reaction.",
         "id": "DC20A000-0000-4000-8000-000000001006",
         "kind": "Reactions",
         "name": "Foretell Demise"
@@ -730,14 +730,14 @@
     "combatMastery": 2,
     "creatureType": "Fiend",
     "damage": 2,
-    "descriptionText": "A yellow-to-red humanoid fiend with goat horns, hind legs, a snake tail, and a black trident carved with screaming faces.",
+    "descriptionText": "Humanoid fiends with skin tones ranging from yellow to red, goat horns and hind legs, and a snake tail, Fiendish Harbingers wield long, black tridents engraved with depictions of faces screaming in pain.",
     "hp": 19,
     "id": "DC200000-0000-4000-8000-000000000010",
     "immunities": "",
     "intelligence": 0,
     "languages": "All",
     "level": 3,
-    "lore": "Harbingers form the vanguard of fiendish armies, spread panic, and take hostages before celestial forces arrive.",
+    "lore": "Harbingers make up the vanguard of fiendish armies, striking first and fast. These fiends usually try to arrive before celestial armies can, taking mortal hostages and causing widespread panic in populated areas to lower the morale of their holy counterparts. The first sighting of a Fiendish Harbinger is a sign that death and destruction is on its way.",
     "might": 0,
     "name": "Fiendish Harbinger",
     "notes": "",
@@ -756,7 +756,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 22,
     "speed": 8,
-    "tactics": "Uses Trident and Umbral Burst, Dooms creatures that heal nearby, and opens with Infernal Declaration.",
+    "tactics": "They use their Trident and Umbral magic (see Umbral Burst) to hurt their enemies, and Doom anyone who heals near them (see Foretell Demise). They’ll usually begin Combat with an Infernal Declaration, Dooming anyone near them.",
     "type": "Standard",
     "vulnerabilities": "Radiant (2)"
   },
@@ -771,42 +771,42 @@
       },
       {
         "cost": "",
-        "details": "When you take Cold damage or contact water, become Slowed for 1 Round.",
+        "details": "When you take Cold damage or make contact with water, you become Slowed for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000001102",
         "kind": "Features",
         "name": "Flame-Blooded"
       },
       {
         "cost": "",
-        "details": "Shed Bright Light in a 1 Space Aura.",
+        "details": "You shed Bright Light in a 1 Space Aura.",
         "id": "DC20A000-0000-4000-8000-000000001103",
         "kind": "Features",
         "name": "Glowing"
       },
       {
         "cost": "",
-        "details": "Walk normally on solid surfaces regardless of orientation without falling or needing to Climb.",
+        "details": "You can walk normally on solid surfaces regardless of their orientation (such as upside down on the ceiling) without falling or needing to Climb.",
         "id": "DC20A000-0000-4000-8000-000000001104",
         "kind": "Features",
         "name": "Wallwalk"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 5 Spaces, 1 Fire; Physical Save failure Tethers the target until this Attack is used again or ended. The target can spend 1 AP to repeat the Save.",
+        "details": "Melee Martial Attack vs PD, 5 Spaces, 1 Fire and target makes a Physical Save. Failure: Target is Tethered to you until you use this Attack again or choose to end the effect. The target can spend 1 AP to repeat this Save.",
         "id": "DC20A000-0000-4000-8000-000000001105",
         "kind": "Actions",
         "name": "Flame Tongue"
       },
       {
         "cost": "1 AP",
-        "details": "Against a creature Tethered by Flame Tongue: Contest, Martial Check vs Might Save. Success pulls it up to 4 Spaces and reduces the Tether distance by the Spaces pulled.",
+        "details": "[Creature Tethered by Flame Tongue] Contest, Martial Check vs Might Save. Success: Target is pulled up to 4 Spaces towards you. The Flame Tongue’s Tether distance is reduced by the Spaces pulled.",
         "id": "DC20A000-0000-4000-8000-000000001106",
         "kind": "Actions",
         "name": "Retract Tongue"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 1 Fire +1 extra damage on a Heavy Hit.",
+        "details": "Melee Martial Attack vs PD, 1 Fire + 1 extra damage on a Heavy Hit.",
         "id": "DC20A000-0000-4000-8000-000000001107",
         "kind": "Actions",
         "name": "Bite"
@@ -820,7 +820,7 @@
       },
       {
         "cost": "2 AP",
-        "details": "Contest in a 1 Space Arc, Martial Check vs Physical Save. Success pushes the target up to 1 Space and knocks it Prone.",
+        "details": "Contest, 1 Space Arc, Martial Check vs Physical Save. Success: Target is pushed up to 1 Space away from you and falls Prone.",
         "id": "DC20A000-0000-4000-8000-000000001109",
         "kind": "Actions",
         "name": "Tail Whip"
@@ -834,14 +834,14 @@
     "combatMastery": 1,
     "creatureType": "Elemental",
     "damage": 1.5,
-    "descriptionText": "A muscular lizard with cooling lava skin, a long burning tongue, glowing eyes, and an aura of sweltering heat.",
+    "descriptionText": "A large, muscular lizard with cooling lava skin and a long, burning tongue. Embers constantly rise from its surface, and its eyes glow yellow. The air near it swelters with its heat.",
     "hp": 15,
     "id": "DC200000-0000-4000-8000-000000000011",
     "immunities": "Fire (Absorb)",
     "intelligence": -3,
     "languages": "",
     "level": 2,
-    "lore": "Fire Lizards live near volcanoes and magma flows and are sometimes displayed in menageries.",
+    "lore": "Fire lizards live near volcanoes and deep within caves near magma flows, eating anything that can be burned as a fuel source. They’re popular in menageries and performances.",
     "might": 3,
     "name": "Fire Lizard",
     "notes": "",
@@ -860,7 +860,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 23,
     "speed": 5,
-    "tactics": "Tethers enemies with Flame Tongue, retracts it to pull them close, bites adjacent targets, and uses Fire Breath or Tail Whip against groups.",
+    "tactics": "Fire Lizards have long Flame Tongues they use to grab enemies, then they retract it to pull an enemy closer (see Retract Tongue). When an enemy is right next to them, they’ll Bite them. They use Fire Breath or Tail Whips to hit grouped enemies.",
     "type": "Standard",
     "vulnerabilities": "Cold (Double)"
   },
@@ -868,56 +868,56 @@
     "abilities": [
       {
         "cost": "",
-        "details": "Move through solid objects and creatures. Ending a turn inside one deals True damage equal to 25% of maximum HP.",
+        "details": "You can move through solid objects and creatures. If you end your turn inside an object or creature, you take True damage equal to 25% of your maximum HP.",
         "id": "DC20A000-0000-4000-8000-000000001201",
         "kind": "Features",
         "name": "Ethereal"
       },
       {
         "cost": "",
-        "details": "Possessor replaces Haunting Scream with Possession. Poltergeist gains Close Quarters and replaces Chilling Grasp and Haunting Scream with Invisibility and Throw Object.",
+        "details": "Modify the stat block in the following ways to make different variants:\n\nPossessor\nLoses Haunting Scream and gains new Possession Action.\n\nPoltergeist\nNew Feature:\nClose Quarters: Your Ranged Attacks don’t have DisADV if you’re within Melee Range of enemies.\n\nLoses Chilling Grasp and Haunting Scream, but gains new Invisibility and Throw Object Actions.",
         "id": "DC20A000-0000-4000-8000-000000001202",
         "kind": "Features",
         "name": "Ghost Variants"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Spell Attack vs PD, 1 Umbral; Physical Save failure Slows for 1 Round.",
+        "details": "Melee Spell Attack vs PD, 1 Umbral and target makes a Physical Save. Failure: Target is Slowed for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000001203",
         "kind": "Actions",
         "name": "Ghastly Touch"
       },
       {
         "cost": "2 AP",
-        "details": "Melee Spell Attack vs AD, 1 Umbral; Might Save failure causes Stunned 1 and Immobilized for 1 Round. Drag (+1 AP): move up to Speed, pulling a target that failed, without provoking and without flying upward.",
+        "details": "Melee Spell Attack vs AD, 1 Umbral and target makes a Might Save. Failure: Target is Stunned 1 and Immobilized for 1 Round.\n\n• (+1) Drag: You move up to your Speed after, pulling the target with you if they failed their Save. You don’t provoke Opportunity Attacks and can’t Fly upward during this movement.",
         "id": "DC20A000-0000-4000-8000-000000001204",
         "kind": "Actions",
         "name": "Chilling Grasp"
       },
       {
         "cost": "4 AP",
-        "details": "Area Spell Attack vs AD, 3 Space Aura, 1 Psychic; Charisma Save failure Frightens the target for 1 Round.",
+        "details": "Area Spell Attack vs AD, 3 Space Aura, 1 Psychic and target makes a Charisma Save. Failure: Target is Frightened by you for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000001205",
         "kind": "Actions",
         "name": "Haunting Scream"
       },
       {
         "cost": "4 AP",
-        "details": "Move into a creature within 10 Spaces; Contest, Spell Check vs Repeated Charisma Save. Failure possesses it as a Curse for 1 minute, Incapacitating it while you control its body and remain Hidden with Full Cover inside.",
+        "details": "Move to the Space of a creature within 10 Spaces and attempt to possess them. Contest, Spell Check vs Repeated Charisma Save. Failure: Target is possessed by you (considered a Curse) for 1 minute. While Possessed:\n\n• The target is Incapacitated and loses control of its body.\n\n• You control the target, using its statistics.\n\n• You’re within the target (Hidden and in Full Cover) and don’t take damage from Ethereal.\n\n• The possession ends early if the target drops to 0 HP, you end it for free, or the Curse is removed.",
         "id": "DC20A000-0000-4000-8000-000000001206",
         "kind": "Actions",
         "name": "Possession (Variant)"
       },
       {
         "cost": "1 AP",
-        "details": "Become Invisible for 1 Round or until taking an Action other than Move, Dodge, or Hide.",
+        "details": "You become Invisible for 1 Round or until you take any Action besides the Move, Dodge, or Hide Actions.",
         "id": "DC20A000-0000-4000-8000-000000001207",
         "kind": "Actions",
         "name": "Invisibility (Variant)"
       },
       {
         "cost": "1 AP",
-        "details": "Ranged Martial Attack vs AD, 10 Spaces, 2 Bludgeoning. Extra Target (+1 AP): target another creature in range.",
+        "details": "Ranged Martial Attack vs AD, 10 Spaces, 2 Bludgeoning.\n\n• (+1) Extra Target: Target an additional creature within range.",
         "id": "DC20A000-0000-4000-8000-000000001208",
         "kind": "Actions",
         "name": "Throw Object (Variant)"
@@ -931,14 +931,14 @@
     "combatMastery": 1,
     "creatureType": "Undead",
     "damage": 1,
-    "descriptionText": "A translucent humanoid form floating as if submerged, with a hollow face and black voids for eyes.",
+    "descriptionText": "A translucent humanoid form floating in the air as if submerged in water, with a haunting, hollow face with black voids for eyes. A distinct chill lingers in the air around it, noticeably colder than is natural.",
     "hp": 8,
     "id": "DC200000-0000-4000-8000-000000000012",
     "immunities": "Poison; Bleeding, Exhausted, Grappled, Poisoned, Unconscious",
     "intelligence": 0,
     "languages": "Languages known in life",
     "level": 2,
-    "lore": "Ghosts are spiritual imprints left by tragic deaths or extreme negative emotion near meaningful places.",
+    "lore": "Ghosts are spiritual imprints of people who died tragically or while filled with extreme negative emotions. They linger around their place of death or other places important to them in life.",
     "might": -2,
     "name": "Ghost",
     "notes": "",
@@ -958,7 +958,7 @@
     "sourcePage": 24,
     "speed": 5,
     "speedType": "Fly",
-    "tactics": "Uses Ethereal movement to surprise enemies, Chilling Grasp and Drag to isolate them, and Haunting Scream when surrounded.",
+    "tactics": "Usually, Ghosts won’t attack outright. When threatened or angered, they try to get the drop on enemies with their Ethereal movement. If they can, they’ll try to grab an enemy (Chilling Grasp) and Drag them away from their allies. When surrounded, they’ll use their Haunting Scream to Frighten everyone around them.",
     "type": "Standard",
     "vulnerabilities": "Fire (Double), Radiant (Double)"
   },
@@ -966,49 +966,49 @@
     "abilities": [
       {
         "cost": "",
-        "details": "Unaffected by mundane Difficult Terrain and can move through a Space as narrow as 1 inch without squeezing.",
+        "details": "You’re unaffected by mundane Difficult Terrain and can move through a Space as narrow as 1 inch wide without squeezing.",
         "id": "DC20A000-0000-4000-8000-000000001301",
         "kind": "Features",
         "name": "Amorphous"
       },
       {
         "cost": "",
-        "details": "Does not need to breathe and is immune to hazardous air and Suffocating.",
+        "details": "You don’t need to breathe. You’re immune to hazardous air and Suffocating.",
         "id": "DC20A000-0000-4000-8000-000000001302",
         "kind": "Features",
         "name": "Anaerobic"
       },
       {
         "cost": "",
-        "details": "Climb any solid surface without making a Check.",
+        "details": "You can Climb any solid surface without making a Check.",
         "id": "DC20A000-0000-4000-8000-000000001303",
         "kind": "Features",
         "name": "Ooze Climb"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 1 Bludgeoning. Absorb (+1 AP): Might Save failure Grapples the target, pulls it into your Space, and also Restrains it.",
+        "details": "Melee Martial Attack vs PD, 1 Bludgeoning.\n\n• (+1) Absorb: Might Save. Failure: Target is Grappled by you and pulled into your Space. While Grappled, the target is also Restrained.",
         "id": "DC20A000-0000-4000-8000-000000001304",
         "kind": "Actions",
         "name": "Slap"
       },
       {
         "cost": "2 AP",
-        "details": "Against all Absorbed targets: Area Martial Attack vs AD, 1 Bludgeoning.",
+        "details": "[All Absorbed targets] Area Martial Attack vs AD, 1 Bludgeoning.",
         "id": "DC20A000-0000-4000-8000-000000001305",
         "kind": "Actions",
         "name": "Compress"
       },
       {
         "cost": "1 AP",
-        "details": "When Hit by a Melee Attack, Contest Martial Check vs Might Save. Success Disarms the attacker and pulls the Weapon into your Space until you drop to 0 HP.",
+        "details": "When you’re Hit by a Melee Attack, you can attempt to absorb the Weapon. Contest, Martial Check vs Might Save. Success: The Attacker is Disarmed, and the Weapon is pulled into your Space until you drop to 0 HP.",
         "id": "DC20A000-0000-4000-8000-000000001306",
         "kind": "Reactions",
         "name": "Absorb Weapon"
       },
       {
         "cost": "1 AP",
-        "details": "When Hit by a Natural Weapon or Unarmed Strike, Contest Martial Check vs Might Save. Success Grapples the attacker, pulls it into your Space, and Restrains it.",
+        "details": "When you’re Hit by a Melee Attack using a Natural Weapon or Unarmed Strike, you can attempt to absorb the Attacker. Contest, Martial Check vs Might Save. Success: The Attacker is Grappled by you and pulled into your Space. While Grappled, the target is also Restrained.",
         "id": "DC20A000-0000-4000-8000-000000001307",
         "kind": "Reactions",
         "name": "Absorb Creature"
@@ -1021,14 +1021,14 @@
     "charisma": 0,
     "creatureType": "Ooze",
     "damage": 1,
-    "descriptionText": "A bright golden blob of sticky honey that smells sweet and slurps as it moves.",
+    "descriptionText": "A bright, golden blob of sticky honey, it smells sweet and makes slurping noises as its body slinks around.",
     "hp": 7,
     "id": "DC200000-0000-4000-8000-000000000013",
     "immunities": "Bleeding, Charmed, Deafened, Grappled, Prone, Restrained",
     "intelligence": -3,
     "languages": "",
     "level": -1,
-    "lore": "Queen Dire Bees create Honey Oozes to hold enemies in place while the hive attacks.",
+    "lore": "Honey oozes are created by Queen Dire Bees to help protect their hive, holding enemies in place while the workers and queen attack.",
     "might": 2,
     "name": "Honey Ooze",
     "notes": "",
@@ -1046,7 +1046,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 25,
     "speed": 4,
-    "tactics": "Guards its hive, Slams and Absorbs attackers, Compresses captured creatures, and absorbs weapons or natural attackers that strike it.",
+    "tactics": "This Ooze sticks close to the territory of its beehive and Slams and Absorbs any attacker it comes across. When it Absorbs multiple creatures, it’ll Compress them to try to squish their bodies. When hit by Melee Attacks, it can absorb the weapon, or creature, that struck it (see Absorb Weapon and Absorb Creature).",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -1054,28 +1054,28 @@
     "abilities": [
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 2 Piercing +1 extra damage on a Heavy Hit. Frostbite (+1 AP): Physical Save failure Slows and gives Vulnerability (Double) to the next Physical or Cold damage before your next turn.",
+        "details": "Melee Martial Attack vs PD, 2 Piercing + 1 extra damage on a Heavy Hit.\n\n• (+1) Frostbite: Target makes a Physical Save. Failure: Target is Slowed and gains Vulnerability (Double) to the next instance of Physical or Cold damage it takes until the start of your next turn.",
         "id": "DC20A000-0000-4000-8000-000000001401",
         "kind": "Actions",
         "name": "Peck"
       },
       {
         "cost": "1 AP",
-        "details": "Ranged Spell Attack vs PD, 10 Spaces, 1 Cold; Might Save failure pushes 1 Space horizontally in any direction, +1 Space per Failure (each 5).",
+        "details": "Ranges Spell Attack vs PD, 10 Spaces, 1 Cold and target makes a Might Save. Failure: Target is pushed 1 Space horizontally in any direction. Failure (each 5): +1 Space.",
         "id": "DC20A000-0000-4000-8000-000000001402",
         "kind": "Actions",
         "name": "Frozen Gust"
       },
       {
         "cost": "2 AP",
-        "details": "Area Spell Attack vs AD, 10 Spaces, 3 Space Sphere, 1 Cold; Might Save failure moves the target to an unoccupied Space of your choice in the area.",
+        "details": "Area Spell Attack vs AD, 10 Spaces, 3 Space Sphere, 1 Cold and target makes a Might Save. Failure: Target is moved to an unoccupied Space of your choice within the area.",
         "id": "DC20A000-0000-4000-8000-000000001403",
         "kind": "Actions",
         "name": "Frozen Torrent"
       },
       {
         "cost": "1 AP",
-        "details": "When targeted by an Attack, impose DisADV on it and gain ADV on Saves imposed by it.",
+        "details": "When you’re targeted by an Attack, you can impose DisADV on the Attack and gain ADV on any Saves imposed by the Attack.",
         "id": "DC20A000-0000-4000-8000-000000001404",
         "kind": "Reactions",
         "name": "Evasive Flying"
@@ -1089,14 +1089,14 @@
     "combatMastery": 2,
     "creatureType": "Elemental",
     "damage": 2.5,
-    "descriptionText": "A person-sized raven with icy feathers, icicle beak and talons, and glowing blue eyes.",
+    "descriptionText": "A large raven, nearly the size of a person, with white ice feathers, icicle beak and talons, and chilling blue eyes that glow. Each beat of its wings creates gusts of frigid air.",
     "hp": 14,
     "id": "DC200000-0000-4000-8000-000000000014",
     "immunities": "Cold (Absorb)",
     "intelligence": 2,
     "languages": "",
     "level": 3,
-    "lore": "Ice Ravens live in tundras, form blizzards in flocks, and sometimes accept offerings and alliances from northern peoples.",
+    "lore": "Ice Ravens live in tundras, but sometimes venture into surrounding areas. Blizzards are formed when a flock of Ice Ravens congregates. They’re known for their intelligence, and many peoples from frigid lands seek allyship with the Ice Ravens by leaving them offerings.",
     "might": 0,
     "name": "Ice Raven",
     "notes": "",
@@ -1116,7 +1116,7 @@
     "sourcePage": 26,
     "speed": 5,
     "speedType": "Fly",
-    "tactics": "Attacks from the sky, repositions enemies with Frozen Gust and Frozen Torrent, inflicts Frostbite up close, and uses Evasive Flying defensively.",
+    "tactics": "They try to stay in the sky, attacking Frozen Gusts and Frozen Torrents to move enemies around the battlefield. If they close in on an enemy, they Peck them and Frostbite them to make them vulnerable. If Attacked, they use their aerial prowess to get out of the way (see Evasive Flying).",
     "type": "Standard",
     "vulnerabilities": "Fire (Double)"
   },
@@ -1124,21 +1124,21 @@
     "abilities": [
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 1 Piercing +1 extra damage on Heavy Hits. Bleed (+1 AP): Repeated Might Save failure causes Bleeding.",
+        "details": "Melee Martial Attack vs PD, 1 Piercing + 1 extra damage on Heavy Hits.\n\n• (+1) Bleed: Repeated Might Save. Failure: Target is Bleeding.",
         "id": "DC20A000-0000-4000-8000-000000001501",
         "kind": "Actions",
         "name": "Claw"
       },
       {
         "cost": "2 AP",
-        "details": "Area Spell Attack vs AD, 5 Spaces, 2 Space Sphere, 1 Fire +1 extra damage on Heavy Hits. Area (+1 AP) enlarges it to 3 Spaces. Burning (+1 AP): Physical Save failure begins Burning.",
+        "details": "Area Spell Attack vs AD, 5 Spaces, 2 Space Sphere, 1 Fire + 1 extra damage on Heavy Hits.\n\n• (+1) Area: The area becomes a 3 Space Sphere.\n\n• (+1) Burning: Physical Save. Failure: Target begins Burning.",
         "id": "DC20A000-0000-4000-8000-000000001502",
         "kind": "Actions",
         "name": "Fireball"
       },
       {
         "cost": "2 AP",
-        "details": "Area Spell Attack vs AD, 1 Space Aura, 1 Fire, then teleport to an unoccupied Space within 5 Spaces.",
+        "details": "Area Spell Attack vs AD, 1 Space Aura, 1 Fire. Teleport to an unoccupied Space within 5 Spaces.",
         "id": "DC20A000-0000-4000-8000-000000001503",
         "kind": "Actions",
         "name": "Fire Warp"
@@ -1152,14 +1152,14 @@
     "combatMastery": 1,
     "creatureType": "Fiend",
     "damage": 1.5,
-    "descriptionText": "A small winged humanoid fiend with sharp claws, a pointed tail, and skin in varied colors.",
+    "descriptionText": "Coming in a variety of colors, imps are small humanoid Fiends with leathery wings, sharp claws, and pointed tails.",
     "hp": 7,
     "id": "DC200000-0000-4000-8000-000000000015",
     "immunities": "",
     "intelligence": 0,
     "languages": "Fiend",
     "level": 0,
-    "lore": "Imps are low-ranking Devils often summoned as servants or Familiars and instinctively seek powerful protectors.",
+    "lore": "An Imp is the lowest form of Devil. They act as servants for creatures more powerful than them, especially other Devils. Their relatively low power to other Fiends makes them easy to summon, making them an attractive option for a Familiar as well. Because of their status as the lowest form of Devil, they have an innate desire to serve a master, attaching themselves to a being who can protect them.",
     "might": -2,
     "name": "Imp",
     "notes": "",
@@ -1179,7 +1179,7 @@
     "sourcePage": 26,
     "speed": 5,
     "speedType": "Fly",
-    "tactics": "Stays airborne, Claws and Bleeds close enemies, throws Fireballs, and uses Fire Warp to retreat.",
+    "tactics": "Imps know that they’re frail, so they try to keep to the air when in a fight. If an enemy gets too close, they’ll Claw them and attempt to make them Bleed, then Fire Warp away. While flying, they’ll lob Fireballs from a distance, then retreat to safety if they can.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -1187,35 +1187,35 @@
     "abilities": [
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 2 Slashing +1 extra damage on a Heavy Hit.",
+        "details": "Melee Martial Attack vs PD, 2 Slashing + 1 extra damage on a Heavy Hit.",
         "id": "DC20A000-0000-4000-8000-000000001601",
         "kind": "Actions",
         "name": "Claw"
       },
       {
         "cost": "2 AP",
-        "details": "Area Spell Attack vs AD, 3 Space Cone, 2 Radiant. Area (+1 AP) enlarges to 5 Spaces. Concussive Breath (+1 AP): Physical Save failure knocks back 1 Space, +1 per Failure (each 5).",
+        "details": "Area Spell Attack vs AD, 3 Space Cone, 2 Radiant.\n\n• (+1) Area: The area becomes a 5 Space Cone.\n\n• (+1) Concussive Breath: Physical Save. Failure: Target is knocked back 1 Space. Failure (each 5): +1 Space.",
         "id": "DC20A000-0000-4000-8000-000000001602",
         "kind": "Actions",
         "name": "Plasma Breath"
       },
       {
         "cost": "2 AP",
-        "details": "Contest in a 5 Space Aura against creatures of your choice, Influence vs Repeated Charisma Save. Success: Taunted for 1 minute.",
+        "details": "Contest, 5 Space Aura (creatures of your choice), Influence vs Repeated Charisma Save. Success: Target is Taunted by you for 1 minute.",
         "id": "DC20A000-0000-4000-8000-000000001603",
         "kind": "Actions",
         "name": "Mass Taunt"
       },
       {
         "cost": "1 AP",
-        "details": "When a creature within 1 Space makes an Attack against an ally you can see, make a Claw Attack against it.",
+        "details": "When a creature within 1 Space of you makes an Attack against an ally you can see, you can make a Claw Attack against them.",
         "id": "DC20A000-0000-4000-8000-000000001604",
         "kind": "Reactions",
         "name": "Fierce Protector"
       },
       {
         "cost": "1 AP",
-        "details": "When a Bloodied creature within 10 Spaces is Attacked, it gains +5 PD and AD against that Attack; if Well-Bloodied the bonus lasts 1 Round. Cannot stack.",
+        "details": "When a Bloodied creature within 10 Spaces is Attacked, they gain a +5 bonus to their PD and AD against this Attack. If they are Well-Bloodied, the bonus lasts for 1 Round. This effect can’t stack.",
         "id": "DC20A000-0000-4000-8000-000000001605",
         "kind": "Reactions",
         "name": "Draconic Shield"
@@ -1229,14 +1229,14 @@
     "combatMastery": 2,
     "creatureType": "Dragon",
     "damage": 2.5,
-    "descriptionText": "A brutish, muscular lesser dragon with gleaming purple scales, a long neck and tail, and a broad jagged jaw.",
+    "descriptionText": "Brutish with gleaming purple scales and a long neck and tail, Purple Drakes are a frightening sight. Their arms and legs are thick with muscle, and they have a wide jaw with large, jagged teeth.",
     "hp": 20,
     "id": "DC200000-0000-4000-8000-000000000016",
     "immunities": "",
     "intelligence": 1,
     "languages": "",
     "level": 4,
-    "lore": "Juvenile Purple Drakes form intense protective bonds that can become dangerous when their chosen companion is immoral.",
+    "lore": "A Juvenile Purple Drake is a lesser dragon, that has an innate drive to protect. They usually form a strong bond to another creature, and fight with ferocity to keep that creature safe against all threats. They become dangerous when bonded with someone lacking moral character, who utilize the drake for nefarious ends.",
     "might": 3,
     "name": "Juvenile Purple Drake",
     "notes": "",
@@ -1255,7 +1255,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 27,
     "speed": 6,
-    "tactics": "Stays close to a protected ally, uses Plasma Breath on groups, and Mass Taunt when surrounded.",
+    "tactics": "Purple Drakes are fiercely protective, staying near whoever they wish to protect in a fight. If they have multiple enemies in front of them, they’ll use their Plasma Breath to hit as many as possible. If they’re surrounded, and have an ally to protect, they’ll try to Mass Taunt their enemies with ferocious growls and swiping claws.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -1277,14 +1277,14 @@
       },
       {
         "cost": "2 AP",
-        "details": "Area Spell Attack vs AD, 2 Space Aura, 1 Psychic; Intelligence Save failure Dazes for 1 Round.",
+        "details": "Area Spell Attack vs AD, 2 Space Aura, 1 Psychic and target makes an Intelligence Save. Failure: Target is Dazed for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000001703",
         "kind": "Actions",
         "name": "Shriek"
       },
       {
         "cost": "2 AP",
-        "details": "Contest in a 2 Space Aura, Spell Check vs Charisma Save. Failure Charms for 1 Round. Creatures of your choice in the area gain a d4 Inspiration Die for a Check or Save before the end of their next turn.",
+        "details": "Contest, 2 Space Aura, Spell Check vs Charisma Save. Failure: Target is Charmed by you for 1 Round. Creatures of your choice in the area get a d4 Inspiration Die that they can use on any Check or Save until the end of their next turn.",
         "id": "DC20A000-0000-4000-8000-000000001704",
         "kind": "Actions",
         "name": "Song"
@@ -1297,14 +1297,14 @@
     "charisma": 2,
     "creatureType": "Plant",
     "damage": 1,
-    "descriptionText": "A root-bodied humanoid plant with a fruit- or vegetable-like head, oval eyes, and sharp teeth.",
+    "descriptionText": "Its body is made up of a bunch of roots vaguely in a humanoid shape, with a head that resembles a vegetable or fruit with two oval eyes and a mouth of sharp teeth.",
     "hp": 15,
     "id": "DC200000-0000-4000-8000-000000000017",
     "immunities": "Bleeding",
     "intelligence": -2,
     "languages": "",
     "level": -1,
-    "lore": "Mandrakes are mischievous garden nuisances whose bodies are valuable potion ingredients.",
+    "lore": "Mandrakes are frustrating nuisances when they make their home within farms or gardens, due to their mischievous nature, but their bodies are useful ingredients in many potions.",
     "might": -2,
     "name": "Mandrake",
     "notes": "",
@@ -1322,7 +1322,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 27,
     "speed": 4,
-    "tactics": "Flees danger while alternating between Shriek and Song; bites anything that grabs it.",
+    "tactics": "Mandrakes usually try to flee from any perceived danger, singing or shrieking all the while (see Shriek and Sing; they use 1 option each round). If someone grabs one, they’ll Bite them until their pursuer lets go.",
     "type": "Standard",
     "vulnerabilities": "Fire (Double), Slashing (Double)"
   },
@@ -1337,28 +1337,28 @@
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 3 Piercing; Physical Save failure Grapples until Bite is used again. Pounce (+1 AP): move up to Speed before Attacking and knock the target Prone if it fails.",
+        "details": "Melee Martial Attack vs PD, 3 Piercing and target makes a Physical Save. Failure: Target is Grappled until you use Bite again.\n\n• (+1) Pounce: You can move up to your Speed before Attacking. If the target fails their Save, they also fall Prone.",
         "id": "DC20A000-0000-4000-8000-000000001802",
         "kind": "Actions",
         "name": "Bite"
       },
       {
         "cost": "1 AP",
-        "details": "Against a target Grappled by Bite: Melee Martial Attack vs AD, 5 Piercing.",
+        "details": "[Target Grappled with your Bite] Melee Martial Attack vs AD, 5 Piercing.",
         "id": "DC20A000-0000-4000-8000-000000001803",
         "kind": "Actions",
         "name": "Chew"
       },
       {
         "cost": "2 AP",
-        "details": "Melee or Ranged Martial Attack vs PD, 2 or 15/45 Spaces, 5 Piercing; Repeated Might Save failure Impairs for 1 minute as a Basic Poison.",
+        "details": "Melee or Ranged Martial Attack vs PD, 2 or 15/45 Spaces, 5 Piercing and target makes a Repeated Might Save. Failure: Target is Impaired for 1 minute (considered a Basic Poison).",
         "id": "DC20A000-0000-4000-8000-000000001804",
         "kind": "Actions",
         "name": "Stinger"
       },
       {
         "cost": "Auto",
-        "details": "When a creature makes a Check to escape Bite’s Grapple, use Chew for free before the Check.",
+        "details": "When a creature makes a Check to escape your Bite’s Grapple, you can use Chew for free before the Check.",
         "id": "DC20A000-0000-4000-8000-000000001805",
         "kind": "Reactions",
         "name": "Vicious Hold"
@@ -1372,14 +1372,14 @@
     "combatMastery": 3,
     "creatureType": "Beast",
     "damage": 3,
-    "descriptionText": "A lion-bodied beast with a humanoid face, dragon wings, a spine-covered tail, and rows of sharp teeth.",
+    "descriptionText": "A powerful beast with a lion’s body, a humanoid face, the wings of a dragon, and a long tail covered in green tipped spines. Its multiple rows of sharp teeth are displayed when it snarls and yowls.",
     "hp": 19,
     "id": "DC200000-0000-4000-8000-000000000018",
     "immunities": "",
     "intelligence": 3,
     "languages": "",
     "level": 6,
-    "lore": "Manticores are intelligent predators that hunt adventurers around ruins and dungeons and rarely deal cordially with others.",
+    "lore": "Manticores are intelligent beasts that dwell in dungeons, ruins, and other locations that draw adventurers, whom they hunt and eat. They’ll occasionally attack caravans or other travelers if they’re sure they won’t be discovered and subsequently hunted. While they can speak, they don’t usually make it a habit to interact cordially with other creatures.",
     "might": 4,
     "name": "Manticore",
     "notes": "",
@@ -1398,7 +1398,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 28,
     "speed": 8,
-    "tactics": "Ambushes with Pounce and Bite, Chews a Grappled victim, and uses its Stinger against other enemies.",
+    "tactics": "Manticores sneak up on their prey and then Pounce (see Bite) from their hiding spot when close to their target. Once they’ve caught a creature in their jaws (see Bite), they’ll Chew them with their rows of teeth. While eating one creature, they use their Stinger to ward off other enemies.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -1413,28 +1413,28 @@
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 5 Spaces, 1 Slashing; Physical Save failure Tethers until ended. The target can spend 1 AP to repeat the Save.",
+        "details": "Melee Martial Attack vs PD, 5 Spaces, 1 Slashing and target makes a Physical Save. Failure: Target is Tethered to you until you choose to end the effect. The target can spend 1 AP to repeat this Save.",
         "id": "DC20A000-0000-4000-8000-000000001902",
         "kind": "Actions",
         "name": "Vine Whip"
       },
       {
         "cost": "1 AP",
-        "details": "Against a creature Tethered by Vine Whip: Contest, Martial Check vs Might Save. Success pulls it into your Space and Consumes it. It is Restrained and takes 1 Corrosion at each turn’s end; losing 5+ HP forces a DC 15 Might Save or releases it.",
+        "details": "[Creature Tethered by Vine Whip] Contest, Martial Check vs Might Save. Success: Target is pulled into your Space and Consumed. You can't use this Attack while you have a creature Consumed.\n\n• While Consumed: It's Restrained and takes 1 Corrosion damage at the end of its turns.\n\n• Escape: Each time you lose 5 or more HP, you must make a DC 15 Might Save. Failure: The target is released into an adjacent Space and is no longer Restrained.",
         "id": "DC20A000-0000-4000-8000-000000001903",
         "kind": "Actions",
         "name": "Devour"
       },
       {
         "cost": "1 AP",
-        "details": "Against a Consumed creature: Melee Martial Attack vs AD, 1 Corrosion; regain HP equal to half the damage dealt.",
+        "details": "[Consumed creature]: Melee Martial Attack vs AD, 1 Corrosion. You regain HP equal to half the damage dealt.",
         "id": "DC20A000-0000-4000-8000-000000001904",
         "kind": "Actions",
         "name": "Digest"
       },
       {
         "cost": "4 AP",
-        "details": "MP Effect against breathing creatures; Contest in a 5 Space Aura, Spell Check vs Repeated Charisma Save. Failure Charms for 1 minute until you Attack or force another Save.",
+        "details": "(MP Effect) [Breathing creatures only] Contest, 5 Space Aura, Spell Check vs Repeated Charisma Save. Failure: Target is Charmed by you for 1 minute or until you Attack them or forces them to make a Save (other than from this effect).",
         "id": "DC20A000-0000-4000-8000-000000001905",
         "kind": "Actions",
         "name": "Charming Pollen"
@@ -1448,14 +1448,14 @@
     "combatMastery": 1,
     "creatureType": "Plant",
     "damage": 1,
-    "descriptionText": "A beautiful flower whose meaty, tooth-like petals snap around prey while thick vines drag its body.",
+    "descriptionText": "A beautiful flower whose meaty petals snap around prey that approach. The petals resemble a tooth- filled mouth when attacking prey. It moves by using its thick, snaking vines to drag its body across surfaces.",
     "hp": 10,
     "id": "DC200000-0000-4000-8000-000000000019",
     "immunities": "Bleeding, Blinded",
     "intelligence": -2,
     "languages": "",
     "level": 1,
-    "lore": "Mantrap Blooms hunt in jungles; their nectar is used in enchantment rituals and potions.",
+    "lore": "Found in jungles, Mantrap Blooms lure and ambush prey, devouring them for added nutrients. Its nectar is used in some enchantment rituals and potions.",
     "might": 3,
     "name": "Mantrap Bloom",
     "notes": "",
@@ -1474,7 +1474,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 29,
     "speed": 3,
-    "tactics": "Uses False Appearance to ambush, Vine Whip and Devour to Consume prey, Digest to heal, and Charming Pollen when surrounded.",
+    "tactics": "Mantrap Blooms wait for prey to approach, appearing mundane with their False Appearance. When a creature is close enough, it Vine Whips them to pull them in and Devours them. While eating a creature, it Digests them quickly for sustenance. While surrounded, it may release its Charming Pollen to stay safe while it eats. They almost never focus their attacks on Constructs, Elementals, or Plants, seeking to eat creatures made of flesh and bone first.",
     "type": "Standard",
     "vulnerabilities": "Fire (1), Slashing (1)"
   },
@@ -1482,56 +1482,56 @@
     "abilities": [
       {
         "cost": "",
-        "details": "While motionless, you’re indistinguishable from glass.",
+        "details": "While motionless, you're indistinguishable from glass.",
         "id": "DC20A000-0000-4000-8000-000000002001",
         "kind": "Features",
         "name": "False Appearance"
       },
       {
         "cost": "",
-        "details": "Unaffected by mundane Difficult Terrain and can move through a Space as narrow as 1 inch without squeezing.",
+        "details": "You're unaffected by mundane Difficult Terrain and can move through a Space as narrow as 1 inch wide without squeezing.",
         "id": "DC20A000-0000-4000-8000-000000002002",
         "kind": "Features",
         "name": "Amorphous"
       },
       {
         "cost": "",
-        "details": "Does not need to breathe and is immune to hazardous air and Suffocating.",
+        "details": "You don't need to breathe. You're immune to hazardous air and Suffocating.",
         "id": "DC20A000-0000-4000-8000-000000002003",
         "kind": "Features",
         "name": "Anaerobic"
       },
       {
         "cost": "",
-        "details": "Climb any solid surface without making a Check.",
+        "details": "You can Climb any solid surface without making a Check.",
         "id": "DC20A000-0000-4000-8000-000000002004",
         "kind": "Features",
         "name": "Ooze Climb"
       },
       {
         "cost": "",
-        "details": "After taking Cold damage, lose Physical Resistance (1), gain Bludgeoning Vulnerability (Double), and become Slowed for 1 Round.",
+        "details": "When you take Cold damage, you lose Physical Resistance (1), gain Bludgeoning Vulnerability (Double), and become Slowed for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000002005",
         "kind": "Features",
         "name": "Molten Glass Body"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 3 Fire. Slather (+2 AP): Agility Save failure causes Burning for 1 minute; it cannot be removed with AP but ends after Cold damage.",
+        "details": "Melee Martial Attack vs PD, 3 Fire.\n\n• (+2) Slather: Agility Save. Failure: Target begins Burning for 1 minute. This Burning can't be removed by spending AP, but ends if the target takes Cold damage.",
         "id": "DC20A000-0000-4000-8000-000000002006",
         "kind": "Actions",
         "name": "Slam"
       },
       {
         "cost": "2 AP",
-        "details": "Area Spell Attack vs AD, 1 Space Aura, 2 Fire +1 extra damage on a Heavy Hit.",
+        "details": "Area Spell Attack vs AD, 1 Space Aura, 2 Fire + 1 extra damage on a Heavy Hit.",
         "id": "DC20A000-0000-4000-8000-000000002007",
         "kind": "Actions",
         "name": "Radiate Heat"
       },
       {
         "cost": "1 AP",
-        "details": "When Hit by a Melee Attack, the attacker makes an Agility Save. Failure causes Burning for 1 minute; it cannot be removed with AP but ends after Cold damage.",
+        "details": "When you're Hit by a Melee Attack, the Attacker must make an Agility Save. Failure: Target begins Burning for 1 minute. This Burning can't be removed by spending AP, but ends if the target takes Cold damage.",
         "id": "DC20A000-0000-4000-8000-000000002008",
         "kind": "Reactions",
         "name": "Molten Splash"
@@ -1545,14 +1545,14 @@
     "combatMastery": 2,
     "creatureType": "Ooze",
     "damage": 3,
-    "descriptionText": "A smooth, transparent ooze that flows like water and becomes intensely hot when agitated.",
+    "descriptionText": "This smooth, clear ooze flows like water as it moves. It is incredibly hot to the touch but only radiates heat when agitated.",
     "hp": 11,
     "id": "DC200000-0000-4000-8000-000000000020",
     "immunities": "Fire; Bleeding, Charmed, Deafened, Grappled, Prone, Restrained",
     "intelligence": -3,
     "languages": "",
     "level": 4,
-    "lore": "Originally made to guard display cases, its residue burns thieves and lets authorities track them magically.",
+    "lore": "Molten Glass Ooze were first created to guard display cases protecting valuable treasures. The residue of their molten glass bodies stick to any would be thieves, causing serious burns and allowing authorities to magically track them.",
     "might": 0,
     "name": "Molten Glass Ooze",
     "notes": "",
@@ -1571,7 +1571,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 30,
     "speed": 5,
-    "tactics": "Hides as glass, Slams and Slathers enemies, Radiates Heat when needed, and splashes molten material onto melee attackers.",
+    "tactics": "These oozes blend in with mundane glass, staying completely still to use their False Appearance to attack with Surprise. They'll Slam into enemies and then Slather them to Burn them. If they can't hit an enemy, they'll Radiate Heat to hurt them instead. When hit by a Melee Attack, they're able to splash onto their enemies to Burn them (see Molten Splash). These oozes are afraid of the cold, however, as it causes them to become extremely fragile and renders their Burns useless.",
     "type": "Standard",
     "vulnerabilities": "Cold (Double)"
   },
@@ -1579,28 +1579,28 @@
     "abilities": [
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 2 Spaces, 1 Bludgeoning +1 extra damage if the target is Prone; Physical Save failure knocks Prone.",
+        "details": "Melee Martial Attack vs PD, 2 Spaces 1 Bludgeoning + 1 extra damage if the target is Prone and target makes a Physical Save. Failure: Target falls Prone.",
         "id": "DC20A000-0000-4000-8000-000000002101",
         "kind": "Actions",
         "name": "Maul"
       },
       {
         "cost": "2 AP",
-        "details": "Area Martial Attack vs AD, 10 Space Line, 1 Piercing. Slow (+1 AP): Repeated Physical Save failure Slows for 1 minute.",
+        "details": "Area Martial Attack vs AD, 10 Space Line, 1 Piercing.\n\n• (+1) Slow: Target makes a Repeated Physical Save. Failure: Target is Slowed for 1 minute.",
         "id": "DC20A000-0000-4000-8000-000000002102",
         "kind": "Actions",
         "name": "Spear Throw"
       },
       {
         "cost": "2 AP",
-        "details": "Against Medium or smaller creatures in a 2 Space Aura: Contest, Martial Check vs Physical Save. Success knocks Prone.",
+        "details": "[Medium or smaller creatures] Contest, 2 Space Aura, Martial Check vs Physical Save. Success: Target falls Prone.",
         "id": "DC20A000-0000-4000-8000-000000002103",
         "kind": "Actions",
         "name": "Ground Stomp"
       },
       {
         "cost": "2 AP",
-        "details": "Contest in a 5 Space Aura, Martial Check vs Repeated Charisma Save. Success Taunts for 1 minute.",
+        "details": "Contest, 5 Space Aura, Martial Check vs Repeated Charisma Save. Success: Target is Taunted by you for 1 minute.",
         "id": "DC20A000-0000-4000-8000-000000002104",
         "kind": "Actions",
         "name": "Taunting Bellow"
@@ -1614,14 +1614,14 @@
     "combatMastery": 1,
     "creatureType": "Giant",
     "damage": 1.5,
-    "descriptionText": "A thickly muscled giant with a small tusked head, massive weapon, and heavy hide armor.",
+    "descriptionText": "A giant with a thick, muscular body and a disproportionately small head with boar like tusks. Ogre Warriors typically wield massive, heavy weapons and wear thick hide armor.",
     "hp": 29,
     "id": "DC200000-0000-4000-8000-000000000021",
     "immunities": "",
     "intelligence": -2,
     "languages": "",
     "level": 2,
-    "lore": "Ogre Warriors hunt large animals and are valued by their kin primarily for fighting.",
+    "lore": "Ogres utilize their size to hunt large animals. Ogre Warriors tend to be the least intelligent of their kind, being good for little more than fighting.",
     "might": 3,
     "name": "Ogre Warrior",
     "notes": "",
@@ -1640,7 +1640,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 31,
     "speed": 5,
-    "tactics": "Targets weak foes, throws spears at range, stomps groups Prone, and uses Taunting Bellow to protect allies.",
+    "tactics": "Ogre Warriors are very easy to fool, but they have strong instincts in battle. They focus attacks on weak targets first and throw spears (see Spear Throw) at distant enemies. If they're surrounded, they'll stomp the ground (see Ground Stomp) and attack anyone who falls over from the quaking earth. They're also keen on protecting their allies, and loose a Taunting Bellow to distract enemies when needed.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -1648,35 +1648,35 @@
     "abilities": [
       {
         "cost": "",
-        "details": "Gain an additional +2 bonus to Attacks against creatures you’re Flanking.",
+        "details": "You gain an additional +2 bonus to Attacks against creatures you're Flanking.",
         "id": "DC20A000-0000-4000-8000-000000002201",
         "kind": "Features",
         "name": "Pack Tactics"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 2 Slashing; Physical Save failure causes Bleeding. Flyby (+1 AP): move up to Speed before or after without provoking.",
+        "details": "Melee Martial Attack vs PD, 2 Slashing and target makes a Physical Save. Failure: Target is Bleeding.\n\n• (+1) Flyby: You can move up to your Speed before or after Attacking without provoking Opportunity Attacks.",
         "id": "DC20A000-0000-4000-8000-000000002202",
         "kind": "Actions",
         "name": "Claw"
       },
       {
         "cost": "1 AP",
-        "details": "Ranged Spell Attack vs AD, 10 Spaces, 1 Psychic; Charisma Save failure Taunts for 1 Round. Discombobulate (+1 AP): Intelligence Save failure subtracts a d4 from every Check for 1 Round.",
+        "details": "Ranged Spell Attack vs AD, 10 Spaces, 1 Psychic and target makes a Charisma Save. Failure: Target is Taunted by you for 1 Round.\n\n• (+1) Discombobulate: Intelligence Save. Failure: Target subtracts a d4 on every Check it makes for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000002203",
         "kind": "Actions",
         "name": "Vicious Mockery"
       },
       {
         "cost": "2 AP",
-        "details": "Contest, 5 Spaces, 2 Space Sphere, Spell Check vs Repeated Intelligence Save. Success Incapacitates for 1 minute until damage, another Save, or an adjacent creature spends 1 AP.",
+        "details": "Contest, 5 Spaces, 2 Space Sphere, Spell Check vs Repeated Intelligence Save. Success: Target is Incapacitated for 1 minute or until it takes damage, makes a Save against another effect, or another creature within 1 Space spends 1 AP to wake it.",
         "id": "DC20A000-0000-4000-8000-000000002204",
         "kind": "Actions",
         "name": "Slumber"
       },
       {
         "cost": "1 AP",
-        "details": "When Hit by a Melee Attack, teleport to an unoccupied Space within 5 Spaces.",
+        "details": "When you're Hit by a Melee Attack, you can teleport to an unoccupied Space within 5 Spaces.",
         "id": "DC20A000-0000-4000-8000-000000002205",
         "kind": "Reactions",
         "name": "Fey Escape (1/Round)"
@@ -1690,14 +1690,14 @@
     "combatMastery": 1,
     "creatureType": "Fey",
     "damage": 2,
-    "descriptionText": "A feral humanoid fey with varied animal features, wings, and a trail of golden magical dust.",
+    "descriptionText": "Feral fey with a humanoid body, but bestial features. Pixies can have the features of any animal, with claws, antennae, bird or bug wings, black eyes, etc. Some can even have fur or the lower body of an animal or insect. Golden dust falls off of its body as it flies.",
     "hp": 12,
     "id": "DC200000-0000-4000-8000-000000000022",
     "immunities": "",
     "intelligence": -1,
     "languages": "Fey",
     "level": 2,
-    "lore": "Pixies behave like mischievous wild animals and are hunted for the alchemical properties of their dust.",
+    "lore": "Pixies have little intelligence and act almost like wild animals, with a hint of mischievousness. The golden dust that coats their bodies is imbued with fey magic, causing some poachers to hunt them for its alchemical properties.",
     "might": -2,
     "name": "Pixie",
     "notes": "",
@@ -1717,7 +1717,7 @@
     "sourcePage": 32,
     "speed": 5,
     "speedType": "Fly",
-    "tactics": "Swarms in packs, Claws while darting through danger, mocks from hiding, and uses Slumber against major threats.",
+    "tactics": "These little fey like to stick together in small packs and aren't usually directly violent unless provoked. When angered, they'll swarm their enemies and try to surround them and Claw them while moving in and out of danger and set 1 or 2 of their ranks to hide and mock (Vicious Mockery) the enemies from afar. If there's a particularly big threat, they'll attempt to put them into a magical Slumber to get away.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -1778,21 +1778,21 @@
     "abilities": [
       {
         "cost": "",
-        "details": "While motionless, you’re indistinguishable from a dead body.",
+        "details": "While you remain motionless, you’re indistinguishable from a dead body.",
         "id": "DC20A000-0000-4000-8000-000000002401",
         "kind": "Features",
         "name": "False Appearance"
       },
       {
         "cost": "1 AP",
-        "details": "Ranged Martial Attack vs PD, 10/30 Spaces, 1 Piercing. Hinder (+1 AP): Agility Save failure Hinders until the end of the target’s next turn.",
+        "details": "Ranged Martial Attack vs PD, 10/30 Spaces, 1 Piercing.\n\n• (+1) Hinder: Agility Save. Failure: Target is Hindered until the end of their next turn.",
         "id": "DC20A000-0000-4000-8000-000000002402",
         "kind": "Actions",
         "name": "Sling"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 1 Slashing. Accuracy (+1 AP): add a d6 to the Attack Check.",
+        "details": "Melee Martial Attack vs PD, 1 Slashing.\n\n• (+1) Accuracy: Add a d6 to your Attack Check.",
         "id": "DC20A000-0000-4000-8000-000000002403",
         "kind": "Actions",
         "name": "Sword"
@@ -1806,7 +1806,7 @@
       },
       {
         "cost": "1 AP",
-        "details": "When you or a creature within 1 Space is Hit, it takes 1 less damage.",
+        "details": "When you or a creature within 1 Space of you is Hit by an Attack, they take 1 less damage from the Attack.",
         "id": "DC20A000-0000-4000-8000-000000002405",
         "kind": "Reactions",
         "name": "Endure"
@@ -1820,14 +1820,14 @@
     "combatMastery": 1,
     "creatureType": "Undead",
     "damage": 1,
-    "descriptionText": "A reanimated skeletal corpse equipped with ancient weapons and armor.",
+    "descriptionText": "A reanimated corpse past the point of rotting where only bones remain, armed with ancient equipment for various roles.",
     "hp": 10,
     "id": "DC200000-0000-4000-8000-000000000024",
     "immunities": "Poison; Bleeding, Exhausted, Poisoned, Unconscious",
     "intelligence": -1,
     "languages": "Understands languages known in life; cannot speak",
     "level": 1,
-    "lore": "Skeleton Warriors are old combatants animated by necromancers or lingering necrotic magic.",
+    "lore": "These creatures are old combatants animated by spellcasters or lingering necrotic magic. They're popular troops for necromancers due to their use of weapons and the minimal magic needed to create them.",
     "might": 3,
     "name": "Skeleton Warrior",
     "notes": "",
@@ -1846,7 +1846,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 33,
     "speed": 4,
-    "tactics": "Attacks recklessly with sword, shield, and sling, Cleaves clustered foes, and Endures dangerous Hits.",
+    "tactics": "Skeleton Warriors attack with reckless abandon, using Sword and Shield to attack anyone close to them. They use Slings to attack from afar. They'll try to make sweeping attacks (Cleave) at groups of enemies and will Endure Heavy Hits.",
     "type": "Standard",
     "vulnerabilities": "Bludgeoning (Double), Radiant (Double)"
   },
@@ -1854,35 +1854,35 @@
     "abilities": [
       {
         "cost": "",
-        "details": "While motionless, you’re indistinguishable from a mundane object.",
+        "details": "While motionless, you're indistinguishable from a mundane object.",
         "id": "DC20A000-0000-4000-8000-000000002501",
         "kind": "Features",
         "name": "False Appearance"
       },
       {
         "cost": "",
-        "details": "Your first Attack each Combat deals +3 damage. If the target is Surprised, you have ADV on the Attack.",
+        "details": "Your first Attack each combat deals +3 damage. If the target is Surprised, you have ADV on the Attack.",
         "id": "DC20A000-0000-4000-8000-000000002502",
         "kind": "Features",
         "name": "Ambush Predator"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 1 Piercing +1 extra damage on a Heavy Hit.",
+        "details": "Melee Martial Attack vs PD, 1 Piercing + 1 extra damage on a Heavy Hit.",
         "id": "DC20A000-0000-4000-8000-000000002503",
         "kind": "Actions",
         "name": "Snap"
       },
       {
         "cost": "2 AP",
-        "details": "Area Martial Attack vs AD, 1 Space Arc, 1 Slashing +1 extra damage on a Heavy Hit.",
+        "details": "Area Martial Attack vs AD, 1 Space Arc, 1 Slashing + 1 extra damage on a Heavy Hit.",
         "id": "DC20A000-0000-4000-8000-000000002504",
         "kind": "Actions",
         "name": "Tongue"
       },
       {
         "cost": "2 AP",
-        "details": "Jump up to Speed, then make a Melee Martial Attack vs PD, 1 Bludgeoning; Physical Save failure knocks Prone.",
+        "details": "You jump up to your Speed then Melee Martial Attack vs PD, 1 Bludgeoning and target makes a Physical Save. Failure: Target falls Prone.",
         "id": "DC20A000-0000-4000-8000-000000002505",
         "kind": "Actions",
         "name": "Lunge"
@@ -1896,14 +1896,14 @@
     "combatMastery": 1,
     "creatureType": "Aberration",
     "damage": 1.5,
-    "descriptionText": "A hungry shapeshifter that imitates small objects, then sprouts legs, crimson fibers, and a blade-like tongue to attack.",
+    "descriptionText": "A shapeshifter that morphs into small objects like treasure or chests, it takes on a monstrous form when attacking, usually sprouting insectoid legs. Its interior is made of thick crimson fibers, resembling the surface of a cat's tongue. Its pointed tongue is as sharp as a blade.",
     "hp": 10,
     "id": "DC200000-0000-4000-8000-000000000025",
     "immunities": "",
     "intelligence": 1,
     "languages": "",
     "level": 1,
-    "lore": "Small Mimics are young or starved predators that lure humanoids by copying mundane objects.",
+    "lore": "Mimics have an insatiable hunger and eat any living creature they can, but mostly humanoids. They disguise themselves as mundane objects that lure people towards them, then attack when their prey's guard is down. Mimics grow when they consume enough meat, so Small Mimics are usually very young or starved.",
     "might": 0,
     "name": "Small Mimic",
     "notes": "",
@@ -1922,7 +1922,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 33,
     "speed": 5,
-    "tactics": "Waits in False Appearance, makes an explosive first Attack, Snaps nearby prey, sweeps groups with Tongue, and Lunges across distance.",
+    "tactics": "Every Mimic copies an item and lies in wait for a creature to come close enough for attack. They Snap at singular enemies and can use their Tongue to swipe at groups. If they need to cover a lot of ground, Small Mimics can Lunge quite far.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -1937,7 +1937,7 @@
       },
       {
         "cost": "",
-        "details": "Use the Help Action on creatures within 5 Spaces.",
+        "details": "You can use the Help Action on creatures within 5 Spaces.",
         "id": "DC20A000-0000-4000-8000-000000002602",
         "kind": "Features",
         "name": "Guidance"
@@ -1951,14 +1951,14 @@
       },
       {
         "cost": "1 AP",
-        "details": "Contest, 5 Spaces, Spell Check vs Physical Save. Failure: Exposed for 1 Round.",
+        "details": "Contest, 5 Spaces, Spell Check vs Physical Save. Failure: Target is Exposed for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000002604",
         "kind": "Actions",
         "name": "Exposing Light"
       },
       {
         "cost": "Auto",
-        "details": "After an ally within 5 Spaces is Hit, use Soothing Words on it.",
+        "details": "After an ally within 5 Spaces is Hit by an Attack, you can use Soothing Words on the creature.",
         "id": "DC20A000-0000-4000-8000-000000002605",
         "kind": "Reactions",
         "name": "Empathetic Support"
@@ -1972,14 +1972,14 @@
     "combatMastery": 1,
     "creatureType": "Fey",
     "damage": 0,
-    "descriptionText": "A tiny elf-like fey at the center of a brightly colored mote of winged light.",
+    "descriptionText": "A very small fey that glows brightly in a variety of colors, usually only appearing as a mote of light with wings. When closely examined, it has a tiny elf-like body in the center of the light.",
     "hp": 11,
     "id": "DC200000-0000-4000-8000-000000000026",
     "immunities": "",
     "intelligence": 0,
     "languages": "Fey",
     "level": 0,
-    "lore": "Sprites’ colors mirror their rapidly changing moods; they encourage heroes and enjoy harmless pranks.",
+    "lore": "The color a Sprite glows is based on its mood, which changes rapidly. They tend to offer encouragement to people and play mostly harmless pranks. Sprites love to be helpful to heroes, and sometimes seek the companionship of an adventurer just starting their journey.",
     "might": -2,
     "name": "Sprite",
     "notes": "",
@@ -1999,7 +1999,7 @@
     "sourcePage": 34,
     "speed": 5,
     "speedType": "Fly",
-    "tactics": "Supports allies with Soothing Words, Exposing Light, ranged Help, and automatic Empathetic Support.",
+    "tactics": "Sprites don't fight directly, and simply support allies with Soothing Words and their Exposing Light. If they're up close in a fight, they'll Help their friends with Attacks and other Actions.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -2007,49 +2007,49 @@
     "abilities": [
       {
         "cost": "",
-        "details": "Can share creature Spaces and move through air-sized gaps as Difficult Terrain.",
+        "details": "You can occupy other creature's spaces and vice versa (without a check or being Slowed). You can move through a gap narrow enough for air to pass through but treat it as Difficult Terrain.",
         "id": "DC20A000-0000-4000-8000-000000002701",
         "kind": "Features",
         "name": "Cloud Body"
       },
       {
         "cost": "",
-        "details": "Creatures occupying your Space are Slowed, Blinded, and Deafened.",
+        "details": "Creatures that occupy your Space are Slowed, Blinded, and Deafened.",
         "id": "DC20A000-0000-4000-8000-000000002702",
         "kind": "Features",
         "name": "Storm Body"
       },
       {
         "cost": "",
-        "details": "When Bloodied, become 1 Size smaller and Attacks have DisADV. When Well-Bloodied, become 2 Sizes smaller and Attacks have DisADV 2.",
+        "details": "When you become Bloodied, you become 1 Size smaller and your Attacks have DisADV. When you become Well-Bloodied, this becomes 2 Sizes smaller and your Attacks have DisADV 2.",
         "id": "DC20A000-0000-4000-8000-000000002703",
         "kind": "Features",
         "name": "Diminishing Size"
       },
       {
         "cost": "1 AP",
-        "details": "Ranged Spell Attack vs AD, 10 Spaces, 3 Lightning and ignores Close Range Penalty. Chain (+1 AP, repeatable): add a target within 3 Spaces of the previous target using the same Check.",
+        "details": "Ranged Spell Attack vs AD, 10 Spaces, 3 Lightning. This ignores Close Range Penalty.\n\n• (+1, Repeatable) Chain: Choose 1 additional target within 3 Spaces of the original (or previous target if used multiple times) using the same Spell Attack for all Targets.",
         "id": "DC20A000-0000-4000-8000-000000002704",
         "kind": "Actions",
         "name": "Lightning Strike"
       },
       {
         "cost": "2 AP",
-        "details": "Against creatures in Spaces you occupy: Area Spell Attack vs AD, 2 Bludgeoning +1 extra damage on a Heavy Hit.",
+        "details": "[Creatures in Spaces you Occupy] Area Spell Attack vs AD, 2 Bludgeoning + 1 extra damage on a Heavy Hit.",
         "id": "DC20A000-0000-4000-8000-000000002705",
         "kind": "Actions",
         "name": "Hail"
       },
       {
         "cost": "2 AP",
-        "details": "Against Large or smaller creatures in a 1 Space Aura: Contest, Spell Check vs Physical Save. Success pulls 1 Space toward your center, +1 per Success (each 5).",
+        "details": "[Large or smaller creature] Contest, 1 Space Aura, Spell Check vs Physical Save. Success: Target is pulled 1 Space toward your center. Success (each 5): Target is pulled +1 Space.",
         "id": "DC20A000-0000-4000-8000-000000002706",
         "kind": "Actions",
         "name": "Vortex Pull"
       },
       {
         "cost": "4 AP",
-        "details": "Contest in a 5 Space Aura, Spell Check vs Might Save. Success causes Dazed and Stunned for 1 Round.",
+        "details": "Contest, 5 Space Aura, Spell Check vs Might Save. Success: Target is Dazed and Stunned for 1 Round.",
         "id": "DC20A000-0000-4000-8000-000000002707",
         "kind": "Actions",
         "name": "Booming Thunder"
@@ -2063,14 +2063,14 @@
     "combatMastery": 3,
     "creatureType": "Elemental",
     "damage": 3,
-    "descriptionText": "A dense living torrent of rain clouds, hail, lightning, and deafening thunder.",
+    "descriptionText": "A dense, compacted torrent of rain clouds, hail, and lightning. Its thunder is deafening.",
     "hp": 10,
     "id": "DC200000-0000-4000-8000-000000000027",
     "immunities": "Lightning, Poison; Bleeding, Blinded, Burning, Deafened, Grappled, Paralyzed, Poisoned, Prone, Restrained, Tethered, Unconscious",
     "intelligence": -2,
     "languages": "",
     "level": 6,
-    "lore": "Storm Elementals are chaotic embodiments of thunderstorms whose emotions shift as quickly as the weather.",
+    "lore": "A living embodiment of a thunderstorm, they are as chaotic and unpredictable. Their emotions can change drastically from one minute to the next, causing them to be quite violent at times.",
     "might": -1,
     "name": "Storm Elemental",
     "notes": "",
@@ -2090,7 +2090,7 @@
     "sourcePage": 35,
     "speed": 5,
     "speedType": "Fly",
-    "tactics": "Strikes at range with lightning, pelts creatures inside its body with Hail, pulls enemies inward, and uses Booming Thunder to Daze and Stun groups.",
+    "tactics": "These elementals use Lightning Strikes to attack from afar and Hail to pelt enemies within their body. They can pull creatures around them into their body (see Vortex Pull) and create Booming Thunder to Daze enemies.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -2098,35 +2098,35 @@
     "abilities": [
       {
         "cost": "",
-        "details": "Can share creature Spaces and move through gaps as small as a member of the swarm, treating them as Difficult Terrain.",
+        "details": "You can occupy other creature's spaces and vice versa (without a check or being Slowed). You can move through a gap as narrow as the size of the creatures that make up your swarm but treat it as Difficult Terrain.",
         "id": "DC20A000-0000-4000-8000-000000002801",
         "kind": "Features",
         "name": "Swarm"
       },
       {
         "cost": "",
-        "details": "Cannot heal or gain Temp HP. When Bloodied, become 1 Size smaller with DisADV on Attacks; when Well-Bloodied, become 2 Sizes smaller with DisADV 2.",
+        "details": "You can't heal or gain Temp HP. When you become Bloodied, you become 1 Size smaller and your Attacks have DisADV. When you become Well-Bloodied, this becomes 2 Sizes smaller and your Attacks have DisADV 2.",
         "id": "DC20A000-0000-4000-8000-000000002802",
         "kind": "Features",
         "name": "Significant Diminishing Numbers"
       },
       {
         "cost": "",
-        "details": "DisADV on Attacks against creatures not revealed by Echo unless they Attacked you since your last turn ended.",
+        "details": "You has DisADV on Attacks against a creature not revealed by Echo, unless they've Attacked you since the end of your last turn.",
         "id": "DC20A000-0000-4000-8000-000000002803",
         "kind": "Features",
         "name": "Poor Eyesight"
       },
       {
         "cost": "1 AP",
-        "details": "Reveal all creatures within 15 Spaces to yourself and creatures with Echosight for 1 Round. Louder (+1 AP): against creatures in your Spaces, Contest Martial Check vs Mental Save; Success Dazes for 1 Round.",
+        "details": "You screech, revealing all creatures within a 15 Spaces of you to yourself and any creature with Echosight for 1 round.\n\n• (+1) Louder: [Creatures in Spaces you occupy] Contest, Martial Check vs Mental Save. Success: Target is Dazed for 1 round.",
         "id": "DC20A000-0000-4000-8000-000000002804",
         "kind": "Actions",
         "name": "Echo"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Attack vs AD, 1 Piercing. Bleed (+1 AP): Agility Save failure causes Bleeding. Impair (+1 AP): Might Save failure Impairs for 1 Round as a Basic Disease.",
+        "details": "Melee Attack vs AD, 1 Piercing.\n\n• (+1) Bleed: Target makes an Agility Save. Failure: Target is Bleeding.\n\n• (+1) Impair: Target makes a Might Save. Failure: Target is Impaired for 1 round (considered a Basic Disease).",
         "id": "DC20A000-0000-4000-8000-000000002805",
         "kind": "Actions",
         "name": "Swarm"
@@ -2139,14 +2139,14 @@
     "charisma": 0,
     "creatureType": "Swarm of Tiny Beasts",
     "damage": 1,
-    "descriptionText": "A loud mass of small brown bats flapping and screeching together.",
+    "descriptionText": "A swarm of small brown bats, loudly flapping and screeching in a large mass.",
     "hp": 5,
     "id": "DC200000-0000-4000-8000-000000000028",
     "immunities": "Grappled, Restrained, Tethered",
     "intelligence": -2,
     "languages": "",
     "level": -1,
-    "lore": "Bat colonies attack when threatened or magically controlled.",
+    "lore": "Bats that live together in colonies, only attacking when they feel threatened or are being controlled.",
     "might": -2,
     "name": "Swarm of Bats",
     "notes": "",
@@ -2165,7 +2165,7 @@
     "sourcePage": 36,
     "speed": 5,
     "speedType": "Fly",
-    "tactics": "Uses Echo to locate and Daze enemies, then Swarms occupied Spaces to cause Bleeding and Impaired.",
+    "tactics": "Swams of Bats screech (see Echo) to find and Daze their enemies, then Swarm them to Bleed and Impair them. They're weak to effects that target an area.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -2173,28 +2173,28 @@
     "abilities": [
       {
         "cost": "",
-        "details": "ADV on Awareness Checks made to hear or smell.",
+        "details": "You have ADV on Awareness Checks made to hear or smell.",
         "id": "DC20A000-0000-4000-8000-000000002901",
         "kind": "Features",
         "name": "Keen Senses"
       },
       {
         "cost": "",
-        "details": "Gain an additional +2 bonus to Attacks against creatures you’re Flanking.",
+        "details": "You gain an additional +2 bonus to Attacks against creatures you’re Flanking.",
         "id": "DC20A000-0000-4000-8000-000000002902",
         "kind": "Features",
         "name": "Pack Tactics"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 1 Piercing. Grapple (+1 AP): Might Save failure Grapples. Slow (+1 AP): Agility Save failure Slows until the end of the target’s next turn.",
+        "details": "Melee Martial Attack vs PD, 1 Piercing.\n\n• (+1) Grapple: Might Save. Failure: Target is Grappled.\n\n• (+1) Slow: Agility Save. Failure: Target is Slowed until the end of its next turn.",
         "id": "DC20A000-0000-4000-8000-000000002903",
         "kind": "Actions",
         "name": "Bite"
       },
       {
         "cost": "1 AP",
-        "details": "Against a Grappled target: Melee Martial Attack vs AD, 1 Piercing; Physical Save failure causes Bleeding.",
+        "details": "[A Grappled target], Melee Martial Attack vs AD, 1 Piercing and target makes a Physical Save. Failure: Target is Bleeding.",
         "id": "DC20A000-0000-4000-8000-000000002904",
         "kind": "Actions",
         "name": "Tear Apart"
@@ -2208,14 +2208,14 @@
     "combatMastery": 1,
     "creatureType": "Beast",
     "damage": 1,
-    "descriptionText": "A large savage canine with sharp teeth and claws that howls to begin a hunt.",
+    "descriptionText": "A large, savage canine with long, sharp teeth and claws that howls to start a hunt. Their fur is often black and gray, but can be brown or white in certain environments.",
     "hp": 11,
     "id": "DC200000-0000-4000-8000-000000000029",
     "immunities": "",
     "intelligence": -3,
     "languages": "",
     "level": 0,
-    "lore": "Wolves live in packs and threaten settlements when they begin hunting livestock near civilization.",
+    "lore": "While wolves can be encountered alone or in a pair, they're usually found in moderately sized packs of 3 or more. They cause trouble when too close to civilization, often eating horses and livestock while preventing civilians from safely doing their day to day work in the crop fields and forests.",
     "might": 1,
     "name": "Wolf",
     "notes": "",
@@ -2234,7 +2234,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 36,
     "speed": 8,
-    "tactics": "Bites and Grapples a target, then Flanks it with the pack and uses Tear Apart.",
+    "tactics": "If an ally hasn't Grappled a target, they Bite and Grapple one. Once they've Grappled a creature, they Flank and Tear Apart.",
     "type": "Standard",
     "vulnerabilities": ""
   },
@@ -2242,49 +2242,49 @@
     "abilities": [
       {
         "cost": "",
-        "details": "ADV on Awareness Checks made to hear or smell.",
+        "details": "You have ADV on Awareness Checks made to hear or smell.",
         "id": "DC20A000-0000-4000-8000-000000003001",
         "kind": "Features",
         "name": "Keen Senses"
       },
       {
         "cost": "",
-        "details": "Gain an additional +2 bonus to Attacks against creatures you’re Flanking.",
+        "details": "You gain an additional +2 bonus to Attacks against creatures you’re Flanking.",
         "id": "DC20A000-0000-4000-8000-000000003002",
         "kind": "Features",
         "name": "Pack Tactics"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 4 Piercing +1 extra damage on a Heavy Hit.",
+        "details": "Melee Marital Attack vs PD, 4 Piercing + 1 extra damage on a Heavy Hit.",
         "id": "DC20A000-0000-4000-8000-000000003003",
         "kind": "Actions",
         "name": "Bite"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 3 Slashing; Physical Save failure Grapples, and Failure (5) also Restrains while Grappled.",
+        "details": "Melee Marital Attack vs PD, 3 Slashing and target makes a Physical Save. Failure: Target is Grappled. Failure (5): While Grappled, the target is also Restrained.",
         "id": "DC20A000-0000-4000-8000-000000003004",
         "kind": "Actions",
         "name": "Talon"
       },
       {
         "cost": "2 AP",
-        "details": "Melee Martial Attack vs AD, 1 Space Aura, 3 Bludgeoning; Physical Save failure knocks Prone.",
+        "details": "Melee Marital Attack vs AD, 1 Space Aura, 3 Bludgeoning and target makes a Physical Save. Failure: Target falls Prone.",
         "id": "DC20A000-0000-4000-8000-000000003005",
         "kind": "Actions",
         "name": "Wing Strike"
       },
       {
         "cost": "2 AP",
-        "details": "Melee Martial Attack vs PD, 2 Spaces, 1 Piercing; Might Save failure deals 2 Poison at the start of each turn for 1 minute as a Basic Poison.",
+        "details": "Melee Martial Attack vs PD, 2 Spaces, 1 Piercing and target makes a Might Save. Failure: Target takes 2 Poison damage at the start of each turn for 1 minute (considered a Basic Poison).",
         "id": "DC20A000-0000-4000-8000-000000003006",
         "kind": "Actions",
         "name": "Stinger"
       },
       {
         "cost": "2 AP",
-        "details": "Contest in a 5 Space Aura, Intimidation vs Repeated Charisma Save. Success Intimidates for 1 minute.",
+        "details": "Contest, 5 Space Aura, Intimidation vs Repeated Charisma Save. Success: Target is Intimidated by you for 1 minute.",
         "id": "DC20A000-0000-4000-8000-000000003007",
         "kind": "Actions",
         "name": "Intimidating Roar"
@@ -2298,14 +2298,14 @@
     "combatMastery": 3,
     "creatureType": "Dragon",
     "damage": 4.5,
-    "descriptionText": "A two-legged dragon with a barbed tail, a smell of rot, and a terrifying roar.",
+    "descriptionText": "A two-legged dragon with a barbed tail. It smells of rot and has a terrifying roar.",
     "hp": 19,
     "id": "DC200000-0000-4000-8000-000000000030",
     "immunities": "",
     "intelligence": 1,
     "languages": "",
     "level": 6,
-    "lore": "Wyverns hunt large prey in mountain ranges and desert mesas, often in pairs or packs.",
+    "lore": "Wyverns are dragons that live in mountain ranges and mesas bordering desserts. They hunt large prey in pairs or packs throughout their vast territories, and their barbed tail has a potent poison.",
     "might": 4,
     "name": "Wyvern",
     "notes": "",
@@ -2325,7 +2325,7 @@
     "sourcePage": 37,
     "speed": 8,
     "speedType": "Fly",
-    "tactics": "Grabs creatures with Talons and flies away, Bites lone targets, Wing Strikes groups, poisons with its Stinger, and Intimidates with a roar.",
+    "tactics": "These dragons focus on grabbing creatures with their Talons, and then flying away with them to separate them from other enemies. They'll Bite singular enemies to inflict heavy damage, and attack with their wings when surrounded (see Wing Strike). When threatened by multiple enemies, they'll try to poison at least one at a time with their Stinger while fighting the rest, and using their roar to Intimidate them (see Intimidating Roar). Their cold-blooded nature makes them susceptible to ice magic and cold weather.",
     "type": "Standard",
     "vulnerabilities": "Cold (Double)"
   },
@@ -2333,21 +2333,21 @@
     "abilities": [
       {
         "cost": "",
-        "details": "The only way to be reduced below 1 HP is by a Heavy Hit or an Attack that deals Radiant damage.",
+        "details": "The only way you can be reduced below 1 HP is by a Heavy Hit or an Attack that deals Radiant damage.",
         "id": "DC20A000-0000-4000-8000-000000003101",
         "kind": "Features",
         "name": "Unrelenting"
       },
       {
         "cost": "1 AP",
-        "details": "Melee Martial Attack vs PD, 1 Bludgeoning. Grapple (+1 AP): Might Save failure Grapples.",
+        "details": "Melee Martial Attack vs PD, 1 Bludgeoning.\n\n• (+1) Grapple: Might Save. Failure: Target is Grappled.",
         "id": "DC20A000-0000-4000-8000-000000003102",
         "kind": "Actions",
         "name": "Strike"
       },
       {
         "cost": "1 AP",
-        "details": "Against a Grappled target: Melee Martial Attack vs AD, 2 Piercing. Infect (+2 AP): Repeated Might Save failure Impairs for 1 minute as a Basic Disease.",
+        "details": "[A Grappled target], Melee Martial Attack vs AD, 2 Piercing.\n\n• (+2) Infect: Repeated Might Save. Failure: Target is Impaired for 1 minute (considered a Basic Disease).",
         "id": "DC20A000-0000-4000-8000-000000003103",
         "kind": "Actions",
         "name": "Bite"
@@ -2361,14 +2361,14 @@
     "combatMastery": 1,
     "creatureType": "Undead",
     "damage": 1,
-    "descriptionText": "A reeking animated corpse that groans while slowly trudging toward living flesh.",
+    "descriptionText": "Reeking of death, Zombie shapes and size can vary as much as the rotting corpses used to create them. They emit low groans as they slowly trudge toward living flesh.",
     "hp": 13,
     "id": "DC200000-0000-4000-8000-000000000031",
     "immunities": "Poison; Poisoned, Unconscious",
     "intelligence": -2,
     "languages": "",
     "level": 0,
-    "lore": "Zombies rise through necromancy or uncleansed necrotic magic and can gather into hordes.",
+    "lore": "These creatures are corpses animated by spellcasters or lingering necrotic magic. Leaving an area of lingering necrotic magic uncleansed can result in a Zombie hoard or the forming of stronger undead.",
     "might": 2,
     "name": "Zombie",
     "notes": "",
@@ -2387,7 +2387,7 @@
     "sourceBook": "DC20 Monster Collection v0.1",
     "sourcePage": 37,
     "speed": 3,
-    "tactics": "Mindlessly Strikes and Grapples a creature, then Bites and Infects it.",
+    "tactics": "Zombies mindlessly Strike and Grapple a creature, then Bite and Infect them.",
     "type": "Standard",
     "vulnerabilities": "Physical (Double)"
   }

@@ -24,6 +24,7 @@ import {
   MONSTER_TRAIT_CATALOG,
   MONSTER_TYPE_GUIDANCE,
   monsterBudget,
+  monsterDisplayRole,
   monsterLevelLabel,
   monsterTraitValueSpent,
 } from '../../utils/monsterRules';
@@ -94,7 +95,7 @@ function MonsterListButton({ monster, active, onClick }: {
         <div className="font-bold text-slate-100">{monster.name}</div>
         <div className="shrink-0 text-xs font-semibold text-violet-300">{monsterLevelLabel(monster.level)}</div>
       </div>
-      <div className="mt-1 text-xs text-slate-400">{monster.type} • {monster.role} • {monster.creatureType || 'Creature'}</div>
+      <div className="mt-1 text-xs text-slate-400">{monster.type} • {monsterDisplayRole(monster)} • {monster.creatureType || 'Creature'}</div>
     </button>
   );
 }
@@ -110,7 +111,7 @@ function SourceMonsterDetail({ monster, onDuplicate }: { monster: Monster; onDup
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Sourcebook Monster</div>
             <h2 className="mt-1 break-words text-3xl font-black tracking-tight text-white sm:text-4xl">{monster.name}</h2>
-            <p className="mt-2 text-slate-300">{monster.size} {monster.creatureType} • {monsterLevelLabel(monster.level)} • {monster.publishedRole || monster.role}</p>
+            <p className="mt-2 text-slate-300">{monster.size} {monster.creatureType} • {monsterLevelLabel(monster.level)} • {monsterDisplayRole(monster)}</p>
             <p className="mt-1 text-xs text-slate-500">{monster.sourceBook}{monster.sourcePage ? ` • Page ${monster.sourcePage}` : ''}</p>
           </div>
           <button type="button" onClick={onDuplicate} className="btn-primary font-semibold">Duplicate as Custom</button>
@@ -124,7 +125,7 @@ function SourceMonsterDetail({ monster, onDuplicate }: { monster: Monster; onDup
         <StatTile label="AD" ruleID="defense.areaDefense" value={monster.arcaneDefense} detail={`${monster.arcaneDefense + 5} / ${monster.arcaneDefense + 10}`} />
         <StatTile label="Attack" value={`+${monster.attackBonus}`} />
         <StatTile label="Save DC" value={monster.saveDC} />
-        <StatTile label="Damage" value={monster.damage} />
+        <StatTile label="Baseline Damage" value={monster.damage} detail="Derived reference; individual attacks vary" />
         <StatTile label="AP / RP" value={`${monster.actionPoints ?? 4} / ${monster.reactionPoints ?? 0}`} />
         <StatTile label={monster.speedType ? `${monster.speedType} Speed` : 'Speed'} value={monster.speed} />
       </div>
@@ -421,7 +422,7 @@ export default function MonstersView({ focusRequest, onFocusHandled }: { focusRe
   const filterMonster = (monster: Monster) => {
     const query = search.trim().toLowerCase();
     if (!query) return true;
-    return [monster.name, monster.creatureType, monster.role, monster.type, ...monster.abilities.map(({ name }) => name)]
+    return [monster.name, monster.creatureType, monster.role, monster.publishedRole ?? '', monster.type, ...monster.abilities.map(({ name }) => name)]
       .some((value) => value.toLowerCase().includes(query));
   };
   const filteredSources = sourceMonsters.filter(filterMonster);

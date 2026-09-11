@@ -1,8 +1,8 @@
-const CACHE_NAME = 'dc20-hub-v8';
+const CACHE_NAME = 'dc20-hub-v9';
 const PRECACHE = [
   '/',
   '/manifest.webmanifest',
-  '/favicon.svg',
+  '/favicon.png',
   '/data/BetaSpells.json',
   '/data/BetaManeuvers.json',
   '/data/CharacterReference.json',

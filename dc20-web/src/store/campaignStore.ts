@@ -443,6 +443,9 @@ function normalizeCharacter(value: unknown): Character {
     sheetCompanions: Array.isArray(rawBuild.sheetCompanions)
       ? rawBuild.sheetCompanions as CharacterBuildData['sheetCompanions']
       : [],
+    sheetTrackedEffects: Array.isArray(rawBuild.sheetTrackedEffects)
+      ? rawBuild.sheetTrackedEffects as CharacterBuildData['sheetTrackedEffects']
+      : [],
   };
   const attributes = {
     Might: { name: DC20Attributes.MIGHT, score: might, modifier: might },

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { useCampaignStore } from '../../store/campaignStore';
 import type { EquipmentCatalogItem, EquipmentCategory, EquipmentSlot, SemanticRuleReference } from '../../types/models';
@@ -72,6 +72,7 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
   const [targetCharacterID, setTargetCharacterID] = useState(selectedCharacterId ?? '');
   const [notice, setNotice] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const detailRef = useRef<HTMLElement>(null);
   const categories = Object.values(EquipmentCategoryValues);
   const customEquipment = campaignData.customEquipment;
   const customIDs = useMemo(() => new Set(customEquipment.map(({ id }) => id)), [customEquipment]);
@@ -80,16 +81,25 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
   const activeEquipment = library === 'magic' ? magicEquipment : standardEquipment;
   const propertyOptions = useMemo(() => Array.from(new Set(equipment.flatMap((item) => item.properties))).sort((a, b) => a.localeCompare(b)), [equipment]);
   const effectiveTargetCharacterID = targetCharacterID || selectedCharacterId || characters[0]?.id || '';
+  const scrollDetailIntoView = useCallback(() => {
+    if (!window.matchMedia('(max-width: 1023px)').matches) return;
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
+  }, []);
 
   useEffect(() => {
     if (focusRequest?.kind !== 'equipment') return;
     const requestedItem = [...equipment, ...customEquipment].find(({ id }) => id === focusRequest.id);
     setLibrary(requestedItem?.collection === 'Magic' ? 'magic' : 'standard');
     setCategory(focusRequest.id && customIDs.has(focusRequest.id) ? 'Custom Items' : 'All');
-    if (focusRequest.id) setSelectedEquipmentID(focusRequest.id);
+    if (focusRequest.id) {
+      setSelectedEquipmentID(focusRequest.id);
+      scrollDetailIntoView();
+    }
     else setShowCustomModal(true);
     onFocusHandled?.();
-  }, [customEquipment, customIDs, equipment, focusRequest, onFocusHandled]);
+  }, [customEquipment, customIDs, equipment, focusRequest, onFocusHandled, scrollDetailIntoView]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -136,6 +146,7 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
     setLibrary('standard');
     setCategory('Custom Items');
     setSelectedEquipmentID(item.id);
+    scrollDetailIntoView();
     setShowCustomModal(false);
     setNotice(`${item.name} was added to the custom equipment library.`);
   };
@@ -184,7 +195,7 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:overflow-hidden">
-          <aside className="w-full shrink-0 overflow-y-auto overscroll-contain border-b border-white/5 p-4 lg:w-[23rem] lg:border-b-0 lg:border-r">
+          <aside className="max-h-[55vh] w-full shrink-0 overflow-y-auto overscroll-contain border-b border-white/5 p-4 lg:max-h-none lg:w-[23rem] lg:border-b-0 lg:border-r">
             {isLoading && <div className="rounded-xl border border-white/5 p-4 text-sm text-slate-500">Loading the native catalog…</div>}
             {error && <div className="rounded-xl border border-red-400/20 bg-red-500/5 p-4 text-sm text-red-300">{error}</div>}
             {!isLoading && filtered.length === 0 && <div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-sm text-slate-500">No equipment matches this search.</div>}
@@ -193,7 +204,7 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
                 <button
                   type="button"
                   key={item.id}
-                  onClick={() => setSelectedEquipmentID(item.id)}
+                  onClick={() => { setSelectedEquipmentID(item.id); scrollDetailIntoView(); }}
                   className={`w-full rounded-xl border p-3 text-left transition ${item.id === effectiveSelectedEquipmentID ? 'border-violet-400/70 bg-violet-500/15' : 'border-white/5 bg-white/[0.025] hover:bg-white/[0.05]'}`}
                 >
                   <div className="flex items-start justify-between gap-3"><span className="font-bold text-slate-100">{item.name}</span><span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-violet-300">{customIDs.has(item.id) ? 'Custom' : item.collection === 'Magic' ? `Magic • ${item.category}` : item.category}</span></div>
@@ -204,7 +215,7 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
             </div>
           </aside>
 
-          <main className="min-w-0 flex-1 overscroll-contain lg:overflow-y-auto">
+          <main ref={detailRef} className="min-w-0 flex-1 scroll-mt-4 overscroll-contain lg:overflow-y-auto">
             {!selected && <div className="grid min-h-full place-items-center p-8 text-slate-500">Select an equipment record.</div>}
             {selected && <EquipmentDetail
               item={selected}
