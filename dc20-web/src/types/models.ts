@@ -500,6 +500,8 @@ export interface EquipmentCatalogItem {
   sourceDocument?: string;
   magicPower?: number;
   charges?: number;
+  /** Printed label for the item's tracked pool; consumables use Uses while rechargeable items use Charges. */
+  usageLabel?: 'Charges' | 'Uses';
   requiresAttunement?: boolean;
   magicFeatures?: MagicItemFeature[];
   /** A magic weapon can carry published statistics without replacing its source-accurate flavor summary. */

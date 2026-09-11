@@ -50,6 +50,8 @@ const BETA_SOURCE = 'DC20 RPG Beta 0.10.5';
 const PSION_SOURCE = 'DC20 Magazine 01 — Psion v2';
 const SUMMONER_SOURCE = 'DC20 Magazine 23 — The Summoner v1.0';
 const ADVENTURE_REWARDS_SOURCE = 'DC20 Magazine 20 — Adventure Rewards v1.0';
+const MAGICAL_CONSUMABLES_SOURCE = 'DC20 Magazine 24 — Magical Consumables';
+const POISONS_SOURCE = 'DC20 Magazine 15 — Poisons';
 
 export const AUDITED_SECTION_RANGES: RulesReferenceData['sections'] = [
   { name: 'Core Rules', pageRange: 'Beta 0.10.5 pp.9–39' },
@@ -200,6 +202,17 @@ const FORMULAS: Readonly<Record<string, string[]>> = {
   Jumping: ['Jump Distance = Agility (minimum 1)'],
   'Holding Breath & Suffocating': ['Breath Duration = Might (minimum 1)'],
   'Step 4: Health Points': ['Starting HP = Class HP + Might + Ancestry HP'],
+  'Spell Consumables': ['Magic Power = Base MP + Enhancement MP + (AP / 2)'],
+  'Ancestry Trait Consumables': ['Magic Power = Ancestry Trait Points + Enhancement MP + (AP / 2)'],
+  'Once per Combat Feature & Talent Consumables': ['Magic Power = 2 + MP + (SP / 2)'],
+  'Continuous Feature & Talent Consumables': ['Magic Power = 5 + MP + (SP / 2)'],
+  'Equipment Property Consumables': ['Magic Power = 2 × Equipment Property Points'],
+  'Magic Item Property Consumables': ['Magic Power = Magic Item Property Magic Power'],
+  'Using Poisons': [
+    '2+ Sizes Smaller Throw Distance = 2 × Might',
+    '1 Size Smaller Throw Distance = Might',
+    'Same Size Throw Distance = 1/2 Might',
+  ],
   'Step 6: Defenses': [
     'PD = 8 + Combat Mastery + Agility + Intelligence + bonuses',
     'AD = 8 + Combat Mastery + Might + Charisma + bonuses',
@@ -251,6 +264,15 @@ const RELATED: Readonly<Record<string, string[]>> = {
   'Player Character Progression': ['Character Paths', 'Talents & Requirements', 'Ancestry System'],
   'Character Paths': ['Maneuvers', 'Spellcasting', 'Player Character Progression'],
   'Ancestry System': ['Ancestry Advancement, Refunds, & Variants', 'Step 8: Ancestry'],
+  Poisons: ['Poison Forms', 'Poison Applications', 'Poison Effects', 'Poison Rarity', 'Poison Treatments & Cures', 'Using Poisons'],
+  'Poison Forms': ['Poison Applications', 'Using Poisons', 'Poison Containers'],
+  'Poison Applications': ['Poison Forms', 'Using Poisons', 'Holding Breath & Suffocating'],
+  'Poison Effects': ['Poison Rarity', 'Poison Vulnerabilities, Resistances, & Immunities', 'Condition Rules'],
+  'Poison Rarity': ['Poison Treatments & Cures', 'Adventuring Supplies'],
+  'Poison Treatments & Cures': ['Medicine', 'Adventuring Supplies', 'Poison Rarity'],
+  'Using Poisons': ['Poison Forms', 'Poison Applications', 'Poison Containers', 'Moving Through Creatures, Collision, & Throwing'],
+  'Poison Containers': ['Using Poisons', 'Creature Sizes & Grappling'],
+  'Poison Vulnerabilities, Resistances, & Immunities': ['Poison Effects', 'Advantage & Disadvantage'],
 };
 
 export type RuleTextBlockKind = 'heading' | 'subheading' | 'paragraph' | 'bullet' | 'callout';
@@ -325,6 +347,12 @@ function sourceFor(entry: RuleReferenceEntry): Pick<RuleReferenceEntry, 'sourceD
   }
   if (entry.page.startsWith('DC20 Magazine 20')) {
     return { sourceDocument: ADVENTURE_REWARDS_SOURCE, sourceStatus: 'Supplemental source verified' };
+  }
+  if (entry.page.startsWith('DC20 Magazine 24')) {
+    return { sourceDocument: MAGICAL_CONSUMABLES_SOURCE, sourceStatus: 'Supplemental source verified' };
+  }
+  if (entry.page.startsWith('DC20 Magazine 15')) {
+    return { sourceDocument: POISONS_SOURCE, sourceStatus: 'Supplemental source verified' };
   }
   return { sourceDocument: BETA_SOURCE, sourceStatus: 'Beta source verified' };
 }
@@ -669,7 +697,7 @@ export function auditRulesReference(
   const entries = sourceEntries.map((entry) => auditEntry(entry, spells, maneuvers, augmentedReference, equipment));
   return {
     ...document,
-    source: `${BETA_SOURCE}; ${PSION_SOURCE}; ${PSION_SUBCLASS_SOURCE}; ${SUMMONER_SOURCE}; ${ARTIFICER_SOURCE}; ${ADVENTURE_REWARDS_SOURCE}`,
+    source: `${BETA_SOURCE}; ${PSION_SOURCE}; ${PSION_SUBCLASS_SOURCE}; ${SUMMONER_SOURCE}; ${ARTIFICER_SOURCE}; ${ADVENTURE_REWARDS_SOURCE}; ${MAGICAL_CONSUMABLES_SOURCE}; ${POISONS_SOURCE}`,
     sections: AUDITED_SECTION_RANGES,
     entries: addRelationships(entries),
   };

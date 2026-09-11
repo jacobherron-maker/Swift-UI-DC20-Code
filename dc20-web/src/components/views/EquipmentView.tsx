@@ -3,7 +3,7 @@ import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { useCampaignStore } from '../../store/campaignStore';
 import type { EquipmentCatalogItem, EquipmentCategory, EquipmentSlot, SemanticRuleReference } from '../../types/models';
 import { EquipmentCategoryValues, EquipmentSlotValues } from '../../types/models';
-import { addInventoryItem, defensiveEquipmentProfile, healingPotionAmount, isEquipmentEquippable, weaponMechanicalProfile, ROUTED_SHEET_EFFECTS } from '../../utils/equipmentRules';
+import { addInventoryItem, defensiveEquipmentProfile, equipmentUsageLabel, healingPotionAmount, isEquipmentEquippable, weaponMechanicalProfile, ROUTED_SHEET_EFFECTS } from '../../utils/equipmentRules';
 import { generateUUID, sortByName } from '../../utils/gameUtils';
 import { PillMultiSelect, toggleValue } from '../equipment/PillMultiSelect';
 import type { ContentFocusRequest } from '../../navigation/appNavigation';
@@ -178,7 +178,7 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
               {categories.filter((entry) => activeEquipment.some(({ category: itemCategory }) => itemCategory === entry)).map((entry) => <option key={entry} value={entry}>{entry} ({activeEquipment.filter(({ category: itemCategory }) => itemCategory === entry).length})</option>)}
               {library === 'standard' && <option value="Custom Items">Custom Items ({customEquipment.length})</option>}
             </select>
-          {library === 'standard' ? <button type="button" onClick={() => setShowCustomModal(true)} className="btn-primary px-4 text-sm font-black">+ Custom</button> : <div className="flex items-center justify-center rounded-lg border border-amber-400/15 bg-amber-500/5 px-3 text-xs font-bold text-amber-200">Adventure Rewards</div>}
+          {library === 'standard' ? <button type="button" onClick={() => setShowCustomModal(true)} className="btn-primary px-4 text-sm font-black">+ Custom</button> : <div className="flex items-center justify-center rounded-lg border border-amber-400/15 bg-amber-500/5 px-3 text-center text-xs font-bold text-amber-200">Supplemental Catalogs</div>}
         </div>
         {notice && <p className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200" role="status">{notice}</p>}
       </div>
@@ -290,8 +290,8 @@ function EquipmentDetail({ item, characters, targetCharacterID, setTargetCharact
             ) : <p className="text-sm text-slate-500">Create a character to add this item to an inventory.</p>}
           </div>
         </div>
-        <p className="mt-5 max-w-3xl text-lg leading-7 text-violet-100"><RuleAwareText text={item.summary} references={item.ruleReferences} /></p>
-        {item.collection === 'Magic' && <div className="mt-5 grid gap-3 sm:grid-cols-3"><MiniFact label="Magic Power" value={String(item.magicPower ?? '—')} /><MiniFact label="Charges" value={item.charges === undefined ? 'None' : String(item.charges)} /><MiniFact label="Attunement" value={item.requiresAttunement ? 'Required for marked features' : 'Not required'} /></div>}
+        <p className="mt-5 max-w-3xl whitespace-pre-wrap text-lg leading-7 text-violet-100"><RuleAwareText text={item.summary} references={item.ruleReferences} /></p>
+        {item.collection === 'Magic' && <div className="mt-5 grid gap-3 sm:grid-cols-3"><MiniFact label="Magic Power" value={String(item.magicPower ?? '—')} /><MiniFact label={equipmentUsageLabel(item)} value={item.charges === undefined ? 'None' : String(item.charges)} /><MiniFact label="Attunement" value={item.requiresAttunement ? 'Required for marked features' : 'Not required'} /></div>}
       </div>
 
       {isCustom && <CustomItemEditor key={item.id} item={item} propertyOptions={propertyOptions} onSave={onCustomSave} onDelete={onCustomDelete} />}

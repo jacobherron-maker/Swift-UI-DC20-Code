@@ -1,0 +1,143 @@
+[
+  {
+    "id": "General Rules|Poisons|Poisons",
+    "title": "Poisons",
+    "section": "General Rules",
+    "subsection": "Poisons",
+    "summary": "Poisons are potent concoctions defined by three key qualities: Form, Application, and Effect.",
+    "text": "Poisons are potent concoctions capable of inflicting a wide range of ailments on those who fall victim to them. Their origins and composition vary: some are distilled from deadly plants, others extracted from venomous creatures, and some are alchemically or magically engineered for maximum effect. Each poison differs in its potency, duration, and method of delivery, making them versatile tools for those who know how to use them wisely. Poisons are defined by three key qualities: Form, Application, and Effect.",
+    "page": "DC20 Magazine 15 p.3",
+    "kind": "Rule",
+    "keywords": "poison poisons concoction form application effect potency duration delivery",
+    "sourceNote": "This supplemental issue was written during Beta 0.9.5. The app’s Beta 0.10.5 rules remain authoritative where wording or mechanics differ.",
+    "details": [
+      { "label": "Key Qualities", "value": "Form, Application, and Effect" },
+      { "label": "Example Poisons", "value": "6 Basic and 10 Advanced" }
+    ]
+  },
+  {
+    "id": "General Rules|Poisons|Poison Forms",
+    "title": "Poison Forms",
+    "section": "General Rules",
+    "subsection": "Poisons — Form",
+    "summary": "The three primary forms of Poison are Gas, Liquid, and Powder.",
+    "text": "Poisons can take different forms, each with specific methods of administration. The following are the 3 primary forms of poisons: Gas, Liquid, and Powder.\n\nGAS\nA Poison Gas is an invisible or colored vapor that spreads through the air and lingers in enclosed areas. The GM determines how long it lingers and how it behaves in enclosed or open environments. These Poisons are applied through inhalation and sometimes contact.\n\nLIQUID\nA Poison liquid is a fluid substance that can come in a variety of appearances: thick or thin, opaque or clear, scented or odorless. They are often stored in vials, soaked into objects, or coated on Weapons. These poisons are applied through ingestion and sometimes contact or injury.\n\nPOWDER\nA Poison powder is a fine, dusty substance that disperses when thrown, hangs briefly in the air, and can cling to surfaces. These poisons are applied through inhalation, ingestion, and sometimes contact.",
+    "page": "DC20 Magazine 15 p.3",
+    "kind": "Rule",
+    "keywords": "poison form gas liquid powder vapor vial weapon ingestion inhalation contact injury",
+    "sourceNote": "This supplemental issue was written during Beta 0.9.5. The app’s Beta 0.10.5 rules remain authoritative where wording or mechanics differ.",
+    "details": [
+      { "label": "Forms", "value": "Gas, Liquid, Powder" }
+    ]
+  },
+  {
+    "id": "General Rules|Poisons|Poison Applications",
+    "title": "Poison Applications",
+    "section": "General Rules",
+    "subsection": "Poisons — Application",
+    "summary": "The common Poison application methods are Attack, Contact, Ingested, and Inhaled.",
+    "text": "The method by which a Poison takes effect depends on how it enters or interacts with the creature’s body. Poisons can be consumed, inhaled, or absorbed through the skin, and each form of application influences how and when a creature is affected. Understanding how a Poison is delivered is crucial for both using it effectively and defending against it. The categories below outline the most common methods of application: Attack, Contact, Ingested, and Inhaled.\n\nATTACK\nThese Poisons are often in Liquid form and injected into a creature through a monster’s stinger or fangs, or coated on a Weapon used by an assassin. A creature targeted by Attack that includes an Injury Poison must make a Save against the Poison’s effects.\n\nCONTACT\nThese Poisons can come in any form and take effect through contact with exposed skin. This includes certain powders, liquids, and gases that bypass the need for inhalation or ingestion. A creature that comes into contact with a Contact Poison must make a Save against the Poison’s effects.\n\nINGESTED\nThese Poisons are often in Powder or Liquid form and are consumed by drinking or eating, typically mixed into a liquid solvent like water or hidden within food. A creature that ingests an Ingested Poison must make a Save against the Poison’s effects.\n\nINHALED\nThese Poisons are often in Gas or Powder form within the air and affect creatures that breathe. A creature that starts their turn in an area of Inhaled Poison, or that enters such an area for the first time on their turn, must make a Save against the Poison’s effects, unless it doesn’t require air to breath or is holding its breath. A creature that stops holding its breath while within an area of Inhaled Poison must immediately make a Save against the Poison’s effects.\n\nDC TIP\nRemember that a creature can hold its breath for a duration equal to their Might, which is measured in Minutes or Rounds depending on the activity being performed. If a creature speaks, or fails a Might Save after taking damage, this duration is reduced by 1 Minute or Round. Creatures without air will begin to Suffocate. See Holding Your Breath (v0.9.5, pg 68) for the complete rules.",
+    "page": "DC20 Magazine 15 p.3",
+    "kind": "Rule",
+    "keywords": "poison application attack contact ingested inhaled injury save breath suffocate",
+    "sourceNote": "This supplemental issue was written during Beta 0.9.5. The app’s Beta 0.10.5 rules remain authoritative where wording or mechanics differ.",
+    "details": [
+      { "label": "Applications", "value": "Attack, Contact, Ingested, Inhaled" }
+    ]
+  },
+  {
+    "id": "General Rules|Poisons|Poison Effects",
+    "title": "Poison Effects",
+    "section": "General Rules",
+    "subsection": "Poisons — Effect",
+    "summary": "A creature is Poisoned while subjected to a Poison’s listed Conditions, damage, or penalties.",
+    "text": "A Poison’s effect details the Conditions, damage, and penalties imposed upon a creature that fails its Save. A creature is considered Poisoned while subjected to the effects of a Poison. The effect of a Poison is listed in its description.",
+    "page": "DC20 Magazine 15 p.3",
+    "kind": "Rule",
+    "keywords": "poison effect poisoned condition damage penalty save failure description",
+    "sourceNote": "This supplemental issue was written during Beta 0.9.5. The app’s Beta 0.10.5 rules remain authoritative where wording or mechanics differ."
+  },
+  {
+    "id": "General Rules|Poisons|Poison Rarity",
+    "title": "Poison Rarity",
+    "section": "General Rules",
+    "subsection": "Poisons — Rarity",
+    "summary": "Poisons are categorized as Basic or Advanced according to how well they are understood and how commonly they are experienced.",
+    "text": "Poisons are categorized as Basic or Advanced, depending on how well they are understood and how commonly they are experienced. Snake bites are a thoroughly understood source of Poison, making them a Basic Poison. Specifically crafted and uncommon Poisons, such as Truth Serum, Nerve Toxin, and the venom of a mythic creature, require much more preparation and a unique component in order to cure.\n\nBASIC POISONS\nThese Poisons are well-known, and readily encountered, within the world. Common assassins, toxic flora, and all manner of naturally venomous creatures are prime sources of these Poisons. They can be treated with a Medicine Kit, which you can find at most apothecaries, healer’s halls, or alchemists’ shops.\n\nPoisonous Creatures: Unless stated otherwise, a creature’s Actions and Features apply Basic Poisons.\n\nADVANCED POISONS\nThese Poisons are specialized tools that require much more expertise, effort, and preparation to counteract. They’re crafted by experts for a specific purpose, usually falling into one of two varieties: quick and deadly or prolonged and intoxicating. Counteracting their effects require immense fortitude and proper preparation. If caught unprepared a creature is typically at the mercy of the Poison’s effect.\n\nAssassins, cultist, hags, politicians, and other intelligent creatures are the typical sources of these potent Poisons. Some mythical creatures and environments are so rare and unknown within the world that they can inflict the effects of Advanced Poisons.\n\nIf no known cure exists, a skilled herbalist, alchemist, or poisoner must first study the Poison to determine what kind of unique additive would suffice.\n\nDC TIP\nSome Advanced Poisons can be extremely deadly, so use them sparingly! You should foreshadow the use of these poisons before subjecting the party to them. This gives the party a chance to create a plan (such as going on a side quest to craft an antidote).\n\nBETA NOTE\nThe specific additive required to cure each Advanced Poison will be provided later. Until then, the GM decides what it is. This structure is meant to be a proof of concept until the DC20 official setting and the game system is more complete. Until then, we encourage GMs to get creative and make these sample poisons fit their world.",
+    "page": "DC20 Magazine 15 p.4",
+    "kind": "Rule",
+    "keywords": "poison rarity basic advanced medicine kit additive antidote assassin toxic flora venom mythic",
+    "sourceNote": "This supplemental issue was written during Beta 0.9.5. The app’s Beta 0.10.5 rules remain authoritative where wording or mechanics differ.",
+    "details": [
+      { "label": "Rarities", "value": "Basic, Advanced" },
+      { "label": "Advanced Treatment", "value": "Medicine Kit plus a unique additive" }
+    ]
+  },
+  {
+    "id": "General Rules|Poisons|Treatments & Cures",
+    "title": "Poison Treatments & Cures",
+    "section": "General Rules",
+    "subsection": "Poisons — Treatments & Cures",
+    "summary": "A Medicine Kit can cure a Basic Poison; an Advanced Poison also requires its unique additive.",
+    "text": "To cure a creature of a Poison, you’ll need a Medicine Kit. Advanced Poisons will also require specific additives, such as a monster part, rare mineral, or exotic herb, in order to complete the cure.\n\nBETA NOTE\nOnce we release more Spells, Spellcasters could cure a Basic Poison by casting a spell, such as Cure Poison. Curing a Advanced Poison will probably include adding a special Enhancement to that Spell.\n\nMEDICINE KIT\nA Medicine Kit can take many forms based on your PC’s theme or expression and is full of supplies and tools such as ointments, tinctures, bandages, and other medicinal reagents.\n\nUses: A fully stocked kit contains 5 uses.\n\nUsing A Kit: You can take the Object Action and spend 1 use of this kit to treat the wounds of a creature within 1 Space, or cure a Poison affecting it.\n\nTREATING A WOUND\nYou treat a creature’s wounds. Make a DC 10 Medicine Check. Success: Target regains 1 HP. Success (each 5): Target regains +1 HP.\n\nLimited Healing: Healing from this kit can’t restore a creature’s HP above its Bloodied threshold.\n\nTREATING A POISON OR DISEASE\nYou treat one Basic Poison or Disease afflicting the target. Make a Medicine Check against the DC of the effect. Success: Target is cured of that Poison or Disease and no longer suffers its effect. Success (each 5): The creature regains +1 HP.\n\nAdvanced Poisons: You can treat one Advanced Poison instead, provided you have its unique additive. One use of that additive is lost every time you attempt to do so.\n\nBETA NOTE\nDiseases are still a work in progress. If they are included in adventures or monsters at a later date, these rules will suffice for treating them as if they were poisons, or those materials will detail how a PC could treat presented Diseases.\n\nRESUPPLYING A MEDICINE KIT\nBuying Supplies: The various supplies contained within this kit can be found in most towns and climates. Enough supplies for 1 use can be bought for 5g at a general store.\n\nGathering Supplies: You can scavenge from an appropriate climate (GM’s discretion) with a DC 15 Survival Check. Success: The kit regains 1 use. Success (each 5): +1 use.",
+    "page": "DC20 Magazine 15 p.4",
+    "kind": "Rule",
+    "keywords": "poison treatment cure medicine kit advanced additive wound disease resupply survival check gold",
+    "sourceNote": "This supplemental issue was written during Beta 0.9.5. The app’s Beta 0.10.5 Medicine Kit record remains authoritative where wording or mechanics differ.",
+    "details": [
+      { "label": "Basic Poison", "value": "Medicine Kit" },
+      { "label": "Advanced Poison", "value": "Medicine Kit plus unique additive" },
+      { "label": "Kit Capacity", "value": "5 uses" }
+    ]
+  },
+  {
+    "id": "General Rules|Poisons|Using Poisons",
+    "title": "Using Poisons",
+    "section": "General Rules",
+    "subsection": "Poisons — Use & Delivery",
+    "summary": "Use the Object Action to coat a Weapon, release a Poison, or throw its container.",
+    "text": "COATING A WEAPON\nYou can use the Object Action to coat a Weapon or piece of Ammunition in an Attack Poison for 1 minute. An item can only be coated within 1 Poison at a time. If you apply an additional poison, the first one becomes inert.\n\nAttacking: When a creature is Attacked by a Weapon or piece of Ammunition coated in Poison, the Poison is expended.\n\nBETA NOTE\nWe may add Oils or other substances that can coat a weapon in the future. For now, you can use these rules to adjudicate those substances.\n\nRELEASING POISON\nYou can use the Object Action to release a Poison stored in a container. When released, each Form of Poison behaves in the following manner, unless stated otherwise in the Poison’s description:\n\n• Gas: The Poison fills the air within the area for 1 minute or until dispersed by a sufficient amount of wind.\n• Liquid: The Poison covers creatures and surfaces within the area for 1 minute, or until a creature spends 1 AP to remove it from that creature or surface.\n• Powder: The Poison fills the air and covers creatures and surfaces with the area for 1 Round.\n\nTHROWING AN OBJECT\nYou can take the Object Action to throw an object. The object is thrown up to a number of Spaces away as shown in the Throwing Table. The total distance thrown is halved if thrown vertically.\n\nTHROWING TABLE\nObject Size | Spaces Thrown\n2 + Sizes Smaller | 2 x Might\n1 Size Smaller | Might\nSame Size as you | 1/2 Might\nLarger than you | Impossible\n\nEXAMPLE\nA Small or Medium creature with a Might of 1 can throw a Micro object up to 2 Spaces. Conversely, if they have a Might of 3 they can throw it up to 6 Spaces. Remember that Micro objects are 2 and 3 sizes smaller than those creatures, respectively.\n\nThrow at Space: When you throw a container of Poison at a specific Space, it releases the Poison within the targeted Space.\n\nThrow at a Target: When you throw a container of Poison at a target, it’s treated as an Improvised Weapon. Make a Ranged Martial Attack against the target’s PD. Hit: The target takes 1 damage of a type as determined by the GM. Whether the Attack Hits or Misses, the Poison is released within the target’s Space.",
+    "page": "DC20 Magazine 15 p.5",
+    "kind": "Rule",
+    "keywords": "using poison coat weapon ammunition attack release gas liquid powder container throw throwing table object action improvised weapon ranged martial attack",
+    "sourceNote": "This supplemental issue was written during Beta 0.9.5. The app’s Beta 0.10.5 rules remain authoritative where wording or mechanics differ.",
+    "details": [
+      { "label": "Activation", "value": "Object Action" },
+      { "label": "Weapon Coating", "value": "1 minute or until the Poison is expended" }
+    ]
+  },
+  {
+    "id": "General Rules|Poisons|Poison Containers",
+    "title": "Poison Containers",
+    "section": "General Rules",
+    "subsection": "Poisons — Use & Delivery",
+    "summary": "Vials, jars, and casks hold progressively more doses and release Poison over larger areas.",
+    "text": "VIAL OF POISON\nPoisons are often housed in Micro-Sized vials, usually made of glass, and each vial contains 1 dose of Poison. When released, a vial of Poison covers an area of 1 Space.\n\nJAR OF POISON\nPoisons are often housed in Tiny-Sized jars, usually made of clay or glass, and each jar contains 5 doses of Poison. When released, a jar of Poison covers a 2 Space Diameter Sphere.\n\nCASK OF POISON\nPoisons are often housed in Small-Sized casks, usually made of wood, and each cask contains 20 doses of Poison. When released, a cask of Poison covers a 5 Space Diameter Sphere.",
+    "page": "DC20 Magazine 15 p.5",
+    "kind": "Rule",
+    "keywords": "poison container vial jar cask micro tiny small dose doses area sphere diameter",
+    "sourceNote": "This supplemental issue was written during Beta 0.9.5. The app’s Beta 0.10.5 rules remain authoritative where wording or mechanics differ.",
+    "details": [
+      { "label": "Vial", "value": "1 dose • 1 Space" },
+      { "label": "Jar", "value": "5 doses • 2 Space Diameter Sphere" },
+      { "label": "Cask", "value": "20 doses • 5 Space Diameter Sphere" }
+    ]
+  },
+  {
+    "id": "General Rules|Poisons|Poison Vulnerabilities, Resistances, & Immunities",
+    "title": "Poison Vulnerabilities, Resistances, & Immunities",
+    "section": "General Rules",
+    "subsection": "Poisons — Defenses",
+    "summary": "Poison Vulnerability imposes DisADV, Poison Resistance grants ADV, and Poison Immunity prevents being Poisoned.",
+    "text": "Poison Vulnerability, Resistance, and Immunity represent a creature’s ability or inability to resist a Poison. The source of a creature’s Poison Resistance or Vulnerability can be attained from a Class Feature, Ancestry Trait, Magic Item, Spell, etc. Your relationship with Poison damage confers the following benefit or penalty:\n\nPOISON VULNERABILITY\nYou have DisADV on Checks and Saves against being Poisoned.\n\nPOISON RESISTANCE\nYou have ADV on Checks and Saves against being Poisoned.\n\nPOISON IMMUNITY\nYou’re immune to being Poisoned.",
+    "page": "DC20 Magazine 15 p.5",
+    "kind": "Rule",
+    "keywords": "poison vulnerability resistance immunity poisoned disadvantage advantage checks saves",
+    "sourceNote": "This supplemental issue was written during Beta 0.9.5. The app’s Beta 0.10.5 rules remain authoritative where wording or mechanics differ.",
+    "details": [
+      { "label": "Vulnerability", "value": "DisADV on Checks and Saves against being Poisoned" },
+      { "label": "Resistance", "value": "ADV on Checks and Saves against being Poisoned" },
+      { "label": "Immunity", "value": "Immune to being Poisoned" }
+    ]
+  }
+]

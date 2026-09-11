@@ -1,0 +1,79 @@
+[
+  {
+    "id": "General Rules|Magical Consumables|Turning Effects into Consumables",
+    "title": "Turning Effects into Consumables",
+    "section": "General Rules",
+    "subsection": "Magical Consumables",
+    "summary": "General guidance for creating Magic Item Consumables from Ancestry Traits, Talents, Features, Equipment Properties, and Magic Item Properties.",
+    "text": "This section provides general guidance on how GMs can create their own Magic Item Consumables from effects (such as Ancestry Traits, Talents, Features, Equipment Properties, and Magic Item Properties).\n\nACTIVATION COST\nThe AP cost to use a consumable created from an effect should be equal to the effect’s base AP cost (minimum 1).",
+    "page": "DC20 Magazine 24 p.3",
+    "kind": "Rule",
+    "keywords": "magical consumable magic item creation balance activation AP cost ancestry trait talent feature equipment property"
+  },
+  {
+    "id": "General Rules|Magical Consumables|Spell Consumables",
+    "title": "Spell Consumables",
+    "section": "General Rules",
+    "subsection": "Magical Consumables — Creation Guidance",
+    "summary": "A Consumable created from a Spell uses the Spell’s Duration and derives Magic Power from its base MP, Enhancements, and AP cost.",
+    "text": "A Consumable created from a Spell has the following characteristics:\n\n• Duration: Spell’s Duration\n• Magic Power: Base MP + Enhancements: MP + (AP / 2)\n\nEXAMPLE: HASTE\nThe Haste Spell costs 1 AP and 1 MP. A potion that grants the benefit of a Haste Spell should cost 1 AP to drink and it would have 1 Magic Power. If the effect included the Phased Movement Enhancement (1 MP), then it would have 2 Magic Power.\n\nEXAMPLE: FIREBALL\nThe Fireball Spell costs 2 AP. A bomb that casts Fireball when thrown would require 2 AP to use (such as 1 AP to prime and 1 AP to throw), and it would have 0 Magic Power.",
+    "page": "DC20 Magazine 24 p.3",
+    "kind": "Rule",
+    "keywords": "spell consumable potion bomb duration magic power MP AP enhancement Haste Fireball"
+  },
+  {
+    "id": "General Rules|Magical Consumables|Ancestry Trait Consumables",
+    "title": "Ancestry Trait Consumables",
+    "section": "General Rules",
+    "subsection": "Magical Consumables — Creation Guidance",
+    "summary": "An Ancestry Trait Consumable lasts until a Long Rest and derives Magic Power from the Trait’s Ancestry Point cost, Enhancements, and AP cost.",
+    "text": "A Consumable created from an Ancestry Trait has the following characteristics:\n\n• Duration: Until Long Rest\n• Magic Power: Ancestry Trait Points + Enhancements: MP + (AP / 2)\n\nEXAMPLE: DRACONIC BREATH WEAPON\nThe Draconic Breath Weapon Ancestry Trait costs 2 Ancestry Points. A potion that grants the benefit of Draconic Breath Weapon until you complete a Long Rest should cost 1 AP to drink and have 2 Magic Power. If the first use of the Breath Weapon had an additional 2 MP worth of damage, then the potion should have 4 Magic Power.",
+    "page": "DC20 Magazine 24 p.3",
+    "kind": "Rule",
+    "keywords": "ancestry trait consumable duration long rest magic power ancestry points MP AP Draconic Breath Weapon"
+  },
+  {
+    "id": "General Rules|Magical Consumables|Once per Combat Feature & Talent Consumables",
+    "title": "Once per Combat Feature & Talent Consumables",
+    "section": "General Rules",
+    "subsection": "Magical Consumables — Creation Guidance",
+    "summary": "A consumable based on a once-per-combat Feature or Talent uses the effect’s Duration and a Magic Power formula that includes MP and SP.",
+    "text": "A Consumable created from a Feature or Talent that replenishes uses when you roll Initiative or is designed to be used once per combat has the following characteristics:\n\n• Duration: Effect’s Duration\n• Magic Power: 2 + MP + (SP / 2)\n\nEXAMPLE: ARCANE SIGIL\nA Wizard’s Arcane Sigil costs 1 AP and 1 MP to activate, and is designed to be used once per combat. A rune that creates a Wizard’s Sigil should cost 1 AP to activate and have 3 Magic Power.",
+    "page": "DC20 Magazine 24 p.3",
+    "kind": "Rule",
+    "keywords": "once per combat feature talent consumable initiative magic power MP SP Arcane Sigil Wizard rune"
+  },
+  {
+    "id": "General Rules|Magical Consumables|Continuous Feature & Talent Consumables",
+    "title": "Continuous Feature & Talent Consumables",
+    "section": "General Rules",
+    "subsection": "Magical Consumables — Creation Guidance",
+    "summary": "A consumable based on a continuously usable Feature or Talent defaults to lasting until a Long Rest and adds 5 to its MP- and SP-based Magic Power.",
+    "text": "A Consumable created from a Feature or Talent that can be used continuously throughout the day has the following characteristics:\n\n• Duration: Effect’s Duration (Until Long Rest if not stated)\n• Magic Power: 5 + MP + (SP / 2)\n\nEXAMPLE: FAVORED TERRAIN\nA Ranger’s Favored Terrain Feature has no cost to activate. A scroll that grants the benefits of 2 Favored Terrains until you complete a Long Rest should have 5 Magic Power.\n\nDC TIP\nBe mindful when turning a Talent or Feature into a magic item that it can make characters who’ve taken those Talents or Features feel less special.",
+    "page": "DC20 Magazine 24 p.3",
+    "kind": "Rule",
+    "keywords": "continuous feature talent consumable duration long rest magic power MP SP Favored Terrain Ranger scroll DC tip"
+  },
+  {
+    "id": "General Rules|Magical Consumables|Equipment Property Consumables",
+    "title": "Equipment Property Consumables",
+    "section": "General Rules",
+    "subsection": "Magical Consumables — Creation Guidance",
+    "summary": "An Equipment Property Consumable lasts until a Long Rest and has twice the Property’s Equipment Property Point cost in Magic Power.",
+    "text": "A Consumable created from an Equipment Property (Weapon, Spell Focus, Armor, or Shield) has the following characteristics:\n\n• Duration: Until Long Rest\n• Magic Power: 2 x Equipment Property Points\n\nEXAMPLE: POWERFUL\nPowerful costs 2 Spell Focus Property Points. An infusion oil that grants the befits of the Powerful Spell Focus Property should have 4 Magic Power.\n\nDC TIP\nApplying an Equipment Property to a different type of equipment does not change what type of equipment it is. For example, if you apply a Spell Focus Property to a Shield, holding the Shield does not count as performing Somatic Components for casting a Spell.",
+    "page": "DC20 Magazine 24 p.3",
+    "kind": "Rule",
+    "keywords": "equipment property consumable weapon spell focus armor shield duration long rest magic power property points Powerful infusion oil somatic components"
+  },
+  {
+    "id": "General Rules|Magical Consumables|Magic Item Property Consumables",
+    "title": "Magic Item Property Consumables",
+    "section": "General Rules",
+    "subsection": "Magical Consumables — Creation Guidance",
+    "summary": "A Magic Item Property Consumable lasts until a Long Rest and uses the Property’s own Magic Power value.",
+    "text": "A Consumable created from a Magic Item Property has the following characteristics:\n\n• Duration: Until Long Rest\n• Magic Power: Magic Item Property Magic Power\n\nEXAMPLE: TRUESIGHT\nThe Truesight Magic Item Property has 6 Magic Power. An eyedrop that grants Truesight until you complete a Long Rest should have 6 Magic Power.",
+    "page": "DC20 Magazine 24 p.3",
+    "kind": "Rule",
+    "keywords": "magic item property consumable duration long rest magic power Truesight eyedrop"
+  }
+]

@@ -167,7 +167,7 @@ function InfoPanel({ title, body }: { title: string; body: string }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-slate-900/70 p-5">
       <h3 className="text-sm font-black uppercase tracking-[0.14em] text-violet-300">{title}</h3>
-      <p className="mt-2 leading-7 text-slate-300"><RuleAwareText text={body} /></p>
+      <p className="mt-2 whitespace-pre-wrap leading-7 text-slate-300"><RuleAwareText text={body} /></p>
     </div>
   );
 }

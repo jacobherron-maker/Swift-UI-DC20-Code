@@ -1,0 +1,65 @@
+[
+  {
+    "id": "MagicalConsumables-Monster-Badger",
+    "name": "Badger",
+    "level": 0,
+    "type": "Minion",
+    "role": "Soldier",
+    "hp": 2,
+    "physicalDefense": 11,
+    "arcaneDefense": 10,
+    "attackBonus": 2,
+    "saveDC": 12,
+    "damage": 1,
+    "notes": "Published defense line: PD 11/16/21 • AD 10/15/20. This creature is summoned by a use of the Bag of Badger Beads and disappears after 1 hour or when its summoner does not Sustain the effect on their Turn.",
+    "sourceBook": "DC20 Magazine 24: Magical Consumables",
+    "sourcePage": 7,
+    "publishedRole": "Soldier",
+    "size": "Small",
+    "creatureType": "Beast",
+    "descriptionText": "A bead from a Bag of Badger Beads transforms into this creature.",
+    "tactics": "The Badger shares its summoner’s Initiative and acts on their turn. The summoner can command it to take available Actions or Reactions, except the Sustain Action, but the Badger spends its own AP. When its summoner takes the Move Action, the Badger also gains the benefits of the Move Action. If it is not commanded, it takes the Dodge Action.",
+    "lore": "Bag of Badger Beads are frequently used for pranks and minor distractions, and have also replaced sappers when burrowing alchemical bombs beneath fortifications from a safe distance.",
+    "actionPoints": 2,
+    "reactionPoints": 0,
+    "speed": 6,
+    "speedType": "Ground",
+    "primeModifier": 2,
+    "combatMastery": 0,
+    "might": 0,
+    "agility": 2,
+    "charisma": -2,
+    "intelligence": -3,
+    "skills": "Awareness +4",
+    "senses": "Tremorsense 3",
+    "languages": "",
+    "otherSpeeds": "Burrow 3",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "MagicalConsumables-Badger-Keen-Smell",
+        "kind": "Features",
+        "name": "Keen Smell",
+        "cost": "",
+        "details": "ADV on Awareness Checks using smell."
+      },
+      {
+        "id": "MagicalConsumables-Badger-Bite-Scratch",
+        "kind": "Actions",
+        "name": "Bite or Scratch",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 1 Space, 1 Piercing or Slashing."
+      },
+      {
+        "id": "MagicalConsumables-Badger-Snarl",
+        "kind": "Actions",
+        "name": "Snarl",
+        "cost": "1 AP",
+        "details": "Contest, 5 Spaces, Martial Check vs Repeated Charisma Save. Success: Target is Intimidated by you for 1 minute."
+      }
+    ]
+  }
+]

@@ -145,6 +145,10 @@ export function equipmentUseCapacity(item: EquipmentCatalogItem): number | undef
   return item.charges ?? (item.name === 'Medicine Kit' ? 5 : undefined);
 }
 
+export function equipmentUsageLabel(item: EquipmentCatalogItem): 'Charges' | 'Uses' {
+  return item.usageLabel ?? (item.properties.includes('Consumable') ? 'Uses' : 'Charges');
+}
+
 export interface ActiveEquipmentSheetEffects {
   resistances: string[];
   skillMasteryIncreases: Record<string, number>;
@@ -208,7 +212,7 @@ export function activeEquipmentSheetEffects(items: CharacterInventoryItem[], cat
 
 export function healingPotionAmount(item: EquipmentCatalogItem): number {
   if (item.category !== 'Adventuring Supplies' || !item.properties.includes('Healing') || !item.properties.includes('Consumable')) return 0;
-  return Number(item.summary.match(/Restores (\d+) HP/)?.[1] ?? 0);
+  return Number(item.summary.match(/Restores (\d+) HP/i)?.[1] ?? item.mechanics.match(/regains (\d+) HP immediately/i)?.[1] ?? 0);
 }
 
 export function equipmentHandCost(slot: EquipmentSlot): number {

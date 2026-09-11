@@ -11,6 +11,7 @@ import {
   enforceEquipmentHandCapacity,
   equipmentTransitionActionPointCost,
   equipmentUseCapacity,
+  equipmentUsageLabel,
   healingPotionAmount,
   setInventoryQuantity,
   spendInventoryUse,
@@ -26,6 +27,10 @@ const mundaneObjectsPath = fileURLToPath(new URL('../../public/data/MundaneObjec
 const mundaneObjects = JSON.parse(readFileSync(mundaneObjectsPath, 'utf8')) as EquipmentCatalogItem[];
 const adventureRewardsPath = fileURLToPath(new URL('../../public/data/AdventureRewards.json', import.meta.url));
 const adventureRewards = JSON.parse(readFileSync(adventureRewardsPath, 'utf8')) as EquipmentCatalogItem[];
+const magicalConsumablesPath = fileURLToPath(new URL('../../public/data/MagicalConsumables.json', import.meta.url));
+const magicalConsumables = JSON.parse(readFileSync(magicalConsumablesPath, 'utf8')) as EquipmentCatalogItem[];
+const poisonsPath = fileURLToPath(new URL('../../public/data/Poisons.json', import.meta.url));
+const poisons = JSON.parse(readFileSync(poisonsPath, 'utf8')) as EquipmentCatalogItem[];
 
 function inventory(item: EquipmentCatalogItem, id: string, equipped = false): CharacterInventoryItem {
   return { id, equipmentID: item.id, quantity: 1, isEquipped: equipped, source: 'added' };
@@ -238,6 +243,61 @@ describe('Adventure Rewards magic items', () => {
     const charged = addInventoryItem([], reflection);
     const doubled = setInventoryQuantity(charged, charged[0].id, 2, equipmentUseCapacity(reflection));
     expect(doubled[0]).toMatchObject({ quantity: 2, remainingUses: 6 });
+  });
+});
+
+describe('Magical Consumables catalog', () => {
+  it('contains all eighteen published items with tracked Uses and source provenance', () => {
+    expect(magicalConsumables).toHaveLength(18);
+    expect(new Set(magicalConsumables.map(({ id }) => id)).size).toBe(18);
+    expect(magicalConsumables.every((item) => (
+      item.collection === 'Magic'
+      && item.properties.includes('Consumable')
+      && item.usageLabel === 'Uses'
+      && (item.charges ?? 0) > 0
+      && item.sourceDocument === 'DC20 Magazine 24 — Magical Consumables'
+      && item.magicFeatures?.length === 1
+    ))).toBe(true);
+  });
+
+  it('routes consumable pools and immediate Hydrablood healing into inventory behavior', () => {
+    const badgerBeads = magicalConsumables.find(({ name }) => name === 'Bag of Badger Beads')!;
+    const hydrablood = magicalConsumables.find(({ name }) => name === 'Elixir of Hydrablood')!;
+    expect(equipmentUseCapacity(badgerBeads)).toBe(5);
+    expect(equipmentUsageLabel(badgerBeads)).toBe('Uses');
+    expect(addInventoryItem([], badgerBeads)[0].remainingUses).toBe(5);
+    expect(healingPotionAmount(hydrablood)).toBe(3);
+  });
+});
+
+describe('Poisons catalog', () => {
+  it('contains all six Basic and ten Advanced example Poisons', () => {
+    expect(poisons).toHaveLength(16);
+    expect(poisons.filter(({ subtype }) => subtype === 'Basic Poison')).toHaveLength(6);
+    expect(poisons.filter(({ subtype }) => subtype === 'Advanced Poison')).toHaveLength(10);
+    expect(new Set(poisons.map(({ id }) => id)).size).toBe(16);
+    expect(poisons.every((item) => (
+      item.category === 'Adventuring Supplies'
+      && item.properties.includes('Consumable')
+      && item.properties.includes('Poison')
+      && item.usageLabel === 'Uses'
+      && item.charges === 1
+      && item.sourceDocument === 'DC20 Magazine 15 — Poisons'
+      && item.mechanics.includes('These examples are written during Beta 0.9.5')
+    ))).toBe(true);
+  });
+
+  it('preserves representative saves, compositions, conditions, and stronger variants', () => {
+    expect(poisons.find(({ name }) => name === 'Hallucinogen')).toMatchObject({
+      properties: expect.arrayContaining(['Gas', 'Powder', 'Ingested', 'Inhaled']),
+    });
+    expect(poisons.find(({ name }) => name === 'Nerve Toxin')?.mechanics).toContain('DC 17 Repeated Physical Save');
+    expect(poisons.find(({ name }) => name === 'Delayed Death')?.mechanics).toContain('Failure: Target dies. Success: Target is reduced to 0 HP.');
+    expect(poisons.find(({ name }) => name === 'Stunning Serum')?.mechanics).toContain('increasing the amount of Stunned applied to Stunned 2');
+
+    const dose = addInventoryItem([], poisons.find(({ name }) => name === 'Void Venom')!)[0];
+    expect(dose.remainingUses).toBe(1);
+    expect(spendInventoryUse([dose], dose.id, 1)[0].remainingUses).toBe(0);
   });
 });
 

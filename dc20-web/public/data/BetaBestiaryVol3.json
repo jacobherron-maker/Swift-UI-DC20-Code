@@ -1,0 +1,996 @@
+[
+  {
+    "id": "BBV30000-0000-4000-8000-000000000001",
+    "name": "Oculoth",
+    "level": 1,
+    "type": "Standard",
+    "role": "Striker",
+    "hp": 6,
+    "physicalDefense": 14,
+    "arcaneDefense": 9,
+    "attackBonus": 4,
+    "saveDC": 14,
+    "damage": 2,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 17: Beta Bestiary Vol. 3",
+    "sourcePage": 3,
+    "publishedRole": "Lurker",
+    "size": "Small",
+    "creatureType": "Fiend",
+    "descriptionText": "A demonic fusion of bat and owl anatomy, with leathery wings and feathers matted with ash. It has multiple glowing eyes arranged unevenly across its face and chest, each swiveling independently. Its head moves in unnatural ways and is capable of rotating all the way around while its body remains motionless.",
+    "tactics": "It will try to avoid combat if it can, it will attack with its Eye Beams until creatures get close, then use its Talons attacks to try and blind the target before flying away.",
+    "lore": "These creatures serve as a scouting familiar for cultists, demon lords, and other dark entities. Their creation through demonic and chaotic magic links them magically to their controller to whom they can speak telepathically across vast distances. They’re seen as omens of bad things to come and are a focus of many cautionary children’s tales. “The first eye of the infernal” is a moniker often used to describe them, as simply mentioning them by name is said to be enough to bring misfortune’s gaze upon you.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 7,
+    "speedType": "Fly",
+    "primeModifier": 3,
+    "combatMastery": 1,
+    "might": -2,
+    "agility": 3,
+    "charisma": 1,
+    "intelligence": 2,
+    "skills": "Awareness +7, Acrobatics +7, Stealth +7",
+    "senses": "Darkvision 10",
+    "languages": "Telepathy 10",
+    "otherSpeeds": "Ground 3",
+    "reductions": "",
+    "resistances": "Blinded, Slowed",
+    "vulnerabilities": "Physical (1)",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000101",
+        "kind": "Features",
+        "name": "Keen Sight",
+        "cost": "",
+        "details": "You have ADV on Awareness Checks using sight."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000102",
+        "kind": "Features",
+        "name": "Telepathic Link",
+        "cost": "",
+        "details": "You have a telepathic link with a creature that’s considered your master and can speak telepathically to it at any distance while you’re both on the same plane. You can only have a link to one creature at a time."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000103",
+        "kind": "Actions",
+        "name": "Talons",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 2 Slashing.\n\nBlind (+1 AP): Agility Save. Failure: Target is Blinded until the end of its next turn."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000104",
+        "kind": "Actions",
+        "name": "Eye Beam",
+        "cost": "1 AP",
+        "details": "Ranged Spell Attack vs PD, 10 Spaces, 1 Fire + 1 additional damage on Heavy Hits.\n\nEmpowered (+1 AP): Charisma Save. Failure: Target is Intimidated until the end of its next turn."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000105",
+        "kind": "Actions",
+        "name": "Full Disengage",
+        "cost": "1 AP",
+        "details": "You take the Full Disengage Action."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000106",
+        "kind": "Actions",
+        "name": "Elemental Ray",
+        "cost": "2 AP",
+        "details": "Area Spell Attack vs AD, 10 Space Line, 1 Fire + 1 additional damage on Heavy Hits."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000107",
+        "kind": "Reactions",
+        "name": "Blinding Assault",
+        "cost": "1 AP",
+        "details": "When a creature moves to a Space adjacent to you, you can make a Talons Attack against it with the Blind Enhancement."
+      }
+    ]
+  },
+  {
+    "id": "BBV30000-0000-4000-8000-000000000002",
+    "name": "Screecher Drone",
+    "level": 2,
+    "type": "Standard",
+    "role": "Tactician",
+    "hp": 10,
+    "physicalDefense": 12,
+    "arcaneDefense": 12,
+    "attackBonus": 4,
+    "saveDC": 15,
+    "damage": 1,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 17: Beta Bestiary Vol. 3",
+    "sourcePage": 4,
+    "publishedRole": "Controller",
+    "size": "Small",
+    "creatureType": "Beast",
+    "descriptionText": "These Insectoid creatures are about the size of one’s forearm, with long, thin, trumpet-like noses that split open into segments when emitting sound. They have translucent wings, and their bodies are thin, veined, and brittle with a glassy appearance. Their coloration ranges from dusty brown to bone white, helping them blend in with the stone of the caves in which they reside.",
+    "tactics": "It uses its Sonic Screech as much as possible. If a solitary enemy gets close, it will try to Claw and Grab them before using its Bloodsucking Bite.",
+    "lore": "These bugs dwell in underground hives, nesting near fault lines, caves, and buried ruins. They’re naturally drawn to other high-pitched noises - crystal resonance, bat calls, certain spell notes - and are often found attacking bardic camps or arcane ruins. Some subterranean cults raise them in jars and release them as organic alarms or tunnel-sealers.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 5,
+    "speedType": "Ground",
+    "primeModifier": 3,
+    "combatMastery": 1,
+    "might": 2,
+    "agility": 3,
+    "charisma": -1,
+    "intelligence": -3,
+    "skills": "Awareness +5, Athletics +4",
+    "senses": "Darkvision 10",
+    "languages": "",
+    "otherSpeeds": "Burrow 3, Fly 3",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "Bludgeoning (1)",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000201",
+        "kind": "Features",
+        "name": "Drawn to Sound",
+        "cost": "",
+        "details": "When a creature you can hear within 10 Spaces makes a high-pitched sound, such as from music, a scream, or the Verbal Components of a Spell, you’re Taunted by it until the end of your next turn."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000202",
+        "kind": "Actions",
+        "name": "Claw",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 1 Slashing + 1 additional damage on Heavy Hits.\n\nBleed (+1 AP): Might Save. Failure: Target is Bleeding for 1 minute.\n\nGrab (+1 AP): Physical Save. Failure: Target is Grappled."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000203",
+        "kind": "Actions",
+        "name": "Bloodsucking Bite",
+        "cost": "1 AP",
+        "details": "A target Grappled by you, Melee Martial Attack vs AD, 1 Piercing + 1 additional damage on Heavy Hits and target makes a Might Save. Failure: Target is Doomed 1."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000204",
+        "kind": "Actions",
+        "name": "Sonic Screech",
+        "cost": "2 AP",
+        "details": "Area Spell Attack vs AD, 5 Space Cone, 1 Bludgeoning and target makes a Physical Save. Failure: Target is Dazed until the start of your next turn. Failure (5): Target is also Hindered until the start of your next turn."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000205",
+        "kind": "Reactions",
+        "name": "Incitement",
+        "cost": "1 AP",
+        "details": "When a creature within 1 Space of you Taunts you, you can make a Claw Attack against them."
+      }
+    ]
+  },
+  {
+    "id": "BBV30000-0000-4000-8000-000000000003",
+    "name": "Mawworm",
+    "level": 3,
+    "type": "Standard",
+    "role": "Brute",
+    "hp": 17,
+    "physicalDefense": 11,
+    "arcaneDefense": 13,
+    "attackBonus": 5,
+    "saveDC": 15,
+    "damage": 2,
+    "notes": "Large Mawworm Variant\n• Level 5\n• Size is Large\n• +10 HP\n• +2 PD, +4 AD\n• +1 to Might and Charisma\n• +2 to Attacks and Save DC",
+    "sourceBook": "DC20 Magazine 17: Beta Bestiary Vol. 3",
+    "sourcePage": 5,
+    "publishedRole": "Brute",
+    "size": "Small",
+    "creatureType": "Aberration",
+    "descriptionText": "Resembles a dark blue, segmented maggot or worm, slick and glistening with an oily sheen. Its body is lined with multiple small mouths, each rimmed in pale, fleshy ridges and opening into pure black voids rather than throats.",
+    "tactics": "Due to its slow Speed, it tries to get the drop on creatures whenever it can. When its close, it attempts to Bite and then Grapple creatures, and then Engulf them as quickly as possible. When enemies are out of its reach, it’ll Burrow or Climb to get away or approach safely.",
+    "lore": "Mawworms are born with mouths that open into individual pocket dimensions, allowing them to consume far more than their size would suggest is possible. Scholars and Artificers harvest these creatures to create Bags of Holding and other extradimensional items. Larger Mawworms are sometimes found burrowed in the foundations of planar rifts or near collapsed portals.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 3,
+    "speedType": "Ground",
+    "primeModifier": 3,
+    "combatMastery": 2,
+    "might": 3,
+    "agility": 0,
+    "charisma": 0,
+    "intelligence": -3,
+    "skills": "Awareness +5, Athletics +5, Stealth +4",
+    "senses": "Blindsight 15",
+    "languages": "",
+    "otherSpeeds": "Burrow 3, Climb 3",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "Radiant (1)",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000301",
+        "kind": "Features",
+        "name": "Dimensional Disruption",
+        "cost": "",
+        "details": "When you take Radiant damage, you can’t Engulf creatures or objects until the start of your next turn."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000302",
+        "kind": "Features",
+        "name": "Tunneler",
+        "cost": "",
+        "details": "You can burrow through solid stone, leaving a 1 Space tunnel in your wake."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000303",
+        "kind": "Actions",
+        "name": "Bite",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 2 Piercing + 1 additional damage on Heavy Hits and target makes a Physical Save. Failure: Target is Grappled by you."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000304",
+        "kind": "Actions",
+        "name": "Consume",
+        "cost": "1 AP",
+        "details": "Area Martial Attack vs AD of an Engulfed creature, 3 Corrosion + 1 additional damage on Heavy Hits."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000305",
+        "kind": "Actions",
+        "name": "Sweep",
+        "cost": "2 AP",
+        "details": "Area Martial Attack vs AD, 1 Space Arc, 1 Bludgeoning + 1 additional damage on Heavy Hits and the target makes a Agility Save. Failure: Target is Prone."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000306",
+        "kind": "Actions",
+        "name": "Engulf",
+        "cost": "2 AP",
+        "details": "A target Grappled by you must make a Might Save. Failure: Target is Swallowed, regardless of its Size, until you’re reduced to 0 HP or take Radiant damage; you eject the target into an adjacent Space of its choice when either of these occurs. The target is held in an interdimensional Space, and can’t breathe or target you while Swallowed. A creature that dies, or an object that’s reduced to 0 HP, in your stomach is completely dissolved."
+      }
+    ]
+  },
+  {
+    "id": "BBV30000-0000-4000-8000-000000000004",
+    "name": "Marrow Reaper Spider",
+    "level": 5,
+    "type": "Standard",
+    "role": "Striker",
+    "hp": 15,
+    "physicalDefense": 15,
+    "arcaneDefense": 14,
+    "attackBonus": 7,
+    "saveDC": 18,
+    "damage": 4,
+    "notes": "Elder Variant\n• Level 6\n• Size is Large\n• +3 HP\n• +1 AD\n• +1 Corrosion damage on Attacks\n• Marrow Sense: You know the location of any Bloodied creature with bones within 100 Spaces. You can sense it’s direction even if it’s behind total cover.\n\nBeta Note: The Poisoned Condition, and its interactions with Poisons, is being modified for the next release. This creature is designed to apply the Poisoned Condition from 0.10, not 0.9.5, of the DC20 Beta Rules.",
+    "sourceBook": "DC20 Magazine 17: Beta Bestiary Vol. 3",
+    "sourcePage": 6,
+    "publishedRole": "Lurker",
+    "size": "Medium",
+    "creatureType": "Beast",
+    "descriptionText": "An eight-legged arachnid with glowing yellow eyes that walks on six legs - its front two limbs end in long, spear-like tips. Extraordinarily long, retractable fangs allow it sink deeply into prey and inject its venom. A vivid, unsettling mix of purple, pink, and black chitinous scales protect its softer interior and glisten softly as if covered in oil.",
+    "tactics": "It uses its Quick Leap to get into fights, ambushing its prey and then using its Bite to poison them. Against creatures just out of range of its Bite, it’ll use its Leg Spear to move the target closer. Once its prey is poisoned, it’ll try to kill them quickly with Marrow Drain.",
+    "lore": "These spiders are feared by both common folk and warriors alike for their grotesque feeding behavior. Their fangs and venom turn bone into liquid, allowing them to drink the liquified marrow directly from their victims. Cultists and necromancers sometimes harvest their venom for horrific rituals. Some claim that elder Marrow Reapers can sniff out weakened or injured prey from great distances, targeting creatures whose bones are already brittle or fractured.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 4,
+    "speedType": "Ground",
+    "primeModifier": 4,
+    "combatMastery": 3,
+    "might": 3,
+    "agility": 4,
+    "charisma": 1,
+    "intelligence": -3,
+    "skills": "Awareness +6, Acrobatics +6, Stealth +6",
+    "senses": "Darkvision 10",
+    "languages": "",
+    "otherSpeeds": "Climb 4",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000401",
+        "kind": "Features",
+        "name": "Spider Climb",
+        "cost": "",
+        "details": "You can walk without falling on the ceiling and vertical surfaces normally without needing to Climb."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000402",
+        "kind": "Features",
+        "name": "Web Walk",
+        "cost": "",
+        "details": "You can walk along and through webs unimpeded. Additionally, you know the location of any creature that’s in contact with the same web."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000403",
+        "kind": "Actions",
+        "name": "Bite",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 2 Piercing + 2 Corrosion and target makes a Repeated Physical Save. Failure: Target is Poisoned by you for 1 minute. Roll a d6 to determine the effect on the target:\n\n1. Body: Target takes 1 True damage at the start of each of its turns.\n2. Neck: Target is Hindered.\n3. Right Arm: Any Checks made using this arm has DisADV.\n4. Left Arm: Any Checks made using this arm has DisADV.\n5. Left Leg: Target is Slowed.\n6. Right Leg: Target is Slowed."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000404",
+        "kind": "Actions",
+        "name": "Leg Spear",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 3 Spaces, 3 Piercing and target makes a Physical Save. Failure: Target is pulled up to 2 Spaces toward you."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000405",
+        "kind": "Actions",
+        "name": "Marrow Drain",
+        "cost": "2 AP",
+        "details": "Requires: Creature Poisoned by you, Melee Spell Attack vs PD, 3 Corrosion. You regain an amount of HP equal to the damage dealt."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000406",
+        "kind": "Reactions",
+        "name": "Quick Leap",
+        "cost": "1 AP",
+        "details": "When you start your turn, you can Jump up to 8 Spaces, provoking Opportunity Attacks at DisADV.\n\nSlam (+1 AP): Make an Area Martial Attack vs AD against each creature within 1 Space of where you land, 2 Bludgeoning."
+      }
+    ]
+  },
+  {
+    "id": "BBV30000-0000-4000-8000-000000000005",
+    "name": "Psymanta",
+    "level": 3,
+    "type": "Standard",
+    "role": "Soldier",
+    "hp": 13,
+    "physicalDefense": 13,
+    "arcaneDefense": 13,
+    "attackBonus": 5,
+    "saveDC": 15,
+    "damage": 2,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 17: Beta Bestiary Vol. 3",
+    "sourcePage": 7,
+    "publishedRole": "Skirmisher",
+    "size": "Large",
+    "creatureType": "Aberration",
+    "descriptionText": "Resembles a manta ray made of brain tissue. Its large flaps of thin, veined skin function as wings that allow it to levitate and drift silently through the air. A long, trailing spinal cord-like tail dangles beneath it, twitching occasionally as if conducting signals. Tendrils like jellyfish feelers pulse constantly and create a small cloud of purple psionic energy around its underside which induce headaches when creatures approach.",
+    "tactics": "It uses Telepathic Lure to get creatures to come toward it, then approaches and uses Psychic Pulse to damage and control enemies. When a single enemy gets close, it uses its Mind Leech Tendril against them. If multiple enemies surround it, it uses Psychic Pulse before using its Mind Leech Tendril on any creature still near it.",
+    "lore": "These aberrations are born from once-psionic beings (mind mages, telepaths, or even extraplanar entities). Through ritualistic defilement, these corpses are reconfigured into floating monstrosities, their sentience stripped away as sharp psionic instincts are instilled into the husk of what it once was. Some still echo faint emotions and memories of their former selves, occasionally mimicking telepathic voices or sending out cries for help that lure in curious minds. They’re often scouts, sentinels, or guards for more powerful psionic masters.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 6,
+    "speedType": "Hover",
+    "primeModifier": 3,
+    "combatMastery": 2,
+    "might": 0,
+    "agility": 1,
+    "charisma": 3,
+    "intelligence": 1,
+    "skills": "",
+    "senses": "Blindsight 10 (can’t see beyond this)",
+    "languages": "Understands creatures with Telepathy but can’t speak",
+    "otherSpeeds": "",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "",
+    "immunities": "",
+    "abilities": [
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000501",
+        "kind": "Features",
+        "name": "Anaerobic",
+        "cost": "",
+        "details": "You don’t need to breathe. You’re immune to hazardous air and Suffocating."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000502",
+        "kind": "Features",
+        "name": "Telepathic Lure (10 Space Aura)",
+        "cost": "",
+        "details": "Humanoids within the Aura, even through total Cover, hear familiar voices and know the direction their coming from, but not the source of the voices. At the start of its turn while hearing these voices, a creature makes a Repeated Intelligence Save. Failure: Target is Taunted by you and has a -1 to Attacks."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000503",
+        "kind": "Actions",
+        "name": "Mind Leech Tendril",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 2 Spaces, 1 Bludgeoning + 1 Psychic and target makes a Repeated Mental Save. Failure: Target is Dazed for 1 minute."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000504",
+        "kind": "Actions",
+        "name": "Psychic Pulse",
+        "cost": "2 AP",
+        "details": "Area Spell Attack vs AD, 2 Space Aura or 3 Space Cone, 1 Psychic and target makes an Intelligence Save. Failure: Target must spend 1 AP as a Reaction to move as far away from you as its Speed allows. It won’t move into obviously dangerous terrain, such as fire or a pit.\n\nStun (+1 AP): Mental Save. Failure: Target is also Stunned 1 until the end of its next turn."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000505",
+        "kind": "Reactions",
+        "name": "Death Echo",
+        "cost": "Auto",
+        "details": "When reduced to 0 HP, you release a wave of mental energy.\n\nArea Spell Attack vs AD: 5 Space Aura, 1 Psychic and target makes a Mental Save. Failure: Target must spend 1 AP as a Reaction to make a Melee Martial Attack against a creature of your choice within 1 Space of it, but it can’t spend any resources on this Attack. If there are no targets within range, it’s Stunned 1 instead."
+      }
+    ]
+  },
+  {
+    "id": "BBV30000-0000-4000-8000-000000000006",
+    "name": "Aqua Ooze",
+    "level": 4,
+    "type": "Standard",
+    "role": "Defender",
+    "hp": 15,
+    "physicalDefense": 15,
+    "arcaneDefense": 15,
+    "attackBonus": 5,
+    "saveDC": 15,
+    "damage": 1,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 17: Beta Bestiary Vol. 3",
+    "sourcePage": 8,
+    "publishedRole": "Defender",
+    "size": "Large",
+    "creatureType": "Ooze",
+    "descriptionText": "Appears identical to a body of still water. Occasionally emits tiny ripples or unnatural stillness where movement should be. When agitated or attacking, it thickens slightly, its insides bubbling and shimmering.",
+    "tactics": "It tries to move other creatures into its Space then to keep it there. If it has 1 or more creatures in its Space, it tries to Drown them as quickly as possible. While it has an enemy within it, it Absorbs Water to sustain itself.",
+    "lore": "The Aqua Ooze is the bane of swimmers. Spawned from arcane pollution or alchemical runoff, these creatures adapted to perfectly mimic their environment, becoming ambush predators. Some speculate they were created intentionally by forgotten water cults or ancient druids to protect sacred springs. Most prey never even realize they’re inside the ooze’s body until it’s too late. Sailors and swamp folk know them as “Drowner’s Gel”.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 5,
+    "speedType": "Swim",
+    "primeModifier": 3,
+    "combatMastery": 2,
+    "might": 3,
+    "agility": 3,
+    "charisma": 0,
+    "intelligence": -3,
+    "skills": "Awareness +3, Stealth +5",
+    "senses": "Blindsight 10 (can’t see beyond)",
+    "languages": "",
+    "otherSpeeds": "Climb 3, Ground 3",
+    "reductions": "",
+    "resistances": "Fire (Half), Physical (1)",
+    "vulnerabilities": "Lightning (2)",
+    "immunities": "Bleeding, Burning, Charmed, Deafened, Grappled, Prone, Restrained",
+    "abilities": [
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000601",
+        "kind": "Features",
+        "name": "Amorphous",
+        "cost": "",
+        "details": "You’re unaffected by mundane Difficult Terrain and can move through a Space as narrow as 1 inch wide without squeezing."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000602",
+        "kind": "Features",
+        "name": "Anaerobic",
+        "cost": "",
+        "details": "You don’t need to breathe. You’re immune to hazardous air and Suffocating."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000603",
+        "kind": "Features",
+        "name": "False Appearance",
+        "cost": "",
+        "details": "While you remain motionless, you’re indistinguishable from a regular body of water, except by magic or by creatures with Mastery in Awareness."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000604",
+        "kind": "Features",
+        "name": "Ooze Climb",
+        "cost": "",
+        "details": "You can Climb any solid surface without making a Check."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000605",
+        "kind": "Features",
+        "name": "Water Body",
+        "cost": "",
+        "details": "You can occupy the same Space as another creature that isn’t an Ooze. A creature that starts its turn within your Space take 2 Corrosion damage. It’s Slowed and can’t breathe while occupying the same Space as you."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000606",
+        "kind": "Features",
+        "name": "Water Dependent",
+        "cost": "",
+        "details": "You take 1 True damage at the end of your turn if you’re not touching water."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000607",
+        "kind": "Actions",
+        "name": "Pressure Lash",
+        "cost": "1 AP",
+        "details": "Melee Spell Attack vs PD, 3 Spaces, 1 Bludgeoning and target makes a Might Save. Failure: Target is pulled into your Space."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000608",
+        "kind": "Actions",
+        "name": "Absorb Water",
+        "cost": "1 AP",
+        "details": "While within 1 Space of water make a DC 10 Spell Check. Success: You regain 2 HP. Success (each 5): +1 HP."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000609",
+        "kind": "Actions",
+        "name": "Drown",
+        "cost": "1 AP",
+        "details": "Creatures in your Space, Area Spell Attack vs AD, 1 Bludgeoning + 1 additional damage on Heavy Hits and target makes a Physical Save. Failure: Target is Suffocating until it leaves your Space."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000610",
+        "kind": "Actions",
+        "name": "Splash",
+        "cost": "2 AP",
+        "details": "Area Spell Attack vs AD, 2 Space Aura, 1 Bludgeoning + 1 additional damage on Heavy Hits."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000611",
+        "kind": "Reactions",
+        "name": "Conduit",
+        "cost": "Auto",
+        "details": "When you take Lightning damage, all creatures within one of your Spaces take half as much damage."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000612",
+        "kind": "Reactions",
+        "name": "Riptide",
+        "cost": "1 AP",
+        "details": "When you’re Hit by a Melee Attack from a creature within 1 Space of you, you force the target to make a Might Save. Failure: Target is pulled into your Space."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000613",
+        "kind": "Reactions",
+        "name": "Furious Waters",
+        "cost": "1 AP",
+        "details": "When a creature in your Space starts to move, you force the target to make a Physical Save. Failure: Target is Immobilized until the start of your next turn."
+      }
+    ]
+  },
+  {
+    "id": "BBV30000-0000-4000-8000-000000000007",
+    "name": "Toxic Slime",
+    "level": 5,
+    "type": "Standard",
+    "role": "Brute",
+    "hp": 28,
+    "physicalDefense": 12,
+    "arcaneDefense": 16,
+    "attackBonus": 7,
+    "saveDC": 17,
+    "damage": 4,
+    "notes": "Mini Toxic Slime\nIt shares your statistics and Initiative except for the following:\n• It has 3 HP and 2 AP\n• It’s Small instead of Large",
+    "sourceBook": "DC20 Magazine 17: Beta Bestiary Vol. 3",
+    "sourcePage": 9,
+    "publishedRole": "Brute",
+    "size": "Large",
+    "creatureType": "Ooze",
+    "descriptionText": "A sickly green and black ooze, bubbling with noxious vapors and streaked with veins of glowing acidic yellow. It’s constantly dripping, fizzing, and reshaping, its form pulsing and twitching like an animal being shocked. Its surface occasionally spouts a limb, eerily similar to a gaunt humanoid’s.",
+    "tactics": "It starts off Combat by using Spit Slime to spawn 2 Mini Toxic Slime Oozes. After that, it uses Toxic Limb on any creature that’s close to it, relying on its Decay aura when it’s surrounded. Its Sudden Mutation counters Attacks from creatures dealing Poison or Corrosion damage. If it can’t get within melee range of any enemies, it creates copies of itself until it gets close.",
+    "lore": "Spawned from the corrupted runoff of alchemical waste dumps or necrotic swamps. They’re considered a living manifestation of pollution and mutation, thriving on toxins and feeding on entropy. Sightings often accompany wilting flora, dead wildlife, and blighted terrain, as they leave destruction in their wake.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 4,
+    "speedType": "Ground",
+    "primeModifier": 4,
+    "combatMastery": 3,
+    "might": 4,
+    "agility": 1,
+    "charisma": 3,
+    "intelligence": -3,
+    "skills": "Awareness +6, Athletics +6, Stealth +5",
+    "senses": "Blindsight 10 (can’t see beyond this)",
+    "languages": "",
+    "otherSpeeds": "Climb 4",
+    "reductions": "",
+    "resistances": "Physical (2), Umbral (Half)",
+    "vulnerabilities": "Lightning (2), Radiant (Double)",
+    "immunities": "Corrosion (Absorb), Poison (Absorb); Bleeding, Charmed, Deafened, Grappled, Prone, Restrained",
+    "abilities": [
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000701",
+        "kind": "Features",
+        "name": "Amorphous",
+        "cost": "",
+        "details": "You’re unaffected by mundane Difficult Terrain and can move through a Space as narrow as 1 inch wide without squeezing."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000702",
+        "kind": "Features",
+        "name": "Anaerobic",
+        "cost": "",
+        "details": "You don’t need to breathe. You’re immune to hazardous air and Suffocating."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000703",
+        "kind": "Features",
+        "name": "Ooze Climb",
+        "cost": "",
+        "details": "You can Climb any solid surface without making a Check."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000704",
+        "kind": "Actions",
+        "name": "Toxic Limb",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 2 Spaces, 2 Bludgeoning + 2 Corrosion."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000705",
+        "kind": "Actions",
+        "name": "Spit Slime",
+        "cost": "1 AP",
+        "details": "Ranged Martial Attack vs PD, 10 Spaces, 2 Corrosion damage. A Mini Toxic Slime appears in an unoccupied Space of your choice with 1 Space of the target. If these creatures survive, they dissolve at the start of your next turn, granting you 1 stack of Toxic Mass."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000706",
+        "kind": "Actions",
+        "name": "Decay",
+        "cost": "2 AP",
+        "details": "Area Spell Attack vs AD, 2 Space Aura, 2 Umbral damage and target makes a Repeated Physical Save. Failure: Target is Poisoned for 1 minute. While Poisoned, it can’t regain HP and it’s Hindered and Impaired."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000707",
+        "kind": "Reactions",
+        "name": "Acidic Body",
+        "cost": "Auto",
+        "details": "When a creature within 1 Space hits you with a Melee Attack, it takes 1 Corrosion damage."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000708",
+        "kind": "Reactions",
+        "name": "Toxic Growth",
+        "cost": "Auto",
+        "details": "When you’re subjected to Corrosion or Poison damage, you gain a stack of Toxic Mass for 1 minute (up to a maximum of 5). Each stack of Toxic Mass gives you a +1 to Attacks. Once you have 5 stacks your Size becomes Huge."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000709",
+        "kind": "Reactions",
+        "name": "Sudden Mutation",
+        "cost": "1 AP",
+        "details": "When you gain a stack of Toxic Mass, you can use Toxic Limb against a creature within range."
+      }
+    ]
+  },
+  {
+    "id": "BBV30000-0000-4000-8000-000000000008",
+    "name": "Crimson Ooze",
+    "level": 4,
+    "type": "Standard",
+    "role": "Soldier",
+    "hp": 15,
+    "physicalDefense": 10,
+    "arcaneDefense": 15,
+    "attackBonus": 7,
+    "saveDC": 17,
+    "damage": 3,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 17: Beta Bestiary Vol. 3",
+    "sourcePage": 10,
+    "publishedRole": "Skirmisher",
+    "size": "Medium",
+    "creatureType": "Ooze",
+    "descriptionText": "A deep red, semi-translucent ooze that pulses like a beating heart. It constantly gives off of a red mist that smells strongly of iron and glows with a dim inner light that seems to brighten whenever it’s around a creature nearing death.",
+    "tactics": "It starts off Combat by creating a copy of itself, then using the secondary Crimson Ooze to deal as much damage as it can. When enemies are wounded, it uses Blood Leech to heal and deal damage. When surrounded, it uses its Blood Pulse so it can follow up with Blood Leech.",
+    "lore": "A Crimson Ooze is an animated mass of coagulated blood, infused with dark blood magic. They’re drawn to injury and suffering, especially the scent of fresh wounds. They spawn in places where massive slaughters occurred - battlefields, sacrificial ritual grounds, or gruesome murder scenes. Blood mages have been known to try and trap them to harness their regenerative properties, even going so far as to commit heinously evil acts to create them.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 4,
+    "speedType": "Ground",
+    "primeModifier": 3,
+    "combatMastery": 2,
+    "might": 3,
+    "agility": 1,
+    "charisma": 2,
+    "intelligence": -3,
+    "skills": "Awareness +7, Athletics +7, Stealth +5",
+    "senses": "Blindsight 10 (can’t see beyond this)",
+    "languages": "",
+    "otherSpeeds": "Climb 4",
+    "reductions": "",
+    "resistances": "Bludgeoning (1)",
+    "vulnerabilities": "Fire (1), Piercing (1), Radiant (1), Slashing (1); Bleeding",
+    "immunities": "Charmed, Deafened, Grappled, Prone, Restrained",
+    "abilities": [
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000801",
+        "kind": "Features",
+        "name": "Amorphous",
+        "cost": "",
+        "details": "You’re unaffected by mundane Difficult Terrain and can move through a Space as narrow as 1 inch wide without squeezing."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000802",
+        "kind": "Features",
+        "name": "Anaerobic",
+        "cost": "",
+        "details": "You don’t need to breathe. You’re immune to hazardous air and Suffocating."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000803",
+        "kind": "Features",
+        "name": "Ooze Climb",
+        "cost": "",
+        "details": "You can Climb any solid surface without making a Check."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000804",
+        "kind": "Actions",
+        "name": "Blood Leech",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 1 Piercing + 2 Umbral. If the target is Bleeding or Bloodied, you regain HP equal to the Umbral damage dealt."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000805",
+        "kind": "Actions",
+        "name": "Sanguine Split",
+        "cost": "1 AP",
+        "details": "You can spend 7 HP to create an exact copy of yourself in an unoccupied adjacent Space that shares initiative with you. This copy has 7 HP and the same statistics as yourself."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000806",
+        "kind": "Actions",
+        "name": "Blood Pulse",
+        "cost": "2 AP",
+        "details": "Area Spell Attack vs AD, 2 Space Aura, 1 Umbral + 1 additional damage on Heavy Hits and target makes a Physical Save. Failure: Target is Bleeding."
+      }
+    ]
+  },
+  {
+    "id": "BBV30000-0000-4000-8000-000000000009",
+    "name": "Plant Shambler",
+    "level": 5,
+    "type": "Standard",
+    "role": "Tactician",
+    "hp": 20,
+    "physicalDefense": 17,
+    "arcaneDefense": 14,
+    "attackBonus": 7,
+    "saveDC": 17,
+    "damage": 3,
+    "notes": "Plant Shambler Variants\nModify the above stat block by adding or exchanging the following Features, Actions, or Reactions to make different variants:\n\nFeatures\nCamouflage: You have a +6 to Stealth Checks and have ADV on Stealth Checks while motionless within natural terrain.\n\nActions\n(2) Pollen Flash: Contest, 2 Space Arc, Spell Check vs Physical Save. Contest Success: Target is Blinded until the end of their next turn.\n\n(2) Spore Cloud: Contest, 2 Space Aura, Spell Check vs Repeated Physical Save. Contest Success: Target is poisoned for 1 minute. While poisoned, its Dazed and Charmed by you.\n\nReactions\n(Auto) Bramble Armor: When a creature within 1 Space hits you with a Melee Attack, it takes 2 Slashing damage.\n\n(Auto) Sap Spray: When an Attack scores a Heavy Hit against you or you’re reduced to 0 HP, you spray sap on each creature within 2 Spaces. An affected creature is Slowed and can’t take Reactions until the end of its next turn.\n\n(Auto) Ivy Lash: When you score a Critical Hit on a creature, the target is Hindered until the end of your next turn.\n\n(1) Photosynthetic Rage: When you take Radiant damage, you can use Slam with ADV.",
+    "sourceBook": "DC20 Magazine 17: Beta Bestiary Vol. 3",
+    "sourcePage": 11,
+    "publishedRole": "Controller",
+    "size": "Large",
+    "creatureType": "Plant",
+    "descriptionText": "A hulking, slow-moving amalgamation of twisting vines, bark-covered limbs, and ivy tendrils. It has moss-covered shoulders and feet that sink into the earth as it moves. Visible in its chest is a glowing yellow core that looks like a large seed. Its arms resemble whip-like vines, and its body has mushrooms and flowers growing sporadically all over.",
+    "tactics": "They prefer fighting on top of their Entangling Terrain to cover as wide an area as they can, and attack any creatures they Restrain. It tries to keep itself stationary to heal from Regeneration and keep its enemies Tethered or Grappled.",
+    "lore": "Regarded as the defenders of all nature, these beings are created by ancient druids or nature spirits to protect sacred groves, hidden forest paths, or wild ruins. However, some are born spontaneously in areas where magic and nature have mingled for centuries. They’re animated by primal nature magic and act with defensive instinct rather than malice, attacking those they come across that aren’t a true part of nature. They never pursue beyond their designated territories, though, to the relief of many adventurers.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 3,
+    "speedType": "Ground",
+    "primeModifier": 4,
+    "combatMastery": 3,
+    "might": 4,
+    "agility": 2,
+    "charisma": 0,
+    "intelligence": -2,
+    "skills": "Awareness +4, Athletics +8",
+    "senses": "Blindsight 15, Tremorsense 30",
+    "languages": "",
+    "otherSpeeds": "",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "Fire (2)",
+    "immunities": "Bleeding, Blinded",
+    "abilities": [
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000901",
+        "kind": "Features",
+        "name": "Forest Stride",
+        "cost": "",
+        "details": "You ignore Difficult Terrain caused by plants."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000902",
+        "kind": "Features",
+        "name": "Toxic Vines",
+        "cost": "",
+        "details": "Creatures that have a Condition imposed on them by you take 1 Poison damage at the start of each of their turns."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000903",
+        "kind": "Actions",
+        "name": "Slam",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 3 Bludgeoning.\n\nKnockback (+1 AP): Physical Save. Failure: Target is knocked back up to 2 Spaces."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000904",
+        "kind": "Actions",
+        "name": "Vine",
+        "cost": "1 AP",
+        "details": "Ranged Martial Attack vs PD, 5/10 Spaces, 2 Bludgeoning + 1 additional damage on Heavy Hits and target makes a Physical Save. Failure: Target is Tethered 1 to its Space. A creature within 1 Space of the target can spend 1 AP to break the vine, ending the Tether."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000905",
+        "kind": "Actions",
+        "name": "Heavy Slam",
+        "cost": "2 AP",
+        "details": "Area Martial Attack vs AD, 2 Space Arc, 1 Bludgeoning + 1 additional damage on Heavy Hits and target makes a Physical Save. Failure: Target is knocked back 2 Spaces. Failure (5): Target is also knocked Prone."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000906",
+        "kind": "Actions",
+        "name": "Entangling Terrain",
+        "cost": "2 AP",
+        "details": "Creatures of your choice on the ground, Contest, 15 Spaces, 5 Space Sphere, Spell Check vs Repeated Physical Save. Contest Success: Target is Restrained.\n\nOvergrowth (+1 AP): The target area becomes Difficult Terrain as it’s overgrown with foliage and vegetation."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000000907",
+        "kind": "Reactions",
+        "name": "Plant Regeneration",
+        "cost": "Auto",
+        "details": "When you end your turn without having moved while on natural ground or in direct sunlight, you regain 2 HP."
+      }
+    ]
+  },
+  {
+    "id": "BBV30000-0000-4000-8000-000000000010",
+    "name": "Carnivorous Bloom",
+    "level": 2,
+    "type": "Standard",
+    "role": "Leader",
+    "hp": 10,
+    "physicalDefense": 14,
+    "arcaneDefense": 14,
+    "attackBonus": 4,
+    "saveDC": 14,
+    "damage": 1,
+    "notes": "",
+    "sourceBook": "DC20 Magazine 17: Beta Bestiary Vol. 3",
+    "sourcePage": 12,
+    "publishedRole": "Support",
+    "size": "Medium",
+    "creatureType": "Plant",
+    "descriptionText": "A massive, mostly stationary carnivorous plant with a wide, tooth-lined maw like a grotesque Venus flytrap. It has thick, thorny petals and is covered in glossy green armor-like plating, while its inner mouth is fleshy, red, and slick with corrosive enzymes. Dozens of small, glowing sap pods grow along its body, giving off a sickly sweet scent.",
+    "tactics": "It waits to attack until a creature is adjacent to it, going for a quick Bite to Grapple the target. Distant threats are dealt with by using Vines to draw them close enough to Bite and Swallow. When it has allies, it uses Empowering Sap to bolster their forces. Carnivorous Blooms that are attacked from afar are easily killed, so they’re usually either found in tight corridors where they can reach any creature that can see them, or they grow in areas where they have plenty of allied creatures (especially Beasts or Plants) to help corral their prey.",
+    "lore": "These predatory plants are ancient, semi-sentient flora that evolved to feed via ambush. They’re mostly immobile, and as such, usually depend on symbiotic creatures to lure or herd prey into their range. The Carnivorous Bloom produces nutrient-rich sap pods along its body, infused with nature’s magic, upon which the symbiotic wildlife feed. Some mages cultivate Carnivorous Blooms as natural defense systems, using them to guard their lairs or important treasures.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 0,
+    "speedType": "Ground",
+    "primeModifier": 3,
+    "combatMastery": 1,
+    "might": 3,
+    "agility": 0,
+    "charisma": 2,
+    "intelligence": -2,
+    "skills": "Awareness +5, Athletics +5, Stealth +4",
+    "senses": "Blindsight 5 (can’t see beyond this)",
+    "languages": "",
+    "otherSpeeds": "",
+    "reductions": "PDR, EDR",
+    "resistances": "",
+    "vulnerabilities": "",
+    "immunities": "Bleeding, Blinded",
+    "abilities": [
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001001",
+        "kind": "Features",
+        "name": "Exposed Interior",
+        "cost": "",
+        "details": "When you’re Exposed, Attacks deal +1 damage against you."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001002",
+        "kind": "Features",
+        "name": "Restraining Grapple",
+        "cost": "",
+        "details": "When you have a creature Grappled, it’s also Restrained."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001003",
+        "kind": "Features",
+        "name": "Sweet Scent (5 Space Aura)",
+        "cost": "",
+        "details": "Other creatures of your choice within this Aura have a +1 bonus to Attacks."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001004",
+        "kind": "Features",
+        "name": "Wrangling Vines",
+        "cost": "",
+        "details": "You can Grapple up to 4 different creatures at a time with your vines."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001005",
+        "kind": "Actions",
+        "name": "Bite",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 1 Piercing and target makes a Physical Save. Failure: Target is Grappled."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001006",
+        "kind": "Actions",
+        "name": "Swallow",
+        "cost": "1 AP",
+        "details": "A target Grappled by you makes a Physical Save Failure: Target is Swallowed. While swallowed, it’s Blinded and Restrained and takes 1 Corrosion damage at the start of each of your turns. You can only have 1 creature swallowed at a time. A Swallowed creature deals an extra +1 damage to you with Attacks."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001007",
+        "kind": "Actions",
+        "name": "Vine",
+        "cost": "1 AP",
+        "details": "Melee Martial Attack vs PD, 10 Spaces, 1 Bludgeoning and target makes a Physical Save. Failure: Target is Grappled and moved to an unoccupied Space within 1 Space of you."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001008",
+        "kind": "Actions",
+        "name": "Empowering Sap",
+        "cost": "1 AP",
+        "details": "Make a DC 10 Spell Check. Success: 1 other creature of your choice within your Sweet Scent gains 2 Temp HP and has ADV on its first Attack on its next turn. Success (each 5): +1 creature."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001009",
+        "kind": "Reactions",
+        "name": "Aiding Vines",
+        "cost": "1 AP",
+        "details": "When another creature within your Sweet Scent attempts to Grapple a target, you can grant ADV to the grappler’s Check or impose DisADV on their target’s Save."
+      }
+    ]
+  },
+  {
+    "id": "BBV30000-0000-4000-8000-000000000011",
+    "name": "Sporebloom Trap",
+    "level": 1,
+    "type": "Standard",
+    "role": "Striker",
+    "hp": 9,
+    "physicalDefense": 10,
+    "arcaneDefense": 10,
+    "attackBonus": 5,
+    "saveDC": 15,
+    "damage": 2,
+    "notes": "Sporebloom Trap Variants\nAdd one of the following Features to make different variants:\n\nHallucinating Spores: A creature that fails a Save against one of your effects has hallucinations until the end of their its next turn. For the duration, it has DisADV on all Checks.\n\nMagical Suppressant: A creature that fails a Save against one of your effects is Dazed and can’t cast Spells until the end of their its turn.\n\nDoom Spores: A creatures that fail a Save against one of your effects is Doomed 1.",
+    "sourceBook": "DC20 Magazine 17: Beta Bestiary Vol. 3",
+    "sourcePage": 13,
+    "publishedRole": "Lurker",
+    "size": "Tiny",
+    "creatureType": "Plant",
+    "descriptionText": "Resembles a small, overgrown bush-like plant with clusters of swollen pollen sacs or fungal puffballs along its branches. The sacs gently pulse and shimmer with a bioluminescent glow.",
+    "tactics": "It only acts once a creature gets within 3 Spaces of it, using its Spore Puff and Stunning Spores to harm enemies. It’ll continually use its Spore Clouds to make it hard to see and destroy.",
+    "lore": "These semi-sentient plants evolved, or were created, as natural defense mechanisms - a biological trap species found in wild jungles, blighted groves, or druid-guarded ruins. Common in clusters, they thrive in areas with high foot traffic. The plant’s spores are toxic, designed to weaken prey so other predators can finish the kill. When one dies, it bursts open, spreading its spores and crippling its attackers. Some variants are cultivated by druids and twisted alchemists for use as traps and weapons.",
+    "actionPoints": 4,
+    "reactionPoints": 0,
+    "speed": 0,
+    "speedType": "Ground",
+    "primeModifier": 2,
+    "combatMastery": 1,
+    "might": 2,
+    "agility": 0,
+    "charisma": 0,
+    "intelligence": -3,
+    "skills": "Awareness +0",
+    "senses": "Blindsight 3 (can’t see beyond this)",
+    "languages": "",
+    "otherSpeeds": "",
+    "reductions": "",
+    "resistances": "",
+    "vulnerabilities": "Fire (Double)",
+    "immunities": "Bleeding, Blinded",
+    "abilities": [
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001101",
+        "kind": "Actions",
+        "name": "Spore Puff",
+        "cost": "1 AP",
+        "details": "Area Spell Attack vs AD, 2 Space Aura, 2 Poison.\n\nStunning Spores (+1 AP): Physical Save. Failure: Target is Immobilized and Stunned 1 until the end of your next turn."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001102",
+        "kind": "Actions",
+        "name": "Spore Cloud",
+        "cost": "2 AP",
+        "details": "You create a 5 Space Aura of spores until the start of your next turn. The area is Heavily Obscured while the spores persist, but they can be dispersed by a strong wind."
+      },
+      {
+        "id": "BBV3A000-0000-4000-8000-000000001103",
+        "kind": "Reactions",
+        "name": "Death Burst",
+        "cost": "Auto",
+        "details": "When you’re reduced to 0 HP, you explode and use Spore Puff with Stunning Spores."
+      }
+    ]
+  }
+]

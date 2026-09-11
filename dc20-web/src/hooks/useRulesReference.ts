@@ -22,8 +22,12 @@ function loadRules(): Promise<RulesReferenceData> {
     fetch('/data/MundaneObjects.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Mundane Objects catalog returned ${response.status}.`))),
     fetch('/data/AdventureRewards.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Adventure Rewards catalog returned ${response.status}.`))),
     fetch('/data/AdventureRewardBoons.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Adventure Rewards Boons returned ${response.status}.`))),
+    fetch('/data/MagicalConsumables.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Magical Consumables catalog returned ${response.status}.`))),
+    fetch('/data/MagicalConsumablesRules.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Magical Consumables rules returned ${response.status}.`))),
+    fetch('/data/Poisons.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Poisons catalog returned ${response.status}.`))),
+    fetch('/data/PoisonsRules.json').then((response) => response.ok ? response.json() : Promise.reject(new Error(`Poisons rules returned ${response.status}.`))),
   ])
-    .then(([rulesValue, spellValue, maneuverValue, characterValue, equipmentValue, mundaneObjectsValue, adventureRewardsValue, adventureBoonsValue]: unknown[]) => {
+    .then(([rulesValue, spellValue, maneuverValue, characterValue, equipmentValue, mundaneObjectsValue, adventureRewardsValue, adventureBoonsValue, magicalConsumablesValue, magicalConsumablesRulesValue, poisonsValue, poisonRulesValue]: unknown[]) => {
       const document = rulesValue as RulesReferenceData;
       if (!document || document.sections?.length !== 5 || !Array.isArray(document.entries) || document.entries.length < 400) {
         throw new Error('Rules reference is incomplete.');
@@ -31,12 +35,14 @@ function loadRules(): Promise<RulesReferenceData> {
       const spells = (spellValue as { spells?: AuditedSpellRecord[] }).spells ?? [];
       const maneuvers = (maneuverValue as { maneuvers?: AuditedManeuverRecord[] }).maneuvers ?? [];
       const characterReference = augmentCharacterReference(characterValue as CharacterReferenceData);
-      const equipment = [...(equipmentValue as EquipmentCatalogItem[]), ...(mundaneObjectsValue as EquipmentCatalogItem[]), ...(adventureRewardsValue as EquipmentCatalogItem[])];
+      const equipment = [...(equipmentValue as EquipmentCatalogItem[]), ...(mundaneObjectsValue as EquipmentCatalogItem[]), ...(adventureRewardsValue as EquipmentCatalogItem[]), ...(magicalConsumablesValue as EquipmentCatalogItem[]), ...(poisonsValue as EquipmentCatalogItem[])];
       const adventureBoons = adventureBoonsValue as RulesReferenceData['entries'];
-      if (spells.length !== 160 || maneuvers.length !== 30 || characterReference.classes?.length !== 16 || !Array.isArray(equipment) || !Array.isArray(adventureBoons)) {
+      const magicalConsumableRules = magicalConsumablesRulesValue as RulesReferenceData['entries'];
+      const poisonRules = poisonRulesValue as RulesReferenceData['entries'];
+      if (spells.length !== 160 || maneuvers.length !== 30 || characterReference.classes?.length !== 16 || !Array.isArray(equipment) || !Array.isArray(adventureBoons) || !Array.isArray(magicalConsumableRules) || !Array.isArray(poisonRules)) {
         throw new Error('One or more audited rules catalogs are incomplete.');
       }
-      const audited = auditRulesReference({ ...document, entries: [...document.entries, ...adventureBoons] }, spells, maneuvers, characterReference, equipment);
+      const audited = auditRulesReference({ ...document, entries: [...document.entries, ...adventureBoons, ...magicalConsumableRules, ...poisonRules] }, spells, maneuvers, characterReference, equipment);
       cache = audited;
       return audited;
     })

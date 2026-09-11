@@ -135,14 +135,63 @@ describe('encounter and combat interoperability', () => {
 });
 
 describe('audited sourcebook library', () => {
-  it('contains the complete exported native library with stable unique IDs', () => {
+  it('contains the complete Monster Collection v0.1 roster with stable source metadata', () => {
     const libraryPath = fileURLToPath(new URL('../../public/data/MonsterSourceLibrary.json', import.meta.url));
     const monsters = JSON.parse(readFileSync(libraryPath, 'utf8')) as Monster[];
+    const collection = monsters.filter(({ sourceBook }) => sourceBook === 'DC20 Monster Collection v0.1');
     expect(monsters).toHaveLength(31);
     expect(new Set(monsters.map(({ id }) => id)).size).toBe(monsters.length);
     expect(monsters[0].name).toBe('Angelic Herald');
     expect(monsters.at(-1)?.name).toBe('Zombie');
     expect(monsters.every(({ sourceBook, abilities }) => Boolean(sourceBook) && Array.isArray(abilities))).toBe(true);
+    expect(collection.map(({ name }) => name)).toEqual([
+      'Angelic Herald',
+      'Animated Armor',
+      'Animated Doll',
+      'Bandit',
+      'Bandit Captain',
+      'Brown Bear',
+      'Cherub',
+      'Earth Tortoise',
+      'Fairy Dragon',
+      'Fiendish Harbinger',
+      'Fire Lizard',
+      'Ghost',
+      'Honey Ooze',
+      'Ice Raven',
+      'Imp',
+      'Juvenile Purple Drake',
+      'Mandrake',
+      'Manticore',
+      'Mantrap Bloom',
+      'Molten Glass Ooze',
+      'Ogre Warrior',
+      'Pixie',
+      'Skeleton Warrior',
+      'Small Mimic',
+      'Sprite',
+      'Storm Elemental',
+      'Swarm of Bats',
+      'Wolf',
+      'Wyvern',
+      'Zombie',
+    ]);
+    expect(collection.every(({ sourcePage }) => sourcePage !== undefined && sourcePage >= 16 && sourcePage <= 37)).toBe(true);
+    expect(collection.filter(({ speedType }) => speedType === 'Fly').map(({ name }) => name)).toEqual([
+      'Angelic Herald',
+      'Cherub',
+      'Fairy Dragon',
+      'Ghost',
+      'Ice Raven',
+      'Imp',
+      'Pixie',
+      'Sprite',
+      'Storm Elemental',
+      'Swarm of Bats',
+      'Wyvern',
+    ]);
+    expect(collection.find(({ name }) => name === 'Storm Elemental')?.otherSpeeds).toBe('');
+    expect(collection.find(({ name }) => name === 'Swarm of Bats')?.otherSpeeds).toBe('');
   });
 
   it('includes all ten Beta Bestiary Vol. 4 monsters with complete encounter metadata', () => {
@@ -177,6 +226,49 @@ describe('audited sourcebook library', () => {
       role: MonsterRoleValues.BRUTE,
       reactionPoints: 6,
     });
+  });
+
+  it('includes all eleven Beta Bestiary Vol. 3 monsters, including the unlisted Screecher Drone', () => {
+    const libraryPath = fileURLToPath(new URL('../../public/data/BetaBestiaryVol3.json', import.meta.url));
+    const monsters = JSON.parse(readFileSync(libraryPath, 'utf8')) as Monster[];
+    expect(monsters.map(({ name }) => name)).toEqual([
+      'Oculoth',
+      'Screecher Drone',
+      'Mawworm',
+      'Marrow Reaper Spider',
+      'Psymanta',
+      'Aqua Ooze',
+      'Toxic Slime',
+      'Crimson Ooze',
+      'Plant Shambler',
+      'Carnivorous Bloom',
+      'Sporebloom Trap',
+    ]);
+    expect(new Set(monsters.map(({ id }) => id)).size).toBe(11);
+    expect(new Set(monsters.flatMap(({ abilities }) => abilities.map(({ id }) => id))).size).toBe(76);
+    expect(monsters.every((monster) => (
+      monster.sourceBook === 'DC20 Magazine 17: Beta Bestiary Vol. 3'
+      && monster.sourcePage !== undefined
+      && monster.sourcePage >= 3
+      && monster.sourcePage <= 13
+      && monster.type === MonsterTypeValues.STANDARD
+      && monster.actionPoints === 4
+      && monster.abilities.length > 0
+    ))).toBe(true);
+    expect(monsters.find(({ name }) => name === 'Oculoth')).toMatchObject({
+      role: MonsterRoleValues.STRIKER,
+      publishedRole: 'Lurker',
+      speed: 7,
+      speedType: 'Fly',
+    });
+    expect(monsters.find(({ name }) => name === 'Psymanta')).toMatchObject({
+      role: MonsterRoleValues.SOLDIER,
+      publishedRole: 'Skirmisher',
+      speedType: 'Hover',
+    });
+    expect(monsters.find(({ name }) => name === 'Plant Shambler')?.notes).toContain('Photosynthetic Rage');
+    expect(monsters.find(({ name }) => name === 'Toxic Slime')?.notes).toContain('Mini Toxic Slime');
+    expect(monsters.find(({ name }) => name === 'Sporebloom Trap')?.notes).toContain('Hallucinating Spores');
   });
 
   it('includes the complete Strong and Simple Monsters roster and its special mechanics', () => {
@@ -214,5 +306,21 @@ describe('audited sourcebook library', () => {
       name: 'Death Burst',
       cost: 'Auto',
     }));
+  });
+
+  it('includes the Badger summoned by Bag of Badger Beads', () => {
+    const libraryPath = fileURLToPath(new URL('../../public/data/MagicalConsumablesMonsters.json', import.meta.url));
+    const monsters = JSON.parse(readFileSync(libraryPath, 'utf8')) as Monster[];
+    expect(monsters).toHaveLength(1);
+    expect(monsters[0]).toMatchObject({
+      name: 'Badger',
+      type: MonsterTypeValues.MINION,
+      role: MonsterRoleValues.SOLDIER,
+      hp: 2,
+      actionPoints: 2,
+      sourceBook: 'DC20 Magazine 24: Magical Consumables',
+      sourcePage: 7,
+    });
+    expect(monsters[0].abilities.map(({ name }) => name)).toEqual(['Keen Smell', 'Bite or Scratch', 'Snarl']);
   });
 });

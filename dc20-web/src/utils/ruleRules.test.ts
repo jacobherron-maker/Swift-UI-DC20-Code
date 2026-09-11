@@ -24,12 +24,30 @@ const equipment = readJSON<EquipmentCatalogItem[]>('../../public/data/EquipmentC
 const audited = auditRulesReference(rawRules, spellDocument.spells, maneuverDocument.maneuvers, characterReference, equipment);
 const adventureRewards = readJSON<EquipmentCatalogItem[]>('../../public/data/AdventureRewards.json');
 const adventureBoons = readJSON<RulesReferenceData['entries']>('../../public/data/AdventureRewardBoons.json');
+const magicalConsumables = readJSON<EquipmentCatalogItem[]>('../../public/data/MagicalConsumables.json');
+const magicalConsumableRules = readJSON<RulesReferenceData['entries']>('../../public/data/MagicalConsumablesRules.json');
+const poisons = readJSON<EquipmentCatalogItem[]>('../../public/data/Poisons.json');
+const poisonRules = readJSON<RulesReferenceData['entries']>('../../public/data/PoisonsRules.json');
 const auditedWithAdventureRewards = auditRulesReference(
   { ...rawRules, entries: [...rawRules.entries, ...adventureBoons] },
   spellDocument.spells,
   maneuverDocument.maneuvers,
   characterReference,
   [...equipment, ...adventureRewards],
+);
+const auditedWithMagicalConsumables = auditRulesReference(
+  { ...rawRules, entries: [...rawRules.entries, ...magicalConsumableRules] },
+  spellDocument.spells,
+  maneuverDocument.maneuvers,
+  characterReference,
+  [...equipment, ...magicalConsumables],
+);
+const auditedWithPoisons = auditRulesReference(
+  { ...rawRules, entries: [...rawRules.entries, ...poisonRules] },
+  spellDocument.spells,
+  maneuverDocument.maneuvers,
+  characterReference,
+  [...equipment, ...poisons],
 );
 
 function rule(title: string) {
@@ -48,6 +66,41 @@ describe('source-audited rules library', () => {
       expect(entry.sourceStatus).toBe('Supplemental source verified');
       expect(entry.sourcePages).toEqual([8]);
     }
+  });
+
+  it('indexes Magical Consumables guidance with formulas and supplemental provenance', () => {
+    const entries = auditedWithMagicalConsumables.entries.filter(({ page }) => page.startsWith('DC20 Magazine 24'));
+    expect(entries).toHaveLength(7);
+    expect(entries.every(({ sourceDocument, sourceStatus, sourcePages }) => (
+      sourceDocument === 'DC20 Magazine 24 — Magical Consumables'
+      && sourceStatus === 'Supplemental source verified'
+      && sourcePages?.[0] === 3
+    ))).toBe(true);
+    expect(entries.find(({ title }) => title === 'Spell Consumables')?.formulas).toEqual([
+      'Magic Power = Base MP + Enhancement MP + (AP / 2)',
+    ]);
+    expect(entries.find(({ title }) => title === 'Equipment Property Consumables')?.text).toContain('holding the Shield does not count as performing Somatic Components');
+  });
+
+  it('indexes the complete Poison subsystem with its legacy-version warning', () => {
+    const entries = auditedWithPoisons.entries.filter(({ page }) => page.startsWith('DC20 Magazine 15'));
+    expect(entries).toHaveLength(9);
+    expect(entries.every(({ sourceDocument, sourceStatus, sourcePages, sourceNote }) => (
+      sourceDocument === 'DC20 Magazine 15 — Poisons'
+      && sourceStatus === 'Supplemental source verified'
+      && (sourcePages?.[0] ?? 0) >= 3
+      && (sourcePages?.[0] ?? 0) <= 5
+      && sourceNote?.includes('Beta 0.9.5')
+    ))).toBe(true);
+    expect(entries.find(({ title }) => title === 'Using Poisons')?.formulas).toEqual([
+      '2+ Sizes Smaller Throw Distance = 2 × Might',
+      '1 Size Smaller Throw Distance = Might',
+      'Same Size Throw Distance = 1/2 Might',
+    ]);
+    expect(entries.find(({ title }) => title === 'Poison Containers')?.details).toContainEqual({
+      label: 'Cask', value: '20 doses • 5 Space Diameter Sphere',
+    });
+    expect(entries.find(({ title }) => title === 'Poisons')?.relatedIDs?.length ?? 0).toBeGreaterThanOrEqual(6);
   });
 
   it('retains every unique document and uses the corrected printed chapter ranges', () => {

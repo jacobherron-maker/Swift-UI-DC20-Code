@@ -9,9 +9,11 @@ function loadSourceMonsters(): Promise<Monster[]> {
   if (pendingRequest) return pendingRequest;
   const sourceFiles = [
     '/data/MonsterSourceLibrary.json',
+    '/data/BetaBestiaryVol3.json',
     '/data/BetaBestiaryVol4.json',
     '/data/StrongSimpleMonsters.json',
     '/data/AdventureRewardsMonsters.json',
+    '/data/MagicalConsumablesMonsters.json',
   ];
   pendingRequest = Promise.all(sourceFiles.map(async (path) => {
     const response = await fetch(path);
