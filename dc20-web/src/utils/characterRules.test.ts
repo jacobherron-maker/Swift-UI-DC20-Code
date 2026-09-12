@@ -554,6 +554,18 @@ describe('DC20 character calculations', () => {
     expect(derived.arcaneDefense).toBe(12);
   });
 
+  it('applies Highly Defensive Heavy Armor to both PD and AD', () => {
+    const hero = character('Wizard');
+    const armor = equipmentCatalog.find(({ name }) => name === 'Highly Defensive Heavy Armor')!;
+    const base = deriveCharacter(hero, wizard, reference.ancestryTraits, equipmentCatalog);
+    hero.inventoryItems = [{ id: 'highly-defensive', equipmentID: armor.id, quantity: 1, isEquipped: true, source: 'added' }];
+    const equipped = deriveCharacter(hero, wizard, reference.ancestryTraits, equipmentCatalog);
+    expect(equipped.physicalDefense).toBe(base.physicalDefense + 2);
+    expect(equipped.arcaneDefense).toBe(base.arcaneDefense + 2);
+    expect(equipped.speed).toBe(base.speed - 1);
+    expect(equipped.physicalDR).toBe(0);
+  });
+
   it('preserves spent HP, Stamina, and Mana when their derived maximums increase', () => {
     const hero = character();
     hero.healthPoints = 7;

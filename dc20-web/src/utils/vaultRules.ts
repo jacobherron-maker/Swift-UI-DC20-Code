@@ -414,6 +414,7 @@ export function addVaultEntryToCharacter(character: Character, supplied: GmVault
     isEquipped: false,
     isAttuned: false,
     source: 'added',
+    itemSnapshot: entry.item,
     ...(entry.item.charges !== undefined ? { remainingUses: entry.item.charges } : {}),
   }];
   if (entry.companion && next.build) {

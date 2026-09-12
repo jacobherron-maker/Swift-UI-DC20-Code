@@ -53,19 +53,25 @@ const BREAK_BEFORE_LABELS = [
   'Spell End',
   'Spell Passive',
   'Recasting the Spell',
-  'Familiar Traits',
-  'Spell Actions',
-  'Managing the Familiar',
-  'Base Summon Traits',
-  'Managing the Summons',
-  'Elemental Trait',
-  'Expanded Familiar Traits',
-  'Expanded Summon Traits',
-  'Repeatable Traits',
-  'Unique Traits',
-  'Gravity Plane',
-  'Falling into a Gravity Plane',
-  'Telekinetic Action',
+];
+
+// The source export flattens some visual headings into the following sentence. Match both the
+// heading and its actual opening words so ordinary mentions of the same term remain in their
+// sentence. This is especially important for Gravity Plane, Familiar Traits, Summon Traits, and
+// Telekinetic Action, which are referenced repeatedly inside their own rules.
+const CONTEXTUAL_HEADINGS: Array<[heading: string, opening: string]> = [
+  ['Familiar Traits', 'Your Familiar has the following Familiar Traits:'],
+  ['Spell Actions', 'Pocket Dimension:'],
+  ['Managing the Familiar', 'Combat:'],
+  ['Base Summon Traits', 'The summoned creature has the following Summon Traits:'],
+  ['Managing the Summons', 'The creature shares your Initiative'],
+  ['Elemental Trait', 'When you summon the elemental'],
+  ['Expanded Familiar Traits', 'Summoned Familiars can choose'],
+  ['Expanded Summon Traits', 'Summoned'],
+  ['Summon Traits', 'Below is a list of repeatable and unique Summon Traits.'],
+  ['Gravity Plane', 'Creatures and unsecured objects fall toward a Gravity Plane.'],
+  ['Falling into a Gravity Plane', 'Creatures and objects that fall into a Gravity Plane'],
+  ['Telekinetic Action', 'When you Sustain this Spell'],
 ];
 
 function escapeRegExp(value: string): string {
@@ -80,12 +86,15 @@ function preparePowerText(text: string, enhancements: boolean): string {
   prepared = prepared.replace(/(Summoned [A-Z][A-Za-z’' -]+\n)([\s\S]*?)(?=\s+DC Tip:)/g, (_match, heading: string, stats: string) => (
     `${heading}${stats.trim().replace(/\s+(?=(?:AP|PD|AD|PM|Save DC|Speed|CM|MIG|CHA|AGI|INT)\s+(?:Shared|See Traits|PM|-?\d))/g, '\n')}\n`
   ));
+  for (const [heading, opening] of CONTEXTUAL_HEADINGS) {
+    prepared = prepared.replace(
+      new RegExp(`\\s*${escapeRegExp(heading)}\\s+(?=${escapeRegExp(opening)})`, 'g'),
+      `\n\n${heading}\n`,
+    );
+  }
+  prepared = prepared.replace(/\s+(Repeatable Traits|Unique Traits)\s+(?=\(\d+\)\s+[A-Z])/g, '\n\n$1\n');
   for (const label of BREAK_BEFORE_LABELS) {
-    if (SECTION_HEADINGS.has(label)) {
-      prepared = prepared.replace(new RegExp(`\\s+(${escapeRegExp(label)})(?=\\s|$)`, 'g'), '\n\n$1\n');
-    } else {
-      prepared = prepared.replace(new RegExp(`\\s+(?=${escapeRegExp(label)}:)`, 'g'), '\n\n');
-    }
+    prepared = prepared.replace(new RegExp(`\\s+(?=${escapeRegExp(label)}:)`, 'g'), '\n\n');
   }
   if (!enhancements) {
     prepared = prepared.replace(/([.!?])\s+(?=[A-Z][A-Za-z’'& -]{1,40}:\s)/g, '$1\n');

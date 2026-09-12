@@ -125,7 +125,7 @@ import {
   sorcererWildMagicOutcome,
   sorcererWildMagicProfile,
 } from '../../utils/characterRules';
-import { enforceEquipmentHandCapacity, isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped as toggleInventoryEquippedBase } from '../../utils/equipmentRules';
+import { enforceEquipmentHandCapacity, inventoryCatalogSnapshots, isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped as toggleInventoryEquippedBase } from '../../utils/equipmentRules';
 import { generateUUID, rollDice, sortByName } from '../../utils/gameUtils';
 import { ownedClassFeatures, talentByName } from '../../utils/talentRules';
 import { artificerInfusions, artificerRituals } from '../../data/supplementalClasses';
@@ -2275,9 +2275,7 @@ function WizardControls({ character, spellCatalog, knownSpells, onChange, onRoll
   </section>;
 }
 
-const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onEdit, onCharacterChange, readOnly = false, partyCampaignNames = [] }) => {
-  const characterRef = useRef(character);
-  useEffect(() => { characterRef.current = character; }, [character]);
+const CharacterSheet: React.FC<CharacterSheetProps> = ({ character: storedCharacter, onClose, onEdit, onCharacterChange, readOnly = false, partyCampaignNames = [] }) => {
   const [selectedTab, setSelectedTab] = useState<SheetTab>('sheet-checks');
   const [lastRoll, setLastRoll] = useState<RollOutcome | null>(null);
   const [inspirationDie, setInspirationDie] = useState<number | null>(null);
@@ -2286,14 +2284,29 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const [expandedTrades, setExpandedTrades] = useState(false);
   const { equipment: standardEquipmentCatalog } = useEquipmentCatalog();
   const customEquipmentCatalog = useCampaignStore(({ campaignData }) => campaignData.customEquipment);
-  const vaultEquipmentCatalog = useMemo(() => (character.vaultEntries ?? []).flatMap(({ item }) => item ? [item] : []), [character.vaultEntries]);
+  const vaultEquipmentCatalog = useMemo(() => (storedCharacter.vaultEntries ?? []).flatMap(({ item }) => item ? [item] : []), [storedCharacter.vaultEntries]);
+  const inventoryEquipmentCatalog = useMemo(() => inventoryCatalogSnapshots(storedCharacter.inventoryItems ?? []), [storedCharacter.inventoryItems]);
   const equipmentCatalog = useMemo(
-    () => sortByName([...standardEquipmentCatalog, ...customEquipmentCatalog, ...vaultEquipmentCatalog]),
-    [customEquipmentCatalog, standardEquipmentCatalog, vaultEquipmentCatalog],
+    () => sortByName(Array.from(new Map([
+      ...inventoryEquipmentCatalog,
+      ...standardEquipmentCatalog,
+      ...customEquipmentCatalog,
+      ...vaultEquipmentCatalog,
+    ].map((item) => [item.id, item])).values())),
+    [customEquipmentCatalog, inventoryEquipmentCatalog, standardEquipmentCatalog, vaultEquipmentCatalog],
   );
   const { spells: spellCatalog, maneuvers: maneuverCatalog } = usePowerCatalog();
   const { reference } = useCharacterReference();
-  const classReference = reference?.classes.find(({ name }) => name === character.class);
+  const classReference = reference?.classes.find(({ name }) => name === storedCharacter.class);
+  // Rebuild sheet statistics from the current catalogs whenever a character is opened. This
+  // repairs older saved or shared snapshots that predate an equipment-mechanics correction,
+  // while preserving every already-spent HP, SP, and MP.
+  const character = useMemo(() => classReference && reference && equipmentCatalog.length > 0
+    ? applyDerivedCharacter(storedCharacter, deriveCharacter(storedCharacter, classReference, reference.ancestryTraits, equipmentCatalog))
+    : storedCharacter,
+  [classReference, equipmentCatalog, reference, storedCharacter]);
+  const characterRef = useRef(character);
+  useEffect(() => { characterRef.current = character; }, [character]);
   const allOwnedClassFeatures = useMemo(
     () => reference ? ownedClassFeatures(character, reference) : [],
     [character, reference],

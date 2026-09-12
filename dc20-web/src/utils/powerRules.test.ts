@@ -124,6 +124,36 @@ describe('power rules presentation and costs', () => {
     expect(summonBlocks.find(({ text }) => text.startsWith('Additional Traits:'))?.text).toContain('see Summon Traits after the Summon Spells');
   });
 
+  it('only promotes true section labels instead of repeated rules terms', () => {
+    const spell = (name: string) => spellDocument.spells.find((entry) => entry.name === name)!;
+    const headings = (name: string, field: 'description' | 'enhancements') => powerRuleBlocks(spell(name)[field], field === 'enhancements')
+      .filter(({ kind }) => kind === 'heading').map(({ text }) => text);
+    expect(headings('Gravity Shift', 'description')).toEqual(['Gravity Plane', 'Falling into a Gravity Plane']);
+    expect(headings('Telekinesis', 'description').filter((heading) => heading === 'Telekinetic Action')).toHaveLength(1);
+    expect(headings('Call Familiar', 'description')).toEqual(['Familiar', 'Familiar Traits', 'Spell Actions', 'Managing the Familiar']);
+    expect(headings('Call Familiar', 'enhancements')).toEqual(['Expanded Familiar Traits', 'Repeatable Traits', 'Unique Traits']);
+    for (const summon of spellDocument.spells.filter(({ name }) => name.startsWith('Summon '))) {
+      const descriptionHeadings = powerRuleBlocks(summon.description).filter(({ kind }) => kind === 'heading').map(({ text }) => text);
+      expect(descriptionHeadings.filter((heading) => heading === 'Base Summon Traits')).toHaveLength(1);
+      expect(descriptionHeadings.filter((heading) => heading === 'Managing the Summons')).toHaveLength(1);
+      const enhancementHeadings = powerRuleBlocks(summon.enhancements, true).filter(({ kind }) => kind === 'heading').map(({ text }) => text);
+      expect(enhancementHeadings.filter((heading) => heading === 'Expanded Summon Traits')).toHaveLength(1);
+      expect(enhancementHeadings.filter((heading) => heading === 'Summon Traits')).toHaveLength(1);
+      expect(enhancementHeadings.filter((heading) => heading === 'Repeatable Traits')).toHaveLength(1);
+      expect(enhancementHeadings.filter((heading) => heading === 'Unique Traits')).toHaveLength(2);
+    }
+  });
+
+  it('preserves every catalog word in order while adding visual structure', () => {
+    const words = (text: string) => text.match(/[\p{L}\p{N}]+(?:[’'-][\p{L}\p{N}]+)*/gu) ?? [];
+    for (const spell of spellDocument.spells) {
+      for (const field of ['description', 'enhancements'] as const) {
+        const rendered = powerRuleBlocks(spell[field], field === 'enhancements').map(({ text }) => text).join(' ');
+        expect(words(rendered), `${spell.name} ${field}`).toEqual(words(spell[field]));
+      }
+    }
+  });
+
   it('reads fixed costs without treating variable enhancement notation as a fixed spend', () => {
     expect(basePowerCost('1 AP + 2 MP')).toEqual({ actionPoints: 1, manaPoints: 2, staminaPoints: 0 });
     expect(basePowerCost('1 AP + X MP (minimum of 1)')).toEqual({ actionPoints: 1, manaPoints: 0, staminaPoints: 0 });

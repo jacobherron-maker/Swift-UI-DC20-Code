@@ -167,6 +167,25 @@ describe('campaign persistence migration', () => {
     })]);
   });
 
+  it('backfills portable custom-item snapshots onto existing character inventories', () => {
+    const migrated = migratePersistedState({
+      campaignData: {
+        customEquipment: [{
+          id: 'custom-equipment-party-ward', name: 'Party Ward', summary: '+2 AD', mechanics: 'A shared custom ward.',
+          category: 'Armor', subtype: 'Custom Item', properties: ['+2 Area Defense'], slot: 'Armor', sourcePage: 'Custom Item',
+        }],
+      },
+      characters: [{
+        id: 'hero', name: 'Hero', level: 1, class: 'Wizard',
+        inventoryItems: [{ id: 'ward', equipmentID: 'custom-equipment-party-ward', quantity: 1, isEquipped: true, source: 'added' }],
+      }],
+    });
+
+    expect(migrated.characters[0].inventoryItems?.[0].itemSnapshot).toMatchObject({
+      id: 'custom-equipment-party-ward', name: 'Party Ward', properties: ['+2 Area Defense'],
+    });
+  });
+
   it('preserves connected party links and live party combatant sources', () => {
     const migrated = migratePersistedState({
       campaignData: {

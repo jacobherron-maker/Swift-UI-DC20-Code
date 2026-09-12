@@ -72,7 +72,12 @@ describe('GM Vault entries', () => {
     const updated = addVaultEntryToCharacter(character(), entry);
     const inventory = updated.inventoryItems?.find(({ equipmentID }) => equipmentID === entry.item?.id);
 
-    expect(inventory).toMatchObject({ isEquipped: false, isAttuned: false, quantity: 1 });
+    expect(inventory).toMatchObject({
+      isEquipped: false,
+      isAttuned: false,
+      quantity: 1,
+      itemSnapshot: { id: entry.item?.id, name: 'Crown of the Deep Star' },
+    });
     expect(entry.item?.equippedEffects).toBeUndefined();
     expect(entry.item?.attunedEffects).toMatchObject({ saveDCBonus: 2, resistances: ['Psychic'] });
     expect(activeEquipmentSheetEffects(updated.inventoryItems ?? [], [entry.item!]).saveDCBonus).toBe(0);

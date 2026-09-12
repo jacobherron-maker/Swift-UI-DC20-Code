@@ -512,6 +512,18 @@ export function migratePersistedState(value: unknown): PersistedCampaignState {
   const rawCampaignData = state.campaignData && typeof state.campaignData === 'object'
     ? state.campaignData as Record<string, unknown>
     : {};
+  const customEquipment = Array.isArray(rawCampaignData.customEquipment)
+    ? rawCampaignData.customEquipment.map(normalizeCustomEquipment).filter((item): item is EquipmentCatalogItem => item !== null)
+    : [];
+  const customEquipmentByID = new Map(customEquipment.map((item) => [item.id, item]));
+  const characters = Array.isArray(state.characters) ? state.characters.map(normalizeCharacter).map((character) => ({
+    ...character,
+    inventoryItems: (character.inventoryItems ?? []).map((inventory) => inventory.itemSnapshot
+      ? inventory
+      : customEquipmentByID.has(inventory.equipmentID)
+        ? { ...inventory, itemSnapshot: customEquipmentByID.get(inventory.equipmentID) }
+        : inventory),
+  })) : [];
   return {
     currentSection: Object.values(HubSectionValues).includes(state.currentSection as HubSection)
       ? state.currentSection as HubSection
@@ -528,9 +540,7 @@ export function migratePersistedState(value: unknown): PersistedCampaignState {
       customMonsters: Array.isArray(rawCampaignData.customMonsters)
         ? rawCampaignData.customMonsters.map(normalizeMonster)
         : [],
-      customEquipment: Array.isArray(rawCampaignData.customEquipment)
-        ? rawCampaignData.customEquipment.map(normalizeCustomEquipment).filter((item): item is EquipmentCatalogItem => item !== null)
-        : [],
+      customEquipment,
       vaultEntries: Array.isArray(rawCampaignData.vaultEntries)
         ? rawCampaignData.vaultEntries.map(normalizeVaultEntry).filter((entry): entry is GmVaultEntry => entry !== null)
         : [],
@@ -541,7 +551,7 @@ export function migratePersistedState(value: unknown): PersistedCampaignState {
         ? rawCampaignData.combats.map(normalizeCombat)
         : [],
     },
-    characters: Array.isArray(state.characters) ? state.characters.map(normalizeCharacter) : [],
+    characters,
     selectedCharacterId: typeof state.selectedCharacterId === 'string' ? state.selectedCharacterId : null,
     selectedMonsterId: typeof state.selectedMonsterId === 'string' ? state.selectedMonsterId : null,
     selectedEncounterId: typeof state.selectedEncounterId === 'string' ? state.selectedEncounterId : null,
@@ -715,6 +725,12 @@ export const useCampaignStore = create<CampaignStore>()(
           ...state.campaignData,
           customEquipment: state.campaignData.customEquipment.map((existing) => existing.id === item.id ? item : existing),
         },
+        characters: state.characters.map((character) => ({
+          ...character,
+          inventoryItems: (character.inventoryItems ?? []).map((inventory) => inventory.equipmentID === item.id
+            ? { ...inventory, itemSnapshot: item }
+            : inventory),
+        })),
       })),
       removeCustomEquipment: (id) => set((state) => ({
         campaignData: {

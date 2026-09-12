@@ -300,6 +300,10 @@ export function addInventoryItem(
   items: CharacterInventoryItem[],
   equipment: EquipmentCatalogItem,
 ): CharacterInventoryItem[] {
+  const portableCustomItem = equipment.sourcePage === 'Custom Item'
+    || equipment.sourcePage === 'GM Vault'
+    || equipment.subtype === 'Custom Item'
+    || equipment.subtype === 'Custom Magic Item';
   return [...items, {
     id: generateUUID(),
     equipmentID: equipment.id,
@@ -307,8 +311,14 @@ export function addInventoryItem(
     isEquipped: false,
     isAttuned: false,
     source: 'added',
+    ...(portableCustomItem ? { itemSnapshot: equipment } : {}),
     remainingUses: equipmentUseCapacity(equipment),
   }];
+}
+
+/** Custom equipment embedded in a character, de-duplicated for local sheet resolution. */
+export function inventoryCatalogSnapshots(items: CharacterInventoryItem[]): EquipmentCatalogItem[] {
+  return Array.from(new Map(items.flatMap(({ itemSnapshot }) => itemSnapshot ? [[itemSnapshot.id, itemSnapshot] as const] : [])).values());
 }
 
 export function toggleInventoryEquipped(

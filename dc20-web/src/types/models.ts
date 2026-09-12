@@ -670,6 +670,12 @@ export interface CharacterInventoryItem {
   quantity: number;
   isEquipped: boolean;
   source: 'startingEquipment' | 'added';
+  /**
+   * Self-contained copy of player-created equipment. Published catalog items stay ID-only,
+   * while custom items carry this snapshot so shared/read-only character sheets can render
+   * and apply them on a different account or device.
+   */
+  itemSnapshot?: EquipmentCatalogItem;
   /** Remaining charges for limited-use supplies such as a Medicine Kit. */
   remainingUses?: number;
   /** Attunement is tracked separately from whether an item is currently equipped. */

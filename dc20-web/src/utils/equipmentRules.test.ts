@@ -372,6 +372,33 @@ describe('character inventory equipment rules', () => {
     expect(healingPotionAmount(potion)).toBe(2);
   });
 
+  it('routes every published armor row into its complete mechanical profile', () => {
+    const expected = [
+      ['Defensive Light Armor', 1, 1, false, 0, 0],
+      ['Deflecting Light Armor', 2, 0, false, 0, 0],
+      ['Fortified Light Armor', 0, 2, false, 0, 0],
+      ['Defensive Heavy Armor', 1, 1, true, 1, 1],
+      ['Deflecting Heavy Armor', 2, 0, true, 1, 1],
+      ['Fortified Heavy Armor', 0, 2, true, 1, 1],
+      ['Highly Defensive Heavy Armor', 2, 2, false, 1, 1],
+    ] as const;
+    for (const [name, physicalDefense, areaDefense, physicalDamageReduction, speedPenalty, agilityCheckDisadvantage] of expected) {
+      expect(defensiveEquipmentProfile(catalog.find((item) => item.name === name)!)).toMatchObject({
+        physicalDefense, areaDefense, physicalDamageReduction, speedPenalty, agilityCheckDisadvantage,
+      });
+    }
+  });
+
+  it('embeds player-created items so a shared character remains self-contained', () => {
+    const customItem: EquipmentCatalogItem = {
+      id: 'custom-equipment-portable', name: 'Traveler’s Ward', category: 'Armor', subtype: 'Custom Item',
+      summary: '+1 PD', mechanics: 'A portable custom item.', properties: ['+1 Physical Defense'],
+      slot: 'Armor', sourcePage: 'Custom Item',
+    };
+    expect(addInventoryItem([], customItem)[0].itemSnapshot).toEqual(customItem);
+    expect(addInventoryItem([], heavyArmor)[0].itemSnapshot).toBeUndefined();
+  });
+
   it('routes a custom item\'s chosen sheet-effect tags into its defensive profile regardless of Category', () => {
     const customArmor: EquipmentCatalogItem = {
       id: 'custom-equipment-1',
