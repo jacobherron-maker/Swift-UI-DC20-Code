@@ -1848,6 +1848,10 @@ export function deriveCharacter(
 export function applyDerivedCharacter(character: Character, derived: CharacterDerivedSummary): Character {
   const previousMaxHP = Math.max(1, character.maxHealthPoints || derived.maxHP);
   const damage = Math.max(0, previousMaxHP - character.healthPoints);
+  const previousMaxStamina = Math.max(0, character.maxStamina);
+  const spentStamina = Math.max(0, previousMaxStamina - character.stamina);
+  const previousMaxMana = Math.max(0, character.maxManaPoints);
+  const spentMana = Math.max(0, previousMaxMana - character.manaPoints);
   return {
     ...character,
     attributes: Object.fromEntries(ATTRIBUTE_NAMES.map((attribute) => [attribute, {
@@ -1861,9 +1865,9 @@ export function applyDerivedCharacter(character: Character, derived: CharacterDe
     maxHealthPoints: derived.maxHP,
     healthPoints: Math.max(0, derived.maxHP - damage),
     maxStamina: derived.maxStamina,
-    stamina: Math.min(character.stamina, derived.maxStamina),
+    stamina: Math.min(derived.maxStamina, Math.max(0, derived.maxStamina - spentStamina)),
     maxManaPoints: derived.maxMana,
-    manaPoints: Math.min(character.manaPoints, derived.maxMana),
+    manaPoints: Math.min(derived.maxMana, Math.max(0, derived.maxMana - spentMana)),
     physicalDefense: derived.physicalDefense,
     arcaneDefense: derived.arcaneDefense,
     defense: derived.physicalDefense,

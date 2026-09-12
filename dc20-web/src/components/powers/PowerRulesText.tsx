@@ -13,6 +13,12 @@ export function PowerRulesText({ text, enhancements = false }: { text: string; e
   const blocks = powerRuleBlocks(text, enhancements);
   return <div className="space-y-3">
     {blocks.map((block, index) => {
+      if (block.kind === 'tableHeader' || block.kind === 'tableRow') {
+        const cells = block.text.split('\t');
+        const header = block.kind === 'tableHeader';
+        const columns = cells.length === 2 ? 'grid-cols-[3rem_minmax(0,1fr)]' : 'grid-cols-[3rem_minmax(6rem,0.65fr)_minmax(0,1.6fr)]';
+        return <div key={index} className={`grid ${columns} gap-3 px-3 py-2 text-sm leading-6 ${header ? 'rounded-t-lg border-b border-violet-300/20 bg-violet-500/10 font-black text-violet-100' : 'border-b border-white/5 bg-slate-950/35 text-slate-300 last:rounded-b-lg'}`}>{cells.map((cell, cellIndex) => <span key={cellIndex}><RuleLabels text={cell} /></span>)}</div>;
+      }
       if (block.kind === 'heading') return <h4 key={index} className="border-b border-white/10 pb-1 pt-2 text-sm font-black uppercase tracking-[0.12em] text-violet-200">{block.text}</h4>;
       if (block.kind === 'bullet') return <div key={index} className="grid grid-cols-[auto_1fr] gap-2 rounded-lg bg-slate-950/35 px-3 py-2 text-sm leading-6 text-slate-300"><span className="theme-accent-text font-black">•</span><span><RuleLabels text={block.text} /></span></div>;
       if (block.kind === 'tip') return <aside key={index} className="rounded-lg border border-sky-400/15 bg-sky-500/10 px-3 py-2 text-sm leading-6 text-sky-100"><RuleLabels text={block.text} /></aside>;

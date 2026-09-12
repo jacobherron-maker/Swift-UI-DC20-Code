@@ -554,14 +554,22 @@ describe('DC20 character calculations', () => {
     expect(derived.arcaneDefense).toBe(12);
   });
 
-  it('preserves damage when derived maximum HP changes', () => {
+  it('preserves spent HP, Stamina, and Mana when their derived maximums increase', () => {
     const hero = character();
     hero.healthPoints = 7;
     hero.maxHealthPoints = 11;
+    hero.stamina = 1;
+    hero.maxStamina = 4;
+    hero.manaPoints = 2;
+    hero.maxManaPoints = 6;
     const derived = deriveCharacter(hero, barbarian, reference.ancestryTraits, []);
-    const updated = applyDerivedCharacter(hero, { ...derived, maxHP: 15 });
+    const updated = applyDerivedCharacter(hero, { ...derived, maxHP: 15, maxStamina: 6, maxMana: 9 });
     expect(updated.healthPoints).toBe(11);
     expect(updated.maxHealthPoints).toBe(15);
+    expect(updated.stamina).toBe(3);
+    expect(updated.maxStamina).toBe(6);
+    expect(updated.manaPoints).toBe(5);
+    expect(updated.maxManaPoints).toBe(9);
   });
 });
 
@@ -654,6 +662,70 @@ describe('character-sheet combat training and equipment modifiers', () => {
     expect(derived.arcaneDefense - base.arcaneDefense).toBe(1);
     expect(derived.mysticalDR).toBe(1);
     expect(equippedCombatModifiers(hero, catalogWithCustom, wizard)).toMatchObject({ mysticalDamageReduction: true });
+  });
+
+  it('routes every structured custom magic-item bonus while the item is equipped and attuned', () => {
+    const customItem: EquipmentCatalogItem = {
+      id: 'custom-vault-item', name: 'Constellation Crown', category: 'Wondrous Items', subtype: 'Custom Magic Item',
+      summary: '', mechanics: '', properties: [], slot: 'Worn', sourcePage: 'GM Vault', requiresAttunement: true,
+      attunedEffects: {
+        allCheckBonus: 1,
+        martialCheckBonus: 2,
+        spellCheckBonus: 3,
+        spellAttackBonus: 4,
+        saveDCBonus: 5,
+        weaponDamageBonus: 6,
+        spellDamageBonus: 7,
+        maxHPBonus: 8,
+        maxStaminaBonus: 9,
+        maxManaBonus: 10,
+        physicalDefenseBonus: 11,
+        areaDefenseBonus: 12,
+        speedBonus: 2,
+        skillBonuses: { Athletics: 3 },
+        tradeBonuses: { Smithing: 4 },
+        saveBonuses: { Might: 5 },
+        resistances: ['Fire'],
+        immunities: ['Poisoned'],
+        senses: ['Darkvision 10 Spaces'],
+        conditionalRules: ['Starsight applies while outdoors.'],
+      },
+    };
+    const catalog = [...equipmentCatalog, customItem];
+    const hero = character('Wizard');
+    const base = deriveCharacter(hero, wizard, reference.ancestryTraits, catalog);
+    hero.inventoryItems = [{
+      id: 'crown', equipmentID: customItem.id, quantity: 1,
+      isEquipped: true, isAttuned: true, source: 'added',
+    }];
+    const derived = deriveCharacter(hero, wizard, reference.ancestryTraits, catalog);
+    expect(derived).toMatchObject({
+      maxHP: base.maxHP + 8,
+      maxStamina: base.maxStamina + 9,
+      maxMana: base.maxMana + 10,
+      physicalDefense: base.physicalDefense + 11,
+      arcaneDefense: base.arcaneDefense + 12,
+      speed: base.speed + 2,
+      saveDC: base.saveDC + 5,
+      martialCheck: base.martialCheck + 3,
+      spellCheck: base.spellCheck + 4,
+    });
+    expect(equippedCombatModifiers(hero, catalog, wizard)).toMatchObject({
+      allCheckBonus: 1,
+      martialCheckBonus: 2,
+      spellCheckBonus: 3,
+      spellAttackBonus: 4,
+      saveDCBonus: 5,
+      weaponDamageBonus: 6,
+      spellAttackDamageBonus: 7,
+      skillBonuses: { Athletics: 3 },
+      tradeBonuses: { Smithing: 4 },
+      saveBonuses: { Might: 5 },
+      resistances: ['Fire'],
+      immunities: ['Poisoned'],
+      senses: ['Darkvision 10 Spaces'],
+      conditionalRules: ['Starsight applies while outdoors.'],
+    });
   });
 });
 

@@ -154,6 +154,8 @@ function normalizeItem(value: unknown, entry: GmVaultEntry): EquipmentCatalogIte
     ? raw.category as EquipmentCatalogItem['category'] : EquipmentCategoryValues.WONDROUS_ITEMS;
   const slot = Object.values(EquipmentSlotValues).includes(raw.slot as EquipmentCatalogItem['slot'])
     ? raw.slot as EquipmentCatalogItem['slot'] : EquipmentSlotValues.WORN;
+  const requiresAttunement = Boolean(raw.requiresAttunement);
+  const effect = equipmentEffectsFromVault(entry.effects);
   return {
     ...(raw as unknown as EquipmentCatalogItem),
     id: typeof raw.id === 'string' ? raw.id : `vault-item-${generateUUID()}`,
@@ -168,8 +170,12 @@ function normalizeItem(value: unknown, entry: GmVaultEntry): EquipmentCatalogIte
     sourceDocument: 'GM Vault',
     collection: 'Magic',
     charges: raw.charges === undefined ? undefined : Math.max(0, Math.trunc(numberValue(raw.charges))),
-    grantedSpells: cleanStrings(raw.grantedSpells),
-    requiresAttunement: Boolean(raw.requiresAttunement),
+    grantedSpells: (entry.grantedSpells?.length ?? 0) > 0
+      ? entry.grantedSpells!.map(({ name }) => name)
+      : cleanStrings(raw.grantedSpells),
+    requiresAttunement,
+    equippedEffects: requiresAttunement ? undefined : effect,
+    attunedEffects: requiresAttunement ? effect : undefined,
   };
 }
 

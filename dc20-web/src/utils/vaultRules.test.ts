@@ -85,6 +85,39 @@ describe('GM Vault entries', () => {
     });
   });
 
+  it('rebuilds missing custom-item bonus snapshots while loading saved Vault data', () => {
+    const draft = createVaultEntry(VaultContentKindValues.ITEM);
+    draft.effects.allCheckBonus = 1;
+    draft.effects.maxHPBonus = 3;
+    draft.effects.attributeBonuses = { Might: 2 };
+    draft.effects.skillBonuses = { Athletics: 1 };
+    draft.effects.resistances = ['Fire'];
+    const saved = JSON.parse(JSON.stringify(prepareVaultEntry(draft))) as Record<string, unknown>;
+    const savedItem = saved.item as Record<string, unknown>;
+    delete savedItem.equippedEffects;
+    delete savedItem.attunedEffects;
+
+    const normalized = normalizeVaultEntry(saved)!;
+    expect(normalized.item?.equippedEffects).toMatchObject({
+      allCheckBonus: 1,
+      maxHPBonus: 3,
+      attributeBonuses: { Might: 2 },
+      skillBonuses: { Athletics: 1 },
+      resistances: ['Fire'],
+    });
+    const equipped = [{
+      id: 'restored-item', equipmentID: normalized.item!.id, quantity: 1,
+      isEquipped: true, source: 'added' as const,
+    }];
+    expect(activeEquipmentSheetEffects(equipped, [normalized.item!])).toMatchObject({
+      allCheckBonus: 1,
+      maxHPBonus: 3,
+      attributeBonuses: { Might: 2 },
+      skillBonuses: { Athletics: 1 },
+      resistances: ['Fire'],
+    });
+  });
+
   it('keeps published and custom spell grants attached to magic items', () => {
     const draft = createVaultEntry(VaultContentKindValues.ITEM);
     draft.grantedSpells = [{
