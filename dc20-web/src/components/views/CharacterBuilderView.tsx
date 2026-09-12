@@ -155,6 +155,42 @@ function Metric({ label, value, tone = 'violet' }: { label: string; value: React
   return <div className="rounded-xl border border-white/10 bg-slate-950/55 p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{label}</div><div className={`mt-1 text-xl font-black ${colors[tone]}`}>{value}</div></div>;
 }
 
+function CharacterLevelPicker({ level, onChange }: { level: number; onChange: (level: number) => void }) {
+  return (
+    <div className="text-sm font-bold text-slate-300">
+      <span className="block">Character Level</span>
+      <div className="mt-2 grid grid-cols-[44px_minmax(0,1fr)_44px] overflow-hidden rounded-lg border border-slate-600 bg-slate-950/70 focus-within:border-violet-400">
+        <button
+          type="button"
+          aria-label="Decrease character level"
+          disabled={level <= 1}
+          onClick={() => onChange(level - 1)}
+          className="min-h-11 border-r border-slate-700 text-xl font-black text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          −
+        </button>
+        <select
+          aria-label="Character Level"
+          value={level}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className="min-h-11 min-w-0 appearance-none bg-transparent px-3 text-center text-base font-black text-slate-100 outline-none"
+        >
+          {Array.from({ length: 10 }, (_, index) => index + 1).map((option) => <option key={option} value={option}>Level {option}</option>)}
+        </select>
+        <button
+          type="button"
+          aria-label="Increase character level"
+          disabled={level >= 10}
+          onClick={() => onChange(level + 1)}
+          className="min-h-11 border-l border-slate-700 text-xl font-black text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MasteryPicker({
   value,
   maximum,
@@ -1486,7 +1522,7 @@ const CharacterBuilderView: React.FC<{
 
         <main className={`${panelClass} min-h-[620px]`}>
           {currentStep === 'attributes' && <section>
-            <div className="mb-6 grid items-start gap-5 lg:grid-cols-[180px_minmax(0,1fr)]"><div><p className="mb-2 text-center text-sm font-bold text-slate-300 lg:text-left">Character Avatar</p><CharacterAvatarEditor image={avatarDataURL} name={name} onChange={setAvatarDataURL} className="mx-auto w-40 lg:mx-0" /></div><div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_160px]"><label className="text-sm font-bold text-slate-300">Player Character Name<input autoFocus value={name} onChange={(event) => setName(event.target.value)} className={`${fieldClass} mt-2 text-lg`} placeholder="Character name" /></label><label className="text-sm font-bold text-slate-300">Character Level<input type="number" min={1} max={10} value={level} onChange={(event) => setLevel(Math.min(10, Math.max(1, Number(event.target.value))))} className={`${fieldClass} mt-2`} /></label></div></div>
+            <div className="mb-6 grid items-start gap-5 lg:grid-cols-[180px_minmax(0,1fr)]"><div><p className="mb-2 text-center text-sm font-bold text-slate-300 lg:text-left">Character Avatar</p><CharacterAvatarEditor image={avatarDataURL} name={name} onChange={setAvatarDataURL} className="mx-auto w-40 lg:mx-0" /></div><div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]"><label className="text-sm font-bold text-slate-300">Player Character Name<input autoFocus value={name} onChange={(event) => setName(event.target.value)} className={`${fieldClass} mt-2 text-lg`} placeholder="Character name" /></label><CharacterLevelPicker level={level} onChange={setLevel} /></div></div>
             <div className="mb-6 grid gap-3 md:grid-cols-3">{(['Standard Array', 'Point Buy', 'Rolled'] as AttributeSelectionMethod[]).map((method) => <button type="button" key={method} onClick={() => changeAttributeMethod(method)} className={`rounded-xl border p-4 text-left ${attributeMethod === method ? 'border-violet-400 bg-violet-500/15 text-violet-200' : 'border-slate-700 bg-slate-950/50 text-slate-300'}`}><div className="font-black">{method}</div><div className="mt-1 text-xs text-slate-500">{method === 'Standard Array' ? '3, 1, 0, −2, then 2 additional points.' : method === 'Point Buy' ? 'Start at −2 and spend 12 points.' : 'Roll 1d6−3 four times, then add 2 points.'}</div></button>)}</div>
             {attributeMethod === 'Rolled' && <button type="button" onClick={rollAttributes} className="mb-6 rounded-xl bg-fuchsia-600 px-5 py-3 font-black text-white hover:bg-fuchsia-500">🎲 Roll The Dice! <span className="ml-2 font-normal">{rolledResults.length === 4 ? 'Roll again' : '1d6−3 × 4'}</span></button>}
             {usesAttributePool && attributePool.length === 4 && <div className="mb-6 rounded-2xl border border-violet-400/20 bg-violet-500/5 p-4"><h3 className="font-black text-violet-200">Assign each {attributeMethod === 'Rolled' ? 'roll' : 'array value'}</h3><p className="mt-1 text-sm text-slate-500">Each value can be assigned once. Pick the Attribute that receives it, then allocate the additional Attribute Points below.</p><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{attributePool.map((result, index) => <label key={`${result}-${index}`} className="rounded-xl border border-white/10 bg-slate-950/55 p-3 text-sm font-bold text-slate-300"><span className="mb-2 block text-2xl font-black text-fuchsia-200">{result >= 0 ? '+' : ''}{result}</span><select value={attributeAssignments[index] ?? ''} onChange={(event) => assignAttribute(index, event.target.value as DC20Attribute | '')} className={fieldClass}><option value="">Choose Attribute…</option>{ATTRIBUTE_NAMES.map((attribute) => <option key={attribute} value={attribute} disabled={attributeAssignments.some((entry, slot) => entry === attribute && slot !== index)}>{attribute}</option>)}</select></label>)}</div></div>}
@@ -1546,7 +1582,7 @@ const CharacterBuilderView: React.FC<{
           </section>}
 
           {currentStep === 'class' && classReference && <section>
-            <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_180px]"><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Class Builder</p><h2 className="text-2xl font-black text-white">Choose a class and level</h2></div><label className="text-sm font-bold text-slate-300">Character Level<input type="number" min={1} max={10} value={level} onChange={(event) => setLevel(Number(event.target.value))} className={`${fieldClass} mt-2`} /></label></div>
+            <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_180px]"><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Class Builder</p><h2 className="text-2xl font-black text-white">Choose a class and level</h2></div><CharacterLevelPicker level={level} onChange={setLevel} /></div>
             <div className="grid min-w-0 gap-5 lg:grid-cols-[270px_minmax(0,1fr)]"><aside className="space-y-2 lg:max-h-[760px] lg:overflow-y-auto lg:pr-2">{reference.classes.map((entry) => <button type="button" key={entry.name} onClick={() => { setClassPreviewName(entry.name); if (entry.name !== className) setClassConfirmed(false); }} className={`w-full rounded-xl border p-3 text-left ${entry.name === classPreviewName ? 'border-violet-400 bg-violet-500/15' : entry.name === className && classConfirmed ? 'border-emerald-400/50 bg-emerald-500/10' : 'border-white/10 bg-slate-950/45 hover:bg-slate-800'}`}><div className="font-black text-slate-100">{entry.name}</div><div className="mt-1 text-xs text-slate-500">{entry.path} • {entry.levelOneResource}</div><p className="mt-2 text-xs leading-5 text-slate-400">{entry.summary}</p></button>)}</aside><div className="min-w-0 space-y-5">{(!classConfirmed || classPreviewName !== className) && previewClassReference ? <><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">{previewClassReference.path} Path</p><h2 className="text-3xl font-black text-white">{previewClassReference.name}</h2><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{previewClassReference.description}</p></div><InfoDetails summary={<span>{previewClassReference.pathTitle}</span>}>{previewClassReference.pathDetails}</InfoDetails><div className={panelClass}><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-black text-violet-200">Class Progression Table</h3><p className="text-xs text-slate-500">{previewClassReference.tableSource}</p></div></div><ClassProgressionCards classReference={previewClassReference} currentLevel={level} /></div><div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Features by Level</h3><div className="space-y-4">{previewClassReference.features.map((entry) => <div key={entry.level}><h4 className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-fuchsia-300">Level {entry.level}</h4><div className="space-y-2">{entry.features.map((feature) => <InfoDetails key={`${entry.level}-${feature.name}`} summary={feature.name}>{feature.description}</InfoDetails>)}</div></div>)}</div></div><button type="button" onClick={confirmClass} className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-4 text-lg font-black text-white">Confirm {previewClassReference.name}</button></> : <><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">{classReference.path} Path • Confirmed</p><h2 className="text-3xl font-black text-white">{classReference.name}</h2><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{classReference.description}</p></div>
               <InfoDetails summary={<span>{classReference.pathTitle}</span>}>{classReference.pathDetails}</InfoDetails>
               {pathLevels.length > 0 && <div className={panelClass}><h3 className="mb-3 font-black text-violet-200">Path Progression Choices</h3><div className="grid gap-3 sm:grid-cols-2">{pathLevels.map((pathLevel) => <div key={pathLevel} className="rounded-xl bg-slate-950/50 p-3"><div className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Level {pathLevel}</div><div className="flex gap-2">{(['Martial', 'Spellcaster'] as CharacterPathChoice[]).map((path) => <button type="button" key={path} onClick={() => choosePathProgression(pathLevel, path)} className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold ${pathChoices[String(pathLevel)] === path ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-400'}`}>{path}</button>)}</div></div>)}</div></div>}

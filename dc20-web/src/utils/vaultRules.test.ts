@@ -3,6 +3,7 @@ import { migratePersistedState } from '../store/campaignStore';
 import { VaultContentKindValues } from '../types/models';
 import type { Character, GmVaultEntry } from '../types/models';
 import { activeEquipmentSheetEffects } from './equipmentRules';
+import { completeCharacterRest } from './characterRules';
 import {
   activeCharacterVaultEffects,
   addVaultEntryToCharacter,
@@ -84,6 +85,26 @@ describe('GM Vault entries', () => {
     });
   });
 
+  it('keeps published and custom spell grants attached to magic items', () => {
+    const draft = createVaultEntry(VaultContentKindValues.ITEM);
+    draft.grantedSpells = [{
+      id: 'custom-spell',
+      name: 'Moonlit Step',
+      source: 'GM Vault',
+      school: 'Astromancy',
+      cost: '1 AP',
+      range: 'Self',
+      duration: 'Instantaneous',
+      description: 'Teleport to an unoccupied Space you can see.',
+    }];
+    const prepared = prepareVaultEntry(draft);
+
+    expect(prepared.item?.grantedSpells).toEqual(['Moonlit Step']);
+    expect(prepared.grantedSpells?.[0]).toMatchObject({ name: 'Moonlit Step', source: 'GM Vault' });
+    expect(normalizeVaultEntry(JSON.parse(JSON.stringify(prepared)))?.grantedSpells?.[0].description)
+      .toContain('Teleport');
+  });
+
   it('copies companions into the character sheet and applies passive feature effects', () => {
     const companion = createVaultEntry(VaultContentKindValues.COMPANION);
     companion.name = 'Clockwork Owl';
@@ -93,6 +114,8 @@ describe('GM Vault entries', () => {
       name: 'Clockwork Owl',
       source: 'GM Vault',
       maxHP: 6,
+      creatureType: 'Beast',
+      canAttack: true,
     });
 
     const feature = createVaultEntry(VaultContentKindValues.FEATURE);
@@ -112,6 +135,46 @@ describe('GM Vault entries', () => {
       physicalDefenseBonus: 1,
       allCheckBonus: 1,
     });
+  });
+
+  it('scales summoned companions from the accepting character and retains structured abilities', () => {
+    const summon = createVaultEntry(VaultContentKindValues.COMPANION);
+    summon.name = 'Lantern Wisp';
+    summon.companion = {
+      ...summon.companion!,
+      kind: 'Summon',
+      usesOwnerStats: true,
+      abilities: [{ id: 'glow', kind: 'Action', name: 'Searing Glow', cost: '1 AP', details: 'Make an Attack.' }],
+    };
+    const updated = addVaultEntryToCharacter(character(), prepareVaultEntry(summon));
+    const accepted = updated.build?.sheetCompanions?.[0];
+
+    expect(accepted).toMatchObject({
+      kind: 'Summon',
+      primeModifier: 2,
+      combatMastery: 1,
+      attackCheck: 3,
+    });
+    expect(accepted?.features).toContain('Action: Searing Glow (1 AP)');
+  });
+
+  it('tracks Talent and Feature charges and restores them at the configured rest', () => {
+    const feature = createVaultEntry(VaultContentKindValues.FEATURE);
+    feature.name = 'Starwell Blessing';
+    feature.charges = 3;
+    feature.remainingCharges = 3;
+    feature.recharge = 'Short Rest';
+    feature.grantedSpells = [{
+      id: 'starwell-spell', name: 'Starlight', source: 'GM Vault', school: 'Astromancy',
+      range: 'Self', duration: '1 Round', description: 'You glow with starlight.',
+    }];
+    const accepted = addVaultEntryToCharacter(character(), prepareVaultEntry(feature));
+    const spent = { ...accepted, vaultEntries: accepted.vaultEntries?.map((entry) => ({ ...entry, remainingCharges: 0 })) };
+
+    expect(spent.vaultEntries?.[0]).toMatchObject({ charges: 3, remainingCharges: 0, recharge: 'Short Rest' });
+    expect(completeCharacterRest(spent, 'Quick', 0).vaultEntries?.[0].remainingCharges).toBe(0);
+    expect(completeCharacterRest(spent, 'Short', 0).vaultEntries?.[0].remainingCharges).toBe(3);
+    expect(spent.vaultEntries?.[0].grantedSpells?.[0].name).toBe('Starlight');
   });
 
   it('enforces level, class, and ancestry requirements before acceptance', () => {

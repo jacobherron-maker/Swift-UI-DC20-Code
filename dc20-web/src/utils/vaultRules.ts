@@ -8,6 +8,7 @@ import type {
   Spell,
   VaultContentKind,
   VaultMechanicalEffects,
+  VaultRecharge,
 } from '../types/models';
 import {
   EquipmentCategoryValues,
@@ -15,6 +16,7 @@ import {
   VaultContentKindValues,
 } from '../types/models';
 import { generateUUID } from './gameUtils';
+import { companionDefaultsForKind, companionRulesText } from './companionRules';
 
 const ATTRIBUTES: DC20Attribute[] = ['Might', 'Agility', 'Charisma', 'Intelligence'];
 
@@ -49,7 +51,7 @@ export function emptyVaultEffects(): VaultMechanicalEffects {
 }
 
 function emptyCompanion(name: string): CharacterCompanion {
-  return {
+  const base: CharacterCompanion = {
     id: `vault-companion-${generateUUID()}`,
     name,
     kind: 'Pet',
@@ -71,6 +73,7 @@ function emptyCompanion(name: string): CharacterCompanion {
     features: '',
     notes: '',
   };
+  return { ...base, ...companionDefaultsForKind('Pet'), id: base.id, name };
 }
 
 export function createVaultEntry(kind: VaultContentKind = VaultContentKindValues.ITEM): GmVaultEntry {
@@ -189,13 +192,50 @@ function normalizeSpell(value: unknown, entry: GmVaultEntry): Spell | undefined 
   };
 }
 
+function normalizeGrantedSpell(value: unknown): Spell | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  const name = typeof raw.name === 'string' ? raw.name.trim() : '';
+  if (!name) return null;
+  return {
+    ...(raw as unknown as Spell),
+    id: typeof raw.id === 'string' ? raw.id : `vault-granted-spell-${generateUUID()}`,
+    name,
+    source: typeof raw.source === 'string' ? raw.source : 'GM Vault',
+    school: typeof raw.school === 'string' ? raw.school : 'Custom',
+    tags: typeof raw.tags === 'string' ? raw.tags : '',
+    cost: typeof raw.cost === 'string' ? raw.cost : '',
+    range: typeof raw.range === 'string' ? raw.range : 'See feature',
+    duration: typeof raw.duration === 'string' ? raw.duration : 'See feature',
+    description: typeof raw.description === 'string' ? raw.description : '',
+    enhancements: typeof raw.enhancements === 'string' ? raw.enhancements : '',
+  };
+}
+
 function normalizeCompanion(value: unknown, entry: GmVaultEntry): CharacterCompanion | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const raw = value as Record<string, unknown>;
   const base = emptyCompanion(entry.name);
   const kind = raw.kind === 'Familiar' || raw.kind === 'Summon' || raw.kind === 'Pet' ? raw.kind : 'Pet';
+  const defaults = companionDefaultsForKind(kind);
+  const abilities = Array.isArray(raw.abilities) ? raw.abilities.flatMap((value) => {
+    if (!value || typeof value !== 'object') return [];
+    const ability = value as Record<string, unknown>;
+    const name = typeof ability.name === 'string' ? ability.name.trim() : '';
+    if (!name) return [];
+    const abilityKind = ['Trait', 'Feature', 'Action', 'Reaction'].includes(String(ability.kind))
+      ? String(ability.kind) as 'Trait' | 'Feature' | 'Action' | 'Reaction' : 'Feature';
+    return [{
+      id: typeof ability.id === 'string' ? ability.id : generateUUID(),
+      kind: abilityKind,
+      name,
+      cost: typeof ability.cost === 'string' ? ability.cost : '',
+      details: typeof ability.details === 'string' ? ability.details : '',
+    }];
+  }) : [];
   return {
     ...base,
+    ...defaults,
     ...(raw as unknown as CharacterCompanion),
     id: typeof raw.id === 'string' ? raw.id : base.id,
     name: entry.name,
@@ -205,7 +245,35 @@ function normalizeCompanion(value: unknown, entry: GmVaultEntry): CharacterCompa
     maxHP: Math.max(1, numberValue(raw.maxHP, 1)),
     currentAP: Math.max(0, numberValue(raw.currentAP, numberValue(raw.maxAP, 2))),
     maxAP: Math.max(0, numberValue(raw.maxAP, 2)),
+    currentRP: Math.max(0, numberValue(raw.currentRP, numberValue(raw.maxRP, numberValue(defaults.maxRP)))),
+    maxRP: Math.max(0, numberValue(raw.maxRP, numberValue(defaults.maxRP))),
+    level: Math.max(-1, Math.trunc(numberValue(raw.level))),
+    damage: Math.max(0, numberValue(raw.damage, 1)),
+    physicalDefense: numberValue(raw.physicalDefense, base.physicalDefense),
+    areaDefense: numberValue(raw.areaDefense, base.areaDefense),
+    speed: Math.max(0, numberValue(raw.speed, numberValue(defaults.speed, base.speed))),
+    primeModifier: numberValue(raw.primeModifier, base.primeModifier),
+    combatMastery: Math.max(0, numberValue(raw.combatMastery, base.combatMastery)),
+    attackCheck: numberValue(raw.attackCheck, base.attackCheck),
+    saveDC: numberValue(raw.saveDC, base.saveDC),
     attributes: { ...base.attributes, ...numberRecord(raw.attributes) } as Record<DC20Attribute, number>,
+    linkedSpellName: typeof raw.linkedSpellName === 'string' ? raw.linkedSpellName : defaults.linkedSpellName,
+    creatureType: typeof raw.creatureType === 'string' ? raw.creatureType : defaults.creatureType,
+    speedType: typeof raw.speedType === 'string' ? raw.speedType : defaults.speedType,
+    otherSpeeds: typeof raw.otherSpeeds === 'string' ? raw.otherSpeeds : '',
+    usesOwnerStats: raw.usesOwnerStats === undefined ? Boolean(defaults.usesOwnerStats) : Boolean(raw.usesOwnerStats),
+    actsOnOwnersTurn: raw.actsOnOwnersTurn === undefined ? Boolean(defaults.actsOnOwnersTurn) : Boolean(raw.actsOnOwnersTurn),
+    requiresCommand: raw.requiresCommand === undefined ? Boolean(defaults.requiresCommand) : Boolean(raw.requiresCommand),
+    canAttack: raw.canAttack === undefined ? Boolean(defaults.canAttack) : Boolean(raw.canAttack),
+    skills: typeof raw.skills === 'string' ? raw.skills : '',
+    senses: typeof raw.senses === 'string' ? raw.senses : '',
+    languages: typeof raw.languages === 'string' ? raw.languages : '',
+    reductions: typeof raw.reductions === 'string' ? raw.reductions : '',
+    resistances: typeof raw.resistances === 'string' ? raw.resistances : '',
+    vulnerabilities: typeof raw.vulnerabilities === 'string' ? raw.vulnerabilities : '',
+    immunities: typeof raw.immunities === 'string' ? raw.immunities : '',
+    categoryRules: typeof raw.categoryRules === 'string' ? raw.categoryRules : defaults.categoryRules,
+    abilities,
     features: entry.description,
   };
 }
@@ -217,6 +285,8 @@ export function normalizeVaultEntry(value: unknown): GmVaultEntry | null {
   const kind = kinds.includes(raw.kind as VaultContentKind) ? raw.kind as VaultContentKind : VaultContentKindValues.OTHER;
   const name = typeof raw.name === 'string' ? raw.name.trim() : '';
   if (!name) return null;
+  const rechargeOptions: VaultRecharge[] = ['Manual', 'Quick Rest', 'Short Rest', 'Long Rest'];
+  const charges = raw.charges === undefined ? undefined : Math.max(0, Math.trunc(numberValue(raw.charges)));
   const entry: GmVaultEntry = {
     id: typeof raw.id === 'string' ? raw.id : `vault-${generateUUID()}`,
     kind,
@@ -231,6 +301,14 @@ export function normalizeVaultEntry(value: unknown): GmVaultEntry | null {
       notes: typeof (raw.requirements as Record<string, unknown> | undefined)?.notes === 'string' ? String((raw.requirements as Record<string, unknown>).notes) : '',
     },
     effects: normalizeEffects(raw.effects),
+    ...(charges ? {
+      charges,
+      remainingCharges: Math.min(charges, Math.max(0, Math.trunc(numberValue(raw.remainingCharges, charges)))),
+      recharge: rechargeOptions.includes(raw.recharge as VaultRecharge) ? raw.recharge as VaultRecharge : 'Long Rest',
+    } : {}),
+    grantedSpells: Array.isArray(raw.grantedSpells)
+      ? raw.grantedSpells.map(normalizeGrantedSpell).filter((spell): spell is Spell => spell !== null)
+      : [],
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
   };
@@ -253,7 +331,17 @@ export function equipmentEffectsFromVault(effects: VaultMechanicalEffects): Equi
 /** Keeps an entry's specialized payload synchronized with its common name and mechanics. */
 export function prepareVaultEntry(entry: GmVaultEntry): GmVaultEntry {
   const updatedAt = new Date().toISOString();
-  const next: GmVaultEntry = { ...entry, name: entry.name.trim(), tags: cleanStrings(entry.tags), updatedAt };
+  const charges = Math.max(0, Math.trunc(entry.charges ?? 0));
+  const next: GmVaultEntry = {
+    ...entry,
+    name: entry.name.trim(),
+    tags: cleanStrings(entry.tags),
+    grantedSpells: (entry.grantedSpells ?? []).map((spell) => ({ ...spell })),
+    ...(charges ? { charges, remainingCharges: charges, recharge: entry.recharge ?? 'Long Rest' } : {
+      charges: undefined, remainingCharges: undefined, recharge: undefined,
+    }),
+    updatedAt,
+  };
   if (next.item) {
     const effect = equipmentEffectsFromVault(next.effects);
     next.item = {
@@ -264,6 +352,9 @@ export function prepareVaultEntry(entry: GmVaultEntry): GmVaultEntry {
       sourcePage: 'GM Vault',
       sourceDocument: 'GM Vault',
       collection: 'Magic',
+      grantedSpells: (next.grantedSpells?.length ?? 0) > 0
+        ? next.grantedSpells!.map(({ name }) => name)
+        : next.item.grantedSpells ?? [],
       equippedEffects: next.item.requiresAttunement ? undefined : effect,
       attunedEffects: next.item.requiresAttunement ? effect : undefined,
     };
@@ -308,6 +399,7 @@ export function addVaultEntryToCharacter(character: Character, supplied: GmVault
   const normalized = normalizeVaultEntry(supplied);
   if (!normalized || (character.vaultEntries ?? []).some(({ id }) => id === normalized.id)) return character;
   const entry = JSON.parse(JSON.stringify(normalized)) as GmVaultEntry;
+  if (entry.charges) entry.remainingCharges = entry.charges;
   let next: Character = { ...character, vaultEntries: [...(character.vaultEntries ?? []), entry] };
   if (entry.item) next.inventoryItems = [...(character.inventoryItems ?? []), {
     id: generateUUID(),
@@ -318,10 +410,26 @@ export function addVaultEntryToCharacter(character: Character, supplied: GmVault
     source: 'added',
     ...(entry.item.charges !== undefined ? { remainingUses: entry.item.charges } : {}),
   }];
-  if (entry.companion && next.build) next.build = {
-    ...next.build,
-    sheetCompanions: [...(next.build.sheetCompanions ?? []), { ...entry.companion, id: generateUUID(), sourceVaultEntryID: entry.id }],
-  };
+  if (entry.companion && next.build) {
+    const suppliedCompanion = entry.companion;
+    const companion: CharacterCompanion = {
+      ...suppliedCompanion,
+      id: generateUUID(),
+      sourceVaultEntryID: entry.id,
+      features: companionRulesText(suppliedCompanion),
+      ...(suppliedCompanion.usesOwnerStats ? {
+        primeModifier: character.primeModifier,
+        combatMastery: character.combatMastery,
+        attackCheck: character.primeModifier + character.combatMastery,
+        saveDC: character.saveDC ?? 10 + character.primeModifier + character.combatMastery,
+      } : {}),
+      ...(suppliedCompanion.sharesHealthWithCharacter ? {
+        currentHP: character.healthPoints,
+        maxHP: character.maxHealthPoints,
+      } : {}),
+    };
+    next.build = { ...next.build, sheetCompanions: [...(next.build.sheetCompanions ?? []), companion] };
+  }
   if ([VaultContentKindValues.TALENT, VaultContentKindValues.FEATURE, VaultContentKindValues.OTHER].includes(entry.kind as never)) {
     const attributeBonuses = entry.effects.attributeBonuses ?? {};
     const might = attributeBonuses.Might ?? 0;

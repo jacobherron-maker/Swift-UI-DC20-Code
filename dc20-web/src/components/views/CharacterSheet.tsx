@@ -8,6 +8,7 @@ import { CharacterAvatar, CharacterAvatarEditor } from '../character/CharacterAv
 import { CharacterRestControls, CharacterSheetTabContent, type RedesignedSheetTab } from '../character/CharacterSheetTabs';
 import { GoldBalanceControl } from '../GoldBalanceControl';
 import type { AncestryTrait, CampaignNote, Character, CharacterInventoryItem, DC20Attribute, DruidWildFormRecord, EquipmentCatalogItem, MasteryLevel, Spell } from '../../types/models';
+import { VaultContentKindValues } from '../../types/models';
 import {
   ATTRIBUTE_NAMES,
   BARBARIAN_RAGE_STATE,
@@ -2346,11 +2347,20 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
   const activeAncestryTraits = selectedAncestryTraits(character, reference?.ancestryTraits ?? []);
   const fastReflexesReady = activeAncestryTraits.some(({ name }) => name === 'Fast Reflexes')
     && !featureStates['ancestry.fastReflexes.firstAttackUsed'];
-  const equipmentGrantedSpells = useMemo(() => (character.inventoryItems ?? [])
-    .filter(({ isEquipped, isAttuned }) => isEquipped && (isAttuned ?? true))
-    .flatMap(({ equipmentID }) => equipmentCatalog.filter(({ id }) => id === equipmentID)
-      .flatMap((item) => (item.grantedSpells ?? []).map((name) => ({ name, itemName: item.name })))),
-  [character.inventoryItems, equipmentCatalog]);
+  const equipmentGrantedSpells = useMemo(() => (character.inventoryItems ?? []).flatMap((inventory) => {
+    const item = equipmentCatalog.find(({ id }) => id === inventory.equipmentID);
+    if (!item || !inventory.isEquipped || (item.requiresAttunement && !inventory.isAttuned)) return [];
+    const vaultEntry = (character.vaultEntries ?? []).find((entry) => entry.item?.id === item.id);
+    return (item.grantedSpells ?? []).map((name) => ({
+      name,
+      itemName: item.name,
+      spell: vaultEntry?.grantedSpells?.find((entry) => entry.name === name),
+    }));
+  }), [character.inventoryItems, character.vaultEntries, equipmentCatalog]);
+  const vaultFeatureGrantedSpells = useMemo(() => (character.vaultEntries ?? [])
+    .filter(({ kind }) => kind === VaultContentKindValues.FEATURE || kind === VaultContentKindValues.TALENT)
+    .flatMap((entry) => (entry.grantedSpells ?? []).map((spell) => ({ spell, entryName: entry.name }))),
+  [character.vaultEntries]);
   const knownSpells = useMemo(() => {
     // Saved characters can contain an older snapshot of a power. Overlay the audited
     // catalog by name so source corrections and metadata reach existing sheets too.
@@ -2361,12 +2371,25 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
     for (const vaultSpell of (character.vaultEntries ?? []).flatMap(({ spell }) => spell ? [spell] : [])) {
       if (!result.some(({ id }) => id === vaultSpell.id)) result.push(vaultSpell);
     }
+    for (const grant of equipmentGrantedSpells) {
+      if (result.some(({ name }) => name === grant.name)) continue;
+      const sourceSpell = grant.spell ?? spellCatalog.find(({ name }) => name === grant.name);
+      if (sourceSpell) result.push({ ...sourceSpell, id: `item-grant|${grant.itemName}|${grant.name}`, source: `Magic Item — ${grant.itemName}` });
+    }
+    for (const grant of vaultFeatureGrantedSpells) {
+      if (result.some(({ name }) => name === grant.spell.name)) continue;
+      const sourceSpell = grant.spell.source === 'GM Vault'
+        ? grant.spell
+        : spellCatalog.find(({ name }) => name === grant.spell.name) ?? grant.spell;
+      result.push({ ...sourceSpell, id: `vault-grant|${grant.entryName}|${grant.spell.name}`, source: `GM Vault — ${grant.entryName}` });
+    }
     for (const name of [
       ...(character.build?.selectedSpells ?? []),
       ...(character.build?.selectedCantrips ?? []),
       ...grantedSpells,
       ...ancestryGrantedSpells.map((entry) => entry.name),
       ...equipmentGrantedSpells.map((entry) => entry.name),
+      ...vaultFeatureGrantedSpells.map(({ spell }) => spell.name),
     ]) {
       if (result.some((spell) => spell.name === name)) continue;
       const spell = spellCatalog.find((entry) => entry.name === name);
@@ -2395,7 +2418,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character, onClose, onE
       }
     }
     return sortByName(result);
-  }, [ancestryGrantedSpells, character.build?.selectedCantrips, character.build?.selectedSpells, character.class, character.spells, character.vaultEntries, equipmentGrantedSpells, grantedSpells, spellCatalog]);
+  }, [ancestryGrantedSpells, character.build?.selectedCantrips, character.build?.selectedSpells, character.class, character.spells, character.vaultEntries, equipmentGrantedSpells, grantedSpells, spellCatalog, vaultFeatureGrantedSpells]);
   const knownManeuvers = useMemo(() => {
     const result = character.maneuvers.map((saved) => {
       const current = maneuverCatalog.find(({ name }) => name === saved.name);

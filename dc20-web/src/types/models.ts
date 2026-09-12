@@ -99,6 +99,8 @@ export const VaultContentKindValues = {
 
 export type VaultContentKind = (typeof VaultContentKindValues)[keyof typeof VaultContentKindValues];
 
+export type VaultRecharge = 'Manual' | 'Quick Rest' | 'Short Rest' | 'Long Rest';
+
 /** Numeric and reference effects that custom Vault content can route into a character sheet. */
 export interface VaultMechanicalEffects {
   attributeBonuses?: Partial<Record<DC20Attribute, number>>;
@@ -141,6 +143,12 @@ export interface GmVaultEntry {
   tags: string[];
   requirements: VaultRequirements;
   effects: VaultMechanicalEffects;
+  /** Limited uses for accepted Talents and Features. The remaining value is character-owned state. */
+  charges?: number;
+  remainingCharges?: number;
+  recharge?: VaultRecharge;
+  /** Complete spell snapshots keep custom spell grants self-contained when shared with a campaign. */
+  grantedSpells?: Spell[];
   item?: EquipmentCatalogItem;
   spell?: Spell;
   companion?: CharacterCompanion;
@@ -347,6 +355,16 @@ export type CharacterPathChoice = 'Martial' | 'Spellcaster';
 
 export type CharacterCompanionKind = 'Familiar' | 'Summon' | 'Pet';
 
+export type CharacterCompanionAbilityKind = 'Trait' | 'Feature' | 'Action' | 'Reaction';
+
+export interface CharacterCompanionAbility {
+  id: string;
+  kind: CharacterCompanionAbilityKind;
+  name: string;
+  cost: string;
+  details: string;
+}
+
 /** A persistent, player-editable stat sheet for a familiar, summon, or other companion. */
 export interface CharacterCompanion {
   id: string;
@@ -355,20 +373,41 @@ export interface CharacterCompanion {
   name: string;
   kind: CharacterCompanionKind;
   source: string;
+  linkedSpellName?: string;
+  creatureType?: string;
+  level?: number;
   size: string;
   currentHP: number;
   maxHP: number;
   sharesHealthWithCharacter: boolean;
   currentAP: number;
   maxAP: number;
+  currentRP?: number;
+  maxRP?: number;
   physicalDefense: number;
   areaDefense: number;
   speed: number;
+  speedType?: string;
+  otherSpeeds?: string;
+  damage?: number;
   primeModifier: number;
   combatMastery: number;
   attackCheck: number;
   saveDC: number;
   attributes: Record<DC20Attribute, number>;
+  usesOwnerStats?: boolean;
+  actsOnOwnersTurn?: boolean;
+  requiresCommand?: boolean;
+  canAttack?: boolean;
+  skills?: string;
+  senses?: string;
+  languages?: string;
+  reductions?: string;
+  resistances?: string;
+  vulnerabilities?: string;
+  immunities?: string;
+  categoryRules?: string;
+  abilities?: CharacterCompanionAbility[];
   features: string;
   notes: string;
 }

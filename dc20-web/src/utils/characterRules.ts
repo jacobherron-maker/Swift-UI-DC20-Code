@@ -1196,12 +1196,22 @@ export function completeCharacterRest(character: Character, type: CharacterRestT
     sheetFeatureSelections[MONK_MEDITATION_SKILL] = sheetFeatureSelections[MONK_MEDITATION_PENDING];
   }
 
+  const restRank = { Quick: 1, Short: 2, Long: 3 } as const;
+  const rechargeRank = { 'Quick Rest': 1, 'Short Rest': 2, 'Long Rest': 3 } as const;
+  const vaultEntries = (character.vaultEntries ?? []).map((entry) => {
+    if (!entry.charges || !entry.recharge || entry.recharge === 'Manual') return entry;
+    return restRank[type] >= rechargeRank[entry.recharge]
+      ? { ...entry, remainingCharges: entry.charges }
+      : entry;
+  });
+
   return {
     ...character,
     healthPoints: character.healthPoints + spent,
     stamina: type === 'Quick' ? character.stamina : character.maxStamina,
     manaPoints: type === 'Long' ? character.maxManaPoints : character.manaPoints,
     currentAP: type === 'Long' ? character.maxAP : character.currentAP,
+    vaultEntries,
     build: {
       ...build,
       temporaryHP: type === 'Long' ? 0 : build.temporaryHP,
