@@ -13,6 +13,7 @@ import {
   equipmentUseCapacity,
   equipmentUsageLabel,
   healingPotionAmount,
+  inventoryWithCustomItemSnapshots,
   setInventoryQuantity,
   spendInventoryUse,
   toggleInventoryEquipped,
@@ -397,6 +398,25 @@ describe('character inventory equipment rules', () => {
     };
     expect(addInventoryItem([], customItem)[0].itemSnapshot).toEqual(customItem);
     expect(addInventoryItem([], heavyArmor)[0].itemSnapshot).toBeUndefined();
+  });
+
+  it('backfills and refreshes custom-item snapshots before a character is shared', () => {
+    const customItem: EquipmentCatalogItem = {
+      id: 'custom-equipment-portable', name: 'Traveler’s Ward', category: 'Armor', subtype: 'Custom Item',
+      summary: '+2 PD', mechanics: 'The corrected portable description.', properties: ['+2 Physical Defense'],
+      slot: 'Armor', sourcePage: 'Custom Item',
+    };
+    const publishedItem = catalog.find(({ name }) => name === 'Defensive Light Armor')!;
+    const inventoryItems: CharacterInventoryItem[] = [
+      { id: 'custom', equipmentID: customItem.id, quantity: 1, isEquipped: true, source: 'added' },
+      { id: 'published', equipmentID: publishedItem.id, quantity: 1, isEquipped: false, source: 'added' },
+    ];
+
+    const portable = inventoryWithCustomItemSnapshots(inventoryItems, [customItem]);
+
+    expect(portable[0].itemSnapshot).toEqual(customItem);
+    expect(portable[1].itemSnapshot).toBeUndefined();
+    expect(inventoryItems[0].itemSnapshot).toBeUndefined();
   });
 
   it('routes a custom item\'s chosen sheet-effect tags into its defensive profile regardless of Category', () => {

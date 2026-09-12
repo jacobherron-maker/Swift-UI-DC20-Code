@@ -23,6 +23,8 @@ import type {
   PartyCampaignSnapshot,
   PartyInventoryItem,
 } from '../types/models';
+import { useCampaignStore } from '../store/campaignStore';
+import { inventoryWithCustomItemSnapshots } from '../utils/equipmentRules';
 import { generateUUID } from '../utils/gameUtils';
 import { normalizeVaultEntry, prepareVaultEntry } from '../utils/vaultRules';
 
@@ -94,8 +96,12 @@ interface PartyInviteDocument {
 const PartyCampaignContext = createContext<PartyCampaignContextValue | null>(null);
 const SHARED_GOLD_DOCUMENT_ID = '__gold__';
 
-function safeCharacter(character: Character): Character {
-  return JSON.parse(JSON.stringify(character)) as Character;
+function safeCharacter(character: Character, customEquipment: ReturnType<typeof useCampaignStore.getState>['campaignData']['customEquipment']): Character {
+  const portableCharacter = {
+    ...character,
+    inventoryItems: inventoryWithCustomItemSnapshots(character.inventoryItems ?? [], customEquipment),
+  };
+  return JSON.parse(JSON.stringify(portableCharacter)) as Character;
 }
 
 function displayNameForUser(user: NonNullable<ReturnType<typeof useAuth>['user']>): string {
@@ -122,6 +128,8 @@ function emptyParty(id: string, role: PartyCampaignRole): PartyCampaignSnapshot 
 
 export function PartyCampaignProvider({ children, links }: { children: ReactNode; links: CampaignPartyLink[] }) {
   const { isConfigured, user } = useAuth();
+  const characters = useCampaignStore((state) => state.characters);
+  const customEquipment = useCampaignStore((state) => state.campaignData.customEquipment);
   const [partiesByID, setPartiesByID] = useState<Record<string, PartyCampaignSnapshot>>({});
   const [pendingInvite, setPendingInvite] = useState<PendingPartyInvite | null>(null);
   const [status, setStatus] = useState<PartyCampaignContextValue['status']>('idle');
@@ -309,7 +317,7 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
         await setDoc(memberReference, {
           display_name: displayNameForUser(currentUser),
           character_id: character.id,
-          character: safeCharacter(character),
+          character: safeCharacter(character, customEquipment),
           updated_at: now,
         }, { merge: true });
       } else {
@@ -319,7 +327,7 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
           role: 'player',
           invite_code: inviteCode,
           character_id: character.id,
-          character: safeCharacter(character),
+          character: safeCharacter(character, customEquipment),
           joined_at: now,
           updated_at: now,
         });
@@ -333,7 +341,7 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
       reportError(caught, 'The character could not join this campaign.');
       throw caught;
     }
-  }, [reportError, requireCloud]);
+  }, [customEquipment, reportError, requireCloud]);
 
   const publishCharacter = useCallback(async (partyId: string, role: PartyCampaignRole, character?: Character) => {
     const { database, currentUser } = requireCloud();
@@ -348,9 +356,30 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
       role,
       joined_at: existing.joined_at ?? now,
       updated_at: now,
-      ...(character ? { character_id: character.id, character: safeCharacter(character) } : {}),
+      ...(character ? { character_id: character.id, character: safeCharacter(character, customEquipment) } : {}),
     });
-  }, [requireCloud]);
+  }, [customEquipment, requireCloud]);
+
+  // Keep every linked player character current even when its owner is working outside the
+  // Characters page. This also repairs older Firebase copies whose custom inventory entries
+  // were published before portable item snapshots were introduced.
+  useEffect(() => {
+    if (!firestore || !user) return;
+    const linkedCharacters = links.flatMap((link) => {
+      if (link.role !== 'player' || !link.characterId) return [];
+      const character = characters.find(({ id }) => id === link.characterId);
+      return character ? [{ link, character }] : [];
+    });
+    if (linkedCharacters.length === 0) return;
+    const timer = window.setTimeout(() => {
+      for (const { link, character } of linkedCharacters) {
+        void publishCharacter(link.partyId, link.role, character).catch((caught) => {
+          reportError(caught, 'The shared character could not be updated.');
+        });
+      }
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [characters, customEquipment, linkSignature, links, publishCharacter, reportError, user]);
 
   const renameParty = useCallback(async (partyId: string, name: string) => {
     const { database } = requireCloud();

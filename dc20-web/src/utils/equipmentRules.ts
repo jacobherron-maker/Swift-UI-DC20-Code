@@ -321,6 +321,22 @@ export function inventoryCatalogSnapshots(items: CharacterInventoryItem[]): Equi
   return Array.from(new Map(items.flatMap(({ itemSnapshot }) => itemSnapshot ? [[itemSnapshot.id, itemSnapshot] as const] : [])).values());
 }
 
+/**
+ * Embeds the owner's player-created equipment records into an inventory before it is
+ * shared outside their account. Published equipment remains ID-only, while an existing
+ * snapshot from another portable source (such as the GM Vault) is preserved.
+ */
+export function inventoryWithCustomItemSnapshots(
+  items: CharacterInventoryItem[],
+  customEquipment: EquipmentCatalogItem[],
+): CharacterInventoryItem[] {
+  const customEquipmentByID = new Map(customEquipment.map((item) => [item.id, item]));
+  return items.map((entry) => {
+    const currentCustomItem = customEquipmentByID.get(entry.equipmentID);
+    return currentCustomItem ? { ...entry, itemSnapshot: currentCustomItem } : entry;
+  });
+}
+
 export function toggleInventoryEquipped(
   items: CharacterInventoryItem[],
   inventoryID: string,
