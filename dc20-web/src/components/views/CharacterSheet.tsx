@@ -7,7 +7,7 @@ import { useCampaignStore } from '../../store/campaignStore';
 import { CharacterAvatar, CharacterAvatarEditor } from '../character/CharacterAvatar';
 import { CharacterRestControls, CharacterSheetTabContent, type RedesignedSheetTab } from '../character/CharacterSheetTabs';
 import { GoldBalanceControl } from '../GoldBalanceControl';
-import type { AncestryTrait, CampaignNote, Character, CharacterInventoryItem, DC20Attribute, DruidWildFormRecord, EquipmentCatalogItem, MasteryLevel, Spell } from '../../types/models';
+import type { AncestryTrait, CampaignNote, Character, CharacterInventoryItem, DC20Attribute, DruidWildFormRecord, EquipmentCatalogItem, Spell } from '../../types/models';
 import { VaultContentKindValues } from '../../types/models';
 import {
   ATTRIBUTE_NAMES,
@@ -100,6 +100,7 @@ import {
   commanderRallyAmount,
   commanderStaminaRegenAmount,
   deriveCharacter,
+  equippedCombatModifiers,
   druidBeastTraitName,
   druidBeastTraitSelection,
   druidWildFormTraitCost,
@@ -109,8 +110,6 @@ import {
   grantedClassSpellNames,
   hunterFavoredTerrainNames,
   hunterStaminaRegenAmount,
-  masteryBonus,
-  masteryRank,
   masteryTitle,
   monkKiMaximum,
   monkKiRecoveryAmount,
@@ -125,6 +124,7 @@ import {
   sorcererWildMagicOutcome,
   sorcererWildMagicProfile,
 } from '../../utils/characterRules';
+import { sheetAttributeCheckProfile, sheetSkillCheckProfile, sheetTradeCheckProfile } from '../../utils/sheetCheckRules';
 import { enforceEquipmentHandCapacity, inventoryCatalogSnapshots, isEquipmentEquippable, setInventoryQuantity, toggleInventoryEquipped as toggleInventoryEquippedBase } from '../../utils/equipmentRules';
 import { generateUUID, rollDice, sortByName } from '../../utils/gameUtils';
 import { ownedClassFeatures, talentByName } from '../../utils/talentRules';
@@ -324,12 +324,13 @@ interface RollOutcome {
   total: number;
 }
 
-function ResourceControl({ label, value, maximum, tone, onChange }: { label: string; value: number; maximum: number; tone: string; onChange: (value: number) => void }) {
-  return <div className="rounded-xl border border-white/10 bg-slate-950/55 p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{label}</div><div className="mt-2 flex items-center justify-between gap-2"><button type="button" onClick={() => onChange(Math.max(0, value - 1))} className="h-8 w-8 rounded-lg bg-slate-800 text-slate-200">−</button><div className={`text-xl font-black ${tone}`}>{value} / {maximum}</div><button type="button" onClick={() => onChange(Math.min(maximum, value + 1))} className="h-8 w-8 rounded-lg bg-slate-800 text-slate-200">+</button></div></div>;
+function ResourceControl({ label, value, maximum, tone, readOnly = false, onChange }: { label: string; value: number; maximum: number; tone: string; readOnly?: boolean; onChange: (value: number) => void }) {
+  return <div className="rounded-xl border border-white/10 bg-slate-950/55 p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{label}</div><div className="mt-2 flex items-center justify-between gap-2">{!readOnly && <button type="button" onClick={() => onChange(Math.max(0, value - 1))} className="h-8 w-8 rounded-lg bg-slate-800 text-slate-200">−</button>}<div className={`text-xl font-black ${tone}`}>{value} / {maximum}</div>{!readOnly && <button type="button" onClick={() => onChange(Math.min(maximum, value + 1))} className="h-8 w-8 rounded-lg bg-slate-800 text-slate-200">+</button>}</div></div>;
 }
 
 function Details({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
-  return <details className="group rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-start justify-between gap-3"><span><span className="font-black text-slate-200">{title}</span>{subtitle && <span className="mt-1 block text-xs text-slate-500">{subtitle}</span>}</span><span className="text-xs font-bold text-violet-300 group-open:hidden">More</span><span className="hidden text-xs font-bold text-violet-300 group-open:inline">Less</span></summary><div className="mt-4 whitespace-pre-wrap border-t border-white/5 pt-4 text-sm leading-6 text-slate-400">{children}</div></details>;
+  const [open, setOpen] = useState(false);
+  return <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)} className="rounded-xl border border-white/10 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-start justify-between gap-3"><span><span className="font-black text-slate-200">{title}</span>{subtitle && <span className="mt-1 block text-xs text-slate-500">{subtitle}</span>}</span><span className="text-xs font-bold text-violet-300">{open ? 'Less' : 'More'}</span></summary><div className="mt-4 whitespace-pre-wrap border-t border-white/5 pt-4 text-sm leading-6 text-slate-400">{children}</div></details>;
 }
 
 function ChampionControls({ character, onChange, onRoll, insightModifier, knowledgeModifier }: {
@@ -2279,6 +2280,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character: storedCharac
   const [selectedTab, setSelectedTab] = useState<SheetTab>('sheet-checks');
   const [lastRoll, setLastRoll] = useState<RollOutcome | null>(null);
   const [inspirationDie, setInspirationDie] = useState<number | null>(null);
+  const [previewRollAdjustment, setPreviewRollAdjustment] = useState(0);
   const [conditionToAdd, setConditionToAdd] = useState('Bleeding');
   const [expandedSkills, setExpandedSkills] = useState(true);
   const [expandedTrades, setExpandedTrades] = useState(false);
@@ -2313,7 +2315,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character: storedCharac
   );
   const multiclassFeatures = allOwnedClassFeatures.filter(({ source }) => source !== 'Class');
   const build = character.build;
-  const rollAdjustment = build?.rollAdjustment ?? 0;
+  const rollAdjustment = readOnly ? previewRollAdjustment : build?.rollAdjustment ?? 0;
   const conditionLevels = build?.sheetConditionLevels ?? {};
   const featureStates = build?.sheetFeatureStates ?? {};
   const featureSelections = build?.sheetFeatureSelections ?? {};
@@ -2358,6 +2360,9 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character: storedCharac
     [character, reference?.ancestryTraits],
   );
   const activeAncestryTraits = selectedAncestryTraits(character, reference?.ancestryTraits ?? []);
+  const checkEquipmentModifiers = classReference
+    ? equippedCombatModifiers(character, equipmentCatalog, classReference, reference?.ancestryTraits ?? [])
+    : null;
   const fastReflexesReady = activeAncestryTraits.some(({ name }) => name === 'Fast Reflexes')
     && !featureStates['ancestry.fastReflexes.firstAttackUsed'];
   const equipmentGrantedSpells = useMemo(() => (character.inventoryItems ?? []).flatMap((inventory) => {
@@ -2745,31 +2750,23 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character: storedCharac
   const skillGroups = reference?.skillGroups ?? [];
   const tradeGroups = reference?.tradeGroups ?? [];
 
-  const skillModifier = (name: string, mastery: MasteryLevel): number => {
-    const skill = reference?.skills.find(({ name: candidate }) => candidate === name);
-    const attribute = skill?.attribute === 'Prime' ? character.primeModifier : character.attributes[skill?.attribute as DC20Attribute]?.modifier ?? 0;
-    const expertise = character.class === 'Rogue' ? 0 : ancestryTraits.filter((trait) => trait.name === 'Skill Expertise' && build?.ancestryTraitChoices[trait.id]?.[0] === name).length;
-    return attribute + masteryBonus(masteryTitle(masteryRank(mastery) + expertise));
+  const skillModifier = (name: string, _legacyMastery?: unknown): number => checkEquipmentModifiers
+    ? sheetSkillCheckProfile(character, name, reference, checkEquipmentModifiers, activeAncestryTraits).modifier : 0;
+  const tradeModifier = (name: string, _legacyMastery?: unknown): number => checkEquipmentModifiers
+    ? sheetTradeCheckProfile(character, name, reference, checkEquipmentModifiers, activeAncestryTraits).modifier : 0;
+  const bestTradeModifier = (group: string): number => {
+    const values = reference?.trades.filter(({ group: candidate }) => candidate === group).map(({ name }) => tradeModifier(name)) ?? [];
+    return values.length > 0 ? Math.max(...values) : 0;
   };
-
-  const tradeModifier = (name: string, mastery: MasteryLevel): number => {
-    const trade = reference?.trades.find(({ name: candidate }) => candidate === name);
-    const availableAttributes = (trade?.attribute ?? '').split(/, | or /).filter((attribute) => ATTRIBUTE_NAMES.includes(attribute as DC20Attribute));
-    const attribute = Math.max(0, ...availableAttributes.map((name) => character.attributes[name as DC20Attribute]?.modifier ?? 0));
-    const expertise = ancestryTraits.filter((trait) => trait.name === 'Trade Expertise' && build?.ancestryTraitChoices[trait.id]?.[0] === name).length;
-    return attribute + masteryBonus(masteryTitle(masteryRank(mastery) + expertise));
-  };
-  const bardArtistryModifier = Math.max(0, ...(reference?.trades
-    .filter(({ group }) => group === 'Artistry')
-    .map(({ name }) => tradeModifier(name, character.tradeMasteries[name] ?? 'Untrained')) ?? []));
-  const championKnowledgeModifier = Math.max(0, ...(reference?.trades
-    .filter(({ group }) => group === 'Knowledge')
-    .map(({ name }) => tradeModifier(name, character.tradeMasteries[name] ?? 'Untrained')) ?? []));
-  const championInsightModifier = skillModifier('Insight', character.skillMasteries.Insight ?? 'Untrained');
-  const commanderIntimidationModifier = skillModifier('Intimidation', character.skillMasteries.Intimidation ?? 'Untrained');
-  const commanderCharismaModifier = character.attributes.Charisma.modifier;
-  const hunterAwarenessModifier = skillModifier('Awareness', character.skillMasteries.Awareness ?? 'Untrained');
-  const hunterInvestigationModifier = skillModifier('Investigation', character.skillMasteries.Investigation ?? 'Untrained');
+  const bardArtistryModifier = bestTradeModifier('Artistry');
+  const championKnowledgeModifier = bestTradeModifier('Knowledge');
+  const championInsightModifier = skillModifier('Insight');
+  const commanderIntimidationModifier = skillModifier('Intimidation');
+  const commanderCharismaModifier = checkEquipmentModifiers
+    ? sheetAttributeCheckProfile(character, 'Charisma', checkEquipmentModifiers).modifier
+    : character.attributes.Charisma.modifier;
+  const hunterAwarenessModifier = skillModifier('Awareness');
+  const hunterInvestigationModifier = skillModifier('Investigation');
 
   const updateNote = (note: CampaignNote) => updateBuild({ characterNotes: notes.map((entry) => entry.id === note.id ? note : entry) });
   const featureDescription = (name: string, description: string, ownerClass = character.class): string => {
@@ -2789,11 +2786,11 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character: storedCharac
       <div className="mx-auto max-w-[1500px]">
         <header className="mb-5 rounded-2xl border border-violet-400/20 bg-slate-950/65 p-4 shadow-2xl shadow-black/20 sm:p-5">
           <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-4 xl:grid-cols-[8rem_minmax(0,1fr)_auto]">{readOnly ? <CharacterAvatar image={character.avatarDataURL} name={character.name} className="w-20 shrink-0 sm:w-32" /> : <CharacterAvatarEditor image={character.avatarDataURL} name={character.name} onChange={(avatarDataURL) => update({ avatarDataURL })} className="w-20 shrink-0 sm:w-32" compact />}<div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300 sm:text-xs sm:tracking-[0.25em]">{readOnly ? 'Party Character Sheet • Read Only' : 'Interactive Character Sheet'}</p><h1 title={character.name} className="mt-1 truncate whitespace-nowrap text-2xl font-black text-white sm:text-4xl">{character.name}</h1><p className="mt-2 text-sm text-slate-400 sm:text-base">Level {character.level} {character.ancestry} {character.class}{character.subclass ? ` • ${character.subclass}` : ''}</p>{partyCampaignNames.length > 0 && <p className="mt-2 text-xs font-bold text-emerald-300">Shared with {partyCampaignNames.join(', ')} • sheet changes sync automatically</p>}</div><div className="col-span-2 flex flex-wrap gap-2 sm:justify-end xl:col-span-1">{readOnly && <span className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-2 text-sm font-black text-emerald-200">GM View • Read Only</span>}{!readOnly && onEdit && <button type="button" onClick={onEdit} className="min-h-11 rounded-xl bg-violet-600 px-4 py-2 font-bold text-white hover:bg-violet-500">Return to Builder</button>}{onClose && <button type="button" onClick={onClose} className="min-h-11 rounded-xl bg-slate-800 px-4 py-2 font-bold text-slate-200 hover:bg-slate-700">{readOnly ? 'Back to Party' : 'Characters'}</button>}</div></div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><ResourceControl label="Health" value={character.healthPoints} maximum={character.maxHealthPoints} tone="text-red-300" onChange={(healthPoints) => update({ healthPoints })} /><ResourceControl label="Action Points" value={character.currentAP} maximum={character.maxAP + sorcererWildEffects.actionPointMaximumBonus} tone="text-violet-300" onChange={(currentAP) => update({ currentAP })} /><ResourceControl label="Stamina" value={character.stamina} maximum={character.maxStamina} tone="text-sky-300" onChange={(stamina) => update({ stamina })} /><ResourceControl label="Mana" value={character.manaPoints} maximum={character.maxManaPoints} tone="text-fuchsia-300" onChange={(manaPoints) => update({ manaPoints })} /><div className="rounded-xl border border-white/10 bg-slate-950/55 p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Temporary HP</div><div className="mt-2 flex items-center justify-between"><button type="button" onClick={() => updateBuild({ temporaryHP: Math.max(0, (build?.temporaryHP ?? 0) - 1) })} className="h-8 w-8 rounded-lg bg-slate-800">−</button><span className="text-xl font-black text-emerald-300">{build?.temporaryHP ?? 0}</span><button type="button" onClick={() => updateBuild({ temporaryHP: (build?.temporaryHP ?? 0) + 1 })} className="h-8 w-8 rounded-lg bg-slate-800">+</button></div></div></div>
-          <CharacterRestControls character={character} onChange={update} />
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><ResourceControl readOnly={readOnly} label="Health" value={character.healthPoints} maximum={character.maxHealthPoints} tone="text-red-300" onChange={(healthPoints) => update({ healthPoints })} /><ResourceControl readOnly={readOnly} label="Action Points" value={character.currentAP} maximum={character.maxAP + sorcererWildEffects.actionPointMaximumBonus} tone="text-violet-300" onChange={(currentAP) => update({ currentAP })} /><ResourceControl readOnly={readOnly} label="Stamina" value={character.stamina} maximum={character.maxStamina} tone="text-sky-300" onChange={(stamina) => update({ stamina })} /><ResourceControl readOnly={readOnly} label="Mana" value={character.manaPoints} maximum={character.maxManaPoints} tone="text-fuchsia-300" onChange={(manaPoints) => update({ manaPoints })} /><div className="rounded-xl border border-white/10 bg-slate-950/55 p-3"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Temporary HP</div><div className="mt-2 flex items-center justify-between">{!readOnly && <button type="button" onClick={() => updateBuild({ temporaryHP: Math.max(0, (build?.temporaryHP ?? 0) - 1) })} className="h-8 w-8 rounded-lg bg-slate-800">−</button>}<span className="text-xl font-black text-emerald-300">{build?.temporaryHP ?? 0}</span>{!readOnly && <button type="button" onClick={() => updateBuild({ temporaryHP: (build?.temporaryHP ?? 0) + 1 })} className="h-8 w-8 rounded-lg bg-slate-800">+</button>}</div></div></div>
+          <CharacterRestControls character={character} onChange={update} readOnly={readOnly} />
         </header>
 
-        {hasLiveClassControls && <details className="group mb-5 rounded-2xl border border-violet-400/20 bg-slate-950/55 p-3 sm:p-4">
+        {hasLiveClassControls && !readOnly && <details className="group mb-5 rounded-2xl border border-violet-400/20 bg-slate-950/55 p-3 sm:p-4">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-2 py-2"><span><span className="block text-[10px] font-black uppercase tracking-[0.2em] text-violet-300">Character Sheet Controls</span><span className="text-lg font-black text-white">Live Class Features • {character.class}</span></span><span className="rounded-lg bg-violet-500/10 px-3 py-2 text-xs font-black text-violet-200 group-open:hidden">Expand</span><span className="hidden rounded-lg bg-violet-500/10 px-3 py-2 text-xs font-black text-violet-200 group-open:inline">Collapse</span></summary>
           <div className="mt-3 border-t border-white/5 pt-4 [&>section]:mb-0">
         {isBarbarian && <section className="mb-5 rounded-2xl border border-orange-400/25 bg-gradient-to-br from-orange-950/55 to-slate-950/70 p-4 sm:p-5">
@@ -2813,7 +2810,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character: storedCharac
         {isCommander && <CommanderControls character={character} onChange={update} onRoll={roll} intimidationModifier={commanderIntimidationModifier} charismaModifier={commanderCharismaModifier} />}
         {isSummoner && <SummonerControls character={character} onChange={update} />}
         {isSpellblade && <SpellbladeControls character={character} onChange={update} onRoll={roll} />}
-        {isRogue && <RogueControls character={character} onChange={update} onRoll={roll} stealthModifier={skillModifier('Stealth', character.skillMasteries.Stealth ?? 'Untrained')} />}
+        {isRogue && <RogueControls character={character} onChange={update} onRoll={roll} stealthModifier={skillModifier('Stealth')} />}
         {isWarlock && <WarlockControls character={character} onChange={update} />}
         {isCleric && <ClericControls character={character} onChange={update} onRoll={roll} />}
         {isDruid && <DruidControls character={character} beastTraits={(reference?.ancestryTraits ?? []).filter(({ ancestry, cost }) => ancestry === 'Beastborn' && cost > 0)} onChange={update} onRoll={roll} />}
@@ -2849,14 +2846,14 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character: storedCharac
 
         <div className="mb-5 grid gap-4 lg:grid-cols-2">
           <nav aria-label="Character sheet sections" className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-slate-950/60 p-2 sm:grid-cols-3 md:grid-cols-6 lg:col-span-2">{tabs.map((tab) => <button type="button" key={tab.id} onClick={() => setSelectedTab(tab.id)} aria-current={selectedTab === tab.id ? 'page' : undefined} className={`min-w-0 rounded-xl px-2 py-3 text-sm font-bold transition ${selectedTab === tab.id ? 'bg-violet-600 text-white shadow-lg shadow-violet-950/30' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}>{tab.label}</button>)}</nav>
-          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/60 p-3"><button type="button" onClick={() => updateBuild({ rollAdjustment: Math.max(-5, rollAdjustment - 1) })} className="h-9 w-9 rounded-lg bg-slate-800 text-lg">−</button><div className="text-center"><div className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Roll Mode</div><div className="font-black text-violet-200">{rollAdjustment > 0 ? `${rollAdjustment}× Advantage` : rollAdjustment < 0 ? `${Math.abs(rollAdjustment)}× Disadvantage` : 'Normal'}</div></div><button type="button" onClick={() => updateBuild({ rollAdjustment: Math.min(5, rollAdjustment + 1) })} className="h-9 w-9 rounded-lg bg-violet-600 text-lg">+</button></div>
+          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/60 p-3"><button type="button" onClick={() => readOnly ? setPreviewRollAdjustment(Math.max(-5, rollAdjustment - 1)) : updateBuild({ rollAdjustment: Math.max(-5, rollAdjustment - 1) })} className="h-9 w-9 rounded-lg bg-slate-800 text-lg">−</button><div className="text-center"><div className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Roll Mode</div><div className="font-black text-violet-200">{rollAdjustment > 0 ? `${rollAdjustment}× Advantage` : rollAdjustment < 0 ? `${Math.abs(rollAdjustment)}× Disadvantage` : 'Normal'}</div></div><button type="button" onClick={() => readOnly ? setPreviewRollAdjustment(Math.min(5, rollAdjustment + 1)) : updateBuild({ rollAdjustment: Math.min(5, rollAdjustment + 1) })} className="h-9 w-9 rounded-lg bg-violet-600 text-lg">+</button></div>
           <div className="rounded-2xl border border-amber-400/20 bg-slate-950/60 p-3"><div className="mb-2 text-center text-[10px] font-bold uppercase tracking-[0.15em] text-amber-300">Inspiration Die • next roll</div><div className="grid grid-cols-6 gap-1">{([null, 4, 6, 8, 10, 12] as Array<number | null>).map((die) => <button type="button" key={die ?? 'none'} onClick={() => setInspirationDie(die)} className={`rounded-lg px-2 py-2 text-xs font-black ${inspirationDie === die ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>{die ? `d${die}` : 'None'}</button>)}</div></div>
         </div>
 
         {lastRoll && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-400/30 bg-violet-500/10 p-4"><div><span className="font-black text-violet-200">{lastRoll.label}</span><span className="ml-3 text-sm text-slate-400">Dice: {lastRoll.dice.join(', ')} • chosen {lastRoll.chosen} {lastRoll.modifier >= 0 ? '+' : '−'} {Math.abs(lastRoll.modifier)}{lastRoll.inspirationDie && lastRoll.inspirationRoll ? ` • Inspiration d${lastRoll.inspirationDie}: +${lastRoll.inspirationRoll}` : ''}</span></div><div className="text-3xl font-black text-white">{lastRoll.total}</div></div>}
 
         <main className={`${panelClass} min-h-[560px]`}>
-          {selectedTab === 'sheet-equipment' && <GoldBalanceControl currentGold={character.gold} onAdjust={(delta) => update({ gold: Math.max(0, Math.trunc((character.gold ?? 0) + delta)) })} description="Track coins carried by this character. Enter a transaction amount, then add or subtract it." />}
+          {selectedTab === 'sheet-equipment' && (readOnly ? <div className="mb-5 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4"><div className="text-[10px] font-black uppercase tracking-wider text-amber-300">Current Gold</div><div className="mt-1 text-2xl font-black text-amber-100">{character.gold ?? 0}</div></div> : <GoldBalanceControl currentGold={character.gold} onAdjust={(delta) => update({ gold: Math.max(0, Math.trunc((character.gold ?? 0) + delta)) })} description="Track coins carried by this character. Enter a transaction amount, then add or subtract it." />)}
           {selectedTab.startsWith('sheet-') && <CharacterSheetTabContent
             tab={selectedTab as RedesignedSheetTab}
             character={character}
@@ -2882,7 +2879,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character: storedCharac
 
           {selectedTab === 'equipment' && <div><div className="mb-6"><h2 className="font-black text-violet-200">Inventory & Equipped Gear</h2><p className="mt-1 text-sm text-slate-500">Add equipment from the main Equipment tab. Armor and hand limits are enforced when equipping.</p></div>{(character.inventoryItems?.length ?? 0) + character.equipment.length > 0 ? <div className="space-y-2">{(character.inventoryItems ?? []).map((inventory) => { const item = equipmentCatalog.find(({ id }) => id === inventory.equipmentID); if (!item) return <div key={inventory.id} className="rounded-lg border border-amber-400/20 bg-amber-500/5 p-3 text-amber-200">Missing catalog item: {inventory.equipmentID}</div>; return <Details key={inventory.id} title={item.name} subtitle={`${item.category} • ${item.subtype} • ${item.slot}${inventory.isEquipped ? ' • Equipped' : ''}`}><p className="font-semibold text-violet-200">{item.summary}</p><p className="mt-3">{item.mechanics}</p><div className="mt-4 flex flex-wrap items-center gap-2"><button type="button" onClick={() => update({ inventoryItems: setInventoryQuantity(character.inventoryItems ?? [], inventory.id, inventory.quantity - 1) })} className="h-8 w-8 rounded bg-slate-800">−</button><span className="font-black text-slate-200">Quantity {inventory.quantity}</span><button type="button" onClick={() => update({ inventoryItems: setInventoryQuantity(character.inventoryItems ?? [], inventory.id, inventory.quantity + 1) })} className="h-8 w-8 rounded bg-slate-800">+</button>{isEquipmentEquippable(item) && <button type="button" onClick={() => update({ inventoryItems: toggleInventoryEquipped(character.inventoryItems ?? [], inventory.id, equipmentCatalog) })} className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white">{inventory.isEquipped ? 'Stow' : 'Equip'}</button>}<button type="button" onClick={() => update({ inventoryItems: (character.inventoryItems ?? []).filter(({ id }) => id !== inventory.id) })} className="rounded-lg px-3 py-2 text-xs font-bold text-red-300">Remove</button></div></Details>; })}{character.equipment.map((item) => <div key={item.id} className="rounded-lg bg-slate-950/45 p-3 text-slate-300">{item.name} ×{item.quantity} <span className="text-xs text-slate-500">legacy item</span></div>)}</div> : <p className="text-slate-500">No equipment in inventory.</p>}</div>}
 
-          {selectedTab === 'notes' && <div className="grid gap-5 lg:grid-cols-[280px_1fr]"><aside><button type="button" onClick={() => updateBuild({ characterNotes: [...notes, { id: generateUUID(), title: 'New Note', body: '' }] })} className="mb-3 w-full rounded-xl bg-violet-600 px-4 py-3 font-black text-white">+ New Note</button><div className="space-y-2">{notes.map((note) => <div key={note.id} className="rounded-xl border border-white/10 bg-slate-950/45 p-3"><input value={note.title} onChange={(event) => updateNote({ ...note, title: event.target.value })} className={`${fieldClass} font-bold`} /><button type="button" onClick={() => updateBuild({ characterNotes: notes.filter(({ id }) => id !== note.id) })} className="mt-2 text-xs font-bold text-red-300">Delete note</button></div>)}</div></aside><section className="space-y-3">{notes.length === 0 ? <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center text-slate-500">Create named notes for session details, goals, NPCs, or reminders.</div> : notes.map((note) => <div key={note.id} className={panelClass}><h2 className="font-black text-violet-200">{note.title || 'Untitled Note'}</h2><textarea value={note.body} onChange={(event) => updateNote({ ...note, body: event.target.value })} rows={10} className={`${fieldClass} mt-3`} placeholder="Write your note…" /></div>)}</section></div>}
+          {selectedTab === 'notes' && (readOnly ? <div className="space-y-3">{notes.length === 0 ? <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center text-slate-500">No character notes are available.</div> : notes.map((note) => <article key={note.id} className={panelClass}><h2 className="font-black text-violet-200">{note.title || 'Untitled Note'}</h2><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{note.body || 'This note is empty.'}</p></article>)}</div> : <div className="grid gap-5 lg:grid-cols-[280px_1fr]"><aside><button type="button" onClick={() => updateBuild({ characterNotes: [...notes, { id: generateUUID(), title: 'New Note', body: '' }] })} className="mb-3 w-full rounded-xl bg-violet-600 px-4 py-3 font-black text-white">+ New Note</button><div className="space-y-2">{notes.map((note) => <div key={note.id} className="rounded-xl border border-white/10 bg-slate-950/45 p-3"><input value={note.title} onChange={(event) => updateNote({ ...note, title: event.target.value })} className={`${fieldClass} font-bold`} /><button type="button" onClick={() => updateBuild({ characterNotes: notes.filter(({ id }) => id !== note.id) })} className="mt-2 text-xs font-bold text-red-300">Delete note</button></div>)}</div></aside><section className="space-y-3">{notes.length === 0 ? <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center text-slate-500">Create named notes for session details, goals, NPCs, or reminders.</div> : notes.map((note) => <div key={note.id} className={panelClass}><h2 className="font-black text-violet-200">{note.title || 'Untitled Note'}</h2><textarea value={note.body} onChange={(event) => updateNote({ ...note, body: event.target.value })} rows={10} className={`${fieldClass} mt-3`} placeholder="Write your note…" /></div>)}</section></div>)}
         </main>
       </div>
     </div>

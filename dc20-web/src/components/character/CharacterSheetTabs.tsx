@@ -13,7 +13,6 @@ import type {
   EquipmentCategory,
   EquipmentSlot,
   Maneuver,
-  MasteryLevel,
   Monster,
   Spell,
 } from '../../types/models';
@@ -26,13 +25,11 @@ import {
   ATTRIBUTE_NAMES,
   BARBARIAN_RAGE_STATE,
   ancestryMechanicalProfile,
-  ancestryExpertise,
   ancestryTraitRulesTags,
   ancestryTraitSelectionCount,
   ancestryTraitSource,
   characterRestPoints,
   characterCombatTraining,
-  classTradeExpertise,
   characterSheetEffects,
   completeCharacterRest,
   druidWildFormProfile,
@@ -40,8 +37,6 @@ import {
   grantedClassLanguageLevels,
   grantedClassLanguageNames,
   masteryBonus,
-  masteryRank,
-  masteryTitle,
   MONK_ACTIVE_STANCE,
   MONK_ASTRAL_SELF_ACTIVE,
   MONK_COBRA_REVENGE,
@@ -55,9 +50,9 @@ import {
   monkMeleeHeavyHitDamageBonus,
   resetCharacterTurn,
   selectedAncestryTraits,
-  skillMasteryCap,
   sorcererWildMagicProfile,
 } from '../../utils/characterRules';
+import { sheetAttributeCheckProfile, sheetSkillCheckProfile, sheetTradeCheckProfile } from '../../utils/sheetCheckRules';
 import {
   addInventoryItem,
   consumeInventoryQuantity,
@@ -110,6 +105,13 @@ const panelClass = 'rounded-2xl border border-white/10 bg-slate-900/70 p-4 sm:p-
 const fieldClass = 'w-full rounded-lg border border-slate-600 bg-slate-950/70 px-3 py-2 text-slate-100 outline-none focus:border-violet-400';
 const conditions = ['Bleeding', 'Blinded', 'Burning', 'Charmed', 'Dazed', 'Deafened', 'Disoriented', 'Doomed', 'Exhaustion', 'Exposed', 'Frightened', 'Hindered', 'Impaired', 'Immobilized', 'Intimidated', 'Invisible', 'Paralyzed', 'Petrified', 'Poisoned', 'Prone', 'Restrained', 'Slowed', 'Stunned', 'Taunted', 'Terrified', 'Unconscious', 'Weakened'];
 const uniqueStrings = (values: string[]) => Array.from(new Set(values));
+const CombatRollContext = React.createContext<{
+  martialCheck: number;
+  spellCheck: number;
+  attackAndSpellAdjustment: number;
+  initiativeModifier: number;
+  initiativeAdjustment: number;
+} | null>(null);
 
 function MoreDetails({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -145,7 +147,7 @@ function CheckReferenceCard({ name, metadata, modifier, description, tone, suppl
   </div>;
 }
 
-export function CharacterRestControls({ character, onChange }: { character: Character; onChange: (character: Character) => void }) {
+export function CharacterRestControls({ character, onChange, readOnly = false }: { character: Character; onChange: (character: Character) => void; readOnly?: boolean }) {
   const [spend, setSpend] = useState(0);
   const [notice, setNotice] = useState('');
   const build = character.build;
@@ -154,6 +156,7 @@ export function CharacterRestControls({ character, onChange }: { character: Char
   const shortRestsTaken = Math.max(0, build.shortRestsTaken ?? 0);
   const maximumSpend = Math.min(restPoints, Math.max(0, character.maxHealthPoints - character.healthPoints));
   const selectedSpend = Math.min(maximumSpend, Math.max(0, spend));
+  if (readOnly) return <div className="mt-3 rounded-xl border border-emerald-400/20 bg-emerald-950/20 p-3"><div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">Rest Points</div><div className="mt-1 text-xl font-black text-emerald-100">{restPoints} / {character.maxHealthPoints}</div><p className="mt-1 text-xs text-slate-500">Rest and turn controls are managed by the character’s player.</p></div>;
   const setRestPoints = (value: number) => onChange({ ...character, build: { ...build, restPoints: Math.min(character.maxHealthPoints, Math.max(0, value)) } });
   const rest = (type: 'Quick' | 'Short' | 'Long') => {
     const before = character;
@@ -489,61 +492,6 @@ function ChecksTab({ character, reference, equipmentCatalog, equipmentModifiers,
   const build = character.build;
   const wildForm = druidWildFormProfile(character);
   const meditationSkill = character.class === 'Monk' ? build?.sheetFeatureSelections[MONK_MEDITATION_SKILL] : undefined;
-  const monkStance = character.class === 'Monk' && build?.sheetFeatureStates[MONK_STANCE_ACTIVE]
-    ? build.sheetFeatureSelections[MONK_ACTIVE_STANCE] : '';
-  const attributeModifier = (attribute: DC20Attribute) => wildForm.active && attribute === 'Might' ? wildForm.might
-    : wildForm.active && attribute === 'Agility' ? wildForm.agility : character.attributes[attribute].modifier;
-  const ancestryMasteryIncreases = wildForm.active ? { skills: {}, trades: {} } : ancestryExpertise(character, selectedTraits);
-  const classMasteryIncreases = wildForm.active ? {} : classTradeExpertise(character);
-  const expertise = {
-    skills: ancestryMasteryIncreases.skills,
-    trades: Object.fromEntries(Array.from(new Set([
-      ...Object.keys(ancestryMasteryIncreases.trades),
-      ...Object.keys(classMasteryIncreases),
-    ])).map((name) => [name, Math.max(ancestryMasteryIncreases.trades[name] ?? 0, classMasteryIncreases[name] ?? 0)])),
-  };
-  const skillModifier = (name: string, mastery: MasteryLevel) => {
-    const skill = reference?.skills.find(({ name: candidate }) => candidate === name);
-    const skillAttribute = skill?.attribute as DC20Attribute | 'Prime' | undefined;
-    const attribute = skillAttribute === 'Prime' ? character.primeModifier
-      : skillAttribute ? attributeModifier(skillAttribute) : 0;
-    const baseRank = masteryRank(mastery);
-    const cap = skillMasteryCap(character);
-    const wildFormIncrease = wildForm.active && wildForm.skillMasteries.includes(name) && baseRank < cap ? 1 : 0;
-    const meditationIncrease = !wildForm.active && meditationSkill === name && baseRank + (expertise.skills[name] ?? 0) + wildFormIncrease < cap ? 1 : 0;
-    const equipmentIncrease = baseRank < cap ? equipmentModifiers.skillMasteryIncreases[name] ?? 0 : 0;
-    const equipmentBonus = baseRank >= cap ? equipmentModifiers.skillBonusesAtCap[name] ?? 0 : 0;
-    return attribute + masteryBonus(masteryTitle(baseRank + (expertise.skills[name] ?? 0) + wildFormIncrease + meditationIncrease + equipmentIncrease))
-      + equipmentBonus + equipmentModifiers.allCheckBonus + (equipmentModifiers.skillBonuses[name] ?? 0);
-  };
-  const effectiveSkillMastery = (name: string, mastery: MasteryLevel) => {
-    const baseRank = masteryRank(mastery);
-    const cap = skillMasteryCap(character);
-    const increase = wildForm.active && wildForm.skillMasteries.includes(name) && baseRank < cap ? 1 : 0;
-    const meditationIncrease = !wildForm.active && meditationSkill === name && baseRank + (expertise.skills[name] ?? 0) + increase < cap ? 1 : 0;
-    const equipmentIncrease = baseRank < cap ? equipmentModifiers.skillMasteryIncreases[name] ?? 0 : 0;
-    return masteryTitle(baseRank + (expertise.skills[name] ?? 0) + increase + meditationIncrease + equipmentIncrease);
-  };
-  const skillAdjustment = (name: string) => {
-    const atCap = masteryRank(character.skillMasteries[name] ?? 'Untrained') >= skillMasteryCap(character);
-    const skillfulAdvantage = Number(wildForm.active && wildForm.skillMasteries.includes(name) && atCap);
-    const gearAdjustment = !wildForm.active && reference?.skills.find(({ name: candidate }) => candidate === name)?.attribute === 'Agility'
-      ? equipmentModifiers.agilityCheckDisadvantage : 0;
-    return skillfulAdvantage + gearAdjustment + Number(monkStance === 'Gazelle Stance' && name === 'Acrobatics');
-  };
-  const tradeAttributes = (name: string) => (reference?.trades.find(({ name: candidate }) => candidate === name)?.attribute ?? '')
-    .split(/, | or /).filter((attribute) => ATTRIBUTE_NAMES.includes(attribute as DC20Attribute));
-  const tradeModifier = (name: string, mastery: MasteryLevel) => {
-    const attribute = Math.max(0, ...tradeAttributes(name).map((candidate) => attributeModifier(candidate as DC20Attribute)));
-    return attribute + masteryBonus(masteryTitle(masteryRank(mastery) + (expertise.trades[name] ?? 0)))
-      + equipmentModifiers.allCheckBonus + (equipmentModifiers.tradeBonuses[name] ?? 0);
-  };
-  const tradeAdjustment = (name: string) => {
-    const attributes = tradeAttributes(name);
-    const best = Math.max(...attributes.map((attribute) => attributeModifier(attribute as DC20Attribute) ?? -Infinity));
-    const nonAgilityTie = attributes.some((attribute) => attribute !== 'Agility' && attributeModifier(attribute as DC20Attribute) === best);
-    return !wildForm.active && attributes.includes('Agility') && !nonAgilityTie ? equipmentModifiers.agilityCheckDisadvantage : 0;
-  };
   const carriedToolTrades = new Set((character.inventoryItems ?? []).flatMap(({ equipmentID, quantity }) => quantity > 0
     ? equipmentCatalog.filter(({ id, category }) => id === equipmentID && category === EquipmentCategoryValues.TRADE_TOOLS).flatMap(({ properties }) => properties.slice(0, 1))
     : []));
@@ -559,15 +507,14 @@ function ChecksTab({ character, reference, equipmentCatalog, equipmentModifiers,
   })).sort((left, right) => left.group.localeCompare(right.group) || left.name.localeCompare(right.name));
   const ancestryMechanics = ancestryMechanicalProfile(character, reference?.ancestryTraits ?? []);
   const passiveChecks = ['Awareness', 'Insight', 'Investigation'].map((name) => {
-    const mastery = character.skillMasteries[name] ?? 'Untrained';
-    const modifier = skillModifier(name, mastery);
+    const modifier = sheetSkillCheckProfile(character, name, reference, equipmentModifiers, selectedTraits).modifier;
     return { name, modifier, passive: 10 + modifier };
   });
 
   return <div className="space-y-5">
     <section className={panelClass}><SectionHeading eyebrow="Background" title={build?.backgroundName || character.background || 'Unnamed Background'} /><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">{build?.backgroundStory || 'No background story has been written yet.'}</p></section>
     {wildForm.active && <section className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-xs leading-5 text-emerald-100"><strong>Wild Form:</strong> Might and Agility use the Wild Form Stat Block. Ancestry Traits and ordinary equipment are inactive; Skillful selections are applied below.</section>}
-    <section><div className="mb-3 flex flex-wrap items-end justify-between gap-2"><SectionHeading eyebrow="Core Checks" title="Attributes" />{!wildForm.active && equipmentModifiers.agilityCheckDisadvantage < 0 && <span className="rounded-full bg-rose-500/10 px-3 py-1 text-xs font-bold text-rose-200">Heavy gear: {Math.abs(equipmentModifiers.agilityCheckDisadvantage)}× Agility DisADV</span>}</div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{ATTRIBUTE_NAMES.map((attribute) => { const modifier = attributeModifier(attribute) + equipmentModifiers.allCheckBonus; const adjustment = !wildForm.active && attribute === 'Agility' ? equipmentModifiers.agilityCheckDisadvantage : 0; return <button type="button" key={attribute} onClick={() => onRoll(`${attribute} Check`, modifier, adjustment)} className="rounded-xl border border-white/10 bg-slate-950/45 p-4 text-left hover:border-violet-400/40 hover:bg-violet-500/10"><div className="text-xs text-slate-500">{attribute}</div><div className="text-2xl font-black text-violet-200">{modifier >= 0 ? '+' : ''}{modifier}</div><div className="text-xs text-violet-300">Roll check</div>{wildForm.active && ['Might', 'Agility'].includes(attribute) && <div className="mt-1 text-[10px] font-bold text-emerald-300">Wild Form statistic</div>}{adjustment < 0 && <div className="mt-1 text-[10px] font-bold text-rose-300">{Math.abs(adjustment)}× gear DisADV</div>}</button>; })}</div></section>
+    <section><div className="mb-3 flex flex-wrap items-end justify-between gap-2"><SectionHeading eyebrow="Core Checks" title="Attributes" />{!wildForm.active && equipmentModifiers.agilityCheckDisadvantage < 0 && <span className="rounded-full bg-rose-500/10 px-3 py-1 text-xs font-bold text-rose-200">Heavy gear: {Math.abs(equipmentModifiers.agilityCheckDisadvantage)}× Agility DisADV</span>}</div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{ATTRIBUTE_NAMES.map((attribute) => { const { modifier, adjustment } = sheetAttributeCheckProfile(character, attribute, equipmentModifiers); return <button type="button" key={attribute} onClick={() => onRoll(`${attribute} Check`, modifier, adjustment)} className="rounded-xl border border-white/10 bg-slate-950/45 p-4 text-left hover:border-violet-400/40 hover:bg-violet-500/10"><div className="text-xs text-slate-500">{attribute}</div><div className="text-2xl font-black text-violet-200">{modifier >= 0 ? '+' : ''}{modifier}</div><div className="text-xs text-violet-300">Roll check</div>{wildForm.active && ['Might', 'Agility'].includes(attribute) && <div className="mt-1 text-[10px] font-bold text-emerald-300">Wild Form statistic</div>}{adjustment < 0 && <div className="mt-1 text-[10px] font-bold text-rose-300">{Math.abs(adjustment)}× gear DisADV</div>}</button>; })}</div></section>
 
     <section className={panelClass}><SectionHeading eyebrow="Automatic Observation" title="Passive Checks" tone="text-emerald-300" /><p className="mt-1 text-xs text-slate-500">Each passive score is 10 + the Skill’s current total bonus, including active equipment and Mastery effects.</p><div className="mt-4 grid gap-3 sm:grid-cols-3">{passiveChecks.map(({ name, modifier, passive }) => <div key={name} className="rounded-xl border border-emerald-400/10 bg-emerald-500/[0.06] p-4"><div className="text-xs font-bold text-slate-400">Passive {name}</div><div className="mt-1 text-2xl font-black text-emerald-200">{passive}</div><div className="text-[10px] text-slate-500">10 {modifier >= 0 ? '+' : '−'} {Math.abs(modifier)} current bonus</div></div>)}</div></section>
 
@@ -579,15 +526,11 @@ function ChecksTab({ character, reference, equipmentCatalog, equipmentModifiers,
           <h3 className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">{group.name}</h3>
           <div className="grid gap-2 md:grid-cols-2">{group.options.map((name) => {
             const skill = reference?.skills.find(({ name: candidate }) => candidate === name);
-            const mastery = character.skillMasteries[name] ?? 'Untrained';
-            const effectiveMastery = effectiveSkillMastery(name, mastery);
-            const modifier = skillModifier(name, mastery);
-            const adjustment = skillAdjustment(name);
-            const magicItemBonus = masteryRank(mastery) >= skillMasteryCap(character) ? equipmentModifiers.skillBonusesAtCap[name] ?? 0 : 0;
+            const { effectiveMastery, modifier, adjustment, magicItemBonusAtCap, magicItemMasteryIncrease } = sheetSkillCheckProfile(character, name, reference, equipmentModifiers, selectedTraits);
             return <CheckReferenceCard
               key={name}
               name={name}
-              metadata={`${effectiveMastery} (+${masteryBonus(effectiveMastery)})${magicItemBonus ? ` • Magic Item +${magicItemBonus}` : equipmentModifiers.skillMasteryIncreases[name] ? ' • Magic Item Mastery' : ''}`}
+              metadata={`${effectiveMastery} (+${masteryBonus(effectiveMastery)})${magicItemBonusAtCap ? ` • Magic Item +${magicItemBonusAtCap}` : magicItemMasteryIncrease ? ' • Magic Item Mastery' : ''}`}
               modifier={modifier}
               description={skill?.description ?? 'No description is available for this Skill.'}
               tone="violet"
@@ -605,10 +548,7 @@ function ChecksTab({ character, reference, equipmentCatalog, equipmentModifiers,
       {tradesOpen && <div className="space-y-5">{(reference?.tradeGroups ?? []).map((group) => <div key={group.name}>
         <h3 className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">{group.name}</h3>
         <div className="grid gap-2 md:grid-cols-2">{group.options.map((name) => {
-          const mastery = character.tradeMasteries[name] ?? 'Untrained';
-          const modifier = tradeModifier(name, mastery);
-          const adjustment = tradeAdjustment(name);
-          const attributes = tradeAttributes(name).join(' or ');
+          const { modifier, adjustment, effectiveMastery, attributes } = sheetTradeCheckProfile(character, name, reference, equipmentModifiers, selectedTraits);
           const trade = reference?.trades.find(({ name: candidate }) => candidate === name);
           const toolRequired = Boolean(trade?.tool && trade.tool !== 'None');
           const toolReady = carriedToolTrades.has(name);
@@ -616,7 +556,7 @@ function ChecksTab({ character, reference, equipmentCatalog, equipmentModifiers,
           return <CheckReferenceCard
             key={name}
             name={name}
-            metadata={`${attributes} • ${mastery} (+${masteryBonus(mastery)})`}
+            metadata={`${attributes.join(' or ')} • ${effectiveMastery} (+${masteryBonus(effectiveMastery)})`}
             modifier={modifier}
             description={trade?.description ?? 'No description is available for this Trade.'}
             tone="fuchsia"
@@ -638,6 +578,7 @@ function NaturalWeaponAttackCard({ character, traits, onChange, onRoll }: {
   onChange: CharacterSheetTabContentProps['onChange'];
   onRoll: CharacterSheetTabContentProps['onRoll'];
 }) {
+  const combatRolls = React.useContext(CombatRollContext);
   const build = character.build;
   const naturalWeapon = traits.find(({ name }) => name === 'Natural Weapon');
   const [ranged, setRanged] = useState(false);
@@ -656,7 +597,7 @@ function NaturalWeaponAttackCard({ character, traits, onChange, onRoll }: {
   const available = resource === 'AP' ? character.currentAP : character.stamina;
   const rollAttack = () => {
     if (resourceCost > available) return;
-    onRoll(`Natural Weapon Martial Attack • 1 ${damageType} damage${rend ? ' • Rend: failed Physical Save causes Bleeding' : ''}${has('Venomous Natural Weapon') ? ` • failed Physical Save DC ${character.saveDC ?? 10 + character.primeModifier + character.combatMastery} causes Impaired` : ''}${styleEnhancement && style ? ` • ${style} Enhancement: ${WEAPON_ENHANCEMENTS[style]}` : ''}`, character.primeModifier + character.combatMastery, Number(retractableAdvantage) + Number(fastReflexAdvantage));
+    onRoll(`Natural Weapon Martial Attack • 1 ${damageType} damage${rend ? ' • Rend: failed Physical Save causes Bleeding' : ''}${has('Venomous Natural Weapon') ? ` • failed Physical Save DC ${character.saveDC ?? 10 + character.primeModifier + character.combatMastery} causes Impaired` : ''}${styleEnhancement && style ? ` • ${style} Enhancement: ${WEAPON_ENHANCEMENTS[style]}` : ''}`, combatRolls?.martialCheck ?? character.primeModifier + character.combatMastery, (combatRolls?.attackAndSpellAdjustment ?? 0) + Number(retractableAdvantage) + Number(fastReflexAdvantage));
     onChange({
       ...(resource === 'AP' ? { currentAP: character.currentAP - resourceCost } : { stamina: character.stamina - resourceCost }),
       build: { ...build, sheetFeatureStates: { ...states, 'ancestry.retractableNaturalWeapon.used': true, 'ancestry.fastReflexes.firstAttackUsed': true } },
@@ -743,6 +684,7 @@ function AncestryActionControls({ character, traits, onChange, onRoll }: {
   onChange: CharacterSheetTabContentProps['onChange'];
   onRoll: CharacterSheetTabContentProps['onRoll'];
 }) {
+  const combatRolls = React.useContext(CombatRollContext);
   const [determinationRoll, setDeterminationRoll] = useState('Martial Check');
   const [notice, setNotice] = useState('');
   const build = character.build;
@@ -763,7 +705,8 @@ function AncestryActionControls({ character, traits, onChange, onRoll }: {
   };
   const modifierFor = (name: string) => name === 'Angelic Insight'
     ? character.attributes.Charisma.modifier + masteryBonus(character.skillMasteries.Insight ?? 'Untrained')
-    : character.primeModifier + character.combatMastery;
+    : determinationRoll === 'Spell Check' ? combatRolls?.spellCheck ?? character.primeModifier + character.combatMastery
+      : combatRolls?.martialCheck ?? character.primeModifier + character.combatMastery;
   const activateTrait = (trait: AncestryTrait) => {
     const [ap, mp] = actionCosts[trait.name] ?? [0, 0];
     const key = stateKey(trait.name);
@@ -779,7 +722,7 @@ function AncestryActionControls({ character, traits, onChange, onRoll }: {
       : trait.name === 'Angelic Insight' ? 'Insight Check'
         : ['Healing Touch', 'Blinding Light', 'Charming Gaze', 'Telepathic Link'].includes(trait.name) ? `${trait.name} Spell Check`
           : ['Intimidating Shout', 'Shoot Webs'].includes(trait.name) ? `${trait.name} Attack Check` : '';
-    if (rollLabel) onRoll(rollLabel, modifierFor(trait.name), Number(['Human Determination', 'Angelic Insight'].includes(trait.name)));
+    if (rollLabel) onRoll(rollLabel, modifierFor(trait.name), Number(['Human Determination', 'Angelic Insight'].includes(trait.name)) + Number(trait.name === 'Human Determination' && determinationRoll === 'Spell Check' ? combatRolls?.attackAndSpellAdjustment ?? 0 : 0));
     onChange({
       currentAP: character.currentAP - ap,
       manaPoints: character.manaPoints - mp,
@@ -802,7 +745,7 @@ function AncestryActionControls({ character, traits, onChange, onRoll }: {
     setNotice('Ancestry uses refreshed for a new Combat or Initiative roll. Long-Rest-only uses remain spent.');
   };
   const rollInitiative = () => {
-    onRoll('Initiative Check', character.attributes.Agility.modifier + character.combatMastery, Number(hasFastReflexes));
+    onRoll('Initiative Check', combatRolls?.initiativeModifier ?? character.attributes.Agility.modifier + character.combatMastery, (combatRolls?.initiativeAdjustment ?? 0) + Number(hasFastReflexes));
     const refreshedStates: Record<string, boolean> = { ...states, 'ancestry.fastReflexes.firstAttackUsed': false, 'ancestry.retractableNaturalWeapon.used': false, 'ancestry.dyingBreath.used': false };
     [...oncePerCombat, ...longRestOrInitiative].forEach((name) => { refreshedStates[stateKey(name)] = false; });
     onChange({ build: { ...build, sheetFeatureStates: refreshedStates, sheetFeatureCounters: { ...build.sheetFeatureCounters, 'ancestry.draconicBreath.usesSpent': 0 } } });
@@ -855,6 +798,7 @@ function CombatTab({ character, training, modifiers, equipmentCatalog, knownSpel
   const spellCheck = baseCheck + (wildForm.active ? 0 : modifiers.spellCheckBonus);
   const spellAttack = baseCheck + (wildForm.active ? 0 : modifiers.spellAttackBonus);
   const attackAndSpellAdjustment = wildForm.active ? 0 : modifiers.attackAndSpellDisadvantage;
+  const initiativeCheck = sheetAttributeCheckProfile(character, 'Agility', modifiers);
   const equippedWeapons = (character.inventoryItems ?? []).filter(({ isEquipped }) => isEquipped).flatMap((inventory) => equipmentCatalog.filter(({ id, category }) => id === inventory.equipmentID && category === EquipmentCategoryValues.WEAPONS).map((item) => ({ inventory, item })));
   const equippedShields = (character.inventoryItems ?? []).filter(({ isEquipped }) => isEquipped).flatMap((inventory) => equipmentCatalog.filter(({ id, category }) => id === inventory.equipmentID && category === EquipmentCategoryValues.SHIELDS).map((item) => ({ inventory, item })));
   const equippedNets = (character.inventoryItems ?? []).filter(({ isEquipped }) => isEquipped).flatMap((inventory) => equipmentCatalog.filter(({ id, name }) => id === inventory.equipmentID && name === 'Net').map((item) => ({ inventory, item })));
@@ -910,7 +854,7 @@ function CombatTab({ character, training, modifiers, equipmentCatalog, knownSpel
     ] as Array<[string, string | number, number | null]> : []),
   ];
 
-  return <div className="space-y-5">
+  return <CombatRollContext.Provider value={{ martialCheck, spellCheck, attackAndSpellAdjustment, initiativeModifier: initiativeCheck.modifier + character.combatMastery, initiativeAdjustment: initiativeCheck.adjustment }}><div className="space-y-5">
     <section className={panelClass}>
       <SectionHeading eyebrow="At a Glance" title="Combat Reference" />
       {wildForm.active && <div className="mt-3 rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-3 text-xs leading-5 text-emerald-100"><strong>Wild Form active:</strong> {wildForm.size} {wildForm.creatureType} • {wildForm.currentHP}/{wildForm.maximumHP} Wild Form HP • PDR {wildForm.physicalDamageReduction ? 1 : 0} • EDR {wildForm.elementalDamageReduction ? 1 : 0} • MDR 0. Ancestry Traits and ordinary equipment are inactive.{wildForm.beastTraits.length > 0 ? ` Wild Form Beast Traits: ${wildForm.beastTraits.join(', ')}.` : ''}</div>}
@@ -942,7 +886,7 @@ function CombatTab({ character, training, modifiers, equipmentCatalog, knownSpel
     {wildForm.active
       ? <section className="rounded-2xl border border-emerald-400/20 bg-emerald-950/15 p-4 text-sm leading-6 text-emerald-100"><strong>Spells & Maneuvers unavailable in Wild Form.</strong> Your Druid Class Features, Druid Subclass Features, and Druid Talents remain available in the live controls above.</section>
       : <section className={panelClass}><SectionHeading eyebrow="Powers" title="Spells & Maneuvers" tone="text-fuchsia-300" /><p className="mt-1 text-sm text-slate-500">Open only the list you need during combat. Equipped focus properties are applied to the rolls and range reminders below; using a power spends its audited base AP, MP, and SP cost.</p><div className="mt-4 space-y-3"><details className="group rounded-xl border border-fuchsia-400/15 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-center justify-between"><span className="font-black text-fuchsia-200">Spells</span><span className="text-xs font-bold text-fuchsia-200">{knownSpells.length} • <span className="group-open:hidden">Expand</span><span className="hidden group-open:inline">Collapse</span></span></summary><div className="mt-3 space-y-2">{knownSpells.length === 0 ? <p className="text-sm text-slate-500">No spells known.</p> : knownSpells.map((spell) => { const ancestryGrant = ancestryGrantedSpells.find(({ name }) => name === spell.name); return <MoreDetails key={spell.id} title={spell.name} subtitle={[spell.source, spell.school, spell.cost, spell.range, ancestryGrant ? `Ancestry • ${ancestryGrant.traitName}` : grantedSpells.includes(spell.name) ? 'Granted by class feature' : ''].filter(Boolean).join(' • ')}>{ancestryGrant && <div className="mb-4 rounded-lg border border-emerald-400/15 bg-emerald-500/10 p-3 text-xs leading-5 text-emerald-100"><strong>{ancestryGrant.traitName}:</strong> {ancestryGrant.traitDescription}</div>}<PowerRulesText text={spell.description} />{spell.enhancements && <div className="mt-5"><h4 className="mb-3 font-black text-slate-300">Enhancements</h4><PowerRulesText text={spell.enhancements} enhancements /></div>}<SpellRollControl spell={spell} character={character} spellCheck={spellCheck} spellAttack={spellAttack} modifiers={modifiers} prone={prone} onChange={onChange} onRoll={onRoll} /></MoreDetails>; })}</div></details><details className="group rounded-xl border border-violet-400/15 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-center justify-between"><span className="font-black text-violet-200">Maneuvers</span><span className="text-xs font-bold text-violet-200">{knownManeuvers.length} • <span className="group-open:hidden">Expand</span><span className="hidden group-open:inline">Collapse</span></span></summary><div className="mt-3 space-y-2">{knownManeuvers.length === 0 ? <p className="text-sm text-slate-500">No maneuvers known.</p> : knownManeuvers.map((maneuver) => <MoreDetails key={maneuver.id} title={maneuver.name} subtitle={[maneuver.category ?? maneuver.type, maneuver.cost, maneuver.range, grantedManeuvers.includes(maneuver.name) ? 'Granted by class feature' : ''].filter(Boolean).join(' • ')}><PowerRulesText text={maneuver.description} />{maneuver.enhancements && <div className="mt-5"><h4 className="mb-3 font-black text-slate-300">Enhancements</h4><PowerRulesText text={maneuver.enhancements} enhancements /></div>}<ManeuverRollControl maneuver={maneuver} character={character} martialCheck={martialCheck} modifiers={modifiers} prone={prone} onChange={onChange} onRoll={onRoll} /></MoreDetails>)}</div></details></div></section>}
-  </div>;
+  </div></CombatRollContext.Provider>;
 }
 
 function FeaturesTab({ character, classReference, reference, selectedTraits, training, readOnly, onChange }: {
@@ -1309,7 +1253,7 @@ function SourceConsumableActions({ character, entry, item, inventory, badger, sp
   </div>;
 }
 
-function EquipmentTab({ character, equipmentCatalog, onChange, onRoll }: { character: Character; equipmentCatalog: EquipmentCatalogItem[]; onChange: CharacterSheetTabContentProps['onChange']; onRoll: CharacterSheetTabContentProps['onRoll'] }) {
+function EquipmentTab({ character, equipmentCatalog, medicineModifier, readOnly = false, onChange, onRoll }: { character: Character; equipmentCatalog: EquipmentCatalogItem[]; medicineModifier: number; readOnly?: boolean; onChange: CharacterSheetTabContentProps['onChange']; onRoll: CharacterSheetTabContentProps['onRoll'] }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<EquipmentCategory | 'All' | 'Custom Items'>('All');
   const [notice, setNotice] = useState('');
@@ -1389,9 +1333,7 @@ function EquipmentTab({ character, equipmentCatalog, onChange, onRoll }: { chara
     if (remaining <= 0) { setNotice('The Medicine Kit is empty. Resupply it before treating a creature.'); return; }
     if (character.currentAP < 1) { setNotice('Treating with a Medicine Kit requires 1 AP for the Object Action.'); return; }
     onChange({ currentAP: character.currentAP - 1, inventoryItems: spendInventoryUse(inventory, entry.id) });
-    const mastery = character.skillMasteries.Medicine ?? 'Untrained';
-    const modifier = character.attributes.Intelligence.modifier + masteryBonus(mastery);
-    onRoll(treatment === 'Wound' ? 'Medicine Kit — Treat Wound (DC 10)' : 'Medicine Kit — Treat Poison or Disease (effect DC)', modifier);
+    onRoll(treatment === 'Wound' ? 'Medicine Kit — Treat Wound (DC 10)' : 'Medicine Kit — Treat Poison or Disease (effect DC)', medicineModifier);
     setNotice(treatment === 'Wound'
       ? 'Spent 1 Medicine Kit use. Success restores 1 HP, +1 per Success (each 5), but not above Bloodied.'
       : 'Spent 1 Medicine Kit use. Success cures one Basic Poison or Disease; Success (each 5) also restores +1 HP.');
@@ -1415,6 +1357,10 @@ function EquipmentTab({ character, equipmentCatalog, onChange, onRoll }: { chara
     });
     setNotice(`${item.name} ${entry.isEquipped ? 'stowed' : `equipped${item.requiresAttunement ? ' and Attuned' : ''}`}${actionPointCost ? ` for ${actionPointCost} AP` : ''}.`);
   };
+  // TypeScript cannot correlate the independently derived remaining-use value with the
+  // optional capacity inside this compact read-only inventory renderer.
+  // @ts-expect-error useCapacity is present whenever remainingUses is present.
+  if (readOnly) return <div><div className="mb-6"><SectionHeading eyebrow="Carried Gear" title="Inventory & Equipped Gear" /><p className="mt-1 text-sm text-slate-500">This inventory is read only. Equipment state and consumable uses are managed by the character’s player.</p></div>{inventory.length + character.equipment.length > 0 ? <div className="space-y-2">{inventory.map((entry) => { const item = equipmentCatalog.find(({ id }) => id === entry.equipmentID); if (!item) return <div key={entry.id} className="rounded-lg border border-amber-400/20 bg-amber-500/5 p-3 text-amber-200">Missing catalog item: {entry.equipmentID}</div>; const useCapacity = equipmentUseCapacity(item); const remainingUses = useCapacity === undefined ? undefined : entry.remainingUses ?? entry.quantity * useCapacity; return <MoreDetails key={entry.id} title={item.name} subtitle={`${item.category} • ${item.subtype} • ${item.slot}${entry.isEquipped ? ' • Equipped' : ' • Unequipped'}${entry.isAttuned ? ' • Attuned' : ''}${remainingUses !== undefined ? ` • ${remainingUses}/${entry.quantity * useCapacity} ${equipmentUsageLabel(item)}` : ''}`}><p className="whitespace-pre-wrap font-semibold text-violet-200">{item.summary}</p><p className="mt-3 whitespace-pre-wrap">{item.mechanics}</p><p className="mt-3 text-xs font-bold text-slate-400">Quantity {entry.quantity}</p></MoreDetails>; })}{character.equipment.map((item) => <div key={item.id} className="rounded-lg bg-slate-950/45 p-3 text-slate-300">{item.name} ×{item.quantity} <span className="text-xs text-slate-500">legacy item</span></div>)}</div> : <p className="text-slate-500">No equipment in inventory.</p>}</div>;
   return <div><TrackedEquipmentEffects character={character} onChange={onChange} setNotice={setNotice} /><div className="mb-6"><SectionHeading eyebrow="Carried Gear" title="Inventory & Equipped Gear" /><p className="mt-1 text-sm text-slate-500">Add items here or from the main Equipment directory. New items enter your inventory unequipped; armor and hand limits are enforced when equipping.</p></div><details ref={catalogDetailsRef} className="group mb-6 rounded-2xl border border-violet-400/20 bg-slate-950/45 p-4"><summary className="flex cursor-pointer list-none items-center justify-between gap-3"><span className="font-black text-violet-100">+ Add Equipment</span><span className="flex items-center gap-3"><button type="button" onClick={openCustomItemForm} className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-xs font-bold text-violet-200 hover:bg-violet-500/20">+ Add Custom Item</button><span className="text-xs font-bold text-violet-300 group-open:hidden">Open catalog</span><span className="hidden text-xs font-bold text-violet-300 group-open:inline">Close catalog</span></span></summary><div className="mt-4 border-t border-white/5 pt-4">{showCustomItemForm && <div className="mb-4 rounded-xl border border-violet-400/20 bg-violet-500/5 p-3"><h3 className="text-sm font-black text-violet-200">Create Custom Item</h3><label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Name<input value={customItemName} onChange={(event) => setCustomItemName(event.target.value)} className={`${fieldClass} mt-1 w-full`} placeholder="Item name" /></label><label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Item Highlight (optional)<input value={customItemHighlight} onChange={(event) => setCustomItemHighlight(event.target.value)} className={`${fieldClass} mt-1 w-full`} placeholder="A short standout detail…" /></label><label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Description<textarea value={customItemDescription} onChange={(event) => setCustomItemDescription(event.target.value)} className={`${fieldClass} mt-1 min-h-20 w-full resize-y`} placeholder="What the item is or does…" /></label><div className="mt-3 grid grid-cols-2 gap-3"><label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Category<select value={customItemCategory} onChange={(event) => setCustomItemCategory(event.target.value as EquipmentCategory)} className={`${fieldClass} mt-1 w-full`}>{Object.values(EquipmentCategoryValues).map((value) => <option key={value} value={value}>{value}</option>)}</select></label><label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Slot<select value={customItemSlot} onChange={(event) => setCustomItemSlot(event.target.value as EquipmentSlot)} className={`${fieldClass} mt-1 w-full`}>{Object.values(EquipmentSlotValues).map((value) => <option key={value} value={value}>{value}</option>)}</select></label></div><PillMultiSelect label="Properties" hint="Some Properties apply automatic effects — e.g. Weapons: Guard; Spell Focuses: Channeling, Vicious, Powerful, Protective, Warded." options={propertyOptions} selected={customItemProperties} onToggle={(value) => setCustomItemProperties((current) => toggleValue(current, value))} /><PillMultiSelect label="Routed-Character Sheet Effects" hint="Applies while the item is equipped, no matter its Category." options={routedEffectOptions} selected={customItemRoutedEffects} onToggle={(value) => setCustomItemRoutedEffects((current) => toggleValue(current, value))} tone="emerald" /><div className="mt-3 flex justify-end gap-2"><button type="button" onClick={() => setShowCustomItemForm(false)} className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-300">Cancel</button><button type="button" disabled={!customItemName.trim()} onClick={createCustomItem} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-35">Create &amp; Add to Inventory</button></div></div>}<div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]"><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} className={fieldClass} placeholder="Search names, types, properties, or uses…" /><select value={category} onChange={(event) => setCategory(event.target.value as EquipmentCategory | 'All' | 'Custom Items')} className={fieldClass}><option value="All">All categories</option>{Object.values(EquipmentCategoryValues).map((value) => <option key={value} value={value}>{value}</option>)}<option value="Custom Items">Custom Items</option></select></div>{notice && <p className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200" role="status">{notice}</p>}<div className="mt-4 grid max-h-[28rem] gap-3 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">{filtered.map((item) => <div key={item.id} className="rounded-xl border border-white/10 bg-slate-900/75 p-3"><div className="flex items-start justify-between gap-2"><div><h3 className="font-black text-slate-100">{item.name}</h3><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">{item.category} • {item.subtype}</p></div><span className="rounded-full bg-slate-800 px-2 py-1 text-[10px] font-bold text-slate-300">{item.slot}</span></div><p className="mt-3 whitespace-pre-wrap text-xs leading-5 text-slate-400">{item.summary}</p><div className="mt-3 flex gap-2"><button type="button" onClick={() => addItem(item)} className="flex-1 rounded-lg bg-violet-700 px-3 py-2 text-xs font-black text-white hover:bg-violet-600">Add Unequipped</button>{customItemIDs.has(item.id) && <button type="button" onClick={() => { if (window.confirm(`Permanently delete ${item.name}? It will also be removed from every character's inventory.`)) removeCustomEquipment(item.id); }} className="rounded-lg border border-red-400/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-300 hover:bg-red-500/20">Delete</button>}</div></div>)}</div>{filtered.length === 0 && <p className="mt-4 rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">No equipment matches those filters.</p>}</div></details>{inventory.length + character.equipment.length > 0 ? <div className="space-y-2">{inventory.map((entry) => { const item = equipmentCatalog.find(({ id }) => id === entry.equipmentID); if (!item) return <div key={entry.id} className="rounded-lg border border-amber-400/20 bg-amber-500/5 p-3 text-amber-200">Missing catalog item: {entry.equipmentID}</div>; const potionHealing = healingPotionAmount(item); const useCapacity = equipmentUseCapacity(item); const usageLabel = equipmentUsageLabel(item); const medicineUses = item.name === 'Medicine Kit' ? entry.remainingUses ?? entry.quantity * 5 : undefined; const trackedUses = item.charges !== undefined ? entry.remainingUses ?? entry.quantity * item.charges : undefined; const maximumUses = entry.quantity * (useCapacity ?? 0); return <MoreDetails key={entry.id} title={item.name} subtitle={`${item.category} • ${item.subtype} • ${item.slot}${entry.isEquipped ? ' • Equipped' : ' • Unequipped'}${entry.isAttuned ? ' • Attuned' : ''}${medicineUses !== undefined ? ` • ${medicineUses}/${maximumUses} uses` : ''}${trackedUses !== undefined ? ` • ${trackedUses}/${maximumUses} ${usageLabel}` : ''}`}><p className="whitespace-pre-wrap font-semibold text-violet-200">{item.summary}</p><p className="mt-3 whitespace-pre-wrap">{item.mechanics}</p><div className="mt-4 flex flex-wrap items-center gap-2"><button type="button" onClick={() => updateInventory(setInventoryQuantity(inventory, entry.id, entry.quantity - 1, useCapacity))} className="h-8 w-8 rounded bg-slate-800">−</button><span className="font-black text-slate-200">Quantity {entry.quantity}</span><button type="button" onClick={() => updateInventory(setInventoryQuantity(inventory, entry.id, entry.quantity + 1, useCapacity))} className="h-8 w-8 rounded bg-slate-800">+</button>{trackedUses !== undefined && !isManagedSourceConsumable(item) && <button type="button" disabled={trackedUses <= 0} onClick={() => updateInventory(spendInventoryUse(inventory, entry.id, useCapacity))} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Spend {usageLabel === 'Uses' ? 'Use' : 'Charge'}</button>}{trackedUses !== undefined && <button type="button" disabled={trackedUses >= maximumUses} onClick={() => updateInventory(inventory.map((candidate) => candidate.id === entry.id ? { ...candidate, remainingUses: Math.min(maximumUses, trackedUses + 1) } : candidate))} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Restore {usageLabel === 'Uses' ? 'Use' : 'Charge'}</button>}{potionHealing > 0 && !isManagedSourceConsumable(item) && <button type="button" onClick={() => drinkPotion(entry, item)} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Drink • Heal {potionHealing} HP</button>}<SourceConsumableActions character={character} entry={entry} item={item} inventory={inventory} badger={badger} onChange={onChange} setNotice={setNotice} />{medicineUses !== undefined && <button type="button" disabled={medicineUses <= 0 || character.currentAP < 1} onClick={() => spendMedicineKitUse(entry, 'Wound')} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Treat Wound • 1 AP + Roll</button>}{medicineUses !== undefined && <button type="button" disabled={medicineUses <= 0 || character.currentAP < 1} onClick={() => spendMedicineKitUse(entry, 'Poison or Disease')} className="rounded-lg bg-teal-700 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">Treat Poison/Disease • 1 AP + Roll</button>}{medicineUses !== undefined && medicineUses < maximumUses && <button type="button" onClick={() => resupplyMedicineKit(entry)} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold text-white">Resupply +1 Use</button>}{isEquipmentEquippable(item) && <button type="button" disabled={(item.category === EquipmentCategoryValues.SHIELDS || item.properties.includes('Cumbersome')) && character.currentAP < 1} onClick={() => toggleGear(entry, item)} className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-35">{entry.isEquipped ? 'Stow' : 'Equip'}{item.category === EquipmentCategoryValues.SHIELDS || item.properties.includes('Cumbersome') ? ' • 1 AP' : ''}</button>}{customItemIDs.has(item.id) ? <CustomItemActions item={item} propertyOptions={propertyOptions} onSave={(values) => updateCustomEquipment({ ...item, ...values })} onDeletePermanently={() => removeCustomEquipment(item.id)} onRemoveFromCharacter={() => updateInventory(inventory.filter(({ id }) => id !== entry.id))} /> : <button type="button" onClick={() => updateInventory(inventory.filter(({ id }) => id !== entry.id))} className="rounded-lg px-3 py-2 text-xs font-bold text-red-300">Remove</button>}</div></MoreDetails>; })}{character.equipment.map((item) => <div key={item.id} className="rounded-lg bg-slate-950/45 p-3 text-slate-300">{item.name} ×{item.quantity} <span className="text-xs text-slate-500">legacy item</span></div>)}</div> : <p className="text-slate-500">No equipment in inventory.</p>}</div>;
 }
 
@@ -1460,16 +1406,18 @@ function createCompanion(character: Character, kind: CharacterCompanionKind, spe
   };
 }
 
-function CompanionSheet({ character, companion, onChange, onRemove }: { character: Character; companion: CharacterCompanion; onChange: (values: Partial<CharacterCompanion>) => void; onRemove: () => void }) {
+function CompanionSheet({ character, companion, readOnly = false, onChange, onRemove }: { character: Character; companion: CharacterCompanion; readOnly?: boolean; onChange: (values: Partial<CharacterCompanion>) => void; onRemove: () => void }) {
+  const [open, setOpen] = useState(true);
   const hp = companion.sharesHealthWithCharacter ? character.healthPoints : companion.currentHP;
   const maxHP = companion.sharesHealthWithCharacter ? character.maxHealthPoints : companion.maxHP;
   const changeHP = (value: number) => companion.sharesHealthWithCharacter
     ? onChange({ currentHP: Math.min(character.maxHealthPoints, Math.max(0, value)) })
     : onChange({ currentHP: Math.min(companion.maxHP, Math.max(0, value)) });
-  return <details open className="group rounded-2xl border border-emerald-400/20 bg-slate-950/50 p-4 sm:p-5"><summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3"><span><span className="font-black text-emerald-100">{companion.name || 'Unnamed Companion'}</span><span className="mt-1 block text-xs text-slate-500">{companion.kind} • {companion.source} • {companion.size}</span></span><span className="text-xs font-black text-emerald-300 group-open:hidden">Open sheet</span><span className="hidden text-xs font-black text-emerald-300 group-open:inline">Collapse sheet</span></summary><div className="mt-4 border-t border-white/5 pt-4"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="text-xs font-bold text-slate-400">Name<input value={companion.name} onChange={(event) => onChange({ name: event.target.value })} className={`${fieldClass} mt-1`} /></label><label className="text-xs font-bold text-slate-400">Kind<select value={companion.kind} onChange={(event) => onChange({ kind: event.target.value as CharacterCompanionKind })} className={`${fieldClass} mt-1`}><option>Familiar</option><option>Summon</option><option>Pet</option></select></label><label className="text-xs font-bold text-slate-400">Source<input value={companion.source} onChange={(event) => onChange({ source: event.target.value })} className={`${fieldClass} mt-1`} /></label><label className="text-xs font-bold text-slate-400">Size<input value={companion.size} onChange={(event) => onChange({ size: event.target.value })} className={`${fieldClass} mt-1`} /></label></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div className="rounded-xl border border-red-400/15 bg-red-950/20 p-3"><div className="text-[10px] font-black uppercase tracking-wider text-red-300">Health {companion.sharesHealthWithCharacter ? '• shared' : ''}</div><div className="mt-2 flex items-center justify-between gap-2"><button type="button" onClick={() => changeHP(hp - 1)} className="h-8 w-8 rounded bg-slate-800">−</button><span className="font-black text-red-100">{hp} / {maxHP}</span><button type="button" onClick={() => changeHP(hp + 1)} className="h-8 w-8 rounded bg-red-800">+</button></div><label className="mt-2 flex items-center gap-2 text-[10px] font-bold text-slate-400"><input type="checkbox" checked={companion.sharesHealthWithCharacter} onChange={(event) => onChange({ sharesHealthWithCharacter: event.target.checked, currentHP: event.target.checked ? character.healthPoints : companion.currentHP, maxHP: event.target.checked ? character.maxHealthPoints : companion.maxHP })} />Share character HP</label></div><div className="rounded-xl bg-slate-900/65 p-3"><div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Action Points</div><div className="mt-2 flex items-center justify-between gap-2"><button type="button" onClick={() => onChange({ currentAP: Math.max(0, companion.currentAP - 1) })} className="h-8 w-8 rounded bg-slate-800">−</button><span className="font-black text-violet-100">{companion.currentAP} / {companion.maxAP}</span><button type="button" onClick={() => onChange({ currentAP: Math.min(companion.maxAP, companion.currentAP + 1) })} className="h-8 w-8 rounded bg-violet-800">+</button></div></div>{([['PD', 'physicalDefense'], ['AD', 'areaDefense'], ['Speed', 'speed'], ['Attack Check', 'attackCheck'], ['Save DC', 'saveDC'], ['Prime Modifier', 'primeModifier'], ['Combat Mastery', 'combatMastery']] as const).map(([label, key]) => <label key={key} className="rounded-xl bg-slate-900/65 p-3 text-[10px] font-black uppercase tracking-wider text-slate-500">{label}<input type="number" value={companion[key]} onChange={(event) => onChange({ [key]: Number(event.target.value) })} className={`${fieldClass} mt-2 text-base font-black normal-case tracking-normal`} /></label>)}</div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{ATTRIBUTE_NAMES.map((attribute) => <label key={attribute} className="text-xs font-bold text-slate-400">{attribute}<input type="number" value={companion.attributes[attribute]} onChange={(event) => onChange({ attributes: { ...companion.attributes, [attribute]: Number(event.target.value) } })} className={`${fieldClass} mt-1`} /></label>)}</div><label className="mt-4 block text-xs font-bold text-slate-400">Features & Summon Traits<textarea rows={9} value={companion.features} onChange={(event) => onChange({ features: event.target.value })} className={`${fieldClass} mt-1`} placeholder="List attacks, traits, actions, immunities, resistances, and spell enhancements…" /></label><label className="mt-3 block text-xs font-bold text-slate-400">Notes<textarea rows={3} value={companion.notes} onChange={(event) => onChange({ notes: event.target.value })} className={`${fieldClass} mt-1`} /></label><button type="button" onClick={onRemove} className="mt-4 rounded-lg px-3 py-2 text-xs font-black text-red-300 hover:bg-red-500/10">Remove companion</button></div></details>;
+  if (readOnly) return <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)} className="rounded-2xl border border-emerald-400/20 bg-slate-950/50 p-4 sm:p-5"><summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3"><span><span className="font-black text-emerald-100">{companion.name || 'Unnamed Companion'}</span><span className="mt-1 block text-xs text-slate-500">{companion.kind} • {companion.source} • {companion.size}</span></span><span className="text-xs font-black text-emerald-300">{open ? 'Collapse sheet' : 'Open sheet'}</span></summary><div className="mt-4 border-t border-white/5 pt-4"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[['Health', `${hp} / ${maxHP}${companion.sharesHealthWithCharacter ? ' • shared' : ''}`], ['Action Points', `${companion.currentAP} / ${companion.maxAP}`], ['PD', companion.physicalDefense], ['AD', companion.areaDefense], ['Speed', companion.speed], ['Attack Check', companion.attackCheck], ['Save DC', companion.saveDC], ['Combat Mastery', companion.combatMastery]].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-900/65 p-3"><div className="text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</div><div className="mt-1 font-black text-slate-100">{value}</div></div>)}</div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{ATTRIBUTE_NAMES.map((attribute) => <div key={attribute} className="rounded-xl bg-slate-900/65 p-3"><div className="text-xs font-bold text-slate-400">{attribute}</div><div className="mt-1 font-black text-slate-100">{companion.attributes[attribute] >= 0 ? '+' : ''}{companion.attributes[attribute]}</div></div>)}</div><div className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-300">{companion.features || 'No features recorded.'}</div>{companion.notes && <div className="mt-3 whitespace-pre-wrap rounded-xl bg-slate-900/65 p-3 text-sm text-slate-400">{companion.notes}</div>}</div></details>;
+  return <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)} className="rounded-2xl border border-emerald-400/20 bg-slate-950/50 p-4 sm:p-5"><summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3"><span><span className="font-black text-emerald-100">{companion.name || 'Unnamed Companion'}</span><span className="mt-1 block text-xs text-slate-500">{companion.kind} • {companion.source} • {companion.size}</span></span><span className="text-xs font-black text-emerald-300">{open ? 'Collapse sheet' : 'Open sheet'}</span></summary><div className="mt-4 border-t border-white/5 pt-4"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="text-xs font-bold text-slate-400">Name<input value={companion.name} onChange={(event) => onChange({ name: event.target.value })} className={`${fieldClass} mt-1`} /></label><label className="text-xs font-bold text-slate-400">Kind<select value={companion.kind} onChange={(event) => onChange({ kind: event.target.value as CharacterCompanionKind })} className={`${fieldClass} mt-1`}><option>Familiar</option><option>Summon</option><option>Pet</option></select></label><label className="text-xs font-bold text-slate-400">Source<input value={companion.source} onChange={(event) => onChange({ source: event.target.value })} className={`${fieldClass} mt-1`} /></label><label className="text-xs font-bold text-slate-400">Size<input value={companion.size} onChange={(event) => onChange({ size: event.target.value })} className={`${fieldClass} mt-1`} /></label></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div className="rounded-xl border border-red-400/15 bg-red-950/20 p-3"><div className="text-[10px] font-black uppercase tracking-wider text-red-300">Health {companion.sharesHealthWithCharacter ? '• shared' : ''}</div><div className="mt-2 flex items-center justify-between gap-2"><button type="button" onClick={() => changeHP(hp - 1)} className="h-8 w-8 rounded bg-slate-800">−</button><span className="font-black text-red-100">{hp} / {maxHP}</span><button type="button" onClick={() => changeHP(hp + 1)} className="h-8 w-8 rounded bg-red-800">+</button></div><label className="mt-2 flex items-center gap-2 text-[10px] font-bold text-slate-400"><input type="checkbox" checked={companion.sharesHealthWithCharacter} onChange={(event) => onChange({ sharesHealthWithCharacter: event.target.checked, currentHP: event.target.checked ? character.healthPoints : companion.currentHP, maxHP: event.target.checked ? character.maxHealthPoints : companion.maxHP })} />Share character HP</label></div><div className="rounded-xl bg-slate-900/65 p-3"><div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Action Points</div><div className="mt-2 flex items-center justify-between gap-2"><button type="button" onClick={() => onChange({ currentAP: Math.max(0, companion.currentAP - 1) })} className="h-8 w-8 rounded bg-slate-800">−</button><span className="font-black text-violet-100">{companion.currentAP} / {companion.maxAP}</span><button type="button" onClick={() => onChange({ currentAP: Math.min(companion.maxAP, companion.currentAP + 1) })} className="h-8 w-8 rounded bg-violet-800">+</button></div></div>{([['PD', 'physicalDefense'], ['AD', 'areaDefense'], ['Speed', 'speed'], ['Attack Check', 'attackCheck'], ['Save DC', 'saveDC'], ['Prime Modifier', 'primeModifier'], ['Combat Mastery', 'combatMastery']] as const).map(([label, key]) => <label key={key} className="rounded-xl bg-slate-900/65 p-3 text-[10px] font-black uppercase tracking-wider text-slate-500">{label}<input type="number" value={companion[key]} onChange={(event) => onChange({ [key]: Number(event.target.value) })} className={`${fieldClass} mt-2 text-base font-black normal-case tracking-normal`} /></label>)}</div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{ATTRIBUTE_NAMES.map((attribute) => <label key={attribute} className="text-xs font-bold text-slate-400">{attribute}<input type="number" value={companion.attributes[attribute]} onChange={(event) => onChange({ attributes: { ...companion.attributes, [attribute]: Number(event.target.value) } })} className={`${fieldClass} mt-1`} /></label>)}</div><label className="mt-4 block text-xs font-bold text-slate-400">Features & Summon Traits<textarea rows={9} value={companion.features} onChange={(event) => onChange({ features: event.target.value })} className={`${fieldClass} mt-1`} placeholder="List attacks, traits, actions, immunities, resistances, and spell enhancements…" /></label><label className="mt-3 block text-xs font-bold text-slate-400">Notes<textarea rows={3} value={companion.notes} onChange={(event) => onChange({ notes: event.target.value })} className={`${fieldClass} mt-1`} /></label><button type="button" onClick={onRemove} className="mt-4 rounded-lg px-3 py-2 text-xs font-black text-red-300 hover:bg-red-500/10">Remove companion</button></div></details>;
 }
 
-function MiscTab({ character, knownSpells, onChange }: { character: Character; knownSpells: Spell[]; onChange: CharacterSheetTabContentProps['onChange'] }) {
+function MiscTab({ character, knownSpells, readOnly = false, onChange }: { character: Character; knownSpells: Spell[]; readOnly?: boolean; onChange: CharacterSheetTabContentProps['onChange'] }) {
   const [selectedSpell, setSelectedSpell] = useState('');
   const build = character.build;
   if (!build) return null;
@@ -1484,7 +1432,7 @@ function MiscTab({ character, knownSpells, onChange }: { character: Character; k
     const characterValues = companion.sharesHealthWithCharacter && values.currentHP !== undefined ? { healthPoints: values.currentHP } : {};
     save(next, characterValues);
   };
-  return <div className="space-y-5"><section className={panelClass}><SectionHeading eyebrow="Miscellaneous" title="Pets & Summons" tone="text-emerald-300" /><p className="mt-2 text-sm leading-6 text-slate-400">Create persistent stat sheets for familiars, summoned creatures, and pets. Known summoning powers prefill the shared DC20 statistics and source text; every field stays editable for enhancements and table rulings.</p><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto]"><select value={selectedSpell} onChange={(event) => setSelectedSpell(event.target.value)} className={fieldClass}><option value="">Choose a known familiar or summon…</option>{summonSpells.map((spell) => <option key={spell.id} value={spell.name}>{spell.name}</option>)}</select><button type="button" disabled={!selectedSpell} onClick={() => { const spell = summonSpells.find(({ name }) => name === selectedSpell); if (spell) add(spell.name === 'Call Familiar' ? 'Familiar' : 'Summon', spell); }} className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-black text-white disabled:opacity-35">Add from Power</button><button type="button" onClick={() => add('Summon')} className="rounded-lg bg-violet-700 px-4 py-2 text-xs font-black text-white">+ Custom Summon</button><button type="button" onClick={() => add('Pet')} className="rounded-lg bg-slate-700 px-4 py-2 text-xs font-black text-white">+ Pet</button></div>{summonSpells.length === 0 && <p className="mt-3 text-xs text-amber-200">This character does not currently know Call Familiar or a Summoning spell. Custom summons and pets remain available.</p>}</section>{companions.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-700 p-10 text-center text-slate-500">No companions tracked yet.</div> : <div className="space-y-4">{companions.map((companion) => <CompanionSheet key={companion.id} character={character} companion={companion} onChange={(values) => update(companion.id, values)} onRemove={() => save(companions.filter(({ id }) => id !== companion.id))} />)}</div>}</div>;
+  return <div className="space-y-5"><section className={panelClass}><SectionHeading eyebrow="Miscellaneous" title="Pets & Summons" tone="text-emerald-300" /><p className="mt-2 text-sm leading-6 text-slate-400">{readOnly ? 'Companion sheets are shown read only in the GM party view.' : 'Create persistent stat sheets for familiars, summoned creatures, and pets. Known summoning powers prefill the shared DC20 statistics and source text; every field stays editable for enhancements and table rulings.'}</p>{!readOnly && <><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto]"><select value={selectedSpell} onChange={(event) => setSelectedSpell(event.target.value)} className={fieldClass}><option value="">Choose a known familiar or summon…</option>{summonSpells.map((spell) => <option key={spell.id} value={spell.name}>{spell.name}</option>)}</select><button type="button" disabled={!selectedSpell} onClick={() => { const spell = summonSpells.find(({ name }) => name === selectedSpell); if (spell) add(spell.name === 'Call Familiar' ? 'Familiar' : 'Summon', spell); }} className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-black text-white disabled:opacity-35">Add from Power</button><button type="button" onClick={() => add('Summon')} className="rounded-lg bg-violet-700 px-4 py-2 text-xs font-black text-white">+ Custom Summon</button><button type="button" onClick={() => add('Pet')} className="rounded-lg bg-slate-700 px-4 py-2 text-xs font-black text-white">+ Pet</button></div>{summonSpells.length === 0 && <p className="mt-3 text-xs text-amber-200">This character does not currently know Call Familiar or a Summoning spell. Custom summons and pets remain available.</p>}</>}</section>{companions.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-700 p-10 text-center text-slate-500">No companions tracked yet.</div> : <div className="space-y-4">{companions.map((companion) => <CompanionSheet key={companion.id} character={character} companion={companion} readOnly={readOnly} onChange={(values) => update(companion.id, values)} onRemove={() => save(companions.filter(({ id }) => id !== companion.id))} />)}</div>}</div>;
 }
 
 export function CharacterSheetTabContent(props: CharacterSheetTabContentProps) {
@@ -1496,6 +1444,6 @@ export function CharacterSheetTabContent(props: CharacterSheetTabContentProps) {
   if (props.tab === 'sheet-checks') return <ChecksTab character={character} reference={reference} equipmentCatalog={equipmentCatalog} equipmentModifiers={modifiers} selectedTraits={selectedTraits} onRoll={props.onRoll} />;
   if (props.tab === 'sheet-combat') return <CombatTab character={character} training={training} modifiers={modifiers} equipmentCatalog={equipmentCatalog} knownSpells={props.knownSpells} knownManeuvers={props.knownManeuvers} grantedSpells={props.grantedSpells} grantedManeuvers={props.grantedManeuvers} ancestryGrantedSpells={props.ancestryGrantedSpells} selectedTraits={selectedTraits} onChange={props.onChange} onRoll={props.onRoll} />;
   if (props.tab === 'sheet-features') return <FeaturesTab character={character} classReference={classReference} reference={reference} selectedTraits={selectedTraits} training={training} readOnly={props.readOnly} onChange={props.onChange} />;
-  if (props.tab === 'sheet-misc') return <MiscTab character={character} knownSpells={props.knownSpells} onChange={props.onChange} />;
-  return <EquipmentTab character={character} equipmentCatalog={equipmentCatalog} onChange={props.onChange} onRoll={props.onRoll} />;
+  if (props.tab === 'sheet-misc') return <MiscTab character={character} knownSpells={props.knownSpells} readOnly={props.readOnly} onChange={props.onChange} />;
+  return <EquipmentTab character={character} equipmentCatalog={equipmentCatalog} medicineModifier={sheetSkillCheckProfile(character, 'Medicine', reference, modifiers, selectedTraits).modifier} readOnly={props.readOnly} onChange={props.onChange} onRoll={props.onRoll} />;
 }

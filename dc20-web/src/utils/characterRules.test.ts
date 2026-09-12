@@ -116,6 +116,7 @@ import {
   wizardSchoolSpellGrantLimit,
   wizardSchoolSpellSelectionKey,
 } from './characterRules';
+import { sheetAttributeCheckProfile, sheetSkillCheckProfile, sheetTradeCheckProfile } from './sheetCheckRules';
 
 const reference = augmentCharacterReference(referenceDocument as CharacterReferenceData);
 const bard = reference.classes.find(({ name }) => name === 'Bard')!;
@@ -738,6 +739,42 @@ describe('character-sheet combat training and equipment modifiers', () => {
       senses: ['Darkvision 10 Spaces'],
       conditionalRules: ['Starsight applies while outdoors.'],
     });
+  });
+
+  it('uses one shared calculation for sheet Skills and Trades, including negative Trade Attributes', () => {
+    const item: EquipmentCatalogItem = {
+      id: 'check-crown', name: 'Check Crown', category: 'Wondrous Items', subtype: 'Custom Magic Item',
+      summary: '', mechanics: '', properties: [], slot: 'Worn', sourcePage: 'GM Vault', requiresAttunement: true,
+      attunedEffects: { allCheckBonus: 1, skillBonuses: { Athletics: 3 }, tradeBonuses: { Blacksmithing: 4 } },
+    };
+    const hero = character('Rogue');
+    hero.attributes.Might = { name: 'Might', score: -2, modifier: -2 };
+    hero.skillMasteries.Athletics = 'Novice';
+    hero.inventoryItems = [{ id: 'crown', equipmentID: item.id, quantity: 1, isEquipped: true, isAttuned: true, source: 'added' }];
+    const modifiers = equippedCombatModifiers(hero, [item], rogue, reference.ancestryTraits);
+    const traits = selectedAncestryTraits(hero, reference.ancestryTraits);
+    expect(sheetSkillCheckProfile(hero, 'Athletics', reference, modifiers, traits).modifier).toBe(4);
+    expect(sheetTradeCheckProfile(hero, 'Blacksmithing', reference, modifiers, traits).modifier).toBe(3);
+  });
+
+  it('applies ancestry Skill Expertise and suppresses ordinary equipment in Wild Form', () => {
+    const expertise = reference.ancestryTraits.find(({ ancestry, name }) => ancestry === 'Human' && name === 'Skill Expertise')!;
+    const hero = character('Barbarian');
+    hero.skillMasteries.Athletics = 'Novice';
+    hero.build = { ...defaultBuild(), selectedAncestryTraitIDs: [expertise.id], ancestryTraitChoices: { [expertise.id]: ['Athletics'] } };
+    const traits = selectedAncestryTraits(hero, reference.ancestryTraits);
+    const modifiers = equippedCombatModifiers(hero, [], barbarian, reference.ancestryTraits);
+    expect(sheetSkillCheckProfile(hero, 'Athletics', reference, modifiers, traits).effectiveMastery).toBe('Adept');
+
+    const item: EquipmentCatalogItem = {
+      id: 'wild-check-item', name: 'Wild Check Item', category: 'Wondrous Items', subtype: 'Custom Magic Item',
+      summary: '', mechanics: '', properties: [], slot: 'Worn', sourcePage: 'GM Vault', attunedEffects: { allCheckBonus: 2 },
+    };
+    const druidHero = character('Druid');
+    druidHero.inventoryItems = [{ id: 'wild-item', equipmentID: item.id, quantity: 1, isEquipped: true, source: 'added' }];
+    druidHero.build = { ...defaultBuild(), sheetFeatureStates: { [DRUID_WILD_FORM_ACTIVE]: true } };
+    const wildModifiers = equippedCombatModifiers(druidHero, [item], druid, reference.ancestryTraits);
+    expect(sheetAttributeCheckProfile(druidHero, 'Might', wildModifiers).modifier).toBe(druidWildFormProfile(druidHero).might);
   });
 });
 
