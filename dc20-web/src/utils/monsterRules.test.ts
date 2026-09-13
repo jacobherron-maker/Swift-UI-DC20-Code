@@ -11,7 +11,9 @@ import {
   getMonsterRecommendation,
   monsterBudget,
   monsterDisplayRole,
+  partyReadinessMetrics,
   synchronizeCombatant,
+  synchronizeEncounterPartyCharacters,
 } from './monsterRules';
 
 describe('Monster Collection builder defaults', () => {
@@ -70,6 +72,10 @@ describe('encounter and combat interoperability', () => {
     });
   });
 
+  it('treats an encounter with no party and no monsters as easy instead of deadly', () => {
+    expect(encounterMetrics({ ...encounter, partyLevels: [], entries: [] }).difficulty).toBe('Easy');
+  });
+
   it('expands encounter counts into linked, uniquely named combatants', () => {
     const combat = combatFromEncounter(encounter);
     expect(combat.sourceEncounterID).toBe(encounter.id);
@@ -86,6 +92,10 @@ describe('encounter and combat interoperability', () => {
       maxHealthPoints: 18,
       currentAP: 3,
       maxAP: 4,
+      stamina: 1,
+      maxStamina: 2,
+      manaPoints: 4,
+      maxManaPoints: 6,
       physicalDefense: 14,
       arcaneDefense: 12,
       primeModifier: 3,
@@ -113,6 +123,28 @@ describe('encounter and combat interoperability', () => {
       sourcePartyCampaignID: 'party-id',
       sourcePartyMemberID: 'player-id',
     });
+    expect(partyReadinessMetrics(connectedEncounter)).toEqual({
+      characterCount: 1,
+      currentHP: 14,
+      maxHP: 18,
+      currentStamina: 1,
+      maxStamina: 2,
+      currentMana: 4,
+      maxMana: 6,
+      currentAP: 3,
+      maxAP: 4,
+    });
+
+    const refreshedCharacter = { ...character, healthPoints: 7, stamina: 0 };
+    const synchronized = synchronizeEncounterPartyCharacters(connectedEncounter, [{
+      partyId: 'party-id',
+      partyName: 'The Verdant Company',
+      memberId: 'player-id',
+      memberName: 'Player',
+      character: refreshedCharacter,
+    }]);
+    expect(synchronized.partyCharacters?.[0].character).toBe(refreshedCharacter);
+    expect(combatFromEncounter(synchronized).combatants[0].hp).toBe(7);
   });
 
   it('preserves spent resources while synchronizing changed custom monster stats', () => {

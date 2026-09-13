@@ -5,7 +5,7 @@ import { useCampaignStore } from '../../store/campaignStore';
 import type { Combatant, CombatantTeam, SavedCombat } from '../../types/models';
 import { CombatantTeamValues } from '../../types/models';
 import { generateUUID } from '../../utils/gameUtils';
-import { combatantFromCharacter, combatantFromMonster, combatFromEncounter, monsterDisplayRole } from '../../utils/monsterRules';
+import { combatantFromCharacter, combatantFromMonster, combatFromEncounter, monsterDisplayRole, synchronizeEncounterPartyCharacters } from '../../utils/monsterRules';
 import { ExplicitRuleLink, RuleAwareText } from '../rules/RuleAwareText';
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
@@ -75,7 +75,7 @@ export default function CombatView() {
 
   const launchEncounter = () => {
     const encounter = campaignData.encounters.find(({ id }) => id === encounterChoice);
-    if (encounter) addCombat(combatFromEncounter(encounter));
+    if (encounter) addCombat(combatFromEncounter(synchronizeEncounterPartyCharacters(encounter, availablePartyCharacters)));
   };
 
   return (
@@ -91,7 +91,7 @@ export default function CombatView() {
         {campaignData.encounters.length > 0 && (
           <div className="mt-5 rounded-xl border border-violet-400/15 bg-violet-500/5 p-3">
             <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-300">Start from Encounter</label>
-            <select className={`${inputClass} mt-2 w-full`} value={encounterChoice} onChange={(event) => setEncounterChoice(event.target.value)}>
+            <select aria-label="Start from Encounter" className={`${inputClass} mt-2 w-full`} value={encounterChoice} onChange={(event) => setEncounterChoice(event.target.value)}>
               <option value="">Choose encounter…</option>
               {campaignData.encounters.map((encounter) => <option key={encounter.id} value={encounter.id}>{encounter.name}</option>)}
             </select>
@@ -184,7 +184,7 @@ function CombatEditor({ combat, participantChoice, setParticipantChoice, sourceM
 
       <section className="rounded-2xl border border-white/8 bg-slate-900/75 p-5">
         <div className="flex flex-wrap gap-3">
-          <select className={`${inputClass} min-w-0 grow basis-64`} value={participantChoice} onChange={(event) => setParticipantChoice(event.target.value)}>
+          <select aria-label="Add a character or monster" className={`${inputClass} min-w-0 grow basis-64`} value={participantChoice} onChange={(event) => setParticipantChoice(event.target.value)}>
             <option value="">Add a character or monster…</option>
             {characters.length > 0 && <optgroup label="Characters">
               {characters.map((character) => <option key={character.id} value={`character:${character.id}`}>{character.name || 'Unnamed Character'} — Level {character.level} {character.class}</option>)}

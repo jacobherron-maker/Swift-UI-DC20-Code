@@ -56,6 +56,18 @@ export interface EncounterMetrics {
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Very Hard' | 'Deadly';
 }
 
+export interface PartyReadinessMetrics {
+  characterCount: number;
+  currentHP: number;
+  maxHP: number;
+  currentStamina: number;
+  maxStamina: number;
+  currentMana: number;
+  maxMana: number;
+  currentAP: number;
+  maxAP: number;
+}
+
 /** The sourcebook-facing role label. Internal mapped roles remain available for builder math. */
 export function monsterDisplayRole(monster: Pick<Monster, 'publishedRole' | 'role'>): string {
   return monster.publishedRole?.trim() || monster.role;
@@ -369,7 +381,8 @@ export function encounterMetrics(encounter: Encounter): EncounterMetrics {
   );
   const delta = monsterTotal - mediumBudget;
   let difficulty: EncounterMetrics['difficulty'];
-  if (delta >= averageLevel * 4) difficulty = 'Deadly';
+  if (partyLevels.length === 0 && monsterTotal === 0) difficulty = 'Easy';
+  else if (delta >= averageLevel * 4) difficulty = 'Deadly';
   else if (delta >= averageLevel * 2) difficulty = 'Very Hard';
   else if (delta >= averageLevel) difficulty = 'Hard';
   else if (delta >= -averageLevel / 2) difficulty = 'Medium';
@@ -385,6 +398,62 @@ export function encounterMetrics(encounter: Encounter): EncounterMetrics {
     averageLevel,
     difficulty,
   };
+}
+
+export function synchronizeEncounterPartyCharacters(
+  encounter: Encounter,
+  availableCharacters: Array<{
+    partyId: string;
+    partyName: string;
+    memberId: string;
+    memberName: string;
+    character: Character;
+  }>,
+): Encounter {
+  return {
+    ...encounter,
+    partyCharacters: (encounter.partyCharacters ?? []).map((partyCharacter) => {
+      const live = availableCharacters.find(({ partyId, memberId }) => (
+        partyId === partyCharacter.partyId && memberId === partyCharacter.memberId
+      ));
+      return live ? {
+        ...partyCharacter,
+        partyName: live.partyName,
+        memberName: live.memberName,
+        character: live.character,
+      } : partyCharacter;
+    }),
+  };
+}
+
+export function partyReadinessMetrics(encounter: Pick<Encounter, 'partyCharacters'>): PartyReadinessMetrics {
+  return (encounter.partyCharacters ?? []).reduce<PartyReadinessMetrics>((metrics, { character }) => {
+    const maxHP = Math.max(1, character.maxHealthPoints);
+    const maxStamina = Math.max(0, character.maxStamina);
+    const maxMana = Math.max(0, character.maxManaPoints);
+    const maxAP = Math.max(0, character.maxAP);
+    return {
+      characterCount: metrics.characterCount + 1,
+      currentHP: metrics.currentHP + Math.min(maxHP, Math.max(0, character.healthPoints)),
+      maxHP: metrics.maxHP + maxHP,
+      currentStamina: metrics.currentStamina + Math.min(maxStamina, Math.max(0, character.stamina)),
+      maxStamina: metrics.maxStamina + maxStamina,
+      currentMana: metrics.currentMana + Math.min(maxMana, Math.max(0, character.manaPoints)),
+      maxMana: metrics.maxMana + maxMana,
+      currentAP: metrics.currentAP + Math.min(maxAP, Math.max(0, character.currentAP)),
+      maxAP: metrics.maxAP + maxAP,
+    };
+  }, {
+    characterCount: 0,
+    currentHP: 0,
+    maxHP: 0,
+    currentStamina: 0,
+    maxStamina: 0,
+    currentMana: 0,
+    maxMana: 0,
+    currentAP: 0,
+    maxAP: 0,
+  });
 }
 
 export function combatantFromMonster(monster: Monster, name = monster.name): Combatant {
