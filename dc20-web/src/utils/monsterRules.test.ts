@@ -8,8 +8,10 @@ import {
   combatantFromMonster,
   createCustomMonster,
   encounterMetrics,
+  encounterMatchupAnalysis,
   getMonsterRecommendation,
   monsterBudget,
+  monsterAbilityMechanicsSummary,
   monsterDisplayRole,
   partyReadinessMetrics,
   synchronizeCombatant,
@@ -164,6 +166,33 @@ describe('encounter and combat interoperability', () => {
       reactionPoints: 8,
       currentReactionPoints: 6,
     });
+  });
+
+  it('routes structured abilities and tokens into matchup analysis and live combat', () => {
+    const tacticalMonster: Monster = {
+      ...monster,
+      damage: 2,
+      speedType: 'Fly',
+      tokenDataURL: 'data:image/webp;base64,UklGRg==',
+      resistances: 'Fire (Half)',
+      abilities: [{
+        id: 'flame-lance', kind: 'Actions', name: 'Flame Lance', cost: '1 AP', details: 'The target becomes Burning.',
+        mechanics: { actionPointCost: 1, targetDefense: 'AD', damage: 3, damageType: 'Fire', condition: 'Burning', range: '10 Spaces' },
+      }],
+    };
+    const character = { physicalDefense: 14, arcaneDefense: 11, defense: 14 } as Character;
+    const tacticalEncounter: Encounter = { ...encounter, entries: [{ id: 'tactical', monster: tacticalMonster, count: 2 }], partyCharacters: [{ id: 'pc', partyId: 'party', memberId: 'member', partyName: 'Party', memberName: 'Player', character }] };
+    expect(monsterAbilityMechanicsSummary(tacticalMonster.abilities[0])).toEqual(expect.arrayContaining(['Cost: 1 AP', 'Resolution: vs AD', 'Damage: 3 Fire damage', 'Range: 10 Spaces']));
+    expect(encounterMatchupAnalysis(tacticalEncounter)).toMatchObject({
+      partyAveragePD: 14,
+      partyAverageAD: 11,
+      targetedDefenses: { PD: 0, AD: 2, Save: 0, Unknown: 0 },
+      baselineDamagePressure: 4,
+      damageTypes: ['Fire'],
+      conditions: ['Burning'],
+      specialMovement: ['Fly'],
+    });
+    expect(combatantFromMonster(tacticalMonster)).toMatchObject({ tokenDataURL: tacticalMonster.tokenDataURL });
   });
 });
 

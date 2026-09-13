@@ -204,6 +204,8 @@ export interface Combatant {
   sourcePartyCampaignID?: string;
   sourcePartyMemberID?: string;
   monsterAbilities?: MonsterAbility[];
+  /** Self-contained token snapshot so saved combats do not depend on a mutable monster record. */
+  tokenDataURL?: string;
 }
 
 export interface SavedCombat {
@@ -225,6 +227,16 @@ export interface CampaignData {
   customEquipment: EquipmentCatalogItem[];
   vaultEntries: GmVaultEntry[];
   encounters: Encounter[];
+  monsterLibrary: MonsterLibraryOrganization;
+}
+
+/** User-owned organization layered over immutable sourcebook and custom monster records. */
+export interface MonsterLibraryOrganization {
+  favoriteIDs: string[];
+  recentIDs: string[];
+  tagsByMonsterID: Record<string, string[]>;
+  folderByMonsterID: Record<string, string>;
+  campaignIDsByMonsterID: Record<string, string[]>;
 }
 
 // ============================================
@@ -909,6 +921,29 @@ export interface MonsterAbilityPowerSource {
   custom: boolean;
 }
 
+export type MonsterAbilityTargetDefense = 'None' | 'PD' | 'AD' | 'Save';
+
+/** Optional structured mechanics used by the builder, compact blocks, and matchup analysis. */
+export interface MonsterAbilityMechanics {
+  actionPointCost?: number;
+  reactionPointCost?: number;
+  staminaCost?: number;
+  manaCost?: number;
+  attackType?: string;
+  targetDefense?: MonsterAbilityTargetDefense;
+  saveType?: string;
+  damage?: number;
+  damageType?: string;
+  range?: string;
+  area?: string;
+  duration?: string;
+  condition?: string;
+  recharge?: string;
+  maximumUses?: number;
+  grantsAbilityID?: string;
+  modifiesAbilityID?: string;
+}
+
 export interface MonsterAbility {
   id: string;
   kind: MonsterAbilityKind;
@@ -918,6 +953,7 @@ export interface MonsterAbility {
   traitValue?: number;
   /** The catalog power copied into this self-contained monster ability, when applicable. */
   sourcePower?: MonsterAbilityPowerSource;
+  mechanics?: MonsterAbilityMechanics;
   ruleReferences?: SemanticRuleReference[];
 }
 
@@ -963,6 +999,12 @@ export interface Monster {
   vulnerabilities: string;
   immunities: string;
   abilities: MonsterAbility[];
+  /** Custom tags and environments remain useful when a monster is copied or exported. */
+  tags?: string[];
+  environments?: string[];
+  /** Cloud-safe compressed image snapshots. Artwork is wide; tokens are center-cropped squares. */
+  artworkDataURL?: string;
+  tokenDataURL?: string;
 }
 
 export interface Rule {

@@ -68,6 +68,107 @@ export interface PartyReadinessMetrics {
   maxAP: number;
 }
 
+export interface EncounterMatchupAnalysis {
+  partyAveragePD?: number;
+  partyAverageAD?: number;
+  targetedDefenses: { PD: number; AD: number; Save: number; Unknown: number };
+  baselineDamagePressure: number;
+  damageTypes: string[];
+  conditions: string[];
+  specialMovement: string[];
+  defenses: string[];
+  warnings: string[];
+}
+
+const KNOWN_DAMAGE_TYPES = ['Bludgeoning', 'Piercing', 'Slashing', 'Cold', 'Corrosion', 'Fire', 'Lightning', 'Poison', 'Psychic', 'Radiant', 'Umbral'];
+const KNOWN_CONDITIONS = ['Bleeding', 'Blinded', 'Burning', 'Charmed', 'Dazed', 'Deafened', 'Disoriented', 'Doomed', 'Exhaustion', 'Exposed', 'Frightened', 'Hindered', 'Immobilized', 'Impaired', 'Incapacitated', 'Intimidated', 'Invisible', 'Paralyzed', 'Petrified', 'Poisoned', 'Prone', 'Restrained', 'Slowed', 'Stunned', 'Surprised', 'Taunted', 'Terrified', 'Tethered', 'Unconscious', 'Weakened'];
+
+export function monsterAbilityMechanicsSummary(ability: MonsterAbility): string[] {
+  const mechanics = ability.mechanics;
+  if (!mechanics) return [];
+  const costs = [
+    mechanics.actionPointCost !== undefined && `${mechanics.actionPointCost} AP`,
+    mechanics.reactionPointCost !== undefined && `${mechanics.reactionPointCost} RP`,
+    mechanics.staminaCost !== undefined && `${mechanics.staminaCost} SP`,
+    mechanics.manaCost !== undefined && `${mechanics.manaCost} MP`,
+  ].filter(Boolean).join(' + ');
+  const attack = [mechanics.attackType, mechanics.targetDefense && mechanics.targetDefense !== 'None' ? `vs ${mechanics.targetDefense}` : '', mechanics.saveType].filter(Boolean).join(' • ');
+  const damage = mechanics.damage !== undefined ? `${mechanics.damage} ${mechanics.damageType || ''} damage`.trim() : mechanics.damageType;
+  return [
+    costs && `Cost: ${costs}`,
+    attack && `Resolution: ${attack}`,
+    damage && `Damage: ${damage}`,
+    mechanics.range && `Range: ${mechanics.range}`,
+    mechanics.area && `Area: ${mechanics.area}`,
+    mechanics.duration && `Duration: ${mechanics.duration}`,
+    mechanics.condition && `Condition: ${mechanics.condition}`,
+    mechanics.recharge && `Recharge: ${mechanics.recharge}`,
+    mechanics.maximumUses !== undefined && `Uses: ${mechanics.maximumUses}`,
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
+function uniqueMatches(text: string, values: string[]): string[] {
+  return values.filter((value) => new RegExp(`\\b${value}\\b`, 'i').test(text));
+}
+
+export function encounterMatchupAnalysis(encounter: Encounter): EncounterMatchupAnalysis {
+  const characters = (encounter.partyCharacters ?? []).map(({ character }) => character);
+  const average = (values: number[]): number | undefined => values.length > 0
+    ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length * 10) / 10
+    : undefined;
+  const targetedDefenses = { PD: 0, AD: 0, Save: 0, Unknown: 0 };
+  const damageTypes = new Set<string>();
+  const conditions = new Set<string>();
+  const specialMovement = new Set<string>();
+  const defenses = new Set<string>();
+  let baselineDamagePressure = 0;
+
+  encounter.entries.forEach(({ monster, count }) => {
+    const quantity = Math.max(1, count);
+    baselineDamagePressure += Math.max(0, monster.damage) * quantity;
+    const movementText = `${monster.speedType ?? ''} ${monster.otherSpeeds}`;
+    ['Fly', 'Hover', 'Burrow', 'Climb', 'Swim', 'Truewalk', 'Incorporeal'].forEach((mode) => {
+      if (new RegExp(`\\b${mode}\\b`, 'i').test(movementText)) specialMovement.add(mode);
+    });
+    [monster.reductions, monster.resistances, monster.immunities].filter(Boolean).forEach((entry) => defenses.add(entry));
+    monster.abilities.forEach((ability) => {
+      const text = `${ability.name} ${ability.cost} ${ability.details} ${monster.resistances} ${monster.immunities}`;
+      uniqueMatches(text, KNOWN_DAMAGE_TYPES).forEach((entry) => damageTypes.add(entry));
+      uniqueMatches(text, KNOWN_CONDITIONS).forEach((entry) => conditions.add(entry));
+      const target = ability.mechanics?.targetDefense;
+      if (target === 'PD' || target === 'AD' || target === 'Save') targetedDefenses[target] += quantity;
+      else if (/\b(?:against|vs\.?|versus)\s+(?:the\s+)?PD\b/i.test(text)) targetedDefenses.PD += quantity;
+      else if (/\b(?:against|vs\.?|versus)\s+(?:the\s+)?AD\b/i.test(text)) targetedDefenses.AD += quantity;
+      else if (/\bsav(?:e|ing throw)\b/i.test(text)) targetedDefenses.Save += quantity;
+      else if (ability.kind === MonsterAbilityKindValues.ACTION || ability.kind === MonsterAbilityKindValues.REACTION || ability.kind === MonsterAbilityKindValues.ROUND_ACTION) targetedDefenses.Unknown += quantity;
+    });
+  });
+
+  const partyAveragePD = average(characters.map((character) => character.physicalDefense ?? character.defense));
+  const partyAverageAD = average(characters.map((character) => character.arcaneDefense ?? character.defense));
+  const warnings: string[] = [];
+  if (characters.length === 0) warnings.push('Link campaign characters to compare monster pressure against live defenses.');
+  if (partyAveragePD !== undefined && partyAverageAD !== undefined) {
+    const lower = partyAveragePD < partyAverageAD ? 'PD' : partyAverageAD < partyAveragePD ? 'AD' : null;
+    if (lower && targetedDefenses[lower] > 0) warnings.push(`The party's lower average defense is ${lower}, and ${targetedDefenses[lower]} listed monster ${targetedDefenses[lower] === 1 ? 'ability targets' : 'abilities target'} it.`);
+  }
+  if (specialMovement.has('Fly') || specialMovement.has('Hover')) warnings.push('Flying opposition is present; confirm the party has ranged attacks or flight control.');
+  if (conditions.size >= 3) warnings.push(`This lineup presents ${conditions.size} different conditions; consider condition-removal and tracking load.`);
+  if (defenses.size > 0) warnings.push('Review monster reductions, resistances, and immunities against the party’s available damage types.');
+
+  return {
+    partyAveragePD,
+    partyAverageAD,
+    targetedDefenses,
+    baselineDamagePressure: Math.round(baselineDamagePressure * 100) / 100,
+    damageTypes: [...damageTypes].sort(),
+    conditions: [...conditions].sort(),
+    specialMovement: [...specialMovement].sort(),
+    defenses: [...defenses],
+    warnings,
+  };
+}
+
 /** The sourcebook-facing role label. Internal mapped roles remain available for builder math. */
 export function monsterDisplayRole(monster: Pick<Monster, 'publishedRole' | 'role'>): string {
   return monster.publishedRole?.trim() || monster.role;
@@ -479,6 +580,7 @@ export function combatantFromMonster(monster: Monster, name = monster.name): Com
     saveDC: monster.saveDC,
     speed: monster.speed,
     monsterAbilities: monster.abilities.map((ability) => ({ ...ability })),
+    tokenDataURL: monster.tokenDataURL,
   };
 }
 
@@ -570,5 +672,6 @@ export function synchronizeCombatant(
     saveDC: monster.saveDC,
     speed: monster.speed,
     monsterAbilities: monster.abilities.map((ability) => ({ ...ability })),
+    tokenDataURL: monster.tokenDataURL,
   };
 }

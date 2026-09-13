@@ -232,4 +232,25 @@ describe('campaign persistence migration', () => {
       sourcePartyMemberID: 'player-user-id',
     });
   });
+
+  it('preserves monster library organization, artwork, and structured ability mechanics', () => {
+    const image = 'data:image/webp;base64,UklGRg==';
+    const migrated = migratePersistedState({
+      campaignData: {
+        monsterLibrary: {
+          favoriteIDs: ['monster-1'], recentIDs: ['monster-1'],
+          tagsByMonsterID: { 'monster-1': ['forest', 'boss'] },
+          folderByMonsterID: { 'monster-1': 'Session 8' },
+          campaignIDsByMonsterID: { 'monster-1': ['campaign-1'] },
+        },
+        customMonsters: [{
+          id: 'monster-1', name: 'Ash Drake', artworkDataURL: image, tokenDataURL: image,
+          abilities: [{ id: 'breath', kind: 'Actions', name: 'Ash Breath', details: 'Burning ash.', cost: '2 AP', mechanics: { actionPointCost: 2, targetDefense: 'AD', damage: 3, damageType: 'Fire' } }],
+        }],
+      },
+    });
+    expect(migrated.campaignData.monsterLibrary).toMatchObject({ favoriteIDs: ['monster-1'], folderByMonsterID: { 'monster-1': 'Session 8' } });
+    expect(migrated.campaignData.customMonsters[0]).toMatchObject({ artworkDataURL: image, tokenDataURL: image });
+    expect(migrated.campaignData.customMonsters[0].abilities[0].mechanics).toMatchObject({ actionPointCost: 2, targetDefense: 'AD', damageType: 'Fire' });
+  });
 });

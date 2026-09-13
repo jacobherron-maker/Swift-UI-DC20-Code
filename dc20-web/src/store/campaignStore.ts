@@ -16,6 +16,7 @@ import type {
   Monster,
   MonsterAbility,
   MonsterAbilityKind,
+  MonsterLibraryOrganization,
   MonsterRole,
   MonsterType,
   SavedCombat,
@@ -41,7 +42,15 @@ import { generateUUID } from '../utils/gameUtils';
 import { DEFAULT_PALETTE_ID, themePalette } from '../data/themePalettes';
 import { normalizeVaultEntry } from '../utils/vaultRules';
 
-const STORE_VERSION = 10;
+const STORE_VERSION = 11;
+
+export const defaultMonsterLibrary: MonsterLibraryOrganization = {
+  favoriteIDs: [],
+  recentIDs: [],
+  tagsByMonsterID: {},
+  folderByMonsterID: {},
+  campaignIDsByMonsterID: {},
+};
 
 export const defaultCampaignData: CampaignData = {
   title: 'DC20 Hub',
@@ -52,6 +61,7 @@ export const defaultCampaignData: CampaignData = {
   customEquipment: [],
   vaultEntries: [],
   encounters: [],
+  monsterLibrary: defaultMonsterLibrary,
 };
 
 interface CampaignStore extends HubState {
@@ -84,6 +94,7 @@ interface CampaignStore extends HubState {
   addCustomMonster: (monster: Monster) => void;
   updateCustomMonster: (monster: Monster) => void;
   removeCustomMonster: (id: string) => void;
+  updateMonsterLibrary: (organization: MonsterLibraryOrganization) => void;
   addCustomEquipment: (item: EquipmentCatalogItem) => void;
   updateCustomEquipment: (item: EquipmentCatalogItem) => void;
   removeCustomEquipment: (id: string) => void;
@@ -161,6 +172,38 @@ function normalizeAbility(value: unknown): MonsterAbility | null {
         custom: Boolean(rawSourcePower.custom),
       }
     : undefined;
+  const rawMechanics = item.mechanics && typeof item.mechanics === 'object'
+    ? item.mechanics as Record<string, unknown>
+    : null;
+  const optionalNumber = (key: string): number | undefined => rawMechanics?.[key] === undefined
+    ? undefined
+    : asNumber(rawMechanics[key], 0);
+  const optionalString = (key: string): string | undefined => typeof rawMechanics?.[key] === 'string'
+    ? String(rawMechanics[key])
+    : undefined;
+  const targetDefense = rawMechanics
+    && ['None', 'PD', 'AD', 'Save'].includes(String(rawMechanics.targetDefense))
+    ? rawMechanics.targetDefense as NonNullable<MonsterAbility['mechanics']>['targetDefense']
+    : undefined;
+  const mechanics: MonsterAbility['mechanics'] = rawMechanics ? {
+    actionPointCost: optionalNumber('actionPointCost'),
+    reactionPointCost: optionalNumber('reactionPointCost'),
+    staminaCost: optionalNumber('staminaCost'),
+    manaCost: optionalNumber('manaCost'),
+    attackType: optionalString('attackType'),
+    targetDefense,
+    saveType: optionalString('saveType'),
+    damage: optionalNumber('damage'),
+    damageType: optionalString('damageType'),
+    range: optionalString('range'),
+    area: optionalString('area'),
+    duration: optionalString('duration'),
+    condition: optionalString('condition'),
+    recharge: optionalString('recharge'),
+    maximumUses: optionalNumber('maximumUses'),
+    grantsAbilityID: optionalString('grantsAbilityID'),
+    modifiesAbilityID: optionalString('modifiesAbilityID'),
+  } : undefined;
   return {
     id: typeof item.id === 'string' ? item.id : generateUUID(),
     kind,
@@ -171,11 +214,42 @@ function normalizeAbility(value: unknown): MonsterAbility | null {
       : typeof item.description === 'string' ? item.description : '',
     traitValue,
     sourcePower,
+    mechanics,
     ruleReferences: Array.isArray(item.ruleReferences)
       ? item.ruleReferences.filter((reference): reference is NonNullable<MonsterAbility['ruleReferences']>[number] => (
           Boolean(reference) && typeof reference === 'object' && typeof (reference as Record<string, unknown>).ruleId === 'string'
         ))
       : undefined,
+  };
+}
+
+function normalizeMonsterImage(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.length > 80_000) return undefined;
+  return /^data:image\/(?:jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(value) ? value : undefined;
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim())) : [];
+}
+
+function normalizeStringArrayRecord(value: unknown): Record<string, string[]> {
+  if (!value || typeof value !== 'object') return {};
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+    .map(([key, entries]) => [key, normalizeStringArray(entries)]));
+}
+
+function normalizeMonsterLibrary(value: unknown): MonsterLibraryOrganization {
+  const item = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const folders = item.folderByMonsterID && typeof item.folderByMonsterID === 'object'
+    ? Object.fromEntries(Object.entries(item.folderByMonsterID as Record<string, unknown>)
+        .filter((entry): entry is [string, string] => typeof entry[1] === 'string'))
+    : {};
+  return {
+    favoriteIDs: normalizeStringArray(item.favoriteIDs),
+    recentIDs: normalizeStringArray(item.recentIDs).slice(0, 20),
+    tagsByMonsterID: normalizeStringArrayRecord(item.tagsByMonsterID),
+    folderByMonsterID: folders,
+    campaignIDsByMonsterID: normalizeStringArrayRecord(item.campaignIDsByMonsterID),
   };
 }
 
@@ -284,6 +358,10 @@ function normalizeMonster(value: unknown): Monster {
     vulnerabilities: typeof item.vulnerabilities === 'string' ? item.vulnerabilities : '',
     immunities: typeof item.immunities === 'string' ? item.immunities : '',
     abilities: migratedAbilities,
+    tags: normalizeStringArray(item.tags),
+    environments: normalizeStringArray(item.environments),
+    artworkDataURL: normalizeMonsterImage(item.artworkDataURL),
+    tokenDataURL: normalizeMonsterImage(item.tokenDataURL),
   };
 }
 
@@ -326,6 +404,7 @@ function normalizeCombatant(value: unknown): Combatant {
     monsterAbilities: Array.isArray(item.monsterAbilities)
       ? item.monsterAbilities.map(normalizeAbility).filter((entry): entry is MonsterAbility => entry !== null)
       : undefined,
+    tokenDataURL: normalizeMonsterImage(item.tokenDataURL),
   };
 }
 
@@ -570,6 +649,7 @@ export function migratePersistedState(value: unknown): PersistedCampaignState {
       combats: Array.isArray(rawCampaignData.combats)
         ? rawCampaignData.combats.map(normalizeCombat)
         : [],
+      monsterLibrary: normalizeMonsterLibrary(rawCampaignData.monsterLibrary),
     },
     characters,
     selectedCharacterId: typeof state.selectedCharacterId === 'string' ? state.selectedCharacterId : null,
@@ -646,7 +726,16 @@ export const useCampaignStore = create<CampaignStore>()(
         selectedCharacterId: state.selectedCharacterId === id ? null : state.selectedCharacterId,
       })),
       selectCharacter: (id) => set({ selectedCharacterId: id }),
-      selectMonster: (id) => set({ selectedMonsterId: id }),
+      selectMonster: (id) => set((state) => ({
+        selectedMonsterId: id,
+        campaignData: id ? {
+          ...state.campaignData,
+          monsterLibrary: {
+            ...state.campaignData.monsterLibrary,
+            recentIDs: [id, ...state.campaignData.monsterLibrary.recentIDs.filter((entry) => entry !== id)].slice(0, 20),
+          },
+        } : state.campaignData,
+      })),
       selectEncounter: (id) => set({ selectedEncounterId: id }),
       selectCombat: (id) => set({ selectedCombatId: id }),
       selectCampaign: (id) => set({ selectedCampaignId: id }),
@@ -734,8 +823,21 @@ export const useCampaignStore = create<CampaignStore>()(
         };
       }),
       removeCustomMonster: (id) => set((state) => ({
-        campaignData: { ...state.campaignData, customMonsters: state.campaignData.customMonsters.filter((monster) => monster.id !== id) },
+        campaignData: {
+          ...state.campaignData,
+          customMonsters: state.campaignData.customMonsters.filter((monster) => monster.id !== id),
+          monsterLibrary: {
+            favoriteIDs: state.campaignData.monsterLibrary.favoriteIDs.filter((entry) => entry !== id),
+            recentIDs: state.campaignData.monsterLibrary.recentIDs.filter((entry) => entry !== id),
+            tagsByMonsterID: Object.fromEntries(Object.entries(state.campaignData.monsterLibrary.tagsByMonsterID).filter(([key]) => key !== id)),
+            folderByMonsterID: Object.fromEntries(Object.entries(state.campaignData.monsterLibrary.folderByMonsterID).filter(([key]) => key !== id)),
+            campaignIDsByMonsterID: Object.fromEntries(Object.entries(state.campaignData.monsterLibrary.campaignIDsByMonsterID).filter(([key]) => key !== id)),
+          },
+        },
         selectedMonsterId: state.selectedMonsterId === id ? null : state.selectedMonsterId,
+      })),
+      updateMonsterLibrary: (organization) => set((state) => ({
+        campaignData: { ...state.campaignData, monsterLibrary: organization },
       })),
       addCustomEquipment: (item) => set((state) => ({
         campaignData: { ...state.campaignData, customEquipment: [...state.campaignData.customEquipment, item] },

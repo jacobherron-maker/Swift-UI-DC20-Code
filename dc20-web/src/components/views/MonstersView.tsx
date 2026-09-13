@@ -8,7 +8,7 @@ import type { ContentFocusRequest } from '../../navigation/appNavigation';
 
 /* Navigation requests intentionally synchronize this view's local workspace state. */
 /* oxlint-disable react/set-state-in-effect, react-hooks/exhaustive-deps */
-import type { Maneuver, Monster, MonsterAbility, MonsterAbilityKind, MonsterRole, MonsterType, Spell } from '../../types/models';
+import type { Maneuver, Monster, MonsterAbility, MonsterAbilityKind, MonsterAbilityMechanics, MonsterRole, MonsterType, Spell } from '../../types/models';
 import {
   MonsterAbilityKindValues,
   MonsterRoleValues,
@@ -29,8 +29,10 @@ import {
   monsterBudget,
   monsterDisplayRole,
   monsterLevelLabel,
+  monsterAbilityMechanicsSummary,
   monsterTraitValueSpent,
 } from '../../utils/monsterRules';
+import { MonsterImageEditor, MonsterToken } from '../monster/MonsterArtwork';
 
 const fieldClass = 'w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
 const labelClass = 'mb-1 block text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400';
@@ -239,25 +241,23 @@ function StatTile({ label, value, detail, ruleID }: { label: string; value: stri
   );
 }
 
-function MonsterListButton({ monster, active, onClick }: {
+function MonsterListButton({ monster, active, favorite, onClick, onFavorite }: {
   monster: Monster;
   active: boolean;
+  favorite: boolean;
   onClick: () => void;
+  onFavorite: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full rounded-xl border p-3 text-left transition ${active
+    <div className={`relative w-full rounded-xl border transition ${active
         ? 'border-violet-400/70 bg-violet-500/15 shadow-lg shadow-violet-950/20'
-        : 'border-white/5 bg-white/[0.025] hover:border-violet-400/30 hover:bg-white/[0.05]'}`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="font-bold text-slate-100">{monster.name}</div>
-        <div className="shrink-0 text-xs font-semibold text-violet-300">{monsterLevelLabel(monster.level)}</div>
-      </div>
-      <div className="mt-1 text-xs text-slate-400">{monster.type} • {monsterDisplayRole(monster)} • {monster.creatureType || 'Creature'}</div>
-    </button>
+        : 'border-white/5 bg-white/[0.025] hover:border-violet-400/30 hover:bg-white/[0.05]'}`}>
+      <button type="button" onClick={onClick} className="flex min-h-16 w-full items-center gap-3 p-3 pr-10 text-left">
+        <MonsterToken image={monster.tokenDataURL} name={monster.name} className="w-10 text-xs" />
+        <span className="min-w-0 grow"><span className="flex items-start justify-between gap-3"><span className="truncate font-bold text-slate-100">{monster.name}</span><span className="shrink-0 text-xs font-semibold text-violet-300">{monsterLevelLabel(monster.level)}</span></span><span className="mt-1 block truncate text-xs text-slate-400">{monster.type} • {monsterDisplayRole(monster)} • {monster.creatureType || 'Creature'}</span></span>
+      </button>
+      <button type="button" onClick={onFavorite} aria-label={`${favorite ? 'Remove' : 'Add'} ${monster.name} ${favorite ? 'from' : 'to'} favorites`} className={`absolute right-2 top-2 rounded-lg p-1.5 text-lg ${favorite ? 'text-amber-300' : 'text-slate-600 hover:text-amber-300'}`}>{favorite ? '★' : '☆'}</button>
+    </div>
   );
 }
 
@@ -268,12 +268,16 @@ function SourceMonsterDetail({ monster, onDuplicate }: { monster: Monster; onDup
   return (
     <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6 lg:space-y-6 lg:p-8">
       <div className="rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-950/50 via-slate-900 to-slate-950 p-4 sm:p-6">
+        {monster.artworkDataURL && <img src={monster.artworkDataURL} alt={`${monster.name} artwork`} className="mb-5 aspect-video w-full rounded-xl border border-white/10 object-cover" />}
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+          <div className="flex min-w-0 items-start gap-4">
+            <MonsterToken image={monster.tokenDataURL} name={monster.name} className="w-16 text-lg" />
+            <div className="min-w-0">
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Sourcebook Monster</div>
             <h2 className="mt-1 break-words text-3xl font-black tracking-tight text-white sm:text-4xl">{monster.name}</h2>
             <p className="mt-2 text-slate-300">{monster.size} {monster.creatureType} • {monsterLevelLabel(monster.level)} • {monsterDisplayRole(monster)}</p>
             <p className="mt-1 text-xs text-slate-500">{monster.sourceBook}{monster.sourcePage ? ` • Page ${monster.sourcePage}` : ''}</p>
+            </div>
           </div>
           <button type="button" onClick={onDuplicate} className="btn-primary font-semibold">Duplicate as Custom</button>
         </div>
@@ -341,6 +345,7 @@ function DetailLine({ label, value }: { label: string; value: string }) {
 }
 
 function AbilityDisplay({ ability, rulesVersion }: { ability: MonsterAbility; rulesVersion?: string }) {
+  const mechanics = monsterAbilityMechanicsSummary(ability);
   return (
     <div className="rounded-xl border border-white/5 bg-slate-950/60 p-4">
       <div className="flex flex-wrap items-baseline gap-2">
@@ -349,6 +354,7 @@ function AbilityDisplay({ ability, rulesVersion }: { ability: MonsterAbility; ru
         {ability.sourcePower && <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-xs font-bold text-cyan-200">{ability.sourcePower.custom ? 'Custom ' : ''}{ability.sourcePower.kind} • {ability.sourcePower.source}</span>}
         {ability.traitValue !== undefined && <span className="text-xs text-amber-300">Trait Value {signed(ability.traitValue)}</span>}
       </div>
+      {mechanics.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{mechanics.map((entry) => <span key={entry} className="rounded-lg border border-cyan-400/15 bg-cyan-950/20 px-2 py-1 text-xs font-bold text-cyan-100">{entry}</span>)}</div>}
       <p className="mt-2 whitespace-pre-wrap leading-6 text-slate-300"><RuleAwareText text={ability.details} references={ability.ruleReferences} rulesVersion={rulesVersion} /></p>
     </div>
   );
@@ -490,6 +496,15 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
             <p className="mt-2 text-sm leading-6 text-slate-400">Raise a weaker simple monster to the intended level, rebalance its Actions, and add straightforward Monster Traits as needed. Dune Beast is the volume’s worked example.</p>
           </div>
           <p className="text-xs leading-5 text-slate-500 md:col-span-3">Source: DC20 Magazine 25, page 3. Use the Monster Collection baselines and Trait Values shown elsewhere in this builder for final balancing.</p>
+        </div>
+      </details>
+
+      <details className="rounded-2xl border border-fuchsia-400/15 bg-fuchsia-950/10">
+        <summary className="cursor-pointer px-5 py-4 text-lg font-black text-fuchsia-200">Token & Artwork</summary>
+        <div className="grid gap-6 border-t border-fuchsia-400/10 p-5 md:grid-cols-[12rem_1fr]">
+          <div><h4 className={labelClass}>Combat Token</h4><MonsterImageEditor shape="token" image={monster.tokenDataURL} name={monster.name} onChange={(image) => update('tokenDataURL', image)} /></div>
+          <div><h4 className={labelClass}>Stat Block Artwork</h4><MonsterImageEditor shape="artwork" image={monster.artworkDataURL} name={monster.name} onChange={(image) => update('artworkDataURL', image)} /></div>
+          <p className="text-xs leading-5 text-slate-500 md:col-span-2">Images are center-cropped and compressed for dependable local and cloud saves. Tokens follow this monster into new encounters and combats.</p>
         </div>
       </details>
 
@@ -640,7 +655,7 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
               <div className="space-y-4 border-t border-white/5 p-5">
                 <PowerAbilityPicker kind={kind} options={powerOptions} isLoading={powersLoading} error={powersError} onAdd={(option) => addPowerAbility(kind, option)} />
                 {entries.map((ability) => (
-                  <AbilityEditor key={ability.id} ability={ability} showTraitValue={kind === MonsterAbilityKindValues.FEATURE} onChange={updateAbility} onRemove={() => removeAbility(ability.id)} />
+                  <AbilityEditor key={ability.id} ability={ability} siblingAbilities={monster.abilities.filter((entry) => entry.id !== ability.id)} showTraitValue={kind === MonsterAbilityKindValues.FEATURE} onChange={updateAbility} onRemove={() => removeAbility(ability.id)} />
                 ))}
                 <button type="button" onClick={() => addAbility(kind)} className="rounded-lg border border-dashed border-violet-400/40 px-3 py-2 text-sm font-bold text-violet-300 hover:bg-violet-500/10">+ Add {kind.slice(0, -1)}</button>
               </div>
@@ -652,12 +667,16 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
   );
 }
 
-function AbilityEditor({ ability, showTraitValue, onChange, onRemove }: {
+function AbilityEditor({ ability, siblingAbilities, showTraitValue, onChange, onRemove }: {
   ability: MonsterAbility;
+  siblingAbilities: MonsterAbility[];
   showTraitValue: boolean;
   onChange: (ability: MonsterAbility) => void;
   onRemove: () => void;
 }) {
+  const mechanics = ability.mechanics ?? {};
+  const updateMechanic = <K extends keyof MonsterAbilityMechanics>(key: K, value: MonsterAbilityMechanics[K]) => onChange({ ...ability, mechanics: { ...mechanics, [key]: value } });
+  const mechanicsSummary = monsterAbilityMechanicsSummary(ability);
   return (
     <div className="rounded-xl border border-white/8 bg-slate-950/60 p-4">
       <div className="grid gap-3 md:grid-cols-[1fr_10rem_auto]">
@@ -673,9 +692,95 @@ function AbilityEditor({ ability, showTraitValue, onChange, onRemove }: {
         <span className={labelClass}>Full Rules Text</span>
         <textarea className={`${fieldClass} min-h-24 resize-y`} value={ability.details} onChange={(event) => onChange({ ...ability, details: event.target.value })} />
       </label>
+      <details className="mt-3 rounded-xl border border-cyan-400/15 bg-cyan-950/10">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-black text-cyan-200">Advanced Mechanics Builder</summary>
+        <div className="space-y-4 border-t border-cyan-400/10 p-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <NumberField label="AP Cost" value={mechanics.actionPointCost ?? 0} min={0} onChange={(value) => updateMechanic('actionPointCost', value)} />
+            <NumberField label="RP Cost" value={mechanics.reactionPointCost ?? 0} min={0} onChange={(value) => updateMechanic('reactionPointCost', value)} />
+            <NumberField label="SP Cost" value={mechanics.staminaCost ?? 0} min={0} onChange={(value) => updateMechanic('staminaCost', value)} />
+            <NumberField label="MP Cost" value={mechanics.manaCost ?? 0} min={0} onChange={(value) => updateMechanic('manaCost', value)} />
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <TextField label="Attack / Check Type" value={mechanics.attackType ?? ''} onChange={(value) => updateMechanic('attackType', value)} placeholder="Martial Attack, Spell Check…" />
+            <label><span className={labelClass}>Targets</span><select className={fieldClass} value={mechanics.targetDefense ?? 'None'} onChange={(event) => updateMechanic('targetDefense', event.target.value as MonsterAbilityMechanics['targetDefense'])}>{['None', 'PD', 'AD', 'Save'].map((value) => <option key={value}>{value}</option>)}</select></label>
+            <TextField label="Save Type" value={mechanics.saveType ?? ''} onChange={(value) => updateMechanic('saveType', value)} placeholder="Physical, Mental, Might…" />
+            <NumberField label="Damage" value={mechanics.damage ?? 0} min={0} step={0.5} onChange={(value) => updateMechanic('damage', value)} />
+            <TextField label="Damage Type" value={mechanics.damageType ?? ''} onChange={(value) => updateMechanic('damageType', value)} placeholder="Fire, Piercing…" />
+            <TextField label="Condition" value={mechanics.condition ?? ''} onChange={(value) => updateMechanic('condition', value)} placeholder="Slowed, Burning…" />
+            <TextField label="Range" value={mechanics.range ?? ''} onChange={(value) => updateMechanic('range', value)} placeholder="10 Spaces" />
+            <TextField label="Area" value={mechanics.area ?? ''} onChange={(value) => updateMechanic('area', value)} placeholder="3 Space Burst" />
+            <TextField label="Duration" value={mechanics.duration ?? ''} onChange={(value) => updateMechanic('duration', value)} placeholder="1 Round" />
+            <TextField label="Recharge" value={mechanics.recharge ?? ''} onChange={(value) => updateMechanic('recharge', value)} placeholder="Short Rest, roll 5–6…" />
+            <NumberField label="Maximum Uses" value={mechanics.maximumUses ?? 0} min={0} onChange={(value) => updateMechanic('maximumUses', value)} />
+          </div>
+          {siblingAbilities.length > 0 && <div className="grid gap-3 md:grid-cols-2">
+            <label><span className={labelClass}>Grants Ability</span><select className={fieldClass} value={mechanics.grantsAbilityID ?? ''} onChange={(event) => updateMechanic('grantsAbilityID', event.target.value || undefined)}><option value="">None</option>{siblingAbilities.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></label>
+            <label><span className={labelClass}>Modifies Ability</span><select className={fieldClass} value={mechanics.modifiesAbilityID ?? ''} onChange={(event) => updateMechanic('modifiesAbilityID', event.target.value || undefined)}><option value="">None</option>{siblingAbilities.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></label>
+          </div>}
+          <div className="rounded-xl border border-white/8 bg-slate-950/60 p-3"><div className={labelClass}>Generated Stat-Block Summary</div>{mechanicsSummary.length > 0 ? <div className="flex flex-wrap gap-2">{mechanicsSummary.map((entry) => <span key={entry} className="rounded-lg bg-cyan-500/10 px-2 py-1 text-xs font-bold text-cyan-100">{entry}</span>)}</div> : <p className="text-xs text-slate-600">Add mechanics above to generate a clean reference summary. Your full rules text remains independently editable.</p>}</div>
+        </div>
+      </details>
       <RuleLinkInspector text={ability.details} references={ability.ruleReferences ?? []} onChange={(ruleReferences) => onChange({ ...ability, ruleReferences })} />
     </div>
   );
+}
+
+function CompactMonsterDetail({ monster }: { monster: Monster }) {
+  const grouped = Object.values(MonsterAbilityKindValues)
+    .map((kind) => ({ kind, abilities: monster.abilities.filter((ability) => ability.kind === kind) }))
+    .filter(({ abilities }) => abilities.length > 0);
+  return <div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-6">
+    <section className="overflow-hidden rounded-2xl border border-violet-400/25 bg-slate-900/80">
+      {monster.artworkDataURL && <img src={monster.artworkDataURL} alt={`${monster.name} artwork`} className="aspect-[3/1] w-full object-cover" />}
+      <div className="p-5"><div className="flex items-start gap-4"><MonsterToken image={monster.tokenDataURL} name={monster.name} className="w-16 text-lg" /><div className="min-w-0"><h2 className="text-3xl font-black text-white">{monster.name}</h2><p className="text-sm text-slate-400">{monster.size} {monster.creatureType || 'Creature'} • {monsterLevelLabel(monster.level)} • {monsterDisplayRole(monster)}</p></div></div>
+        <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8">{[['HP', monster.hp], ['PD', monster.physicalDefense], ['AD', monster.arcaneDefense], ['Attack', signed(monster.attackBonus)], ['DC', monster.saveDC], ['Damage', monster.damage], ['AP/RP', `${monster.actionPoints ?? 4}/${monster.reactionPoints ?? 0}`], ['Speed', monster.speed]].map(([label, value]) => <StatTile key={label} label={String(label)} value={value} />)}</div>
+        <p className="mt-4 text-sm leading-6 text-slate-400">{[monster.reductions && `Reductions: ${monster.reductions}`, monster.resistances && `Resistances: ${monster.resistances}`, monster.vulnerabilities && `Vulnerabilities: ${monster.vulnerabilities}`, monster.immunities && `Immunities: ${monster.immunities}`].filter(Boolean).join(' • ')}</p>
+      </div>
+    </section>
+    {grouped.map(({ kind, abilities }) => <section key={kind} className="rounded-2xl border border-white/8 bg-slate-900/70 p-4"><h3 className="mb-3 text-sm font-black uppercase tracking-[0.16em] text-violet-300">{kind}</h3><div className="space-y-2">{abilities.map((ability) => <AbilityDisplay key={ability.id} ability={ability} />)}</div></section>)}
+  </div>;
+}
+
+function PrintableMonster({ monster }: { monster: Monster }) {
+  return <article data-monster-print className="monster-print-sheet hidden bg-white p-8 text-black">
+    <header className="border-b-4 border-black pb-3"><div className="flex items-start justify-between gap-5"><div><h1 className="text-4xl font-black">{monster.name}</h1><p>{monster.size} {monster.creatureType || 'Creature'} • {monsterLevelLabel(monster.level)} • {monsterDisplayRole(monster)}</p></div>{monster.tokenDataURL && <img src={monster.tokenDataURL} alt="" className="h-20 w-20 rounded-full object-cover" />}</div></header>
+    <div className="my-4 grid grid-cols-8 gap-2 border-y-2 border-black py-3 text-center">{[['HP', monster.hp], ['PD', monster.physicalDefense], ['AD', monster.arcaneDefense], ['Attack', signed(monster.attackBonus)], ['Save DC', monster.saveDC], ['Damage', monster.damage], ['AP/RP', `${monster.actionPoints ?? 4}/${monster.reactionPoints ?? 0}`], ['Speed', monster.speed]].map(([label, value]) => <div key={label}><strong className="block text-xs uppercase">{label}</strong><span className="text-lg font-black">{value}</span></div>)}</div>
+    <p className="text-sm"><strong>Attributes:</strong> Might {signed(monster.might)} • Agility {signed(monster.agility)} • Charisma {signed(monster.charisma)} • Intelligence {signed(monster.intelligence)}</p>
+    {[['Training', monster.training], ['Skills', monster.skills], ['Senses', monster.senses], ['Languages', monster.languages], ['Movement', monster.otherSpeeds], ['Reductions', monster.reductions], ['Resistances', monster.resistances], ['Vulnerabilities', monster.vulnerabilities], ['Immunities', monster.immunities]].map(([label, value]) => value && <p key={label} className="mt-1 text-sm"><strong>{label}:</strong> {value}</p>)}
+    {Object.values(MonsterAbilityKindValues).map((kind) => { const abilities = monster.abilities.filter((ability) => ability.kind === kind); return abilities.length > 0 && <section key={kind} className="mt-4 break-inside-avoid"><h2 className="border-b border-black text-xl font-black">{kind}</h2>{abilities.map((ability) => <div key={ability.id} className="mt-2 break-inside-avoid text-sm"><strong>{ability.name}{ability.cost ? ` (${ability.cost})` : ''}.</strong>{monsterAbilityMechanicsSummary(ability).length > 0 && <span> {monsterAbilityMechanicsSummary(ability).join(' • ')}.</span>} <span className="whitespace-pre-wrap">{ability.details}</span></div>)}</section>; })}
+    {monster.sourceBook && <footer className="mt-6 border-t border-black pt-2 text-xs">{monster.sourceBook}{monster.sourcePage ? ` • Page ${monster.sourcePage}` : ''}</footer>}
+  </article>;
+}
+
+function printMonster() {
+  const cleanup = () => document.body.classList.remove('monster-print-mode');
+  document.body.classList.add('monster-print-mode');
+  window.addEventListener('afterprint', cleanup, { once: true });
+  window.print();
+  window.setTimeout(cleanup, 1500);
+}
+
+function MonsterOrganizationPanel({ favorites, tags, folder, campaignIDs, campaigns, onFavorite, onTags, onFolder, onCampaigns }: {
+  favorites: boolean;
+  tags: string[];
+  folder: string;
+  campaignIDs: string[];
+  campaigns: Array<{ id: string; name: string }>;
+  onFavorite: () => void;
+  onTags: (tags: string[]) => void;
+  onFolder: (folder: string) => void;
+  onCampaigns: (ids: string[]) => void;
+}) {
+  return <details className="mx-auto mt-4 max-w-5xl rounded-2xl border border-amber-400/15 bg-amber-950/10 px-4 sm:px-5">
+    <summary className="cursor-pointer py-3 text-sm font-black text-amber-200">Organize this monster</summary>
+    <div className="grid gap-4 border-t border-amber-400/10 py-4 md:grid-cols-2">
+      <button type="button" onClick={onFavorite} className={`rounded-xl border px-4 py-3 text-left text-sm font-black ${favorites ? 'border-amber-400/30 bg-amber-500/15 text-amber-200' : 'border-white/10 text-slate-300'}`}>{favorites ? '★ Favorited' : '☆ Add to Favorites'}</button>
+      <TextField label="Folder" value={folder} onChange={onFolder} placeholder="Example: Undead, City Watch…" />
+      <label className="md:col-span-2"><span className={labelClass}>Tags / Environments</span><input className={fieldClass} value={tags.join(', ')} onChange={(event) => onTags(event.target.value.split(',').map((entry) => entry.trim()).filter(Boolean))} placeholder="forest, boss, fire, session 12…" /></label>
+      {campaigns.length > 0 && <fieldset className="md:col-span-2"><legend className={labelClass}>Campaign Collections</legend><div className="flex flex-wrap gap-2">{campaigns.map((campaign) => <label key={campaign.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/8 bg-slate-950/55 px-3 py-2 text-sm text-slate-300"><input type="checkbox" checked={campaignIDs.includes(campaign.id)} onChange={(event) => onCampaigns(event.target.checked ? [...campaignIDs, campaign.id] : campaignIDs.filter((id) => id !== campaign.id))} />{campaign.name}</label>)}</div></fieldset>}
+    </div>
+  </details>;
 }
 
 export default function MonstersView({ focusRequest, onFocusHandled }: { focusRequest?: ContentFocusRequest | null; onFocusHandled?: () => void }) {
@@ -686,16 +791,39 @@ export default function MonstersView({ focusRequest, onFocusHandled }: { focusRe
     addCustomMonster,
     updateCustomMonster,
     removeCustomMonster,
+    updateMonsterLibrary,
   } = useCampaignStore();
   const { monsters: sourceMonsters, isLoading, error } = useSourceMonsters();
   const [search, setSearch] = useState('');
   const [customMonstersExpanded, setCustomMonstersExpanded] = useState(true);
   const [monsterWorkspaceExpanded, setMonsterWorkspaceExpanded] = useState(true);
+  const [compactMode, setCompactMode] = useState(false);
+  const [libraryFilter, setLibraryFilter] = useState('all');
+  const [levelFilter, setLevelFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [movementFilter, setMovementFilter] = useState('all');
+  const [damageFilter, setDamageFilter] = useState('');
+  const [conditionFilter, setConditionFilter] = useState('');
+  const [environmentFilter, setEnvironmentFilter] = useState('');
   const customMonsters = campaignData.customMonsters;
+  const library = campaignData.monsterLibrary;
+  const allMonsters = [...sourceMonsters, ...customMonsters];
   const selected = sourceMonsters.find(({ id }) => id === selectedMonsterId)
     ?? customMonsters.find(({ id }) => id === selectedMonsterId)
     ?? null;
   const isCustom = selected ? customMonsters.some(({ id }) => id === selected.id) : false;
+  const folderOptions = Array.from(new Set(Object.values(library.folderByMonsterID).filter(Boolean))).sort();
+  const levelOptions = Array.from(new Set(allMonsters.map(({ level }) => level))).sort((left, right) => left - right);
+  const roleOptions = Array.from(new Set(allMonsters.map(monsterDisplayRole))).sort();
+  const typeOptions = Array.from(new Set(allMonsters.map(({ creatureType }) => creatureType).filter(Boolean))).sort();
+  const sourceOptions = Array.from(new Set(sourceMonsters.map(({ sourceBook }) => sourceBook).filter((value): value is string => Boolean(value)))).sort();
+
+  const changeLibrary = (changes: Partial<typeof library>) => updateMonsterLibrary({ ...library, ...changes });
+  const toggleFavorite = (id: string) => changeLibrary({ favoriteIDs: library.favoriteIDs.includes(id)
+    ? library.favoriteIDs.filter((entry) => entry !== id)
+    : [...library.favoriteIDs, id] });
 
   useEffect(() => {
     if (!selectedMonsterId && sourceMonsters[0]) selectMonster(sourceMonsters[0].id);
@@ -703,12 +831,29 @@ export default function MonstersView({ focusRequest, onFocusHandled }: { focusRe
 
   const filterMonster = (monster: Monster) => {
     const query = search.trim().toLowerCase();
-    if (!query) return true;
-    return [monster.name, monster.creatureType, monster.role, monster.publishedRole ?? '', monster.type, ...monster.abilities.map(({ name }) => name)]
+    if (libraryFilter === 'favorites' && !library.favoriteIDs.includes(monster.id)) return false;
+    if (libraryFilter === 'recent' && !library.recentIDs.includes(monster.id)) return false;
+    if (libraryFilter.startsWith('folder:') && library.folderByMonsterID[monster.id] !== libraryFilter.slice(7)) return false;
+    if (libraryFilter.startsWith('campaign:') && !(library.campaignIDsByMonsterID[monster.id] ?? []).includes(libraryFilter.slice(9))) return false;
+    if (levelFilter !== 'all' && monster.level !== Number(levelFilter)) return false;
+    if (roleFilter !== 'all' && monsterDisplayRole(monster) !== roleFilter) return false;
+    if (typeFilter !== 'all' && monster.creatureType !== typeFilter) return false;
+    if (sourceFilter !== 'all' && (monster.sourceBook || 'Custom') !== sourceFilter) return false;
+    const movement = `${monster.speedType ?? ''} ${monster.otherSpeeds}`.toLowerCase();
+    if (movementFilter !== 'all' && !movement.includes(movementFilter.toLowerCase())) return false;
+    const abilitiesText = monster.abilities.map((ability) => `${ability.name} ${ability.details} ${ability.mechanics?.damageType ?? ''} ${ability.mechanics?.condition ?? ''}`).join(' ');
+    if (damageFilter.trim() && !`${abilitiesText} ${monster.resistances} ${monster.vulnerabilities} ${monster.immunities}`.toLowerCase().includes(damageFilter.trim().toLowerCase())) return false;
+    if (conditionFilter.trim() && !abilitiesText.toLowerCase().includes(conditionFilter.trim().toLowerCase())) return false;
+    const tags = [...(monster.tags ?? []), ...(monster.environments ?? []), ...(library.tagsByMonsterID[monster.id] ?? [])].join(' ').toLowerCase();
+    if (environmentFilter.trim() && !tags.includes(environmentFilter.trim().toLowerCase())) return false;
+    return !query || [monster.name, monster.creatureType, monster.role, monster.publishedRole ?? '', monster.type, monster.sourceBook ?? '', monster.training, monster.skills, monster.languages, abilitiesText, tags]
       .some((value) => value.toLowerCase().includes(query));
   };
-  const filteredSources = sourceMonsters.filter(filterMonster);
-  const filteredCustom = customMonsters.filter(filterMonster);
+  const sortRecent = (monsters: Monster[]) => libraryFilter === 'recent'
+    ? [...monsters].sort((left, right) => library.recentIDs.indexOf(left.id) - library.recentIDs.indexOf(right.id))
+    : monsters;
+  const filteredSources = sortRecent(sourceMonsters.filter(filterMonster));
+  const filteredCustom = sortRecent(customMonsters.filter(filterMonster));
 
   const duplicate = (monster: Monster) => {
     const copy = cloneMonsterAsCustom(monster);
@@ -750,6 +895,20 @@ export default function MonstersView({ focusRequest, onFocusHandled }: { focusRe
           placeholder="Search names, roles, traits…"
           aria-label="Search monsters"
         />
+        <details className="mt-3 rounded-xl border border-white/8 bg-slate-900/55 p-3">
+          <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-violet-300">Advanced filters</summary>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <select aria-label="Monster collection" className={fieldClass} value={libraryFilter} onChange={(event) => setLibraryFilter(event.target.value)}><option value="all">All monsters</option><option value="favorites">★ Favorites</option><option value="recent">Recently viewed</option>{folderOptions.map((folder) => <option key={folder} value={`folder:${folder}`}>Folder: {folder}</option>)}{campaignData.campaigns.map((campaign) => <option key={campaign.id} value={`campaign:${campaign.id}`}>Campaign: {campaign.name}</option>)}</select>
+            <select aria-label="Monster level" className={fieldClass} value={levelFilter} onChange={(event) => setLevelFilter(event.target.value)}><option value="all">Any level</option>{levelOptions.map((level) => <option key={level} value={level}>{monsterLevelLabel(level)}</option>)}</select>
+            <select aria-label="Monster role" className={fieldClass} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}><option value="all">Any role</option>{roleOptions.map((role) => <option key={role}>{role}</option>)}</select>
+            <select aria-label="Creature type" className={fieldClass} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">Any creature type</option>{typeOptions.map((type) => <option key={type}>{type}</option>)}</select>
+            <select aria-label="Monster source" className={fieldClass} value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option value="all">Any source</option><option value="Custom">Custom</option>{sourceOptions.map((source) => <option key={source}>{source}</option>)}</select>
+            <select aria-label="Movement type" className={fieldClass} value={movementFilter} onChange={(event) => setMovementFilter(event.target.value)}><option value="all">Any movement</option>{PRIMARY_SPEED_TYPES.map((type) => <option key={type}>{type}</option>)}</select>
+            <input aria-label="Damage type filter" className={fieldClass} value={damageFilter} onChange={(event) => setDamageFilter(event.target.value)} placeholder="Damage type" />
+            <input aria-label="Condition filter" className={fieldClass} value={conditionFilter} onChange={(event) => setConditionFilter(event.target.value)} placeholder="Condition" />
+            <input aria-label="Tag or environment filter" className={`${fieldClass} col-span-2`} value={environmentFilter} onChange={(event) => setEnvironmentFilter(event.target.value)} placeholder="Tag or environment" />
+          </div>
+        </details>
         <div className="mt-5 max-h-80 space-y-5 overflow-y-auto overscroll-contain pr-1 lg:max-h-none lg:overflow-visible">
           <section>
             <div className="mb-2 flex items-center justify-between">
@@ -759,7 +918,7 @@ export default function MonstersView({ focusRequest, onFocusHandled }: { focusRe
             {isLoading && <p className="rounded-xl border border-white/5 p-3 text-sm text-slate-500">Loading audited library…</p>}
             {error && <p className="rounded-xl border border-red-400/20 bg-red-500/5 p-3 text-sm text-red-300">{error}</p>}
             <div className="max-h-44 space-y-2 overflow-y-auto pr-1 lg:max-h-[42vh]">
-              {filteredSources.map((monster) => <MonsterListButton key={monster.id} monster={monster} active={monster.id === selectedMonsterId} onClick={() => openMonster(monster.id)} />)}
+              {filteredSources.map((monster) => <MonsterListButton key={monster.id} monster={monster} favorite={library.favoriteIDs.includes(monster.id)} active={monster.id === selectedMonsterId} onClick={() => openMonster(monster.id)} onFavorite={() => toggleFavorite(monster.id)} />)}
             </div>
           </section>
           <section>
@@ -769,7 +928,7 @@ export default function MonstersView({ focusRequest, onFocusHandled }: { focusRe
             </button>
             {customMonstersExpanded && <div className="max-h-40 space-y-2 overflow-y-auto pr-1 lg:max-h-[32vh]">
               {filteredCustom.length === 0 && <button type="button" onClick={createMonster} className="w-full rounded-xl border border-dashed border-white/10 p-4 text-sm text-slate-500 hover:border-violet-400/30 hover:text-violet-300">Create your first custom monster</button>}
-              {filteredCustom.map((monster) => <MonsterListButton key={monster.id} monster={monster} active={monster.id === selectedMonsterId} onClick={() => openMonster(monster.id)} />)}
+              {filteredCustom.map((monster) => <MonsterListButton key={monster.id} monster={monster} favorite={library.favoriteIDs.includes(monster.id)} active={monster.id === selectedMonsterId} onClick={() => openMonster(monster.id)} onFavorite={() => toggleFavorite(monster.id)} />)}
             </div>}
           </section>
         </div>
@@ -778,13 +937,15 @@ export default function MonstersView({ focusRequest, onFocusHandled }: { focusRe
       <main className="min-w-0 flex-1 lg:overflow-y-auto">
         {!selected && <div className="grid min-h-full place-items-center p-8 text-center text-slate-500">Select a monster or create a custom one.</div>}
         {selected && <section className="min-h-full">
-          <button type="button" onClick={() => setMonsterWorkspaceExpanded((expanded) => !expanded)} aria-expanded={monsterWorkspaceExpanded} className="sticky top-0 z-20 flex min-h-14 w-full items-center justify-between gap-4 border-b border-white/10 bg-slate-950/90 px-4 py-3 text-left shadow-lg backdrop-blur sm:px-6 lg:px-8">
+          <div className="sticky top-0 z-20 flex min-h-14 w-full flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-slate-950/90 px-4 py-3 shadow-lg backdrop-blur sm:px-6 lg:px-8">
             <span className="min-w-0"><span className="block text-[10px] font-black uppercase tracking-[0.18em] text-violet-300">{isCustom ? 'Custom Monster Builder' : 'Monster Stat Block'}</span><span className="block truncate font-black text-white">{selected.name || 'Unnamed Monster'}</span></span>
-            <span className="shrink-0 rounded-lg bg-violet-500/10 px-3 py-2 text-xs font-black text-violet-200">{monsterWorkspaceExpanded ? 'Collapse' : 'Expand'} <span aria-hidden="true">{monsterWorkspaceExpanded ? '▴' : '▾'}</span></span>
-          </button>
+            <span className="flex flex-wrap gap-2"><button type="button" onClick={() => toggleFavorite(selected.id)} className={`rounded-lg px-3 py-2 text-xs font-black ${library.favoriteIDs.includes(selected.id) ? 'bg-amber-500/15 text-amber-200' : 'bg-white/5 text-slate-300'}`}>{library.favoriteIDs.includes(selected.id) ? '★ Favorite' : '☆ Favorite'}</button><button type="button" onClick={() => setCompactMode((value) => !value)} className="rounded-lg bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-200">{compactMode ? 'Full Layout' : 'Compact Layout'}</button><button type="button" onClick={printMonster} className="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-200">Print</button><button type="button" onClick={() => setMonsterWorkspaceExpanded((expanded) => !expanded)} aria-expanded={monsterWorkspaceExpanded} className="rounded-lg bg-violet-500/10 px-3 py-2 text-xs font-black text-violet-200">{monsterWorkspaceExpanded ? 'Collapse ▴' : 'Expand ▾'}</button></span>
+          </div>
           {monsterWorkspaceExpanded && <>
-            {!isCustom && <SourceMonsterDetail monster={selected} onDuplicate={() => duplicate(selected)} />}
-            {isCustom && <CustomMonsterEditor
+            <MonsterOrganizationPanel favorites={library.favoriteIDs.includes(selected.id)} tags={library.tagsByMonsterID[selected.id] ?? []} folder={library.folderByMonsterID[selected.id] ?? ''} campaignIDs={library.campaignIDsByMonsterID[selected.id] ?? []} campaigns={campaignData.campaigns} onFavorite={() => toggleFavorite(selected.id)} onTags={(tags) => changeLibrary({ tagsByMonsterID: { ...library.tagsByMonsterID, [selected.id]: tags } })} onFolder={(folder) => changeLibrary({ folderByMonsterID: { ...library.folderByMonsterID, [selected.id]: folder } })} onCampaigns={(ids) => changeLibrary({ campaignIDsByMonsterID: { ...library.campaignIDsByMonsterID, [selected.id]: ids } })} />
+            {compactMode && <CompactMonsterDetail monster={selected} />}
+            {!compactMode && !isCustom && <SourceMonsterDetail monster={selected} onDuplicate={() => duplicate(selected)} />}
+            {!compactMode && isCustom && <CustomMonsterEditor
               monster={selected}
               onChange={updateCustomMonster}
               onDuplicate={() => duplicate(selected)}
@@ -795,6 +956,7 @@ export default function MonstersView({ focusRequest, onFocusHandled }: { focusRe
               }}
             />}
           </>}
+          <PrintableMonster monster={selected} />
         </section>}
       </main>
     </div>

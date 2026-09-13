@@ -5,8 +5,9 @@ import { useCampaignStore } from '../../store/campaignStore';
 import type { Combatant, CombatantTeam, SavedCombat } from '../../types/models';
 import { CombatantTeamValues } from '../../types/models';
 import { generateUUID } from '../../utils/gameUtils';
-import { combatantFromCharacter, combatantFromMonster, combatFromEncounter, monsterDisplayRole, synchronizeEncounterPartyCharacters } from '../../utils/monsterRules';
+import { combatantFromCharacter, combatantFromMonster, combatFromEncounter, monsterAbilityMechanicsSummary, monsterDisplayRole, synchronizeEncounterPartyCharacters } from '../../utils/monsterRules';
 import { ExplicitRuleLink, RuleAwareText } from '../rules/RuleAwareText';
+import { MonsterToken } from '../monster/MonsterArtwork';
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
 
@@ -296,6 +297,7 @@ function CombatantCard({ combatant, livePartyName, onChange, onRemove }: {
     <article className={`overflow-hidden rounded-xl border bg-slate-950/65 ${combatant.hasActed ? 'border-white/5 opacity-65' : 'border-white/10'}`}>
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
+          {combatant.sourceMonsterID && <MonsterToken image={combatant.tokenDataURL} name={combatant.name} className="w-12 text-xs" />}
           <div className="min-w-0 grow">
             <input value={combatant.name} onChange={(event) => onChange({ ...combatant, name: event.target.value })} className="w-full bg-transparent font-black text-slate-100 outline-none focus:text-violet-200" aria-label="Combatant name" />
             <select value={combatant.team} onChange={(event) => onChange({ ...combatant, team: event.target.value as CombatantTeam })} className="mt-1 bg-transparent text-xs text-slate-500 outline-none">
@@ -336,6 +338,7 @@ function CombatantCard({ combatant, livePartyName, onChange, onRemove }: {
           {combatant.monsterAbilities?.map((ability) => (
             <div key={ability.id} className="rounded-lg bg-white/[0.035] p-3">
               <div className="font-bold text-slate-200">{ability.name} {ability.cost && <span className="text-xs text-violet-300">• <RuleAwareText text={ability.cost} /></span>}</div>
+              {monsterAbilityMechanicsSummary(ability).length > 0 && <div className="mt-2 flex flex-wrap gap-1">{monsterAbilityMechanicsSummary(ability).map((entry) => <span key={entry} className="rounded bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-bold text-cyan-200">{entry}</span>)}</div>}
               <p className="mt-1 leading-5 text-slate-400"><RuleAwareText text={ability.details} references={ability.ruleReferences} /></p>
             </div>
           ))}

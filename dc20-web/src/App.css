@@ -230,4 +230,44 @@ button,
     color: inherit !important;
     text-decoration: none !important;
   }
+
+  body.monster-print-mode * {
+    visibility: hidden !important;
+  }
+
+  body.monster-print-mode [data-monster-print],
+  body.monster-print-mode [data-monster-print] * {
+    visibility: visible !important;
+  }
+
+  body.monster-print-mode [data-monster-print] {
+    display: block !important;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    min-height: 100%;
+    color: #000 !important;
+    background: #fff !important;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+
+  body.monster-print-mode,
+  body.monster-print-mode .dc20-theme,
+  body.monster-print-mode .app-main,
+  body.monster-print-mode main,
+  body.monster-print-mode section {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.monster-print-mode [data-monster-print] * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body.monster-print-mode [data-monster-print] img {
+    print-color-adjust: exact;
+  }
 }

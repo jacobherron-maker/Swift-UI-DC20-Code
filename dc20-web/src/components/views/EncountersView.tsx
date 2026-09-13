@@ -8,6 +8,7 @@ import { generateUUID } from '../../utils/gameUtils';
 import { RuleAwareText } from '../rules/RuleAwareText';
 import {
   combatFromEncounter,
+  encounterMatchupAnalysis,
   encounterMetrics,
   monsterBudget,
   monsterDisplayRole,
@@ -16,6 +17,7 @@ import {
   synchronizeEncounterPartyCharacters,
 } from '../../utils/monsterRules';
 import { CharacterAvatar } from '../character/CharacterAvatar';
+import { MonsterToken } from '../monster/MonsterArtwork';
 import type { ContentFocusRequest } from '../../navigation/appNavigation';
 
 /* Navigation requests intentionally synchronize this view's local selection. */
@@ -224,9 +226,26 @@ function PartyReadinessPanel({ encounter }: { encounter: Encounter }) {
   </section>;
 }
 
+function MatchupAnalysisPanel({ encounter }: { encounter: Encounter }) {
+  const analysis = encounterMatchupAnalysis(encounter);
+  const totalTargets = Object.values(analysis.targetedDefenses).reduce((sum, value) => sum + value, 0);
+  const chipSection = (label: string, values: string[]) => values.length > 0 && <div><div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</div><div className="mt-1.5 flex flex-wrap gap-1.5">{values.map((value) => <span key={value} className="rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-xs font-bold text-slate-300">{value}</span>)}</div></div>;
+  return <details open className="rounded-2xl border border-cyan-400/15 bg-gradient-to-br from-cyan-950/20 via-slate-900/75 to-slate-950/75">
+    <summary className="cursor-pointer px-5 py-4"><span className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">Tactical Advisory</span><span className="mt-1 block text-lg font-black text-white">Encounter Matchup Analysis</span></summary>
+    <div className="space-y-5 border-t border-cyan-400/10 p-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        {[['Party avg PD', analysis.partyAveragePD ?? '—'], ['Party avg AD', analysis.partyAverageAD ?? '—'], ['Targets PD', analysis.targetedDefenses.PD], ['Targets AD', analysis.targetedDefenses.AD], ['Forces Saves', analysis.targetedDefenses.Save], ['Unclassified', analysis.targetedDefenses.Unknown], ['Damage pressure', formatBudget(analysis.baselineDamagePressure)]].map(([label, value]) => <div key={label} className="rounded-xl border border-white/8 bg-slate-950/55 p-3 text-center"><div className="text-[9px] font-black uppercase tracking-wider text-slate-600">{label}</div><div className="mt-1 text-xl font-black text-cyan-100">{value}</div></div>)}
+      </div>
+      <p className="text-xs leading-5 text-slate-500">Damage pressure totals each listed monster’s baseline damage once per creature. It is a comparison aid, not predicted damage per round; individual actions and tactics still control actual output. {totalTargets === 0 && 'No attacks could be classified from the current stat blocks.'}</p>
+      <div className="grid gap-4 lg:grid-cols-2">{chipSection('Damage types presented', analysis.damageTypes)}{chipSection('Conditions presented', analysis.conditions)}{chipSection('Special movement', analysis.specialMovement)}{chipSection('Monster defenses to review', analysis.defenses)}</div>
+      {analysis.warnings.length > 0 && <div className="rounded-xl border border-amber-400/15 bg-amber-500/5 p-4"><h3 className="text-xs font-black uppercase tracking-[0.14em] text-amber-300">GM Checks</h3><ul className="mt-2 space-y-1.5 text-sm leading-6 text-amber-100/75">{analysis.warnings.map((warning) => <li key={warning}>• {warning}</li>)}</ul></div>}
+    </div>
+  </details>;
+}
+
 function EncounterMonsterCard({ monster, isCustom, currentCount, onAdd }: { monster: Monster; isCustom: boolean; currentCount: number; onAdd: () => void }) {
   const [expanded, setExpanded] = useState(false);
-  return <article className="min-w-0 rounded-xl border border-white/8 bg-slate-950/55 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-black text-slate-100">{monster.name}</h3>{isCustom && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-300">Custom</span>}</div><p className="mt-1 text-xs text-slate-500">{monsterLevelLabel(monster.level)} • {monster.type} • {monsterDisplayRole(monster)} • {monster.creatureType || 'Creature'}</p><p className="mt-1 text-xs font-bold text-violet-300">{formatBudget(monsterBudget(monster))} budget each{currentCount > 0 ? ` • ${currentCount} in encounter` : ''}</p></div><button type="button" onClick={onAdd} className="shrink-0 rounded-lg bg-violet-600 px-3 py-2 text-sm font-black text-white hover:bg-violet-500">{currentCount > 0 ? '+ Add Another' : '+ Add'}</button></div>
+  return <article className="min-w-0 rounded-xl border border-white/8 bg-slate-950/55 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div className="flex min-w-0 items-start gap-3"><MonsterToken image={monster.tokenDataURL} name={monster.name} className="w-12 text-xs" /><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-black text-slate-100">{monster.name}</h3>{isCustom && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-300">Custom</span>}</div><p className="mt-1 text-xs text-slate-500">{monsterLevelLabel(monster.level)} • {monster.type} • {monsterDisplayRole(monster)} • {monster.creatureType || 'Creature'}</p><p className="mt-1 text-xs font-bold text-violet-300">{formatBudget(monsterBudget(monster))} budget each{currentCount > 0 ? ` • ${currentCount} in encounter` : ''}</p></div></div><button type="button" onClick={onAdd} className="shrink-0 rounded-lg bg-violet-600 px-3 py-2 text-sm font-black text-white hover:bg-violet-500">{currentCount > 0 ? '+ Add Another' : '+ Add'}</button></div>
     <details className="group mt-3 rounded-lg border border-white/5 bg-white/[0.025]" onToggle={(event) => setExpanded(event.currentTarget.open)}><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-xs font-black text-slate-300"><span>Preview stat block</span><span className="text-violet-300 group-open:hidden">More</span><span className="hidden text-violet-300 group-open:inline">Less</span></summary>{expanded && <div className="border-t border-white/5 p-3"><div className="grid grid-cols-3 gap-2 text-center sm:grid-cols-6">{[['HP', monster.hp], ['PD', monster.physicalDefense], ['AD', monster.arcaneDefense], ['Attack', `+${monster.attackBonus}`], ['Save DC', monster.saveDC], ['Speed', monster.speed]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-900 p-2"><div className="text-[9px] font-black uppercase tracking-wider text-slate-600">{label}</div><div className="font-black text-slate-200">{value}</div></div>)}</div>{monster.descriptionText && <p className="mt-3 text-sm leading-6 text-slate-400"><RuleAwareText text={monster.descriptionText} /></p>}{monster.abilities.length > 0 && <div className="mt-3 space-y-2">{monster.abilities.map((ability) => <div key={ability.id} className="rounded-lg bg-slate-900/70 p-3"><div className="font-bold text-slate-200">{ability.name}{ability.cost ? <span className="ml-2 text-xs text-violet-300">{ability.cost}</span> : null}</div><p className="mt-1 text-xs leading-5 text-slate-400"><RuleAwareText text={ability.details} references={ability.ruleReferences} /></p></div>)}</div>}</div>}</details>
   </article>;
 }
@@ -341,6 +360,7 @@ function EncounterEditor({ encounter, sourceMonsters, customMonsters, partyChara
       </section>
 
       <PartyReadinessPanel encounter={encounter} />
+      <MatchupAnalysisPanel encounter={encounter} />
 
       <section className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <div className={`rounded-xl border p-4 text-center ${budgetColor(metrics.difficulty)}`}>
@@ -376,10 +396,10 @@ function EncounterEditor({ encounter, sourceMonsters, customMonsters, partyChara
           {encounter.entries.length === 0 && <div className="rounded-xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-500">Choose creatures from the audited sourcebook library or your custom directory.</div>}
           {encounter.entries.map((entry) => (
             <div key={entry.id} className="grid items-center gap-3 rounded-xl border border-white/8 bg-slate-950/55 p-4 md:grid-cols-[1fr_auto_auto_auto]">
-              <div>
+              <div className="flex min-w-0 items-center gap-3"><MonsterToken image={entry.monster.tokenDataURL} name={entry.monster.name} className="w-11 text-xs" /><div className="min-w-0">
                 <div className="font-black text-slate-100">{entry.monster.name}</div>
                 <div className="mt-1 text-xs text-slate-500">{monsterLevelLabel(entry.monster.level)} • {entry.monster.type} • {monsterDisplayRole(entry.monster)} • {formatBudget(monsterBudget(entry.monster))} budget each</div>
-              </div>
+              </div></div>
               <div className="flex items-center rounded-lg border border-white/8 bg-slate-900 p-1">
                 <button type="button" onClick={() => setEntryCount(entry.id, entry.count - 1)} className="h-8 w-8 rounded text-slate-300 hover:bg-white/5">−</button>
                 <input type="number" min={1} value={entry.count} onChange={(event) => setEntryCount(entry.id, Number(event.target.value))} className="w-12 bg-transparent text-center font-black text-violet-200 outline-none" aria-label={`${entry.monster.name} count`} />
