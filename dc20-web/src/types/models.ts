@@ -182,6 +182,20 @@ export const CombatantTeamValues = {
 
 export type CombatantTeam = (typeof CombatantTeamValues)[keyof typeof CombatantTeamValues];
 
+export type CombatTurnState = 'Ready' | 'Active' | 'Delayed' | 'Readied' | 'Skipped' | 'Defeated' | 'Escaped' | 'Surrendered' | 'Captured';
+export type CombatEffectTiming = 'Manual' | 'Start of Turn' | 'End of Turn' | 'Start of Round' | 'End of Round';
+
+export interface CombatConditionEffect {
+  id: string;
+  name: string;
+  level: number;
+  source: string;
+  remainingRounds?: number;
+  expiresAt: CombatEffectTiming;
+  saveDC?: number;
+  description?: string;
+}
+
 export interface Combatant {
   id: string;
   name: string;
@@ -206,6 +220,42 @@ export interface Combatant {
   monsterAbilities?: MonsterAbility[];
   /** Self-contained token snapshot so saved combats do not depend on a mutable monster record. */
   tokenDataURL?: string;
+  initiative?: number;
+  initiativeBonus?: number;
+  turnState?: CombatTurnState;
+  activeConditions?: CombatConditionEffect[];
+  visibility?: 'Visible' | 'Hidden';
+  maxStamina?: number;
+  stamina?: number;
+  maxMana?: number;
+  mana?: number;
+  reductions?: string;
+  resistances?: string;
+  vulnerabilities?: string;
+  immunities?: string;
+  movementDetails?: string;
+}
+
+export type CombatHistoryKind = 'Turn' | 'Damage' | 'Healing' | 'Condition' | 'Resource' | 'Roster' | 'Note' | 'System';
+
+export interface CombatHistoryEntry {
+  id: string;
+  timestamp: string;
+  round: number;
+  kind: CombatHistoryKind;
+  text: string;
+  private: boolean;
+}
+
+export interface CombatUndoSnapshot {
+  id: string;
+  label: string;
+  round: number;
+  combatants: Combatant[];
+  initiativeOrder: string[];
+  activeCombatantID?: string;
+  status: 'Active' | 'Paused' | 'Completed';
+  completedAt?: string;
 }
 
 export interface SavedCombat {
@@ -216,6 +266,16 @@ export interface SavedCombat {
   firstTeam: CombatantTeam;
   notes: string;
   sourceEncounterID?: string;
+  initiativeMode?: 'Team' | 'Individual';
+  initiativeOrder?: string[];
+  activeCombatantID?: string;
+  status?: 'Active' | 'Paused' | 'Completed';
+  history?: CombatHistoryEntry[];
+  undoStack?: CombatUndoSnapshot[];
+  startedAt?: string;
+  completedAt?: string;
+  summary?: string;
+  playerView?: boolean;
 }
 
 export interface CampaignData {

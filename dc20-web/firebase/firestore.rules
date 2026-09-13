@@ -61,12 +61,17 @@ service cloud.firestore {
             || (request.resource.data.invite_code is string
               && get(/databases/$(database)/documents/party_invites/$(request.resource.data.invite_code)).data.campaign_id == campaignId
               && get(/databases/$(database)/documents/party_invites/$(request.resource.data.invite_code)).data.active == true));
-        allow update: if signedIn()
-          && memberId == request.auth.uid
-          && resource.data.user_id == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'display_name', 'character_id', 'character', 'updated_at'
-          ]);
+        allow update: if signedIn() && (
+          (memberId == request.auth.uid
+            && resource.data.user_id == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'display_name', 'character_id', 'character', 'updated_at'
+            ]))
+          || (isPartyGM(campaignId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'character', 'updated_at'
+            ]))
+        );
         allow delete: if signedIn() && (memberId == request.auth.uid || isPartyGM(campaignId));
       }
 

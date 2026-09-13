@@ -1,77 +1,118 @@
-import { useEffect, useState } from 'react';
-import { usePartyCampaigns } from '../../cloud/PartyCampaignContext';
+import { useEffect, useMemo, useState } from 'react';
+import { usePartyCampaigns, type PartyCharacterEntry } from '../../cloud/PartyCampaignContext';
+import { useRulesReference } from '../../hooks/useRulesReference';
 import { useSourceMonsters } from '../../hooks/useSourceMonsters';
 import { useCampaignStore } from '../../store/campaignStore';
-import type { Combatant, CombatantTeam, SavedCombat } from '../../types/models';
+import type { CampaignNote, Character, CombatConditionEffect, Combatant, CombatantTeam, CombatEffectTiming, CombatTurnState, RuleReferenceEntry, SavedCombat } from '../../types/models';
 import { CombatantTeamValues } from '../../types/models';
+import { advanceCombatTurn, combatTacticalMetrics, createCombatSummary, moveInitiative, normalizedInitiativeOrder, recordCombatChange, resolveDamage, retreatCombatTurn, startCombatTurns, undoLastCombatChange, type DamageResolutionInput, type HitSeverity } from '../../utils/combatRules';
 import { generateUUID } from '../../utils/gameUtils';
 import { combatantFromCharacter, combatantFromMonster, combatFromEncounter, monsterAbilityMechanicsSummary, monsterDisplayRole, synchronizeEncounterPartyCharacters } from '../../utils/monsterRules';
-import { ExplicitRuleLink, RuleAwareText } from '../rules/RuleAwareText';
 import { MonsterToken } from '../monster/MonsterArtwork';
+import { ExplicitRuleLink, RuleAwareText } from '../rules/RuleAwareText';
 
 const inputClass = 'rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
+const panelClass = 'rounded-2xl border border-white/8 bg-slate-900/75 p-4 sm:p-5';
+const turnStates: CombatTurnState[] = ['Ready', 'Delayed', 'Readied', 'Skipped', 'Defeated', 'Escaped', 'Surrendered', 'Captured'];
+const effectTimings: CombatEffectTiming[] = ['Manual', 'Start of Turn', 'End of Turn', 'Start of Round', 'End of Round'];
+const damageTypes = ['Bludgeoning', 'Piercing', 'Slashing', 'Cold', 'Corrosion', 'Fire', 'Lightning', 'Poison', 'Psychic', 'Radiant', 'Umbral', 'True'];
 
 function newCombat(name: string): SavedCombat {
-  return {
-    id: generateUUID(),
-    name,
-    combatants: [],
-    round: 1,
-    firstTeam: CombatantTeamValues.HEROES,
-    notes: '',
-  };
+  return { id: generateUUID(), name, combatants: [], round: 1, firstTeam: CombatantTeamValues.HEROES, notes: '', initiativeMode: 'Team', initiativeOrder: [], status: 'Active', history: [], undoStack: [], playerView: false };
+}
+
+function conditionLabel(condition: CombatConditionEffect): string {
+  return `${condition.name}${condition.level > 1 ? ` ${condition.level}` : ''}`;
+}
+
+function characterWithCombatState(character: Character, combatant: Combatant): Character {
+  const sheetConditionLevels = Object.fromEntries((combatant.activeConditions ?? []).map((condition) => [condition.name, condition.level]));
+  const stamina = Math.max(0, Math.min(character.maxStamina, combatant.stamina ?? character.build?.currentStamina ?? character.stamina));
+  const mana = Math.max(0, Math.min(character.maxManaPoints, combatant.mana ?? character.build?.currentMana ?? character.manaPoints));
+  return { ...character, healthPoints: Math.max(0, Math.min(character.maxHealthPoints, combatant.hp)), currentAP: Math.max(0, Math.min(character.maxAP, combatant.ap)), stamina, manaPoints: mana, build: character.build ? { ...character.build, currentStamina: stamina, currentMana: mana, sheetConditionLevels } : character.build };
+}
+
+function liveCombatant(combatant: Combatant, entry?: PartyCharacterEntry): Combatant {
+  if (!entry) return combatant;
+  const character = entry.character;
+  const activeConditions = Object.entries(character.build?.sheetConditionLevels ?? {}).flatMap(([name, level]) => {
+    if (level <= 0) return [];
+    const existing = combatant.activeConditions?.find((condition) => condition.name === name);
+    return [{ ...(existing ?? { id: `${combatant.id}-${name}`, source: 'Character sheet', expiresAt: 'Manual' as const }), name, level }];
+  });
+  return { ...combatant, name: character.name, hp: character.healthPoints, maxHP: character.maxHealthPoints, ap: character.currentAP, maxAP: character.maxAP, stamina: character.build?.currentStamina ?? character.stamina, maxStamina: character.maxStamina, mana: character.build?.currentMana ?? character.manaPoints, maxMana: character.maxManaPoints, physicalDefense: character.physicalDefense, arcaneDefense: character.arcaneDefense, attackBonus: character.primeModifier + character.combatMastery, saveDC: character.saveDC ?? 10 + character.primeModifier + character.combatMastery, speed: character.speed, initiativeBonus: (character.attributes?.Agility?.modifier ?? character.primeModifier ?? 0) + character.combatMastery, activeConditions, conditions: activeConditions.map(conditionLabel) };
 }
 
 export default function CombatView() {
-  const {
-    campaignData,
-    characters,
-    selectedCombatId,
-    selectCombat,
-    addCombat,
-    updateCombat,
-    removeCombat,
-  } = useCampaignStore();
+  const { campaignData, characters, selectedCombatId, selectedCampaignId, selectCombat, addCombat, updateCombat, removeCombat, updateCharacter, updateCampaign } = useCampaignStore();
   const { monsters: sourceMonsters } = useSourceMonsters();
-  const { parties, partyCharacters } = usePartyCampaigns();
+  const { reference } = useRulesReference();
+  const { parties, partyCharacters, updatePartyMemberCharacter, addSharedNote } = usePartyCampaigns();
   const [participantChoice, setParticipantChoice] = useState('');
   const [encounterChoice, setEncounterChoice] = useState('');
+  const [syncMessage, setSyncMessage] = useState('');
   const combats = campaignData.combats;
   const selected = combats.find(({ id }) => id === selectedCombatId) ?? null;
-  const gmPartyIDs = new Set(parties.filter(({ role }) => role === 'gm').map(({ id }) => id));
+  const gmPartyIDs = useMemo(() => new Set(parties.filter(({ role }) => role === 'gm').map(({ id }) => id)), [parties]);
   const availablePartyCharacters = partyCharacters.filter(({ partyId }) => gmPartyIDs.has(partyId));
+  const conditions = useMemo(() => (reference?.entries ?? []).filter((entry) => entry.kind === 'Condition' && entry.subsection === 'Conditions - List').sort((left, right) => left.title.localeCompare(right.title)), [reference]);
 
+  useEffect(() => { if (!selectedCombatId && combats[0]) selectCombat(combats[0].id); }, [combats, selectCombat, selectedCombatId]);
+
+  // A new member snapshot means a player changed their sheet (or a GM write was
+  // confirmed). Import only at that boundary so an in-flight GM edit never flashes back.
   useEffect(() => {
-    if (!selectedCombatId && combats[0]) selectCombat(combats[0].id);
-  }, [combats, selectCombat, selectedCombatId]);
+    if (!selected || selected.status === 'Completed') return;
+    let changed = false;
+    const combatants = selected.combatants.map((combatant) => {
+      const partyEntry = partyCharacters.find(({ partyId, memberId }) => partyId === combatant.sourcePartyCampaignID && memberId === combatant.sourcePartyMemberID);
+      if (!partyEntry) return combatant;
+      const live = liveCombatant(combatant, partyEntry);
+      const before = [combatant.name, combatant.hp, combatant.maxHP, combatant.ap, combatant.maxAP, combatant.stamina, combatant.maxStamina, combatant.mana, combatant.maxMana, combatant.physicalDefense, combatant.arcaneDefense, combatant.attackBonus, combatant.saveDC, combatant.speed, (combatant.activeConditions ?? []).map(({ name, level }) => `${name}:${level}`).join('|')];
+      const after = [live.name, live.hp, live.maxHP, live.ap, live.maxAP, live.stamina, live.maxStamina, live.mana, live.maxMana, live.physicalDefense, live.arcaneDefense, live.attackBonus, live.saveDC, live.speed, (live.activeConditions ?? []).map(({ name, level }) => `${name}:${level}`).join('|')];
+      if (before.join('¦') !== after.join('¦')) changed = true;
+      return live;
+    });
+    if (changed) updateCombat({ ...selected, combatants });
+    // Deliberately react to remote snapshots and combat selection, not every local edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partyCharacters, selectedCombatId]);
 
-  const createCombat = () => addCombat(newCombat(`Combat ${combats.length + 1}`));
+  const syncCombatants = (changed: Combatant[]) => {
+    let localUpdates = 0;
+    for (const combatant of changed) {
+      if (combatant.sourceCharacterID) {
+        const character = characters.find(({ id }) => id === combatant.sourceCharacterID);
+        if (character) { localUpdates += 1; updateCharacter(characterWithCombatState(character, combatant)); }
+      }
+      if (combatant.sourcePartyCampaignID && combatant.sourcePartyMemberID) {
+        const entry = availablePartyCharacters.find(({ partyId, memberId }) => partyId === combatant.sourcePartyCampaignID && memberId === combatant.sourcePartyMemberID);
+        if (entry) void updatePartyMemberCharacter(entry.partyId, entry.memberId, characterWithCombatState(entry.character, combatant)).then(() => setSyncMessage(`Synced ${entry.character.name} with ${entry.partyName}.`)).catch((caught: unknown) => setSyncMessage(caught instanceof Error ? caught.message : 'Shared character sync failed.'));
+      }
+    }
+    if (localUpdates > 0) setSyncMessage('Updated the linked local character sheet.');
+  };
+
   const addParticipant = () => {
     if (!selected || !participantChoice) return;
-    const [kind, id] = participantChoice.split(':');
+    const [kind, id, memberId] = participantChoice.split(':');
     let combatant: Combatant | null = null;
     if (kind === 'character') {
       const character = characters.find((entry) => entry.id === id);
       if (character) combatant = combatantFromCharacter(character);
     } else if (kind === 'party') {
-      const memberId = participantChoice.split(':')[2];
-      const partyCharacter = availablePartyCharacters.find((entry) => entry.partyId === id && entry.memberId === memberId);
-      if (partyCharacter) combatant = {
-        ...combatantFromCharacter(partyCharacter.character),
-        id: generateUUID(),
-        sourceCharacterID: undefined,
-        sourcePartyCampaignID: partyCharacter.partyId,
-        sourcePartyMemberID: partyCharacter.memberId,
-      };
+      const entry = availablePartyCharacters.find((candidate) => candidate.partyId === id && candidate.memberId === memberId);
+      if (entry) combatant = { ...combatantFromCharacter(entry.character), id: generateUUID(), sourceCharacterID: undefined, sourcePartyCampaignID: entry.partyId, sourcePartyMemberID: entry.memberId };
     } else {
-      const monster = (kind === 'source' ? sourceMonsters : campaignData.customMonsters)
-        .find((entry) => entry.id === id);
+      const monster = (kind === 'source' ? sourceMonsters : campaignData.customMonsters).find((entry) => entry.id === id);
       if (monster) {
-        const existingCount = selected.combatants.filter(({ sourceMonsterID }) => sourceMonsterID === id).length;
-        combatant = combatantFromMonster(monster, existingCount > 0 ? `${monster.name} ${existingCount + 1}` : monster.name);
+        const count = selected.combatants.filter(({ sourceMonsterID }) => sourceMonsterID === id).length;
+        combatant = combatantFromMonster(monster, count > 0 ? `${monster.name} ${count + 1}` : monster.name);
       }
     }
-    if (combatant) updateCombat({ ...selected, combatants: [...selected.combatants, combatant] });
+    if (!combatant) return;
+    updateCombat(recordCombatChange(selected, { ...selected, combatants: [...selected.combatants, combatant], initiativeOrder: [...normalizedInitiativeOrder(selected), combatant.id] }, `Added ${combatant.name} to combat.`, 'Roster'));
+    setParticipantChoice('');
   };
 
   const launchEncounter = () => {
@@ -79,274 +120,111 @@ export default function CombatView() {
     if (encounter) addCombat(combatFromEncounter(synchronizeEncounterPartyCharacters(encounter, availablePartyCharacters)));
   };
 
-  return (
-    <div className="flex min-h-full flex-col bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)] lg:h-full lg:flex-row lg:overflow-hidden">
-      <aside className="w-full shrink-0 border-b border-white/5 bg-slate-950/45 p-4 lg:w-80 lg:overflow-y-auto lg:border-b-0 lg:border-r">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-black text-white">Combat</h1>
-            <p className="text-xs text-slate-500">Persistent live combat trackers</p>
-          </div>
-          <button type="button" onClick={createCombat} className="btn-primary text-sm font-bold">+ New</button>
-        </div>
-        {campaignData.encounters.length > 0 && (
-          <div className="mt-5 rounded-xl border border-violet-400/15 bg-violet-500/5 p-3">
-            <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-300">Start from Encounter</label>
-            <select aria-label="Start from Encounter" className={`${inputClass} mt-2 w-full`} value={encounterChoice} onChange={(event) => setEncounterChoice(event.target.value)}>
-              <option value="">Choose encounter…</option>
-              {campaignData.encounters.map((encounter) => <option key={encounter.id} value={encounter.id}>{encounter.name}</option>)}
-            </select>
-            <button type="button" disabled={!encounterChoice} onClick={launchEncounter} className="mt-2 w-full rounded-lg bg-violet-500/20 px-3 py-2 text-sm font-bold text-violet-200 hover:bg-violet-500/30 disabled:opacity-40">Create Combat</button>
-          </div>
-        )}
-        <div className="mt-5 max-h-64 space-y-2 overflow-y-auto overscroll-contain pr-1 lg:max-h-none">
-          {combats.length === 0 && <button type="button" onClick={createCombat} className="w-full rounded-xl border border-dashed border-white/10 p-5 text-sm text-slate-500 hover:border-violet-400/30 hover:text-violet-300">Create your first combat</button>}
-          {combats.map((combat) => (
-            <button
-              type="button"
-              key={combat.id}
-              onClick={() => selectCombat(combat.id)}
-              className={`w-full rounded-xl border p-3 text-left transition ${combat.id === selectedCombatId ? 'border-violet-400/70 bg-violet-500/15' : 'border-white/5 bg-white/[0.025] hover:bg-white/[0.05]'}`}
-            >
-              <div className="flex justify-between gap-3"><span className="font-bold text-slate-100">{combat.name}</span><span className="text-xs font-bold text-violet-300">Round {combat.round}</span></div>
-              <div className="mt-1 text-xs text-slate-500">{combat.combatants.length} combatants</div>
-            </button>
-          ))}
-        </div>
-      </aside>
-
-      <main className="min-w-0 flex-1 lg:overflow-y-auto">
-        {!selected && <div className="grid min-h-full place-items-center p-8 text-center text-slate-500">Select a saved combat or create a new one.</div>}
-        {selected && (
-          <CombatEditor
-            combat={selected}
-            participantChoice={participantChoice}
-            setParticipantChoice={setParticipantChoice}
-            sourceMonsters={sourceMonsters}
-            customMonsters={campaignData.customMonsters}
-            characters={characters}
-            partyCharacters={availablePartyCharacters}
-            onAddParticipant={addParticipant}
-            onUpdate={updateCombat}
-            onDelete={() => {
-              if (window.confirm(`Delete ${selected.name}?`)) removeCombat(selected.id);
-            }}
-          />
-        )}
-      </main>
-    </div>
-  );
-}
-
-function CombatEditor({ combat, participantChoice, setParticipantChoice, sourceMonsters, customMonsters, characters, partyCharacters, onAddParticipant, onUpdate, onDelete }: {
-  combat: SavedCombat;
-  participantChoice: string;
-  setParticipantChoice: (value: string) => void;
-  sourceMonsters: ReturnType<typeof useSourceMonsters>['monsters'];
-  customMonsters: ReturnType<typeof useCampaignStore.getState>['campaignData']['customMonsters'];
-  characters: ReturnType<typeof useCampaignStore.getState>['characters'];
-  partyCharacters: ReturnType<typeof usePartyCampaigns>['partyCharacters'];
-  onAddParticipant: () => void;
-  onUpdate: (combat: SavedCombat) => void;
-  onDelete: () => void;
-}) {
-  const update = (changes: Partial<SavedCombat>) => onUpdate({ ...combat, ...changes });
-  const updateCombatant = (changed: Combatant) => update({
-    combatants: combat.combatants.map((combatant) => combatant.id === changed.id ? changed : combatant),
-  });
-  const teams = Object.values(CombatantTeamValues);
-  const nextRound = () => update({
-    round: combat.round + 1,
-    combatants: combat.combatants.map((combatant) => ({
-      ...combatant,
-      hasActed: false,
-      ap: combatant.maxAP,
-      currentReactionPoints: combatant.reactionPoints,
-    })),
-  });
-
-  return (
-    <div className="space-y-5 p-4 sm:p-6 lg:space-y-6 lg:p-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 grow basis-64">
-          <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Combat Tracker</div>
-          <input className="mt-1 w-full border-0 bg-transparent p-0 text-3xl font-black tracking-tight text-white outline-none focus:text-violet-100 sm:text-4xl" value={combat.name} onChange={(event) => update({ name: event.target.value })} aria-label="Combat name" />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => update({ round: Math.max(1, combat.round - 1) })} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-bold text-slate-200 hover:bg-white/10">←</button>
-          <div className="rounded-xl border border-violet-400/20 bg-violet-500/10 px-5 py-2 text-center">
-            <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-300">Round</div>
-            <div className="text-2xl font-black text-white">{combat.round}</div>
-          </div>
-          <button type="button" onClick={nextRound} className="btn-primary font-bold">Next Round →</button>
-          <button type="button" onClick={onDelete} className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/20">Delete</button>
-        </div>
-      </div>
-
-      <section className="rounded-2xl border border-white/8 bg-slate-900/75 p-5">
-        <div className="flex flex-wrap gap-3">
-          <select aria-label="Add a character or monster" className={`${inputClass} min-w-0 grow basis-64`} value={participantChoice} onChange={(event) => setParticipantChoice(event.target.value)}>
-            <option value="">Add a character or monster…</option>
-            {characters.length > 0 && <optgroup label="Characters">
-              {characters.map((character) => <option key={character.id} value={`character:${character.id}`}>{character.name || 'Unnamed Character'} — Level {character.level} {character.class}</option>)}
-            </optgroup>}
-            {partyCharacters.length > 0 && <optgroup label="Connected Party Characters">
-              {partyCharacters.map((entry) => <option key={`${entry.partyId}:${entry.memberId}`} value={`party:${entry.partyId}:${entry.memberId}`}>{entry.character.name} — {entry.partyName} • HP {entry.character.healthPoints}/{entry.character.maxHealthPoints}</option>)}
-            </optgroup>}
-            <optgroup label="Sourcebook Monsters">
-              {sourceMonsters.map((monster) => <option key={monster.id} value={`source:${monster.id}`}>{monster.name} — Level {monster.level} {monsterDisplayRole(monster)}</option>)}
-            </optgroup>
-            {customMonsters.length > 0 && <optgroup label="Custom Monsters">
-              {customMonsters.map((monster) => <option key={monster.id} value={`custom:${monster.id}`}>{monster.name} — Level {monster.level} {monster.role}</option>)}
-            </optgroup>}
-          </select>
-          <button type="button" onClick={onAddParticipant} disabled={!participantChoice} className="btn-primary shrink-0 font-bold disabled:opacity-40">+ Add Combatant</button>
-          <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/60 px-3 text-sm text-slate-400">
-            First team
-            <select className="bg-transparent py-2 font-bold text-slate-200 outline-none" value={combat.firstTeam} onChange={(event) => update({ firstTeam: event.target.value as CombatantTeam })}>
-              {teams.map((team) => <option key={team}>{team}</option>)}
-            </select>
-          </label>
-        </div>
-      </section>
-
-      <div className="grid items-start gap-5 2xl:grid-cols-3">
-        {teams.map((team) => {
-          const combatants = combat.combatants.filter((combatant) => combatant.team === team);
-          return (
-            <section key={team} className={`rounded-2xl border bg-slate-900/60 p-4 ${team === CombatantTeamValues.HEROES ? 'border-blue-400/20' : team === CombatantTeamValues.ENEMIES ? 'border-red-400/20' : 'border-amber-400/20'}`}>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className={`text-lg font-black ${team === CombatantTeamValues.HEROES ? 'text-blue-300' : team === CombatantTeamValues.ENEMIES ? 'text-red-300' : 'text-amber-300'}`}>{team}</h2>
-                <span className="text-xs text-slate-600">{combatants.length}</span>
-              </div>
-              <div className="space-y-3">
-                {combatants.length === 0 && <div className="rounded-xl border border-dashed border-white/8 p-5 text-center text-sm text-slate-600">No {team.toLowerCase()} yet</div>}
-                {combatants.map((combatant) => {
-                  const livePartyCharacter = partyCharacters.find((entry) => entry.partyId === combatant.sourcePartyCampaignID && entry.memberId === combatant.sourcePartyMemberID);
-                  const displayedCombatant = livePartyCharacter ? {
-                    ...combatant,
-                    name: livePartyCharacter.character.name,
-                    hp: livePartyCharacter.character.healthPoints,
-                    maxHP: livePartyCharacter.character.maxHealthPoints,
-                    physicalDefense: livePartyCharacter.character.physicalDefense,
-                    arcaneDefense: livePartyCharacter.character.arcaneDefense,
-                    attackBonus: livePartyCharacter.character.primeModifier + livePartyCharacter.character.combatMastery,
-                    saveDC: 10 + livePartyCharacter.character.primeModifier + livePartyCharacter.character.combatMastery,
-                    speed: livePartyCharacter.character.speed,
-                  } : combatant;
-                  return <CombatantCard
-                    key={combatant.id}
-                    combatant={displayedCombatant}
-                    livePartyName={livePartyCharacter?.partyName}
-                    onChange={updateCombatant}
-                    onRemove={() => update({ combatants: combat.combatants.filter(({ id }) => id !== combatant.id) })}
-                  />;
-                })}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-
-      <label className="block rounded-2xl border border-white/8 bg-slate-900/75 p-5">
-        <span className="text-lg font-black text-violet-200">Combat Notes</span>
-        <textarea className={`${inputClass} mt-3 min-h-24 w-full resize-y`} value={combat.notes} onChange={(event) => update({ notes: event.target.value })} placeholder="Objectives, hazards, reminders…" />
-        {combat.notes.trim() && <details className="mt-2 rounded-lg border border-violet-400/15 bg-violet-500/5 p-3"><summary className="cursor-pointer text-xs font-black text-violet-200">Rules-aware preview</summary><p className="mt-2 whitespace-pre-wrap text-sm normal-case leading-6 text-slate-300"><RuleAwareText text={combat.notes} /></p></details>}
-      </label>
-    </div>
-  );
-}
-
-function ResourceControl({ label, value, max, min = 0, onChange }: {
-  label: string;
-  value: number;
-  max: number;
-  min?: number;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <div className="rounded-lg border border-white/8 bg-slate-950/60 p-2">
-      <div className="text-center text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">{label}</div>
-      <div className="mt-1 grid grid-cols-[1.5rem_1fr_1.5rem] items-center">
-        <button type="button" onClick={() => onChange(Math.max(min, value - 1))} className="rounded text-slate-400 hover:bg-white/5 hover:text-white">−</button>
-        <input type="number" value={value} onChange={(event) => onChange(Math.min(max, Math.max(min, Number(event.target.value))))} className="w-full bg-transparent text-center font-black text-slate-100 outline-none" aria-label={`${label} current value`} />
-        <button type="button" onClick={() => onChange(Math.min(max, value + 1))} className="rounded text-slate-400 hover:bg-white/5 hover:text-white">+</button>
-      </div>
-      <div className="text-center text-[10px] text-slate-600">of {max}</div>
-    </div>
-  );
-}
-
-function CombatantCard({ combatant, livePartyName, onChange, onRemove }: {
-  combatant: Combatant;
-  livePartyName?: string;
-  onChange: (combatant: Combatant) => void;
-  onRemove: () => void;
-}) {
-  const [condition, setCondition] = useState('');
-  const teamOptions = Object.values(CombatantTeamValues);
-  const healthPercent = Math.max(0, Math.min(100, combatant.hp / Math.max(1, combatant.maxHP) * 100));
-  const addCondition = () => {
-    const trimmed = condition.trim();
-    if (!trimmed) return;
-    onChange({ ...combatant, conditions: [...combatant.conditions, trimmed] });
-    setCondition('');
+  const duplicateCombat = (combat: SavedCombat) => {
+    const idMap = new Map(combat.combatants.map((entry) => [entry.id, generateUUID()]));
+    addCombat({ ...combat, id: generateUUID(), name: `${combat.name} Copy`, status: 'Paused', completedAt: undefined, summary: undefined, undoStack: [], combatants: combat.combatants.map((entry) => ({ ...entry, id: idMap.get(entry.id)!, activeConditions: entry.activeConditions?.map((condition) => ({ ...condition, id: generateUUID() })) })), initiativeOrder: normalizedInitiativeOrder(combat).map((id) => idMap.get(id)!).filter(Boolean), activeCombatantID: undefined });
   };
 
-  return (
-    <article className={`overflow-hidden rounded-xl border bg-slate-950/65 ${combatant.hasActed ? 'border-white/5 opacity-65' : 'border-white/10'}`}>
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          {combatant.sourceMonsterID && <MonsterToken image={combatant.tokenDataURL} name={combatant.name} className="w-12 text-xs" />}
-          <div className="min-w-0 grow">
-            <input value={combatant.name} onChange={(event) => onChange({ ...combatant, name: event.target.value })} className="w-full bg-transparent font-black text-slate-100 outline-none focus:text-violet-200" aria-label="Combatant name" />
-            <select value={combatant.team} onChange={(event) => onChange({ ...combatant, team: event.target.value as CombatantTeam })} className="mt-1 bg-transparent text-xs text-slate-500 outline-none">
-              {teamOptions.map((team) => <option key={team}>{team}</option>)}
-            </select>
-            {livePartyName && <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-emerald-300">Live HP • {livePartyName}</p>}
-          </div>
-          <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-400">
-            <input type="checkbox" checked={combatant.hasActed} onChange={(event) => onChange({ ...combatant, hasActed: event.target.checked })} className="accent-violet-500" /> Acted
-          </label>
-        </div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800"><div className={`h-full ${healthPercent <= 25 ? 'bg-red-500' : healthPercent <= 50 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${healthPercent}%` }} /></div>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {livePartyName ? <div className="rounded-lg border border-emerald-400/15 bg-emerald-950/20 p-2 text-center"><div className="text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-400">Live HP</div><div className="mt-1 font-black text-emerald-100">{combatant.hp} / {combatant.maxHP}</div><div className="text-[10px] text-slate-600">Player controlled</div></div> : <ResourceControl label="HP" value={combatant.hp} max={combatant.maxHP} min={-20} onChange={(hp) => onChange({ ...combatant, hp })} />}
-          <ResourceControl label="AP" value={combatant.ap} max={combatant.maxAP} onChange={(ap) => onChange({ ...combatant, ap })} />
-          <ResourceControl label="RP" value={combatant.currentReactionPoints} max={combatant.reactionPoints} onChange={(currentReactionPoints) => onChange({ ...combatant, currentReactionPoints })} />
-        </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {combatant.conditions.map((entry, index) => (
-            <span key={`${entry}-${index}`} className="inline-flex items-center gap-1 rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-200"><RuleAwareText text={entry} /><button type="button" aria-label={`Remove ${entry}`} onClick={() => onChange({ ...combatant, conditions: combatant.conditions.filter((_, conditionIndex) => conditionIndex !== index) })} className="opacity-60 hover:opacity-100">×</button></span>
-          ))}
-        </div>
-        <div className="mt-3 flex gap-2">
-          <input value={condition} onChange={(event) => setCondition(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') addCondition(); }} className="min-w-0 grow rounded-lg border border-white/8 bg-slate-900 px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-violet-400/50" placeholder="Add condition…" aria-label="New condition" />
-          <button type="button" onClick={addCondition} className="rounded-lg bg-white/5 px-2 text-sm font-bold text-slate-300 hover:bg-white/10">+</button>
-        </div>
-      </div>
-      <details className="border-t border-white/5">
-        <summary className="cursor-pointer px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-violet-300">Stats & Abilities</summary>
-        <div className="space-y-3 border-t border-white/5 p-4 text-sm">
-          <div className="grid grid-cols-3 gap-2 text-center">
-            {combatant.physicalDefense !== undefined && <MiniStat label="PD" ruleID="defense.precisionDefense" value={combatant.physicalDefense} />}
-            {combatant.arcaneDefense !== undefined && <MiniStat label="AD" ruleID="defense.areaDefense" value={combatant.arcaneDefense} />}
-            {combatant.attackBonus !== undefined && <MiniStat label="Attack" value={`+${combatant.attackBonus}`} />}
-            {combatant.saveDC !== undefined && <MiniStat label="Save DC" value={combatant.saveDC} />}
-            {combatant.speed !== undefined && <MiniStat label="Speed" value={combatant.speed} />}
-          </div>
-          {combatant.monsterAbilities?.map((ability) => (
-            <div key={ability.id} className="rounded-lg bg-white/[0.035] p-3">
-              <div className="font-bold text-slate-200">{ability.name} {ability.cost && <span className="text-xs text-violet-300">• <RuleAwareText text={ability.cost} /></span>}</div>
-              {monsterAbilityMechanicsSummary(ability).length > 0 && <div className="mt-2 flex flex-wrap gap-1">{monsterAbilityMechanicsSummary(ability).map((entry) => <span key={entry} className="rounded bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-bold text-cyan-200">{entry}</span>)}</div>}
-              <p className="mt-1 leading-5 text-slate-400"><RuleAwareText text={ability.details} references={ability.ruleReferences} /></p>
-            </div>
-          ))}
-          <button type="button" onClick={onRemove} className="w-full rounded-lg px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Remove from Combat</button>
-        </div>
-      </details>
-    </article>
-  );
+  const finishCombat = (combat: SavedCombat) => {
+    const completed: SavedCombat = { ...combat, status: 'Completed', completedAt: new Date().toISOString() };
+    completed.summary = createCombatSummary(completed);
+    const changed = recordCombatChange(combat, completed, 'Combat completed and final character state synchronized.', 'System');
+    updateCombat(changed);
+    syncCombatants(changed.combatants);
+    const partyID = changed.combatants.find(({ sourcePartyCampaignID }) => sourcePartyCampaignID)?.sourcePartyCampaignID;
+    const campaign = campaignData.campaigns.find((entry) => partyID && entry.party?.partyId === partyID) ?? campaignData.campaigns.find(({ id }) => id === selectedCampaignId) ?? campaignData.campaigns[0];
+    const note: CampaignNote = { id: generateUUID(), title: `Combat: ${changed.name}`, body: changed.summary ?? '' };
+    if (campaign) updateCampaign({ ...campaign, notes: [...campaign.notes, note] });
+    if (partyID) void addSharedNote(partyID, note).catch(() => undefined);
+  };
+
+  return <div className="flex min-h-full flex-col bg-[radial-gradient(circle_at_top_right,rgba(109,40,217,0.12),transparent_35%)] lg:h-full lg:flex-row lg:overflow-hidden">
+    <aside className="w-full shrink-0 border-b border-white/5 bg-slate-950/45 p-4 lg:w-80 lg:overflow-y-auto lg:border-b-0 lg:border-r">
+      <div className="flex items-center justify-between gap-3"><div><h1 className="text-2xl font-black text-white">Combat</h1><p className="text-xs text-slate-500">Live turns, effects, and party sync</p></div><button type="button" onClick={() => addCombat(newCombat(`Combat ${combats.length + 1}`))} className="btn-primary text-sm font-bold">+ New</button></div>
+      {campaignData.encounters.length > 0 && <div className="mt-5 rounded-xl border border-violet-400/15 bg-violet-500/5 p-3"><label className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-300">Start from Encounter</label><select aria-label="Start from Encounter" className={`${inputClass} mt-2 w-full`} value={encounterChoice} onChange={(event) => setEncounterChoice(event.target.value)}><option value="">Choose encounter…</option>{campaignData.encounters.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select><button type="button" disabled={!encounterChoice} onClick={launchEncounter} className="mt-2 w-full rounded-lg bg-violet-500/20 px-3 py-2 text-sm font-bold text-violet-200 disabled:opacity-40">Create Combat</button></div>}
+      <div className="mt-5 max-h-64 space-y-2 overflow-y-auto overscroll-contain pr-1 lg:max-h-none">{combats.length === 0 && <button type="button" onClick={() => addCombat(newCombat('Combat 1'))} className="w-full rounded-xl border border-dashed border-white/10 p-5 text-sm text-slate-500">Create your first combat</button>}{combats.map((combat) => <button type="button" key={combat.id} onClick={() => selectCombat(combat.id)} className={`w-full rounded-xl border p-3 text-left transition ${combat.id === selectedCombatId ? 'border-violet-400/70 bg-violet-500/15' : 'border-white/5 bg-white/[0.025] hover:bg-white/[0.05]'}`}><div className="flex justify-between gap-3"><span className="truncate font-bold text-slate-100">{combat.name}</span><span className="text-xs font-bold text-violet-300">R{combat.round}</span></div><div className="mt-1 flex justify-between text-xs text-slate-500"><span>{combat.combatants.length} combatants</span><span>{combat.status ?? 'Active'}</span></div></button>)}</div>
+    </aside>
+    <main className="min-w-0 flex-1 overflow-y-auto overscroll-contain">{!selected && <div className="grid min-h-full place-items-center p-8 text-center text-slate-500">Select a saved combat or create a new one.</div>}{selected && <CombatEditor combat={selected} participantChoice={participantChoice} setParticipantChoice={setParticipantChoice} sourceMonsters={sourceMonsters} customMonsters={campaignData.customMonsters} characters={characters} partyCharacters={availablePartyCharacters} conditionOptions={conditions} syncMessage={syncMessage} onAddParticipant={addParticipant} onUpdate={updateCombat} onSyncCombatants={syncCombatants} onDuplicate={() => duplicateCombat(selected)} onFinish={finishCombat} onDelete={() => { if (window.confirm(`Delete ${selected.name}?`)) removeCombat(selected.id); }} />}</main>
+  </div>;
+}
+
+interface CombatEditorProps {
+  combat: SavedCombat; participantChoice: string; setParticipantChoice: (value: string) => void;
+  sourceMonsters: ReturnType<typeof useSourceMonsters>['monsters']; customMonsters: ReturnType<typeof useCampaignStore.getState>['campaignData']['customMonsters']; characters: ReturnType<typeof useCampaignStore.getState>['characters']; partyCharacters: PartyCharacterEntry[]; conditionOptions: RuleReferenceEntry[]; syncMessage: string;
+  onAddParticipant: () => void; onUpdate: (combat: SavedCombat) => void; onSyncCombatants: (combatants: Combatant[]) => void; onDuplicate: () => void; onFinish: (combat: SavedCombat) => void; onDelete: () => void;
+}
+
+function CombatEditor(props: CombatEditorProps) {
+  const { combat, participantChoice, setParticipantChoice, sourceMonsters, customMonsters, characters, partyCharacters, conditionOptions, syncMessage, onAddParticipant, onUpdate, onSyncCombatants, onDuplicate, onFinish, onDelete } = props;
+  const [draggedID, setDraggedID] = useState('');
+  const [historyNote, setHistoryNote] = useState('');
+  const [historyNotePrivate, setHistoryNotePrivate] = useState(true);
+  const teams = Object.values(CombatantTeamValues);
+  const displayedCombatants = combat.combatants;
+  const displayedCombat: SavedCombat = { ...combat, combatants: displayedCombatants };
+  const visibleCombatants = displayedCombatants.filter((entry) => !combat.playerView || entry.visibility !== 'Hidden');
+  const metrics = combatTacticalMetrics(displayedCombat);
+  const commit = (next: SavedCombat, label: string, kind: Parameters<typeof recordCombatChange>[3], sync: Combatant[] = []) => { const recorded = recordCombatChange(combat, next, label, kind); onUpdate(recorded); if (sync.length > 0) onSyncCombatants(sync); };
+  const update = (changes: Partial<SavedCombat>) => onUpdate({ ...combat, ...changes });
+  const updateCombatant = (changed: Combatant, label = `Updated ${changed.name}.`, kind: Parameters<typeof recordCombatChange>[3] = 'Resource') => { const next = { ...combat, combatants: combat.combatants.map((entry) => entry.id === changed.id ? changed : entry) }; commit(next, label, kind, [changed]); };
+  const removeCombatant = (entry: Combatant) => commit({ ...combat, combatants: combat.combatants.filter(({ id }) => id !== entry.id), initiativeOrder: normalizedInitiativeOrder(combat).filter((id) => id !== entry.id), activeCombatantID: combat.activeCombatantID === entry.id ? undefined : combat.activeCombatantID }, `Removed ${entry.name} from combat.`, 'Roster');
+  const reorder = (targetID: string) => { if (!draggedID || draggedID === targetID) return; const order = normalizedInitiativeOrder(combat); const from = order.indexOf(draggedID); const target = order.indexOf(targetID); if (from < 0 || target < 0) return; order.splice(target, 0, order.splice(from, 1)[0]); commit({ ...combat, initiativeOrder: order }, 'Reordered initiative.', 'Turn'); setDraggedID(''); };
+  const initiativeOrder = normalizedInitiativeOrder(combat).filter((id) => visibleCombatants.some((entry) => entry.id === id));
+  const addHistoryNote = () => { const text = historyNote.trim(); if (!text) return; const entry: NonNullable<SavedCombat['history']>[number] = { id: generateUUID(), timestamp: new Date().toISOString(), round: combat.round, kind: 'Note', text, private: historyNotePrivate }; onUpdate({ ...combat, history: [...(combat.history ?? []), entry].slice(-150) }); setHistoryNote(''); };
+
+  return <div className="space-y-5 p-4 sm:p-6 lg:space-y-6 lg:p-8">
+    <header className="flex flex-wrap items-start justify-between gap-4"><div className="min-w-0 grow basis-64"><div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Combat Tracker <span className={`rounded-full px-2 py-1 text-[10px] tracking-normal ${combat.status === 'Completed' ? 'bg-emerald-500/15 text-emerald-300' : combat.status === 'Paused' ? 'bg-amber-500/15 text-amber-300' : 'bg-violet-500/15'}`}>{combat.status ?? 'Active'}</span></div><input className="mt-1 w-full border-0 bg-transparent p-0 text-3xl font-black tracking-tight text-white outline-none sm:text-4xl" value={combat.name} onChange={(event) => update({ name: event.target.value })} aria-label="Combat name" />{syncMessage && <p className="mt-2 text-xs text-emerald-300" role="status">{syncMessage}</p>}</div>
+      <div className="flex flex-wrap items-center gap-2"><div className="rounded-xl border border-violet-400/20 bg-violet-500/10 px-5 py-2 text-center"><div className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-300">Round</div><div className="text-2xl font-black text-white">{combat.round}</div></div><button type="button" disabled={(combat.undoStack?.length ?? 0) === 0} onClick={() => { const undone = undoLastCombatChange(combat); onUpdate(undone); onSyncCombatants(undone.combatants); }} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 disabled:opacity-35">↶ Undo</button>{combat.status !== 'Completed' && <button type="button" onClick={() => update({ status: combat.status === 'Paused' ? 'Active' : 'Paused' })} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200">{combat.status === 'Paused' ? 'Resume' : 'Pause'}</button>}<button type="button" onClick={() => update({ playerView: !combat.playerView })} className="rounded-lg border border-cyan-400/25 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-200">{combat.playerView ? 'Exit Player View' : 'Player View'}</button><button type="button" onClick={onDuplicate} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-300">Duplicate</button>{!combat.playerView && <button type="button" onClick={onDelete} className="rounded-lg border border-red-400/25 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-300">Delete</button>}</div></header>
+    {combat.playerView && <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm text-cyan-100">Player View hides secret notes and combatants marked Hidden.</div>}
+    <TacticalDashboard metrics={metrics} playerView={Boolean(combat.playerView)} />
+    {!combat.playerView && <RosterPanel participantChoice={participantChoice} setParticipantChoice={setParticipantChoice} characters={characters} partyCharacters={partyCharacters} sourceMonsters={sourceMonsters} customMonsters={customMonsters} onAddParticipant={onAddParticipant} />}
+    <InitiativePanel combat={combat} visibleCombatants={visibleCombatants} initiativeOrder={initiativeOrder} playerView={Boolean(combat.playerView)} setDraggedID={setDraggedID} reorder={reorder} update={update} updateCombatant={updateCombatant} onUpdate={onUpdate} />
+    {!combat.playerView && <DamageResolver combat={displayedCombat} onApply={(changes, label, kind) => { const ids = new Set(changes.map(({ id }) => id)); const nextCombatants = combat.combatants.map((entry) => changes.find(({ id }) => id === entry.id) ?? entry); commit({ ...combat, combatants: nextCombatants }, label, kind, nextCombatants.filter(({ id }) => ids.has(id))); }} />}
+    <div className="grid items-start gap-5 2xl:grid-cols-3">{teams.map((team) => { const entries = visibleCombatants.filter((entry) => entry.team === team); return <section key={team} className={`rounded-2xl border bg-slate-900/60 p-4 ${team === CombatantTeamValues.HEROES ? 'border-blue-400/20' : team === CombatantTeamValues.ENEMIES ? 'border-red-400/20' : 'border-amber-400/20'}`}><div className="mb-4 flex items-center justify-between"><h2 className={`text-lg font-black ${team === CombatantTeamValues.HEROES ? 'text-blue-300' : team === CombatantTeamValues.ENEMIES ? 'text-red-300' : 'text-amber-300'}`}>{team}</h2><span className="text-xs text-slate-600">{entries.length}</span></div><div className="space-y-3">{entries.length === 0 && <div className="rounded-xl border border-dashed border-white/8 p-5 text-center text-sm text-slate-600">No visible {team.toLowerCase()}</div>}{entries.map((entry) => <CombatantCard key={entry.id} combatant={entry} isActive={entry.id === combat.activeCombatantID} playerView={Boolean(combat.playerView)} livePartyName={partyCharacters.find(({ partyId, memberId }) => partyId === entry.sourcePartyCampaignID && memberId === entry.sourcePartyMemberID)?.partyName} conditionOptions={conditionOptions} onChange={updateCombatant} onRemove={() => removeCombatant(entry)} />)}</div></section>; })}</div>
+    <HistoryPanel combat={combat} historyNote={historyNote} setHistoryNote={setHistoryNote} historyNotePrivate={historyNotePrivate} setHistoryNotePrivate={setHistoryNotePrivate} addHistoryNote={addHistoryNote} />
+    {!combat.playerView && <label className={`block ${panelClass}`}><span className="text-lg font-black text-violet-200">Combat Notes</span><textarea className={`${inputClass} mt-3 min-h-24 w-full resize-y`} value={combat.notes} onChange={(event) => update({ notes: event.target.value })} placeholder="Objectives, hazards, reminders…" />{combat.notes.trim() && <details className="mt-2 rounded-lg border border-violet-400/15 bg-violet-500/5 p-3"><summary className="cursor-pointer text-xs font-black text-violet-200">Rules-aware preview</summary><p className="mt-2 whitespace-pre-wrap text-sm normal-case leading-6 text-slate-300"><RuleAwareText text={combat.notes} /></p></details>}</label>}
+    <section className={`${panelClass} border-emerald-400/15`}>{combat.status === 'Completed' ? <div><h2 className="text-lg font-black text-emerald-300">Combat Complete</h2><pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-6 text-slate-300">{combat.summary}</pre><button type="button" onClick={() => void navigator.clipboard?.writeText(combat.summary ?? '')} className="mt-3 rounded-lg bg-white/5 px-3 py-2 text-sm font-bold text-slate-200">Copy Summary</button></div> : <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-black text-emerald-300">Conclude Encounter</h2><p className="text-sm text-slate-500">Synchronizes final character state and creates a campaign session note.</p></div><button type="button" onClick={() => { if (window.confirm('End this combat and synchronize linked character sheets?')) onFinish(displayedCombat); }} className="rounded-lg bg-emerald-600 px-4 py-2 font-black text-white hover:bg-emerald-500">End Combat</button></div>}</section>
+  </div>;
+}
+
+function RosterPanel({ participantChoice, setParticipantChoice, characters, partyCharacters, sourceMonsters, customMonsters, onAddParticipant }: { participantChoice: string; setParticipantChoice: (value: string) => void; characters: CombatEditorProps['characters']; partyCharacters: PartyCharacterEntry[]; sourceMonsters: CombatEditorProps['sourceMonsters']; customMonsters: CombatEditorProps['customMonsters']; onAddParticipant: () => void }) {
+  return <section className={panelClass}><div className="flex flex-wrap gap-3"><select aria-label="Add a character or monster" className={`${inputClass} min-w-0 grow basis-64`} value={participantChoice} onChange={(event) => setParticipantChoice(event.target.value)}><option value="">Add a character or monster…</option>{characters.length > 0 && <optgroup label="Characters">{characters.map((entry) => <option key={entry.id} value={`character:${entry.id}`}>{entry.name || 'Unnamed Character'} — Level {entry.level} {entry.class}</option>)}</optgroup>}{partyCharacters.length > 0 && <optgroup label="Connected Party Characters">{partyCharacters.map((entry) => <option key={`${entry.partyId}:${entry.memberId}`} value={`party:${entry.partyId}:${entry.memberId}`}>{entry.character.name} — {entry.partyName}</option>)}</optgroup>}<optgroup label="Sourcebook Monsters">{sourceMonsters.map((entry) => <option key={entry.id} value={`source:${entry.id}`}>{entry.name} — Level {entry.level} {monsterDisplayRole(entry)}</option>)}</optgroup>{customMonsters.length > 0 && <optgroup label="Custom Monsters">{customMonsters.map((entry) => <option key={entry.id} value={`custom:${entry.id}`}>{entry.name} — Level {entry.level} {entry.role}</option>)}</optgroup>}</select><button type="button" onClick={onAddParticipant} disabled={!participantChoice} className="btn-primary shrink-0 font-bold disabled:opacity-40">+ Add Combatant</button></div></section>;
+}
+
+function InitiativePanel({ combat, visibleCombatants, initiativeOrder, playerView, setDraggedID, reorder, update, updateCombatant, onUpdate }: { combat: SavedCombat; visibleCombatants: Combatant[]; initiativeOrder: string[]; playerView: boolean; setDraggedID: (id: string) => void; reorder: (id: string) => void; update: (changes: Partial<SavedCombat>) => void; updateCombatant: (changed: Combatant, label?: string, kind?: Parameters<typeof recordCombatChange>[3]) => void; onUpdate: (combat: SavedCombat) => void }) {
+  return <section className={panelClass}><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-black text-violet-200">Initiative & Active Turn</h2><p className="text-xs text-slate-500">Drag rows on desktop or use arrows on mobile.</p></div>{!playerView && <div className="flex flex-wrap gap-2"><select aria-label="Initiative mode" className={inputClass} value={combat.initiativeMode ?? 'Team'} onChange={(event) => update({ initiativeMode: event.target.value as SavedCombat['initiativeMode'] })}><option>Team</option><option>Individual</option></select>{(combat.initiativeMode ?? 'Team') === 'Team' && <select aria-label="First team" className={inputClass} value={combat.firstTeam} onChange={(event) => update({ firstTeam: event.target.value as CombatantTeam })}>{Object.values(CombatantTeamValues).map((team) => <option key={team}>{team}</option>)}</select>}<button type="button" disabled={combat.combatants.length === 0} onClick={() => onUpdate(startCombatTurns(combat))} className="rounded-lg bg-violet-500 px-3 py-2 text-sm font-black text-white disabled:opacity-35">Sort & Start</button><button type="button" disabled={!combat.activeCombatantID || combat.status !== 'Active'} onClick={() => onUpdate(retreatCombatTurn(combat))} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-black text-slate-200 disabled:opacity-35">← Previous</button><button type="button" disabled={!combat.activeCombatantID || combat.status !== 'Active'} onClick={() => onUpdate(advanceCombatTurn(combat))} className="btn-primary text-sm font-black disabled:opacity-35">Next Turn →</button></div>}</div>
+    <div className="mt-4 grid gap-2">{initiativeOrder.map((id, index) => { const entry = visibleCombatants.find((combatant) => combatant.id === id)!; const active = id === combat.activeCombatantID; return <div key={id} draggable={!playerView} onDragStart={() => setDraggedID(id)} onDragOver={(event) => event.preventDefault()} onDrop={() => reorder(id)} className={`grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-2 ${active ? 'border-violet-400 bg-violet-500/15' : 'border-white/5 bg-slate-950/50'}`}><span className="text-center text-sm font-black text-slate-500">{index + 1}</span><div className="min-w-0"><div className="truncate font-bold text-slate-100">{entry.name}</div><div className="text-[10px] uppercase tracking-wider text-slate-500">{entry.team} • {active ? 'Active Turn' : entry.turnState ?? 'Ready'}</div></div>{!playerView && <div className="flex flex-wrap items-center justify-end gap-1"><button type="button" aria-label={`Move ${entry.name} up`} disabled={index === 0} onClick={() => onUpdate(moveInitiative(combat, id, -1))} className="rounded px-2 py-1 text-slate-400 disabled:opacity-25">↑</button><button type="button" aria-label={`Move ${entry.name} down`} disabled={index === initiativeOrder.length - 1} onClick={() => onUpdate(moveInitiative(combat, id, 1))} className="rounded px-2 py-1 text-slate-400 disabled:opacity-25">↓</button><button type="button" onClick={() => { const initiative = Math.floor(Math.random() * 20) + 1 + (entry.initiativeBonus ?? 0); updateCombatant({ ...entry, initiative }, `${entry.name} rolled ${initiative} initiative.`, 'Turn'); }} className="rounded bg-white/5 px-2 py-1 text-xs font-bold text-violet-200">Roll</button><input aria-label={`${entry.name} initiative`} type="number" value={entry.initiative ?? 0} onChange={(event) => updateCombatant({ ...entry, initiative: Number(event.target.value) }, `Set ${entry.name}'s initiative.`, 'Turn')} className="w-14 rounded bg-slate-900 px-2 py-1 text-center font-black text-slate-100 outline-none" /><select aria-label={`${entry.name} turn state`} value={entry.turnState === 'Active' ? 'Ready' : entry.turnState ?? 'Ready'} onChange={(event) => updateCombatant({ ...entry, turnState: event.target.value as CombatTurnState }, `${entry.name} is ${event.target.value.toLowerCase()}.`, 'Turn')} className="rounded bg-slate-900 px-2 py-1 text-xs text-slate-300 outline-none">{turnStates.map((state) => <option key={state}>{state}</option>)}</select></div>}</div>; })}{initiativeOrder.length === 0 && <div className="rounded-xl border border-dashed border-white/8 p-5 text-center text-sm text-slate-600">Add combatants to build the initiative queue.</div>}</div>
+  </section>;
+}
+
+function TacticalDashboard({ metrics, playerView }: { metrics: ReturnType<typeof combatTacticalMetrics>; playerView: boolean }) {
+  return <section className={panelClass}><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-black text-violet-200">Tactical Dashboard</h2><span className="text-xs text-slate-500">{metrics.totalConditions} active effects</span></div><div className="mt-3 grid gap-3 sm:grid-cols-3">{metrics.teams.map((team) => <div key={team.team} className="rounded-xl border border-white/5 bg-slate-950/55 p-3"><div className="text-xs font-black uppercase tracking-wider text-slate-400">{team.team}</div><div className="mt-2 text-xl font-black text-white">{team.currentHP}/{team.maxHP} HP</div><div className="mt-1 text-xs text-slate-500">{team.active} active • {team.bloodied} bloodied • {team.defeated} defeated</div><div className="mt-2 text-xs font-bold text-violet-300">{team.remainingAP} AP • {team.remainingRP} RP</div></div>)}</div>{!playerView && metrics.alerts.length > 0 && <div className="mt-3 grid gap-2 sm:grid-cols-2">{metrics.alerts.map((alert) => <div key={alert} className="rounded-lg border border-amber-400/15 bg-amber-500/8 px-3 py-2 text-xs text-amber-100">⚠ {alert}</div>)}</div>}</section>;
+}
+
+function DamageResolver({ combat, onApply }: { combat: SavedCombat; onApply: (combatants: Combatant[], label: string, kind: 'Damage' | 'Healing') => void }) {
+  const [mode, setMode] = useState<DamageResolutionInput['mode']>('Damage'); const [amount, setAmount] = useState(1); const [damageType, setDamageType] = useState('Slashing'); const [severity, setSeverity] = useState<HitSeverity>('Normal'); const [targets, setTargets] = useState<string[]>([]);
+  const selected = combat.combatants.filter(({ id }) => targets.includes(id)); const input: DamageResolutionInput = { mode, amount, damageType, severity }; const previews = selected.map((entry) => ({ entry, preview: resolveDamage(entry, input) }));
+  const apply = () => { if (previews.length === 0 || amount <= 0) return; const changes = previews.map(({ entry, preview }) => { const activeConditions = mode === 'Healing' && preview.finalAmount > 0 ? (entry.activeConditions ?? []).filter(({ name }) => !/^Bleeding$/i.test(name)) : entry.activeConditions; return { ...entry, hp: preview.hpAfter, activeConditions, conditions: activeConditions?.map(conditionLabel) ?? entry.conditions }; }); const names = changes.map(({ name }) => name).join(', '); const total = previews.reduce((sum, { preview }) => sum + preview.finalAmount, 0); onApply(changes, `${mode === 'Damage' ? 'Dealt' : 'Restored'} ${total} total HP ${mode === 'Damage' ? `(${damageType}, ${severity}) to` : 'to'} ${names}.`, mode); };
+  return <section className={panelClass}><div><h2 className="text-lg font-black text-violet-200">Damage & Healing Resolver</h2><p className="text-xs text-slate-500">Preview multi-target results before committing them.</p></div><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[0.8fr_0.8fr_1fr_1fr]"><select aria-label="Resolver mode" className={inputClass} value={mode} onChange={(event) => setMode(event.target.value as DamageResolutionInput['mode'])}><option>Damage</option><option>Healing</option></select><input aria-label="Damage or healing amount" className={inputClass} type="number" min="0" value={amount} onChange={(event) => setAmount(Math.max(0, Number(event.target.value)))} />{mode === 'Damage' && <><select aria-label="Damage type" className={inputClass} value={damageType} onChange={(event) => setDamageType(event.target.value)}>{damageTypes.map((type) => <option key={type}>{type}</option>)}</select><select aria-label="Hit severity" className={inputClass} value={severity} onChange={(event) => setSeverity(event.target.value as HitSeverity)}><option>Normal</option><option>Heavy</option><option>Brutal</option><option>Critical</option></select></>}</div><div className="mt-3 flex flex-wrap gap-2">{combat.combatants.map((entry) => <button type="button" key={entry.id} onClick={() => setTargets((current) => current.includes(entry.id) ? current.filter((id) => id !== entry.id) : [...current, entry.id])} className={`rounded-full border px-3 py-1.5 text-xs font-bold ${targets.includes(entry.id) ? 'border-violet-400 bg-violet-500/20 text-violet-100' : 'border-white/8 bg-white/[0.03] text-slate-400'}`}>{entry.name}</button>)}</div>{previews.length > 0 && <div className="mt-4 grid gap-2 sm:grid-cols-2">{previews.map(({ entry, preview }) => <div key={entry.id} className="rounded-xl bg-slate-950/60 p-3"><div className="flex justify-between gap-3 font-bold text-slate-200"><span>{entry.name}</span><span>{entry.hp} → {preview.hpAfter} HP</span></div><div className="mt-1 text-xs text-slate-500">Final {mode.toLowerCase()}: {preview.finalAmount}</div>{preview.steps.map((step) => <div key={step} className="mt-1 text-xs text-amber-200">{step}</div>)}</div>)}</div>}<button type="button" disabled={previews.length === 0 || amount <= 0} onClick={apply} className="mt-4 rounded-lg bg-violet-500 px-4 py-2 text-sm font-black text-white disabled:opacity-35">Confirm {mode}</button></section>;
+}
+
+function ResourceControl({ label, value, max, min = 0, disabled = false, onChange }: { label: string; value: number; max: number; min?: number; disabled?: boolean; onChange: (value: number) => void }) {
+  return <div className="rounded-lg border border-white/8 bg-slate-950/60 p-2"><div className="text-center text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">{label}</div><div className="mt-1 grid grid-cols-[1.5rem_1fr_1.5rem] items-center"><button type="button" disabled={disabled} onClick={() => onChange(Math.max(min, value - 1))} className="rounded text-slate-400 disabled:opacity-25">−</button><input disabled={disabled} type="number" value={value} onChange={(event) => onChange(Math.min(max, Math.max(min, Number(event.target.value))))} className="w-full bg-transparent text-center font-black text-slate-100 outline-none disabled:opacity-100" aria-label={`${label} current value`} /><button type="button" disabled={disabled} onClick={() => onChange(Math.min(max, value + 1))} className="rounded text-slate-400 disabled:opacity-25">+</button></div><div className="text-center text-[10px] text-slate-600">of {max}</div></div>;
+}
+
+function CombatantCard({ combatant, isActive, playerView, livePartyName, conditionOptions, onChange, onRemove }: { combatant: Combatant; isActive: boolean; playerView: boolean; livePartyName?: string; conditionOptions: RuleReferenceEntry[]; onChange: (combatant: Combatant, label?: string, kind?: Parameters<typeof recordCombatChange>[3]) => void; onRemove: () => void }) {
+  const [conditionName, setConditionName] = useState(''); const [conditionLevel, setConditionLevel] = useState(1); const [conditionSource, setConditionSource] = useState(''); const [duration, setDuration] = useState(1); const [expiresAt, setExpiresAt] = useState<CombatEffectTiming>('Manual'); const [saveDC, setSaveDC] = useState('');
+  const healthPercent = Math.max(0, Math.min(100, combatant.hp / Math.max(1, combatant.maxHP) * 100)); const selectedRule = conditionOptions.find((entry) => entry.title.replace(/ X$/, '') === conditionName);
+  const addCondition = () => { if (!conditionName.trim()) return; const next: CombatConditionEffect = { id: generateUUID(), name: conditionName.trim(), level: conditionLevel, source: conditionSource.trim() || 'Combat', expiresAt, remainingRounds: expiresAt === 'Manual' ? undefined : duration, saveDC: saveDC ? Number(saveDC) : undefined, description: selectedRule?.text }; const activeConditions = [...(combatant.activeConditions ?? []), next]; onChange({ ...combatant, activeConditions, conditions: activeConditions.map(conditionLabel) }, `Applied ${conditionLabel(next)} to ${combatant.name}.`, 'Condition'); setConditionName(''); };
+  return <article className={`overflow-hidden rounded-xl border bg-slate-950/65 ${isActive ? 'border-violet-400 shadow-[0_0_22px_rgba(139,92,246,0.12)]' : combatant.hasActed ? 'border-white/5 opacity-75' : 'border-white/10'}`}><div className="p-4"><div className="flex items-start gap-3">{combatant.sourceMonsterID && <MonsterToken image={combatant.tokenDataURL} name={combatant.name} className="w-12 text-xs" />}<div className="min-w-0 grow"><input disabled={playerView} value={combatant.name} onChange={(event) => onChange({ ...combatant, name: event.target.value }, `Renamed a combatant to ${event.target.value}.`, 'Roster')} className="w-full bg-transparent font-black text-slate-100 outline-none disabled:opacity-100" aria-label="Combatant name" /><div className="mt-1 flex flex-wrap items-center gap-2"><span className="text-xs text-slate-500">{combatant.team}</span>{isActive && <span className="rounded bg-violet-500/20 px-1.5 py-0.5 text-[10px] font-black uppercase text-violet-200">Active</span>}{livePartyName && <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">Live • {livePartyName}</span>}{combatant.visibility === 'Hidden' && <span className="text-[10px] font-black uppercase text-amber-300">Hidden</span>}</div></div>{!playerView && <select aria-label={`${combatant.name} visibility`} value={combatant.visibility ?? 'Visible'} onChange={(event) => onChange({ ...combatant, visibility: event.target.value as Combatant['visibility'] }, `${combatant.name} is now ${event.target.value.toLowerCase()}.`, 'System')} className="rounded bg-slate-900 px-2 py-1 text-xs text-slate-400"><option>Visible</option><option>Hidden</option></select>}</div>
+    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800"><div className={`h-full ${healthPercent <= 25 ? 'bg-red-500' : healthPercent <= 50 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${healthPercent}%` }} /></div><div className={`mt-3 grid gap-2 ${combatant.maxStamina !== undefined || combatant.maxMana !== undefined ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-3'}`}><ResourceControl disabled={playerView} label="HP" value={combatant.hp} max={combatant.maxHP} min={-20} onChange={(hp) => onChange({ ...combatant, hp }, `${combatant.name} HP: ${combatant.hp} → ${hp}.`, hp < combatant.hp ? 'Damage' : 'Healing')} /><ResourceControl disabled={playerView} label="AP" value={combatant.ap} max={combatant.maxAP} onChange={(ap) => onChange({ ...combatant, ap }, `${combatant.name} AP: ${combatant.ap} → ${ap}.`, 'Resource')} /><ResourceControl disabled={playerView} label="RP" value={combatant.currentReactionPoints} max={combatant.reactionPoints} onChange={(currentReactionPoints) => onChange({ ...combatant, currentReactionPoints }, `${combatant.name} RP: ${combatant.currentReactionPoints} → ${currentReactionPoints}.`, 'Resource')} />{combatant.maxStamina !== undefined && <ResourceControl disabled={playerView} label="SP" value={combatant.stamina ?? combatant.maxStamina} max={combatant.maxStamina} onChange={(stamina) => onChange({ ...combatant, stamina }, `${combatant.name} SP: ${combatant.stamina ?? combatant.maxStamina} → ${stamina}.`, 'Resource')} />}{combatant.maxMana !== undefined && <ResourceControl disabled={playerView} label="MP" value={combatant.mana ?? combatant.maxMana} max={combatant.maxMana} onChange={(mana) => onChange({ ...combatant, mana }, `${combatant.name} MP: ${combatant.mana ?? combatant.maxMana} → ${mana}.`, 'Resource')} />}</div>
+    <div className="mt-3 space-y-2">{(combatant.activeConditions ?? []).map((condition) => <details key={condition.id} className="rounded-lg border border-amber-400/15 bg-amber-500/8 p-2"><summary className="cursor-pointer text-xs font-bold text-amber-200">{conditionLabel(condition)} <span className="font-normal text-slate-500">• {condition.source}{condition.remainingRounds !== undefined ? ` • ${condition.remainingRounds} remaining` : ''}</span></summary><div className="mt-2 text-xs leading-5 text-slate-300">{condition.description ? <RuleAwareText text={condition.description} /> : 'No attached rules description.'}{condition.saveDC !== undefined && <div className="mt-1 font-bold text-violet-200">Save DC {condition.saveDC}</div>}</div>{!playerView && <button type="button" onClick={() => { const activeConditions = (combatant.activeConditions ?? []).filter(({ id }) => id !== condition.id); onChange({ ...combatant, activeConditions, conditions: activeConditions.map(conditionLabel) }, `Removed ${conditionLabel(condition)} from ${combatant.name}.`, 'Condition'); }} className="mt-2 text-xs font-bold text-red-300">Remove effect</button>}</details>)}</div>
+    {!playerView && <details className="mt-3 rounded-lg border border-white/5 bg-white/[0.025] p-2"><summary className="cursor-pointer text-xs font-black uppercase tracking-wider text-violet-300">+ Structured Effect</summary><div className="mt-3 grid gap-2 sm:grid-cols-2"><select aria-label="Condition name" className={inputClass} value={conditionName} onChange={(event) => setConditionName(event.target.value)}><option value="">Choose condition…</option>{conditionOptions.map((entry) => <option key={entry.id} value={entry.title.replace(/ X$/, '')}>{entry.title}</option>)}<option value="Custom Effect">Custom Effect</option></select><input aria-label="Condition source" className={inputClass} value={conditionSource} onChange={(event) => setConditionSource(event.target.value)} placeholder="Source (spell, feature…)" /><label className="text-xs text-slate-500">Level<input aria-label="Condition level" className={`${inputClass} mt-1 w-full`} type="number" min="1" max="10" value={conditionLevel} onChange={(event) => setConditionLevel(Math.max(1, Number(event.target.value)))} /></label><label className="text-xs text-slate-500">Expires<select aria-label="Condition expiration timing" className={`${inputClass} mt-1 w-full`} value={expiresAt} onChange={(event) => setExpiresAt(event.target.value as CombatEffectTiming)}>{effectTimings.map((timing) => <option key={timing}>{timing}</option>)}</select></label>{expiresAt !== 'Manual' && <label className="text-xs text-slate-500">Rounds<input aria-label="Condition duration" className={`${inputClass} mt-1 w-full`} type="number" min="1" value={duration} onChange={(event) => setDuration(Math.max(1, Number(event.target.value)))} /></label>}<label className="text-xs text-slate-500">Save DC (optional)<input aria-label="Condition save DC" className={`${inputClass} mt-1 w-full`} type="number" value={saveDC} onChange={(event) => setSaveDC(event.target.value)} /></label></div>{selectedRule && <p className="mt-3 text-xs leading-5 text-slate-400"><RuleAwareText text={selectedRule.text} /></p>}<button type="button" disabled={!conditionName} onClick={addCondition} className="mt-3 rounded-lg bg-violet-500 px-3 py-2 text-xs font-black text-white disabled:opacity-35">Apply Effect</button></details>}</div>
+    <details className="border-t border-white/5"><summary className="cursor-pointer px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-violet-300">Stats & Abilities</summary><div className="space-y-3 border-t border-white/5 p-4 text-sm"><div className="grid grid-cols-3 gap-2 text-center">{combatant.physicalDefense !== undefined && <MiniStat label="PD" ruleID="defense.precisionDefense" value={combatant.physicalDefense} />}{combatant.arcaneDefense !== undefined && <MiniStat label="AD" ruleID="defense.areaDefense" value={combatant.arcaneDefense} />}{combatant.attackBonus !== undefined && <MiniStat label="Attack" value={`+${combatant.attackBonus}`} />}{combatant.saveDC !== undefined && <MiniStat label="Save DC" value={combatant.saveDC} />}{combatant.speed !== undefined && <MiniStat label="Speed" value={combatant.speed} />}</div>{[combatant.reductions, combatant.resistances, combatant.vulnerabilities, combatant.immunities].filter(Boolean).map((entry) => <p key={entry} className="text-xs text-slate-400"><RuleAwareText text={entry!} /></p>)}{combatant.monsterAbilities?.map((ability) => <div key={ability.id} className="rounded-lg bg-white/[0.035] p-3"><div className="font-bold text-slate-200">{ability.name} {ability.cost && <span className="text-xs text-violet-300">• <RuleAwareText text={ability.cost} /></span>}</div>{monsterAbilityMechanicsSummary(ability).length > 0 && <div className="mt-2 flex flex-wrap gap-1">{monsterAbilityMechanicsSummary(ability).map((entry) => <span key={entry} className="rounded bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-bold text-cyan-200">{entry}</span>)}</div>}<p className="mt-1 leading-5 text-slate-400"><RuleAwareText text={ability.details} references={ability.ruleReferences} /></p></div>)}{!playerView && <button type="button" onClick={onRemove} className="w-full rounded-lg px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Remove from Combat</button>}</div></details></article>;
+}
+
+function HistoryPanel({ combat, historyNote, setHistoryNote, historyNotePrivate, setHistoryNotePrivate, addHistoryNote }: { combat: SavedCombat; historyNote: string; setHistoryNote: (value: string) => void; historyNotePrivate: boolean; setHistoryNotePrivate: (value: boolean) => void; addHistoryNote: () => void }) {
+  return <section className={panelClass}><div className="flex items-center justify-between gap-3"><div><h2 className="text-lg font-black text-violet-200">Combat History</h2><p className="text-xs text-slate-500">Turn changes, damage, healing, effects, and resource use.</p></div><span className="text-xs text-slate-500">{(combat.history ?? []).length} events</span></div>{!combat.playerView && <div className="mt-3 flex flex-wrap gap-2"><input className={`${inputClass} min-w-0 grow basis-52`} value={historyNote} onChange={(event) => setHistoryNote(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') addHistoryNote(); }} placeholder="Add a combat note…" /><label className="flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/70 px-3 text-xs font-bold text-slate-300"><input type="checkbox" checked={historyNotePrivate} onChange={(event) => setHistoryNotePrivate(event.target.checked)} className="accent-violet-500" />GM only</label><button type="button" onClick={addHistoryNote} className="rounded-lg bg-white/5 px-3 py-2 text-sm font-bold text-slate-200">Add</button></div>}<div className="mt-3 max-h-64 space-y-2 overflow-y-auto overscroll-contain pr-1">{(combat.history ?? []).filter((entry) => !combat.playerView || !entry.private).slice().reverse().map((entry) => <div key={entry.id} className="flex gap-3 rounded-lg bg-slate-950/55 p-2 text-sm"><span className="shrink-0 text-[10px] font-black uppercase text-violet-300">R{entry.round} {entry.kind}</span><span className="text-slate-300">{entry.text}</span>{entry.private && <span className="ml-auto text-[10px] text-amber-300">GM</span>}</div>)}</div></section>;
 }
 
 function MiniStat({ label, value, ruleID }: { label: string; value: string | number; ruleID?: string }) {

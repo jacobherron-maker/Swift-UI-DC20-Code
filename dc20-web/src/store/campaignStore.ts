@@ -7,6 +7,9 @@ import type {
   Character,
   CharacterBuildData,
   Combatant,
+  CombatConditionEffect,
+  CombatHistoryEntry,
+  CombatUndoSnapshot,
   CombatantTeam,
   Encounter,
   EquipmentCatalogItem,
@@ -42,7 +45,7 @@ import { generateUUID } from '../utils/gameUtils';
 import { DEFAULT_PALETTE_ID, themePalette } from '../data/themePalettes';
 import { normalizeVaultEntry } from '../utils/vaultRules';
 
-const STORE_VERSION = 11;
+const STORE_VERSION = 12;
 
 export const defaultMonsterLibrary: MonsterLibraryOrganization = {
   favoriteIDs: [],
@@ -372,6 +375,26 @@ function normalizeTeam(value: unknown): CombatantTeam {
   return CombatantTeamValues.HEROES;
 }
 
+function normalizeCombatCondition(value: unknown): CombatConditionEffect | null {
+  if (!value || typeof value !== 'object') return null;
+  const item = value as Record<string, unknown>;
+  const name = typeof item.name === 'string' ? item.name.trim() : '';
+  if (!name) return null;
+  const expiresAt = ['Manual', 'Start of Turn', 'End of Turn', 'Start of Round', 'End of Round'].includes(String(item.expiresAt))
+    ? item.expiresAt as CombatConditionEffect['expiresAt']
+    : 'Manual';
+  return {
+    id: typeof item.id === 'string' ? item.id : generateUUID(),
+    name,
+    level: Math.min(10, Math.max(1, Math.trunc(asNumber(item.level, 1)))),
+    source: typeof item.source === 'string' ? item.source : '',
+    remainingRounds: item.remainingRounds === undefined ? undefined : Math.max(0, Math.trunc(asNumber(item.remainingRounds, 0))),
+    expiresAt,
+    saveDC: item.saveDC === undefined ? undefined : asNumber(item.saveDC, 0),
+    description: typeof item.description === 'string' ? item.description : undefined,
+  };
+}
+
 function normalizeCombatant(value: unknown): Combatant {
   const item = value && typeof value === 'object' ? value as Record<string, unknown> : {};
   const maxHP = asNumber(item.maxHP ?? item.maxStamina, 1);
@@ -405,6 +428,26 @@ function normalizeCombatant(value: unknown): Combatant {
       ? item.monsterAbilities.map(normalizeAbility).filter((entry): entry is MonsterAbility => entry !== null)
       : undefined,
     tokenDataURL: normalizeMonsterImage(item.tokenDataURL),
+    initiative: item.initiative === undefined ? undefined : asNumber(item.initiative, 0),
+    initiativeBonus: item.initiativeBonus === undefined ? undefined : asNumber(item.initiativeBonus, 0),
+    turnState: ['Ready', 'Active', 'Delayed', 'Readied', 'Skipped', 'Defeated', 'Escaped', 'Surrendered', 'Captured'].includes(String(item.turnState))
+      ? item.turnState as Combatant['turnState'] : 'Ready',
+    activeConditions: Array.isArray(item.activeConditions)
+      ? item.activeConditions.map(normalizeCombatCondition).filter((entry): entry is CombatConditionEffect => entry !== null)
+      : conditions.map((label) => {
+          const match = label.match(/^(.*?)\s+(\d+)$/);
+          return { id: generateUUID(), name: match?.[1] ?? label, level: Number(match?.[2] ?? 1), source: 'Legacy combat', expiresAt: 'Manual' as const };
+        }),
+    visibility: item.visibility === 'Hidden' ? 'Hidden' : 'Visible',
+    maxStamina: item.maxStamina === undefined ? undefined : Math.max(0, asNumber(item.maxStamina, 0)),
+    stamina: item.stamina === undefined ? undefined : Math.max(0, asNumber(item.stamina, 0)),
+    maxMana: item.maxMana === undefined ? undefined : Math.max(0, asNumber(item.maxMana, 0)),
+    mana: item.mana === undefined ? undefined : Math.max(0, asNumber(item.mana, 0)),
+    reductions: typeof item.reductions === 'string' ? item.reductions : undefined,
+    resistances: typeof item.resistances === 'string' ? item.resistances : undefined,
+    vulnerabilities: typeof item.vulnerabilities === 'string' ? item.vulnerabilities : undefined,
+    immunities: typeof item.immunities === 'string' ? item.immunities : undefined,
+    movementDetails: typeof item.movementDetails === 'string' ? item.movementDetails : undefined,
   };
 }
 
@@ -441,14 +484,59 @@ function normalizeCampaignRecord(value: unknown): CampaignRecord | null {
 
 function normalizeCombat(value: unknown): SavedCombat {
   const item = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const combatants = Array.isArray(item.combatants) ? item.combatants.map(normalizeCombatant) : [];
+  const combatantIDs = new Set(combatants.map(({ id }) => id));
+  const initiativeOrder = [
+    ...normalizeStringArray(item.initiativeOrder).filter((id) => combatantIDs.has(id)),
+    ...combatants.map(({ id }) => id).filter((id) => !normalizeStringArray(item.initiativeOrder).includes(id)),
+  ];
+  const status = item.status === 'Paused' || item.status === 'Completed' ? item.status : 'Active';
+  const history: CombatHistoryEntry[] = Array.isArray(item.history) ? item.history.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return [];
+    const record = entry as Record<string, unknown>;
+    return [{
+      id: typeof record.id === 'string' ? record.id : generateUUID(),
+      timestamp: typeof record.timestamp === 'string' ? record.timestamp : new Date().toISOString(),
+      round: Math.max(1, Math.trunc(asNumber(record.round, 1))),
+      kind: ['Turn', 'Damage', 'Healing', 'Condition', 'Resource', 'Roster', 'Note', 'System'].includes(String(record.kind)) ? record.kind as CombatHistoryEntry['kind'] : 'System',
+      text: typeof record.text === 'string' ? record.text : '',
+      private: Boolean(record.private),
+    }];
+  }).slice(-150) : [];
+  const undoStack: CombatUndoSnapshot[] = Array.isArray(item.undoStack) ? item.undoStack.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return [];
+    const record = entry as Record<string, unknown>;
+    const snapshotCombatants = Array.isArray(record.combatants) ? record.combatants.map(normalizeCombatant) : [];
+    const snapshotStatus: CombatUndoSnapshot['status'] = record.status === 'Paused' || record.status === 'Completed' ? record.status : 'Active';
+    return [{
+      id: typeof record.id === 'string' ? record.id : generateUUID(),
+      label: typeof record.label === 'string' ? record.label : 'Previous change',
+      round: Math.max(1, Math.trunc(asNumber(record.round, 1))),
+      combatants: snapshotCombatants,
+      initiativeOrder: normalizeStringArray(record.initiativeOrder),
+      activeCombatantID: typeof record.activeCombatantID === 'string' ? record.activeCombatantID : undefined,
+      status: snapshotStatus,
+      completedAt: typeof record.completedAt === 'string' ? record.completedAt : undefined,
+    }];
+  }).slice(-8) : [];
   return {
     id: typeof item.id === 'string' ? item.id : generateUUID(),
     name: typeof item.name === 'string' ? item.name : 'New Combat',
-    combatants: Array.isArray(item.combatants) ? item.combatants.map(normalizeCombatant) : [],
+    combatants,
     round: Math.max(1, Math.trunc(asNumber(item.round, 1))),
     firstTeam: normalizeTeam(item.firstTeam),
     notes: typeof item.notes === 'string' ? item.notes : '',
     sourceEncounterID: typeof item.sourceEncounterID === 'string' ? item.sourceEncounterID : undefined,
+    initiativeMode: item.initiativeMode === 'Individual' ? 'Individual' : 'Team',
+    initiativeOrder,
+    activeCombatantID: typeof item.activeCombatantID === 'string' && combatantIDs.has(item.activeCombatantID) ? item.activeCombatantID : undefined,
+    status,
+    history,
+    undoStack,
+    startedAt: typeof item.startedAt === 'string' ? item.startedAt : undefined,
+    completedAt: typeof item.completedAt === 'string' ? item.completedAt : undefined,
+    summary: typeof item.summary === 'string' ? item.summary : undefined,
+    playerView: Boolean(item.playerView),
   };
 }
 
@@ -713,6 +801,16 @@ export const useCampaignStore = create<CampaignStore>()(
               attackBonus: character.primeModifier + character.combatMastery,
               saveDC: character.saveDC ?? 10 + character.primeModifier + character.combatMastery,
               speed: character.speed,
+              maxStamina: character.maxStamina,
+              stamina: Math.min(character.maxStamina, character.build?.currentStamina ?? character.stamina),
+              maxMana: character.maxManaPoints,
+              mana: Math.min(character.maxManaPoints, character.build?.currentMana ?? character.manaPoints),
+              initiativeBonus: (character.attributes?.Agility?.modifier ?? character.primeModifier ?? 0) + character.combatMastery,
+              activeConditions: Object.entries(character.build?.sheetConditionLevels ?? {}).flatMap(([name, level]) => {
+                if (level <= 0) return [];
+                const active = combatant.activeConditions?.find((condition) => condition.name === name);
+                return [{ ...(active ?? { id: generateUUID(), source: 'Character sheet', expiresAt: 'Manual' as const }), name, level }];
+              }),
             };
           }),
         }));

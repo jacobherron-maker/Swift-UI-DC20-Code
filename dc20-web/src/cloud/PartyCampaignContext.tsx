@@ -56,6 +56,7 @@ interface PartyCampaignContextValue {
   createPartyCampaign: (name: string) => Promise<CampaignPartyLink>;
   joinPartyCampaign: (inviteCode: string, character: Character) => Promise<{ link: CampaignPartyLink; campaignName: string }>;
   publishCharacter: (partyId: string, role: PartyCampaignRole, character?: Character) => Promise<void>;
+  updatePartyMemberCharacter: (partyId: string, memberId: string, character: Character) => Promise<void>;
   renameParty: (partyId: string, name: string) => Promise<void>;
   addSharedNote: (partyId: string, note: CampaignNote) => Promise<void>;
   updateSharedNote: (partyId: string, note: CampaignNote) => Promise<void>;
@@ -360,6 +361,16 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
     });
   }, [customEquipment, requireCloud]);
 
+  const updatePartyMemberCharacter = useCallback(async (partyId: string, memberId: string, character: Character) => {
+    const { database } = requireCloud();
+    const link = links.find((entry) => entry.partyId === partyId);
+    if (link?.role !== 'gm') throw new Error('Only the campaign GM can update a connected character from combat.');
+    await setDoc(doc(database, 'party_campaigns', partyId, 'members', memberId), {
+      character: safeCharacter(character, customEquipment),
+      updated_at: new Date().toISOString(),
+    }, { merge: true });
+  }, [customEquipment, links, requireCloud]);
+
   // Keep every linked player character current even when its owner is working outside the
   // Characters page. This also repairs older Firebase copies whose custom inventory entries
   // were published before portable item snapshots were introduced.
@@ -526,6 +537,7 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
     createPartyCampaign,
     joinPartyCampaign,
     publishCharacter,
+    updatePartyMemberCharacter,
     renameParty,
     addSharedNote: saveSharedNote,
     updateSharedNote: saveSharedNote,
@@ -546,7 +558,7 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
       return url.toString();
     },
     clearPendingInvite,
-  }), [adjustSharedGold, clearPendingInvite, createPartyCampaign, deleteParty, error, isConfigured, joinPartyCampaign, leaveParty, parties, partyCharacters, pendingInvite, publishCharacter, refreshParty, removePartyMember, removeSharedInventoryItem, removeSharedNote, removeSharedVaultEntry, renameParty, saveSharedInventoryItem, saveSharedNote, shareVaultEntry, status, user]);
+  }), [adjustSharedGold, clearPendingInvite, createPartyCampaign, deleteParty, error, isConfigured, joinPartyCampaign, leaveParty, parties, partyCharacters, pendingInvite, publishCharacter, refreshParty, removePartyMember, removeSharedInventoryItem, removeSharedNote, removeSharedVaultEntry, renameParty, saveSharedInventoryItem, saveSharedNote, shareVaultEntry, status, updatePartyMemberCharacter, user]);
 
   return <PartyCampaignContext.Provider value={value}>{children}</PartyCampaignContext.Provider>;
 }

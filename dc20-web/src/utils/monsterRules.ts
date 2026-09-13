@@ -572,7 +572,11 @@ export function combatantFromMonster(monster: Monster, name = monster.name): Com
     reactionPoints,
     currentReactionPoints: reactionPoints,
     conditions: [],
+    activeConditions: [],
     hasActed: false,
+    turnState: 'Ready',
+    visibility: 'Visible',
+    initiativeBonus: monster.agility + monster.combatMastery,
     sourceMonsterID: monster.id,
     physicalDefense: monster.physicalDefense,
     arcaneDefense: monster.arcaneDefense,
@@ -581,6 +585,11 @@ export function combatantFromMonster(monster: Monster, name = monster.name): Com
     speed: monster.speed,
     monsterAbilities: monster.abilities.map((ability) => ({ ...ability })),
     tokenDataURL: monster.tokenDataURL,
+    reductions: monster.reductions,
+    resistances: monster.resistances,
+    vulnerabilities: monster.vulnerabilities,
+    immunities: monster.immunities,
+    movementDetails: [monster.speedType, monster.otherSpeeds].filter(Boolean).join(' • '),
   };
 }
 
@@ -596,13 +605,23 @@ export function combatantFromCharacter(character: Character): Combatant {
     reactionPoints: 0,
     currentReactionPoints: 0,
     conditions: [],
+    activeConditions: Object.entries(character.build?.sheetConditionLevels ?? {}).flatMap(([name, level]) => level > 0 ? [{
+      id: generateUUID(), name, level, source: 'Character sheet', expiresAt: 'Manual' as const,
+    }] : []),
     hasActed: false,
+    turnState: 'Ready',
+    visibility: 'Visible',
+    initiativeBonus: (character.attributes?.Agility?.modifier ?? character.primeModifier ?? 0) + character.combatMastery,
     sourceCharacterID: character.id,
     physicalDefense: character.physicalDefense ?? character.defense,
     arcaneDefense: character.arcaneDefense ?? character.defense,
     attackBonus: character.primeModifier + character.combatMastery,
     saveDC: character.saveDC ?? 10 + character.primeModifier + character.combatMastery,
     speed: character.speed,
+    maxStamina: character.maxStamina,
+    stamina: character.build?.currentStamina ?? character.stamina,
+    maxMana: character.maxManaPoints,
+    mana: character.build?.currentMana ?? character.manaPoints,
   };
 }
 
@@ -633,6 +652,12 @@ export function combatFromEncounter(encounter: Encounter): SavedCombat {
     firstTeam: CombatantTeamValues.HEROES,
     notes: encounter.notes,
     sourceEncounterID: encounter.id,
+    initiativeMode: 'Team',
+    initiativeOrder: combatants.map(({ id }) => id),
+    status: 'Active',
+    history: [],
+    undoStack: [],
+    playerView: false,
   };
 }
 
