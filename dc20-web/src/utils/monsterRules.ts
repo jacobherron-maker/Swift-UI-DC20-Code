@@ -294,6 +294,7 @@ export function createCustomMonster(
     agility: 0,
     charisma: 0,
     intelligence: 0,
+    training: '',
     skills: '',
     senses: '',
     languages: '',

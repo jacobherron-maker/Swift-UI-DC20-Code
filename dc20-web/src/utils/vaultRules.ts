@@ -5,6 +5,7 @@ import type {
   EquipmentCatalogItem,
   EquipmentSheetEffects,
   GmVaultEntry,
+  Maneuver,
   Spell,
   VaultContentKind,
   VaultMechanicalEffects,
@@ -198,6 +199,24 @@ function normalizeSpell(value: unknown, entry: GmVaultEntry): Spell | undefined 
   };
 }
 
+function normalizeManeuver(value: unknown, entry: GmVaultEntry): Maneuver | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const raw = value as Record<string, unknown>;
+  return {
+    ...(raw as unknown as Maneuver),
+    id: typeof raw.id === 'string' ? raw.id : `vault-maneuver-${generateUUID()}`,
+    name: entry.name,
+    type: typeof raw.type === 'string' ? raw.type : 'Custom',
+    category: typeof raw.category === 'string' ? raw.category : 'Custom',
+    cost: typeof raw.cost === 'string' ? raw.cost : '1 AP',
+    range: typeof raw.range === 'string' ? raw.range : 'Self',
+    requirements: typeof raw.requirements === 'string' ? raw.requirements : '',
+    description: entry.description,
+    enhancements: typeof raw.enhancements === 'string' ? raw.enhancements : '',
+    sourceNote: 'Custom maneuver shared from the GM Vault.',
+  };
+}
+
 function normalizeGrantedSpell(value: unknown): Spell | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
@@ -320,6 +339,7 @@ export function normalizeVaultEntry(value: unknown): GmVaultEntry | null {
   };
   entry.item = normalizeItem(raw.item, entry);
   entry.spell = normalizeSpell(raw.spell, entry);
+  entry.maneuver = normalizeManeuver(raw.maneuver, entry);
   entry.companion = normalizeCompanion(raw.companion, entry);
   return entry;
 }
@@ -366,6 +386,7 @@ export function prepareVaultEntry(entry: GmVaultEntry): GmVaultEntry {
     };
   }
   if (next.spell) next.spell = { ...next.spell, name: next.name, source: 'GM Vault', description: next.description };
+  if (next.maneuver) next.maneuver = { ...next.maneuver, name: next.name, description: next.description };
   if (next.companion) next.companion = { ...next.companion, name: next.name, source: 'GM Vault', features: next.description };
   return next;
 }

@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useCharacterReference } from '../../hooks/useCharacterReference';
+import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
+import { usePowerCatalog } from '../../hooks/usePowerCatalog';
 import { useSourceMonsters } from '../../hooks/useSourceMonsters';
 import { useCampaignStore } from '../../store/campaignStore';
 import type { ContentFocusRequest } from '../../navigation/appNavigation';
 
 /* Navigation requests intentionally synchronize this view's local workspace state. */
 /* oxlint-disable react/set-state-in-effect, react-hooks/exhaustive-deps */
-import type { Monster, MonsterAbility, MonsterAbilityKind, MonsterRole, MonsterType } from '../../types/models';
+import type { Maneuver, Monster, MonsterAbility, MonsterAbilityKind, MonsterRole, MonsterType, Spell } from '../../types/models';
 import {
   MonsterAbilityKindValues,
   MonsterRoleValues,
@@ -31,6 +34,164 @@ import {
 
 const fieldClass = 'w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/20';
 const labelClass = 'mb-1 block text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400';
+
+interface SelectOptionGroup {
+  label: string;
+  options: Array<{ label: string; value: string }>;
+}
+
+interface MonsterPowerOption {
+  key: string;
+  group: 'Custom GM Vault Spells' | 'Published Spells' | 'Custom GM Vault Maneuvers' | 'Published Maneuvers';
+  name: string;
+  cost: string;
+  details: string;
+  sourcePower: NonNullable<MonsterAbility['sourcePower']>;
+}
+
+const PRIMARY_SPEED_TYPES = ['Ground', 'Burrow', 'Climb', 'Fly', 'Hover', 'Swim', 'Truewalk', 'Incorporeal'];
+const OTHER_SPEED_OPTIONS: SelectOptionGroup[] = [{
+  label: 'Movement Modes',
+  options: [
+    ['Ground Speed', 'Ground Speed'], ['Burrow Speed', 'Burrow Speed'], ['Climb Speed', 'Climb Speed'],
+    ['Fly Speed', 'Fly Speed'], ['Hover Speed', 'Hover Speed'], ['Swim Speed', 'Swim Speed'],
+    ['Truewalk', 'Truewalk'], ['Incorporeal Movement', 'Incorporeal Movement'],
+  ].map(([label, value]) => ({ label, value })),
+}];
+const SENSE_OPTIONS: SelectOptionGroup[] = [{
+  label: 'Special Senses',
+  options: ['Darkvision', 'Blindsight', 'Tremorsense', 'Truesight', 'Telepathy', 'Passive Awareness']
+    .map((value) => ({ label: value, value })),
+}];
+const DAMAGE_TYPE_GROUPS: SelectOptionGroup[] = [
+  { label: 'Physical Damage', options: ['Bludgeoning', 'Piercing', 'Slashing'].map((value) => ({ label: value, value })) },
+  { label: 'Elemental Damage', options: ['Cold', 'Corrosion', 'Fire', 'Lightning', 'Poison'].map((value) => ({ label: value, value })) },
+  { label: 'Mystical Damage', options: ['Psychic', 'Radiant', 'Umbral'].map((value) => ({ label: value, value })) },
+  { label: 'Damage Categories', options: ['Physical', 'Elemental', 'Mystical'].map((value) => ({ label: value, value })) },
+];
+const CONDITION_OPTIONS = [
+  'Bleeding', 'Blinded', 'Burning', 'Charmed', 'Dazed', 'Deafened', 'Disoriented', 'Doomed', 'Exhaustion',
+  'Exposed', 'Frightened', 'Hindered', 'Immobilized', 'Impaired', 'Incapacitated', 'Intimidated', 'Invisible',
+  'Paralyzed', 'Petrified', 'Poisoned', 'Prone', 'Restrained', 'Slowed', 'Stunned', 'Surprised', 'Taunted',
+  'Terrified', 'Tethered', 'Unconscious', 'Weakened',
+];
+
+function appendCatalogValue(current: string, value: string): string {
+  if (!value) return current;
+  const entries = current.split(/[,;|]/).map((entry) => entry.trim()).filter(Boolean);
+  if (entries.some((entry) => entry.toLocaleLowerCase() === value.toLocaleLowerCase())) return current;
+  return current.trim() ? `${current.trim()}, ${value}` : value;
+}
+
+function CatalogTextField({ label, value, onChange, groups, placeholder }: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  groups: SelectOptionGroup[];
+  placeholder: string;
+}) {
+  return (
+    <div>
+      <span className={labelClass}>{label}</span>
+      <select
+        className={fieldClass}
+        value=""
+        aria-label={`Add ${label}`}
+        onChange={(event) => onChange(appendCatalogValue(value, event.target.value))}
+      >
+        <option value="">Add from the rules catalog…</option>
+        {groups.map((group) => (
+          <optgroup key={group.label} label={group.label}>
+            {group.options.map((option) => <option key={`${group.label}-${option.value}`} value={option.value}>{option.label}</option>)}
+          </optgroup>
+        ))}
+      </select>
+      <input
+        className={`${fieldClass} mt-2`}
+        value={value}
+        aria-label={`${label} details`}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <span className="mt-1 block text-[10px] leading-4 text-slate-600">Choose a standard option above, then add ranges, bonuses, mastery, or custom details here.</span>
+    </div>
+  );
+}
+
+function defenseOptions(suffixes: string[], includeConditions = true): SelectOptionGroup[] {
+  const damageGroups = DAMAGE_TYPE_GROUPS.map((group) => ({
+    ...group,
+    options: group.options.flatMap((option) => suffixes.map((suffix) => ({
+      label: suffix ? `${option.label} (${suffix})` : option.label,
+      value: suffix ? `${option.value} (${suffix})` : option.value,
+    }))),
+  }));
+  return includeConditions
+    ? [...damageGroups, { label: 'Conditions', options: CONDITION_OPTIONS.map((value) => ({ label: value, value })) }]
+    : damageGroups;
+}
+
+function formatSpellAbility(spell: Spell): string {
+  const metadata = [
+    spell.source && `Source: ${spell.source}`,
+    spell.school && `School: ${spell.school}`,
+    spell.tags && `Tags: ${spell.tags}`,
+    spell.range && `Range: ${spell.range}`,
+    spell.duration && `Duration: ${spell.duration}`,
+    spell.resolution && spell.resolution !== 'None' && `Resolution: ${spell.resolution}`,
+  ].filter(Boolean).join('\n');
+  return [metadata, spell.description, spell.enhancements?.trim() ? `Enhancements\n${spell.enhancements.trim()}` : ''].filter(Boolean).join('\n\n');
+}
+
+function formatManeuverAbility(maneuver: Maneuver): string {
+  const metadata = [
+    maneuver.category && `Category: ${maneuver.category}`,
+    maneuver.range && `Range: ${maneuver.range}`,
+    maneuver.requirements && `Requirements: ${maneuver.requirements}`,
+    maneuver.resolution && maneuver.resolution !== 'None' && `Resolution: ${maneuver.resolution}`,
+  ].filter(Boolean).join('\n');
+  return [metadata, maneuver.description, maneuver.enhancements?.trim() ? `Enhancements\n${maneuver.enhancements.trim()}` : ''].filter(Boolean).join('\n\n');
+}
+
+function PowerAbilityPicker({ kind, options, isLoading, error, onAdd }: {
+  kind: MonsterAbilityKind;
+  options: MonsterPowerOption[];
+  isLoading: boolean;
+  error: string | null;
+  onAdd: (option: MonsterPowerOption) => void;
+}) {
+  const groups: MonsterPowerOption['group'][] = [
+    'Custom GM Vault Spells', 'Published Spells', 'Custom GM Vault Maneuvers', 'Published Maneuvers',
+  ];
+  const singularKind = kind.slice(0, -1);
+  return (
+    <div className="rounded-xl border border-cyan-400/15 bg-cyan-950/10 p-3">
+      <label>
+        <span className={labelClass}>Add Spell or Maneuver as {singularKind}</span>
+        <select
+          className={fieldClass}
+          value=""
+          disabled={isLoading}
+          aria-label={`Add spell or maneuver as ${singularKind}`}
+          onChange={(event) => {
+            const option = options.find(({ key }) => key === event.target.value);
+            if (option) onAdd(option);
+          }}
+        >
+          <option value="">{isLoading ? 'Loading powers…' : 'Choose a power…'}</option>
+          {groups.map((group) => {
+            const grouped = options.filter((option) => option.group === group);
+            return grouped.length > 0 && <optgroup key={group} label={group}>{grouped.map((option) => (
+              <option key={option.key} value={option.key}>{option.name}{option.cost ? ` • ${option.cost}` : ''}</option>
+            ))}</optgroup>;
+          })}
+        </select>
+      </label>
+      {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
+      <p className="mt-2 text-[10px] leading-4 text-slate-600">The full power text is copied into the monster, so it remains editable and self-contained. GM Vault spells and future custom maneuvers are kept in separate catalog groups.</p>
+    </div>
+  );
+}
 
 function NumberField({ label, value, onChange, step = 1, min }: {
   label: string;
@@ -141,6 +302,7 @@ function SourceMonsterDetail({ monster, onDuplicate }: { monster: Monster; onDup
         <div className="mt-4 grid gap-x-8 gap-y-3 text-sm md:grid-cols-2">
           <DetailLine label="Attributes" value={`Might ${signed(monster.might)} • Agility ${signed(monster.agility)} • Charisma ${signed(monster.charisma)} • Intelligence ${signed(monster.intelligence)}`} />
           <DetailLine label="Prime / Mastery" value={`${signed(monster.primeModifier)} / ${monster.combatMastery}`} />
+          <DetailLine label="Training" value={monster.training} />
           <DetailLine label="Skills" value={monster.skills} />
           <DetailLine label="Senses" value={monster.senses} />
           <DetailLine label="Languages" value={monster.languages} />
@@ -184,6 +346,7 @@ function AbilityDisplay({ ability, rulesVersion }: { ability: MonsterAbility; ru
       <div className="flex flex-wrap items-baseline gap-2">
         <h4 className="font-black text-slate-100">{ability.name}</h4>
         {ability.cost && <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-bold text-violet-300"><RuleAwareText text={ability.cost} /></span>}
+        {ability.sourcePower && <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-xs font-bold text-cyan-200">{ability.sourcePower.custom ? 'Custom ' : ''}{ability.sourcePower.kind} • {ability.sourcePower.source}</span>}
         {ability.traitValue !== undefined && <span className="text-xs text-amber-300">Trait Value {signed(ability.traitValue)}</span>}
       </div>
       <p className="mt-2 whitespace-pre-wrap leading-6 text-slate-300"><RuleAwareText text={ability.details} references={ability.ruleReferences} rulesVersion={rulesVersion} /></p>
@@ -201,8 +364,81 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
   onDelete: () => void;
   onDuplicate: () => void;
 }) {
+  const vaultEntries = useCampaignStore((state) => state.campaignData.vaultEntries);
+  const { reference, isLoading: referenceLoading, error: referenceError } = useCharacterReference();
+  const { equipment, isLoading: equipmentLoading, error: equipmentError } = useEquipmentCatalog();
+  const { spells, maneuvers, isLoading: powersLoading, error: powersError } = usePowerCatalog();
   const recommendation = getMonsterRecommendation(monster.level, monster.type, monster.role);
   const traitSpent = monsterTraitValueSpent(monster);
+  const skillOptions = useMemo<SelectOptionGroup[]>(() => [
+    {
+      label: 'Skills',
+      options: (reference?.skills ?? []).map(({ name, attribute }) => ({ label: attribute ? `${name} • ${attribute}` : name, value: name })),
+    },
+    {
+      label: 'Trades',
+      options: (reference?.trades ?? []).map(({ name, attribute }) => ({ label: attribute ? `${name} • ${attribute}` : name, value: name })),
+    },
+  ], [reference]);
+  const languageOptions = useMemo<SelectOptionGroup[]>(() => {
+    const groups = (reference?.languageGroups ?? []).map((group) => ({
+      label: `${group.name} Languages`,
+      options: group.options.map((value) => ({ label: value, value })),
+    }));
+    return [...groups, { label: 'Special Communication', options: ['All Languages', 'Telepathy', 'Understands but cannot speak'].map((value) => ({ label: value, value })) }];
+  }, [reference]);
+  const combatTrainingOptions = useMemo<SelectOptionGroup[]>(() => {
+    const categoryOptions = (category: string, prefix: string) => Array.from(new Set(
+      equipment.filter((item) => item.category === category).map(({ subtype }) => subtype).filter(Boolean),
+    )).sort((left, right) => left.localeCompare(right)).map((value) => ({ label: value, value: `${prefix}: ${value}` }));
+    return [
+      { label: 'Weapons', options: [{ label: 'All Weapons', value: 'Weapons: All' }, ...categoryOptions('Weapons', 'Weapon')] },
+      { label: 'Armor', options: [{ label: 'All Armor', value: 'Armor: All' }, ...categoryOptions('Armor', 'Armor')] },
+      { label: 'Shields', options: [{ label: 'All Shields', value: 'Shields: All' }, ...categoryOptions('Shields', 'Shield')] },
+      { label: 'Spell Focuses', options: [{ label: 'All Spell Focuses', value: 'Spell Focuses: All' }, ...categoryOptions('Spell Focuses', 'Spell Focus')] },
+    ];
+  }, [equipment]);
+  const powerOptions = useMemo<MonsterPowerOption[]>(() => {
+    const publishedSpells: MonsterPowerOption[] = spells.map((spell) => {
+      const snapshot: Spell = { id: `published-spell-${spell.name}`, ...spell };
+      return {
+        key: `published-spell-${spell.name}`,
+        group: 'Published Spells',
+        name: spell.name,
+        cost: spell.cost,
+        details: formatSpellAbility(snapshot),
+        sourcePower: { kind: 'Spell', id: snapshot.id, source: `DC20 Beta 0.10.5 • ${spell.source}`, custom: false },
+      };
+    });
+    const publishedManeuvers: MonsterPowerOption[] = maneuvers.map((maneuver) => {
+      const snapshot: Maneuver = { id: `published-maneuver-${maneuver.name}`, ...maneuver };
+      return {
+        key: `published-maneuver-${maneuver.name}`,
+        group: 'Published Maneuvers',
+        name: maneuver.name,
+        cost: maneuver.cost,
+        details: formatManeuverAbility(snapshot),
+        sourcePower: { kind: 'Maneuver', id: snapshot.id, source: 'DC20 Beta 0.10.5', custom: false },
+      };
+    });
+    const customSpells: MonsterPowerOption[] = vaultEntries.flatMap((entry) => entry.spell ? [{
+      key: `custom-spell-${entry.id}-${entry.spell.id}`,
+      group: 'Custom GM Vault Spells' as const,
+      name: entry.spell.name,
+      cost: entry.spell.cost ?? '',
+      details: formatSpellAbility(entry.spell),
+      sourcePower: { kind: 'Spell' as const, id: entry.spell.id, source: 'GM Vault', custom: true },
+    }] : []);
+    const customManeuvers: MonsterPowerOption[] = vaultEntries.flatMap((entry) => entry.maneuver ? [{
+      key: `custom-maneuver-${entry.id}-${entry.maneuver.id}`,
+      group: 'Custom GM Vault Maneuvers' as const,
+      name: entry.maneuver.name,
+      cost: entry.maneuver.cost ?? '',
+      details: formatManeuverAbility(entry.maneuver),
+      sourcePower: { kind: 'Maneuver' as const, id: entry.maneuver.id, source: 'GM Vault', custom: true },
+    }] : []);
+    return [...customSpells, ...publishedSpells, ...customManeuvers, ...publishedManeuvers];
+  }, [maneuvers, spells, vaultEntries]);
   const update = <K extends keyof Monster>(key: K, value: Monster[K]) => onChange({ ...monster, [key]: value });
   const updateAbility = (changed: MonsterAbility) => update('abilities', monster.abilities.map((ability) => ability.id === changed.id ? changed : ability));
   const addAbility = (kind: MonsterAbilityKind) => update('abilities', [...monster.abilities, {
@@ -211,7 +447,16 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
     name: 'New Ability',
     cost: '',
     details: '',
-    traitValue: kind === MonsterAbilityKindValues.TRAIT ? 0 : undefined,
+    traitValue: kind === MonsterAbilityKindValues.FEATURE ? 0 : undefined,
+  }]);
+  const addPowerAbility = (kind: MonsterAbilityKind, option: MonsterPowerOption) => update('abilities', [...monster.abilities, {
+    id: generateUUID(),
+    kind,
+    name: option.name,
+    cost: option.cost,
+    details: option.details,
+    traitValue: kind === MonsterAbilityKindValues.FEATURE ? 0 : undefined,
+    sourcePower: option.sourcePower,
   }]);
   const removeAbility = (id: string) => update('abilities', monster.abilities.filter((ability) => ability.id !== id));
 
@@ -293,7 +538,6 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
           <NumberField label="Action Points" value={monster.actionPoints ?? 4} min={0} onChange={(value) => update('actionPoints', value)} />
           <NumberField label="Reaction Points" value={monster.reactionPoints ?? 0} min={0} onChange={(value) => update('reactionPoints', value)} />
           <NumberField label="Speed" value={monster.speed} min={0} onChange={(value) => update('speed', value)} />
-          <TextField label="Primary Speed Type" value={monster.speedType ?? ''} onChange={(value) => update('speedType', value)} placeholder="Ground, Fly, Swim…" />
           <NumberField label="Prime Modifier" value={monster.primeModifier} onChange={(value) => update('primeModifier', value)} />
           <NumberField label="Combat Mastery" value={monster.combatMastery} min={0} onChange={(value) => update('combatMastery', value)} />
           <div className="rounded-xl border border-violet-400/15 bg-violet-500/5 p-3 text-center">
@@ -323,11 +567,44 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
 
       <details className="rounded-2xl border border-white/8 bg-slate-900/75">
         <summary className="cursor-pointer px-5 py-4 text-lg font-black text-violet-200">Movement, Training & Defenses</summary>
-        <div className="grid gap-4 border-t border-white/5 p-5 md:grid-cols-2">
-          {([
-            ['skills', 'Skills'], ['senses', 'Senses'], ['languages', 'Languages'], ['otherSpeeds', 'Other Speeds'],
-            ['reductions', 'Damage Reductions'], ['resistances', 'Resistances'], ['vulnerabilities', 'Vulnerabilities'], ['immunities', 'Immunities'],
-          ] as const).map(([key, label]) => <TextField key={key} label={label} value={monster[key]} onChange={(value) => update(key, value)} />)}
+        <div className="space-y-6 border-t border-white/5 p-5">
+          <section>
+            <h4 className="text-sm font-black uppercase tracking-[0.14em] text-emerald-300">Movement</h4>
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              <label>
+                <span className={labelClass}>Primary Speed Type</span>
+                <select className={fieldClass} value={monster.speedType ?? ''} onChange={(event) => update('speedType', event.target.value)}>
+                  <option value="">Choose a movement type…</option>
+                  {monster.speedType && !PRIMARY_SPEED_TYPES.includes(monster.speedType) && <option value={monster.speedType}>{monster.speedType} • Custom</option>}
+                  {PRIMARY_SPEED_TYPES.map((type) => <option key={type}>{type}</option>)}
+                </select>
+              </label>
+              <CatalogTextField label="Other Speeds & Movement" value={monster.otherSpeeds} onChange={(value) => update('otherSpeeds', value)} groups={OTHER_SPEED_OPTIONS} placeholder="Example: Fly 5, Climb 3" />
+            </div>
+          </section>
+
+          <section className="border-t border-white/5 pt-5">
+            <h4 className="text-sm font-black uppercase tracking-[0.14em] text-sky-300">Training & Communication</h4>
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              <CatalogTextField label="Combat Training" value={monster.training} onChange={(value) => update('training', value)} groups={combatTrainingOptions} placeholder="Example: Weapons: All, Armor: Light Armor" />
+              <CatalogTextField label="Skills & Trades" value={monster.skills} onChange={(value) => update('skills', value)} groups={skillOptions} placeholder="Example: Awareness +5, Athletics +4" />
+              <CatalogTextField label="Languages" value={monster.languages} onChange={(value) => update('languages', value)} groups={languageOptions} placeholder="Example: Common, Giant; cannot speak" />
+            </div>
+          </section>
+
+          <section className="border-t border-white/5 pt-5">
+            <h4 className="text-sm font-black uppercase tracking-[0.14em] text-amber-300">Defenses & Senses</h4>
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              <CatalogTextField label="Senses" value={monster.senses} onChange={(value) => update('senses', value)} groups={SENSE_OPTIONS} placeholder="Example: Darkvision 10, Tremorsense 5" />
+              <CatalogTextField label="Damage Reductions" value={monster.reductions} onChange={(value) => update('reductions', value)} groups={[{ label: 'Damage Reduction', options: ['PDR', 'EDR', 'MDR'].map((value) => ({ label: value, value })) }]} placeholder="Example: PDR, EDR" />
+              <CatalogTextField label="Resistances" value={monster.resistances} onChange={(value) => update('resistances', value)} groups={defenseOptions(['1', '2', 'Half'])} placeholder="Example: Fire (Half), Poisoned" />
+              <CatalogTextField label="Vulnerabilities" value={monster.vulnerabilities} onChange={(value) => update('vulnerabilities', value)} groups={defenseOptions(['1', '2', 'Double'])} placeholder="Example: Radiant (2), Slowed" />
+              <CatalogTextField label="Immunities" value={monster.immunities} onChange={(value) => update('immunities', value)} groups={defenseOptions([''])} placeholder="Example: Poison, Bleeding" />
+            </div>
+          </section>
+
+          {(referenceLoading || equipmentLoading) && <p className="text-xs text-slate-500">Loading character and equipment choices…</p>}
+          {(referenceError || equipmentError) && <p className="text-xs text-red-300">{referenceError || equipmentError}</p>}
         </div>
       </details>
 
@@ -335,32 +612,35 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h3 className="text-xl font-black text-violet-200">Abilities</h3>
-            <p className="text-sm text-slate-500">Traits, features, actions, reactions, and boss round actions.</p>
+            <p className="text-sm text-slate-500">Features now include monster traits and share one Trait Value budget. Actions, reactions, and boss round actions remain separate.</p>
           </div>
           <label className="min-w-0 grow basis-64">
-            <span className={labelClass}>Quick Add Published Trait</span>
+            <span className={labelClass}>Quick Add Published Feature</span>
             <select
               className={fieldClass}
               value=""
               onChange={(event) => {
                 const template = MONSTER_TRAIT_CATALOG.find(({ name }) => name === event.target.value);
-                if (template) update('abilities', [...monster.abilities, makeTraitAbility(template)]);
+                if (template) update('abilities', [...monster.abilities, { ...makeTraitAbility(template), kind: MonsterAbilityKindValues.FEATURE }]);
               }}
             >
-              <option value="">Choose a trait…</option>
+              <option value="">Choose a feature…</option>
               {MONSTER_TRAIT_CATALOG.map((trait) => <option key={trait.name} value={trait.name}>{trait.category} • {trait.name} ({signed(trait.value)})</option>)}
             </select>
           </label>
         </div>
 
-        {Object.values(MonsterAbilityKindValues).map((kind) => {
-          const entries = monster.abilities.filter((ability) => ability.kind === kind);
+        {([MonsterAbilityKindValues.FEATURE, MonsterAbilityKindValues.ACTION, MonsterAbilityKindValues.REACTION, MonsterAbilityKindValues.ROUND_ACTION] as const).map((kind) => {
+          const entries = monster.abilities.filter((ability) => kind === MonsterAbilityKindValues.FEATURE
+            ? ability.kind === MonsterAbilityKindValues.FEATURE || ability.kind === MonsterAbilityKindValues.TRAIT
+            : ability.kind === kind);
           return (
             <details key={kind} open={entries.length > 0} className="rounded-2xl border border-white/8 bg-slate-900/75">
               <summary className="cursor-pointer px-5 py-4 text-lg font-black text-violet-200">{kind} <span className="text-sm font-medium text-slate-500">({entries.length})</span></summary>
               <div className="space-y-4 border-t border-white/5 p-5">
+                <PowerAbilityPicker kind={kind} options={powerOptions} isLoading={powersLoading} error={powersError} onAdd={(option) => addPowerAbility(kind, option)} />
                 {entries.map((ability) => (
-                  <AbilityEditor key={ability.id} ability={ability} onChange={updateAbility} onRemove={() => removeAbility(ability.id)} />
+                  <AbilityEditor key={ability.id} ability={ability} showTraitValue={kind === MonsterAbilityKindValues.FEATURE} onChange={updateAbility} onRemove={() => removeAbility(ability.id)} />
                 ))}
                 <button type="button" onClick={() => addAbility(kind)} className="rounded-lg border border-dashed border-violet-400/40 px-3 py-2 text-sm font-bold text-violet-300 hover:bg-violet-500/10">+ Add {kind.slice(0, -1)}</button>
               </div>
@@ -372,8 +652,9 @@ function CustomMonsterEditor({ monster, onChange, onDelete, onDuplicate }: {
   );
 }
 
-function AbilityEditor({ ability, onChange, onRemove }: {
+function AbilityEditor({ ability, showTraitValue, onChange, onRemove }: {
   ability: MonsterAbility;
+  showTraitValue: boolean;
   onChange: (ability: MonsterAbility) => void;
   onRemove: () => void;
 }) {
@@ -384,9 +665,10 @@ function AbilityEditor({ ability, onChange, onRemove }: {
         <TextField label="Cost" value={ability.cost} onChange={(value) => onChange({ ...ability, cost: value })} placeholder="1 AP" />
         <button type="button" onClick={onRemove} className="self-end rounded-lg px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10">Remove</button>
       </div>
-      {ability.traitValue !== undefined && (
-        <div className="mt-3 max-w-40"><NumberField label="Trait Value" value={ability.traitValue} onChange={(value) => onChange({ ...ability, traitValue: value })} /></div>
-      )}
+      <div className="mt-3 flex flex-wrap items-end gap-3">
+        {showTraitValue && <div className="max-w-40"><NumberField label="Trait Value" value={ability.traitValue ?? 0} onChange={(value) => onChange({ ...ability, kind: MonsterAbilityKindValues.FEATURE, traitValue: value })} /></div>}
+        {ability.sourcePower && <span className="rounded-full bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-200">Linked from {ability.sourcePower.custom ? 'Custom ' : ''}{ability.sourcePower.kind} • {ability.sourcePower.source}</span>}
+      </div>
       <label className="mt-3 block">
         <span className={labelClass}>Full Rules Text</span>
         <textarea className={`${fieldClass} min-h-24 resize-y`} value={ability.details} onChange={(event) => onChange({ ...ability, details: event.target.value })} />

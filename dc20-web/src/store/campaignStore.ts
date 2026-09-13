@@ -148,6 +148,19 @@ function normalizeAbility(value: unknown): MonsterAbility | null {
     ? rawKind as MonsterAbilityKind
     : MonsterAbilityKindValues.FEATURE;
   const traitValue = item.traitValue === undefined ? undefined : asNumber(item.traitValue, 0);
+  const rawSourcePower = item.sourcePower && typeof item.sourcePower === 'object'
+    ? item.sourcePower as Record<string, unknown>
+    : null;
+  const sourcePower: MonsterAbility['sourcePower'] = rawSourcePower
+    && (rawSourcePower.kind === 'Spell' || rawSourcePower.kind === 'Maneuver')
+    && typeof rawSourcePower.id === 'string'
+    ? {
+        kind: rawSourcePower.kind as 'Spell' | 'Maneuver',
+        id: rawSourcePower.id,
+        source: typeof rawSourcePower.source === 'string' ? rawSourcePower.source : '',
+        custom: Boolean(rawSourcePower.custom),
+      }
+    : undefined;
   return {
     id: typeof item.id === 'string' ? item.id : generateUUID(),
     kind,
@@ -157,6 +170,12 @@ function normalizeAbility(value: unknown): MonsterAbility | null {
       ? item.details
       : typeof item.description === 'string' ? item.description : '',
     traitValue,
+    sourcePower,
+    ruleReferences: Array.isArray(item.ruleReferences)
+      ? item.ruleReferences.filter((reference): reference is NonNullable<MonsterAbility['ruleReferences']>[number] => (
+          Boolean(reference) && typeof reference === 'object' && typeof (reference as Record<string, unknown>).ruleId === 'string'
+        ))
+      : undefined,
   };
 }
 
@@ -253,6 +272,7 @@ function normalizeMonster(value: unknown): Monster {
     agility: asNumber(item.agility, baseline.agility),
     charisma: asNumber(item.charisma, baseline.charisma),
     intelligence: asNumber(item.intelligence, baseline.intelligence),
+    training: typeof item.training === 'string' ? item.training : '',
     skills: typeof item.skills === 'string' ? item.skills : '',
     senses: typeof item.senses === 'string' ? item.senses : '',
     languages: Array.isArray(item.languages)

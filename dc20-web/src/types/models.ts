@@ -151,6 +151,8 @@ export interface GmVaultEntry {
   grantedSpells?: Spell[];
   item?: EquipmentCatalogItem;
   spell?: Spell;
+  /** Reserved for the forthcoming custom-maneuver editor and already consumable by linked pickers. */
+  maneuver?: Maneuver;
   companion?: CharacterCompanion;
   createdAt: string;
   updatedAt: string;
@@ -900,6 +902,13 @@ export const MonsterAbilityKindValues = {
 export type MonsterAbilityKind =
   (typeof MonsterAbilityKindValues)[keyof typeof MonsterAbilityKindValues];
 
+export interface MonsterAbilityPowerSource {
+  kind: 'Spell' | 'Maneuver';
+  id: string;
+  source: string;
+  custom: boolean;
+}
+
 export interface MonsterAbility {
   id: string;
   kind: MonsterAbilityKind;
@@ -907,6 +916,8 @@ export interface MonsterAbility {
   cost: string;
   details: string;
   traitValue?: number;
+  /** The catalog power copied into this self-contained monster ability, when applicable. */
+  sourcePower?: MonsterAbilityPowerSource;
   ruleReferences?: SemanticRuleReference[];
 }
 
@@ -941,6 +952,8 @@ export interface Monster {
   agility: number;
   charisma: number;
   intelligence: number;
+  /** Combat and equipment training, stored as display-ready text for custom and published stat blocks. */
+  training: string;
   skills: string;
   senses: string;
   languages: string;
