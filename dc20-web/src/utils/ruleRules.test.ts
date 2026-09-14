@@ -28,6 +28,8 @@ const magicalConsumables = readJSON<EquipmentCatalogItem[]>('../../public/data/M
 const magicalConsumableRules = readJSON<RulesReferenceData['entries']>('../../public/data/MagicalConsumablesRules.json');
 const poisons = readJSON<EquipmentCatalogItem[]>('../../public/data/Poisons.json');
 const poisonRules = readJSON<RulesReferenceData['entries']>('../../public/data/PoisonsRules.json');
+const mundaneObjects = readJSON<EquipmentCatalogItem[]>('../../public/data/MundaneObjects.json');
+const allEquipment = [...equipment, ...mundaneObjects, ...adventureRewards, ...magicalConsumables, ...poisons];
 const auditedWithAdventureRewards = auditRulesReference(
   { ...rawRules, entries: [...rawRules.entries, ...adventureBoons] },
   spellDocument.spells,
@@ -49,6 +51,13 @@ const auditedWithPoisons = auditRulesReference(
   characterReference,
   [...equipment, ...poisons],
 );
+const fullyAudited = auditRulesReference(
+  { ...rawRules, entries: [...rawRules.entries, ...adventureBoons, ...magicalConsumableRules, ...poisonRules] },
+  spellDocument.spells,
+  maneuverDocument.maneuvers,
+  characterReference,
+  allEquipment,
+);
 
 function rule(title: string) {
   const entry = audited.entries.find((candidate) => candidate.title === title);
@@ -58,7 +67,7 @@ function rule(title: string) {
 
 describe('source-audited rules library', () => {
   it('indexes the Adventure Rewards Boons as supplemental source documents', () => {
-    const boons = auditedWithAdventureRewards.entries.filter(({ page }) => page.startsWith('DC20 Magazine 20'));
+    const boons = auditedWithAdventureRewards.entries.filter(({ subsection }) => subsection.startsWith('Adventure Rewards'));
     expect(boons).toHaveLength(4);
     expect(boons.map(({ title }) => title)).toEqual(['Boons', 'Rampaging Monster', 'Cleanse an Ancient Forest', 'Impress a Lake Goddess']);
     for (const entry of boons) {
@@ -69,7 +78,7 @@ describe('source-audited rules library', () => {
   });
 
   it('indexes Magical Consumables guidance with formulas and supplemental provenance', () => {
-    const entries = auditedWithMagicalConsumables.entries.filter(({ page }) => page.startsWith('DC20 Magazine 24'));
+    const entries = auditedWithMagicalConsumables.entries.filter(({ subsection }) => subsection.startsWith('Magical Consumables'));
     expect(entries).toHaveLength(7);
     expect(entries.every(({ sourceDocument, sourceStatus, sourcePages }) => (
       sourceDocument === 'DC20 Magazine 24 — Magical Consumables'
@@ -83,7 +92,7 @@ describe('source-audited rules library', () => {
   });
 
   it('indexes the complete Poison subsystem with its legacy-version warning', () => {
-    const entries = auditedWithPoisons.entries.filter(({ page }) => page.startsWith('DC20 Magazine 15'));
+    const entries = auditedWithPoisons.entries.filter(({ subsection }) => subsection.startsWith('Poisons'));
     expect(entries).toHaveLength(9);
     expect(entries.every(({ sourceDocument, sourceStatus, sourcePages, sourceNote }) => (
       sourceDocument === 'DC20 Magazine 15 — Poisons'
@@ -104,8 +113,8 @@ describe('source-audited rules library', () => {
   });
 
   it('retains every unique document and uses the corrected printed chapter ranges', () => {
-    expect(audited.entries).toHaveLength(502);
-    expect(new Set(audited.entries.map(({ id }) => id)).size).toBe(502);
+    expect(audited.entries).toHaveLength(502 + equipment.length);
+    expect(new Set(audited.entries.map(({ id }) => id)).size).toBe(502 + equipment.length);
     expect(audited.sections).toEqual(AUDITED_SECTION_RANGES);
     expect(rule('Core Rules Overview').page).toBe('Beta 0.10.5 pp.9–39');
     expect(rule('Combat Rules Overview').page).toBe('Beta 0.10.5 pp.40–150');
@@ -125,14 +134,19 @@ describe('source-audited rules library', () => {
     expect(rule('Bleeding X').page).toBe('Beta 0.10.5 pp.35, 173');
     expect(rule('Bleeding X').sourceNote).toContain('expanded Medicine outcome');
     expect(rule('Unconscious').page).toBe('Beta 0.10.5 p.174');
+    expect(rule('Trade Tools').page).toBe('Beta 0.10.5 pp.15–18');
   });
 
-  it('gives every document visible source provenance and searchable mechanical metadata', () => {
+  it('gives every document visible source provenance and an honest verification level', () => {
+    const allowedStatuses = new Set(['Beta source verified', 'Supplemental source verified', 'Verified source excerpt', 'Condensed source reference', 'Catalog source reference']);
     for (const entry of audited.entries) {
       expect(entry.sourceDocument).not.toBe('');
-      expect(entry.sourceStatus).toMatch(/source verified$/);
+      expect(allowedStatuses.has(entry.sourceStatus ?? '')).toBe(true);
       expect(entry.sourcePages?.length ?? 0).toBeGreaterThan(0);
     }
+    expect(rule('Core Rules Overview').sourceStatus).toBe('Condensed source reference');
+    expect(rule('Resting').sourceStatus).toBe('Beta source verified');
+    expect(rule('Weapons').sourceStatus).toBe('Verified source excerpt');
     expect(rule('Check Formulas').formulas).toContain('Skill Check = d20 + Attribute + Skill Mastery');
     expect(rule('Precision Defense & Area Defense').formulas).toHaveLength(2);
     expect(rule('Psion').sourceDocument).toContain('Psion v2');
@@ -168,7 +182,7 @@ describe('source-audited rules library', () => {
     }
   });
 
-  it('uses the audited character and equipment catalogs instead of stale Rules copies', () => {
+  it('keeps rule prose separate from individually sourced equipment catalog records', () => {
     const athletics = characterReference.skills.find(({ name }) => name === 'Athletics')!;
     expect(rule('Athletics').text).toBe(athletics.description);
     expect(rule('Athletics').details).toContainEqual({ label: 'Associated Attribute', value: 'Might' });
@@ -176,13 +190,50 @@ describe('source-audited rules library', () => {
     expect(rule('Beastborn').text).toContain('Shell Retreat');
     expect(rule('Beastborn').details).toContainEqual({ label: 'Published Traits', value: '52' });
     const axe = equipment.find(({ name }) => name === 'Battleaxe')!;
-    expect(rule('Weapons').text).toContain(axe.mechanics);
-    expect(rule('Weapons').details).toContainEqual({ label: 'Catalog Records', value: String(equipment.filter(({ category }) => category === 'Weapons').length) });
+    expect(rule('Weapons').text).toContain('WEAPON TYPES');
+    expect(rule('Weapons').text).not.toContain(axe.mechanics);
+    expect(rule('Battleaxe').text).toBe(axe.mechanics);
+    expect(rule('Battleaxe').page).toBe(axe.sourcePage);
+    expect(rule('Battleaxe').sourceStatus).toBe('Catalog source reference');
     const barbarian = characterReference.classes.find(({ name }) => name === 'Barbarian')!;
     const elementalFury = barbarian.subclassFeatures['Elemental Fury'][0];
     expect(rule('Elemental Fury').text).toContain(elementalFury.description);
     expect(rule('Martial Expansion').details).toContainEqual({ label: 'Repeatable', value: 'No' });
     expect(rule('Unfathomable Strength').details).toContainEqual({ label: 'Requirements', value: 'Rage' });
+  });
+
+  it('indexes every equipment category and preserves per-item supplemental provenance', () => {
+    const catalogEntries = fullyAudited.entries.filter(({ id }) => id.startsWith('General Rules|Equipment Catalog|'));
+    expect(catalogEntries).toHaveLength(allEquipment.length);
+    const owlCloak = catalogEntries.find(({ title }) => title === 'Owl Cloak');
+    expect(owlCloak).toMatchObject({
+      page: 'DC20 Magazine 20 p.4',
+      sourceDocument: 'DC20 Magazine 20 — Adventure Rewards v1.0',
+      sourceStatus: 'Catalog source reference',
+      subsection: 'Equipment Catalog — Wondrous Items',
+    });
+    const ballista = catalogEntries.find(({ title }) => title === 'Ballista');
+    expect(ballista).toMatchObject({
+      page: 'DC20 Magazine 27 p.3',
+      sourceDocument: 'DC20 Magazine 27 — Mundane Objects',
+      sourceStatus: 'Catalog source reference',
+      subsection: 'Equipment Catalog — Siege Weapons',
+    });
+    expect(catalogEntries.filter(({ subsection }) => subsection.endsWith('Wondrous Items'))).toHaveLength(9);
+    expect(catalogEntries.filter(({ subsection }) => subsection.endsWith('Siege Weapons'))).toHaveLength(1);
+  });
+
+  it('uses source-specific subclass progression metadata', () => {
+    const progression = (title: string, characterClass: string) => fullyAudited.entries
+      .find((entry) => entry.kind === 'Subclass' && entry.title === title && entry.characterClass === characterClass)
+      ?.details?.find(({ label }) => label === 'Progression')?.value;
+    expect(progression('Elemental Fury', 'Barbarian')).toBe('Levels 3, 7, and 10');
+    expect(progression('Apothecary', 'Artificer')).toBe('Levels 3, 6, and 9');
+    expect(progression('Oracle', 'Psion')).toBe('Level 3 published; later subclass levels are not yet published');
+  });
+
+  it('lists every installed supplemental class in the Classes Overview', () => {
+    expect(rule('Classes Overview').text).toContain('Psion, Summoner, and Artificer');
   });
 
   it('uses source-grounded summaries instead of labels and catalog counts', () => {

@@ -28,13 +28,32 @@ button,
   touch-action: manipulation;
 }
 
+.workspace-tab-strip {
+  scrollbar-width: none;
+}
+
+.workspace-tab-strip::-webkit-scrollbar {
+  display: none;
+}
+
 .dc20-theme {
   --theme-accent: #8c4cf2;
-  --theme-highlight: #c8a5ff;
-  --theme-bg: #0e0917;
-  --theme-bg-secondary: #241036;
+  --theme-palette-highlight: #c8a5ff;
+  --theme-palette-bg: #0e0917;
+  --theme-palette-bg-secondary: #241036;
+  --theme-highlight: var(--theme-palette-highlight);
+  --theme-bg: var(--theme-palette-bg);
+  --theme-bg-secondary: var(--theme-palette-bg-secondary);
   background: var(--theme-bg);
   color-scheme: dark;
+}
+
+.dc20-theme:not(.dark) {
+  --theme-highlight: color-mix(in srgb, var(--theme-accent) 72%, #0f172a);
+  --theme-bg: #f8fafc;
+  --theme-bg-secondary: color-mix(in srgb, var(--theme-accent) 7%, #eef2f7);
+  color: #0f172a;
+  color-scheme: light;
 }
 
 .app-main {
@@ -183,6 +202,113 @@ button,
 
 :is(.character-builder, .character-sheet) :is([class*="shadow-violet-"], [class*="shadow-purple-"]) {
   --tw-shadow-color: color-mix(in srgb, var(--theme-accent) 24%, transparent) !important;
+}
+
+/* The original interface was authored with dark Tailwind utilities. These
+   semantic light-mode translations keep every workspace readable without
+   requiring a second set of component classes. Palette accents remain intact. */
+.dc20-theme:not(.dark) .app-main {
+  background:
+    radial-gradient(circle at 15% -10%, color-mix(in srgb, var(--theme-accent) 15%, transparent), transparent 38%),
+    linear-gradient(145deg, var(--theme-bg-secondary), #f8fafc 48%, #ffffff);
+}
+
+.dc20-theme:not(.dark) .sidebar {
+  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--theme-accent) 5%, #f1f5f9));
+  border-color: #cbd5e1;
+}
+
+.dc20-theme:not(.dark) .header-modern,
+.dc20-theme:not(.dark) .workspace-tabs {
+  background: linear-gradient(90deg, #ffffff, color-mix(in srgb, var(--theme-accent) 6%, #f8fafc));
+  border-color: #cbd5e1;
+}
+
+.dc20-theme:not(.dark) :is(.character-builder, .character-sheet) {
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--theme-accent) 14%, transparent) 0%, transparent 45%),
+    linear-gradient(160deg, var(--theme-bg-secondary), #f8fafc 52%, #ffffff);
+}
+
+.dc20-theme:not(.dark) :is(.card, .theme-selected-card) {
+  background: color-mix(in srgb, var(--theme-accent) 7%, #ffffff);
+  border-color: color-mix(in srgb, var(--theme-accent) 25%, #cbd5e1);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.dc20-theme:not(.dark) :is(.text-white, .text-slate-100, .text-slate-200, .text-gray-200) {
+  color: #0f172a !important;
+}
+
+.dc20-theme:not(.dark) :is(.text-slate-300, .text-gray-300) {
+  color: #334155 !important;
+}
+
+.dc20-theme:not(.dark) :is(.text-slate-400, .text-slate-500, .text-slate-600, .text-gray-400, .text-gray-500) {
+  color: #64748b !important;
+}
+
+.dc20-theme:not(.dark) :is([class*="bg-slate-950"], [class*="bg-slate-900"]) {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.dc20-theme:not(.dark) :is([class*="bg-slate-800"], [class*="bg-gray-800"]) {
+  background-color: #e2e8f0 !important;
+}
+
+.dc20-theme:not(.dark) :is([class*="bg-slate-700"], [class*="bg-gray-700"]) {
+  background-color: #cbd5e1 !important;
+}
+
+.dc20-theme:not(.dark) [class*="bg-white/"] {
+  background-color: rgba(15, 23, 42, 0.045) !important;
+}
+
+.dc20-theme:not(.dark) :is([class*="border-white/"], [class*="border-slate-700"], [class*="border-slate-600"]) {
+  border-color: #cbd5e1 !important;
+}
+
+.dc20-theme:not(.dark) :is(input, select, textarea) {
+  color: #0f172a;
+  caret-color: var(--theme-accent);
+}
+
+.dc20-theme:not(.dark) :is(input, textarea)::placeholder {
+  color: #94a3b8;
+}
+
+.dc20-theme:not(.dark) .text-muted {
+  color: #64748b;
+}
+
+.dc20-theme:not(.dark) :is(.text-amber-100, .text-amber-200, .text-amber-300, .text-amber-400, .text-orange-300) {
+  color: #92400e !important;
+}
+
+.dc20-theme:not(.dark) :is(.text-cyan-100, .text-cyan-200, .text-cyan-300, .text-cyan-400) {
+  color: #155e75 !important;
+}
+
+.dc20-theme:not(.dark) :is(.text-emerald-100, .text-emerald-200, .text-emerald-300, .text-emerald-400, .text-green-300, .text-green-400) {
+  color: #047857 !important;
+}
+
+.dc20-theme:not(.dark) :is(.text-red-200, .text-red-300, .text-red-400) {
+  color: #b91c1c !important;
+}
+
+.dc20-theme:not(.dark) :is(.text-blue-200, .text-blue-300, .text-blue-400) {
+  color: #1d4ed8 !important;
+}
+
+.dc20-theme:not(.dark) .nav-item-active,
+.dc20-theme:not(.dark) .nav-item-active :is(.text-white, [class*="text-white/"]) {
+  color: #ffffff !important;
+}
+
+.dc20-theme:not(.dark) .btn-primary,
+.dc20-theme:not(.dark) .theme-primary-button {
+  color: #ffffff !important;
 }
 
 @media (max-width: 1023px) {

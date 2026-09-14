@@ -15,18 +15,13 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onOpenCreate, onOpenSearch, onOpenTools, rulesVersion, onRulesVersionChange }) => {
-  const { campaignData, currentSection, isDarkMode, toggleDarkMode, saveCampaign } = useCampaignStore();
+  const { campaignData, currentSection, isDarkMode, toggleDarkMode } = useCampaignStore();
   const { isConfigured, user, signOut } = useAuth();
   const { status, error, lastSyncedAt, syncNow } = useCloudSync();
   const syncLabel = status === 'saving' ? 'Saving…'
     : status === 'synced' ? 'Cloud saved'
       : status === 'error' ? 'Sync issue'
         : 'Local only';
-
-  const save = async () => {
-    saveCampaign();
-    await syncNow();
-  };
 
   const logOut = async () => {
     await syncNow();
@@ -60,22 +55,18 @@ const Header: React.FC<HeaderProps> = ({ onOpenCreate, onOpenSearch, onOpenTools
         <button type="button" onClick={onOpenSearch} className="min-h-11 min-w-11 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 hover:bg-white/10" aria-label="Open global search" title="Search (Command or Control K)">⌕ <span className="hidden xl:inline">Search</span></button>
         <button type="button" onClick={onOpenCreate} className="btn-primary min-h-11 min-w-11 font-black" aria-label="Create something"><span aria-hidden="true">＋</span> <span className="hidden md:inline">Create</span></button>
         <button type="button" onClick={onOpenTools} className="min-h-11 min-w-11 rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm font-bold text-slate-200 hover:bg-slate-800" aria-label="Open GM Tools" title="GM Tools">⚙ <span className="hidden xl:inline">Tools</span></button>
-        <button
-          onClick={() => void save()}
-          className="btn-primary min-h-11 min-w-11 font-medium"
-          aria-label="Save now"
-        >
-          ☁️ <span className="hidden xl:inline">Save</span>
-        </button>
-
         {user && <button type="button" onClick={() => void logOut()} aria-label="Sign out" className="hidden min-h-11 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 lg:block">Sign Out</button>}
 
         <button
+          type="button"
           onClick={toggleDarkMode}
           aria-label={isDarkMode ? 'Use light appearance' : 'Use dark appearance'}
-          className="min-h-11 min-w-11 rounded-lg bg-gray-800 px-3 py-2 text-gray-200 transition-colors hover:bg-gray-700"
+          aria-pressed={!isDarkMode}
+          title={isDarkMode ? 'Switch to light appearance' : 'Switch to dark appearance'}
+          className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-white/10 bg-gray-800 px-3 py-2 text-gray-200 transition-colors hover:bg-gray-700"
         >
-          {isDarkMode ? '☀️' : '🌙'}
+          <span aria-hidden="true">{isDarkMode ? '☀️' : '🌙'}</span>
+          <span className="hidden xl:inline">{isDarkMode ? 'Light' : 'Dark'}</span>
         </button>
       </div>
     </header>

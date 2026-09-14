@@ -42,9 +42,9 @@ function App() {
   const currentDestination = primaryDestinationForSection(currentSection);
   const themeStyle = {
     '--theme-accent': palette.accent,
-    '--theme-highlight': palette.highlight,
-    '--theme-bg': palette.background,
-    '--theme-bg-secondary': palette.backgroundSecondary,
+    '--theme-palette-highlight': palette.highlight,
+    '--theme-palette-bg': palette.background,
+    '--theme-palette-bg-secondary': palette.backgroundSecondary,
   } as CSSProperties;
 
   useEffect(() => { loadCampaign(); }, [loadCampaign]);

@@ -922,8 +922,8 @@ export interface RuleReferenceEntry {
   formulas?: string[];
   /** Exact document IDs that can be opened from this reference. */
   relatedIDs?: string[];
-  /** Distinguishes the core Beta from installed supplemental publications. */
-  sourceStatus?: 'Beta source verified' | 'Supplemental source verified';
+  /** Describes how faithfully the displayed text represents its cited source. */
+  sourceStatus?: 'Beta source verified' | 'Supplemental source verified' | 'Verified source excerpt' | 'Condensed source reference' | 'Catalog source reference';
 }
 
 /** Semantic rules link stored separately from canonical display text. */

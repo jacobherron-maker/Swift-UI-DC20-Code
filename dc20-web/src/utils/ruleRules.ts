@@ -13,6 +13,7 @@ import {
   artificerRituals,
   augmentCharacterReference,
 } from '../data/supplementalClasses';
+import { FULLY_VERIFIED_RULE_TEXT_TITLES, VERIFIED_RULE_TEXT_OVERRIDES } from '../data/ruleTextOverrides';
 
 export interface AuditedSpellRecord {
   name: string;
@@ -52,6 +53,7 @@ const SUMMONER_SOURCE = 'DC20 Magazine 23 — The Summoner v1.0';
 const ADVENTURE_REWARDS_SOURCE = 'DC20 Magazine 20 — Adventure Rewards v1.0';
 const MAGICAL_CONSUMABLES_SOURCE = 'DC20 Magazine 24 — Magical Consumables';
 const POISONS_SOURCE = 'DC20 Magazine 15 — Poisons';
+const MUNDANE_OBJECTS_SOURCE = 'DC20 Magazine 27 — Mundane Objects';
 
 export const AUDITED_SECTION_RANGES: RulesReferenceData['sections'] = [
   { name: 'Core Rules', pageRange: 'Beta 0.10.5 pp.9–39' },
@@ -130,7 +132,7 @@ const PAGE_BY_TITLE: Readonly<Record<string, string>> = {
   Armor: 'Beta 0.10.5 p.170',
   Shields: 'Beta 0.10.5 p.171',
   'Adventuring Supplies': 'Beta 0.10.5 p.172',
-  'Trade Tools': 'Beta 0.10.5 pp.15–26',
+  'Trade Tools': 'Beta 0.10.5 pp.15–18',
   'Condition Rules': 'Beta 0.10.5 pp.173–176',
   Resting: 'Beta 0.10.5 p.177',
   'Setting Difficulty Classes': 'Beta 0.10.5 pp.178–179',
@@ -225,19 +227,7 @@ const FORMULAS: Readonly<Record<string, string[]>> = {
 };
 
 const TEXT_OVERRIDES: Readonly<Record<string, string>> = {
-  'Condition Rules': `CONDITION RESISTANCE, IMMUNITY, & VULNERABILITY
-Condition Resistance: You have ADV on Checks and Saves against the Condition.
-Condition Immunity: You can’t be subjected to the Condition.
-Condition Vulnerability: You have DisADV on Checks and Saves against the Condition.
-
-CONDITION STACKING
-A target can be affected by a Condition with an X value multiple times. If you gain multiple stacks of the same Condition, you add their X values together. If a stacking Condition doesn’t include an X value, the value equals 1. Track different durations independently so each source ends at the correct time.
-
-OVERLAPPING CONDITIONS
-Charmed, Frightened, Restrained, Taunted, Terrified, and Tethered can affect a creature from multiple sources. Their effects overlap as described on pages 175–176 rather than increasing a numerical penalty unless the individual Condition says otherwise.
-
-EXCLUDED CONDITIONS
-The following Conditions don’t stack or overlap in any way: Blinded, Deafened, Immobilized, Incapacitated, Invisible, Paralyzed, Petrified, Surprised, and Unconscious.`,
+  'Classes Overview': 'The Beta class chapter presents Barbarian, Bard, Champion, Cleric, Commander, Druid, Hunter, Monk, Rogue, Sorcerer, Spellblade, Warlock, and Wizard. The app also includes the separately published Psion, Summoner, and Artificer material. Open any Class reference for its starting profile, complete available Class Table, level-by-level Features, and Subclass progression.',
   Invisible: 'Creatures can’t see you unless they have the ability to see the Invisible (see “Unseen” on page 163 for more information).',
 };
 
@@ -353,32 +343,29 @@ export function sourcePages(page: string): number[] {
   return unique(pages);
 }
 
+function inferredSourceDocument(entry: RuleReferenceEntry): string {
+  if (entry.sourceDocument) return entry.sourceDocument;
+  if (entry.page.startsWith('Beta 0.10.5')) return BETA_SOURCE;
+  if (entry.page.startsWith('DC20 Magazine 09')) return PSION_SUBCLASS_SOURCE;
+  if (entry.page.startsWith('DC20 Magazine 16') || entry.characterClass === 'Artificer') return ARTIFICER_SOURCE;
+  if (entry.characterClass === 'Psion' || entry.title === 'Psyborn') return PSION_SOURCE;
+  if (entry.characterClass === 'Summoner') return SUMMONER_SOURCE;
+  if (entry.page.startsWith('DC20 Magazine 20')) return ADVENTURE_REWARDS_SOURCE;
+  if (entry.page.startsWith('DC20 Magazine 24')) return MAGICAL_CONSUMABLES_SOURCE;
+  if (entry.page.startsWith('DC20 Magazine 15')) return POISONS_SOURCE;
+  if (entry.page.startsWith('DC20 Magazine 27')) return MUNDANE_OBJECTS_SOURCE;
+  return BETA_SOURCE;
+}
+
+function verifiedStatusFor(entry: RuleReferenceEntry): NonNullable<RuleReferenceEntry['sourceStatus']> {
+  return inferredSourceDocument(entry) === BETA_SOURCE ? 'Beta source verified' : 'Supplemental source verified';
+}
+
 function sourceFor(entry: RuleReferenceEntry): Pick<RuleReferenceEntry, 'sourceDocument' | 'sourceStatus'> {
-  if (entry.page.startsWith('Beta 0.10.5')) {
-    return { sourceDocument: BETA_SOURCE, sourceStatus: 'Beta source verified' };
-  }
-  if (entry.page.startsWith('DC20 Magazine 09')) {
-    return { sourceDocument: PSION_SUBCLASS_SOURCE, sourceStatus: 'Supplemental source verified' };
-  }
-  if (entry.page.startsWith('DC20 Magazine 16') || entry.characterClass === 'Artificer') {
-    return { sourceDocument: ARTIFICER_SOURCE, sourceStatus: 'Supplemental source verified' };
-  }
-  if (entry.characterClass === 'Psion' || entry.title === 'Psyborn') {
-    return { sourceDocument: PSION_SOURCE, sourceStatus: 'Supplemental source verified' };
-  }
-  if (entry.characterClass === 'Summoner') {
-    return { sourceDocument: SUMMONER_SOURCE, sourceStatus: 'Supplemental source verified' };
-  }
-  if (entry.page.startsWith('DC20 Magazine 20')) {
-    return { sourceDocument: ADVENTURE_REWARDS_SOURCE, sourceStatus: 'Supplemental source verified' };
-  }
-  if (entry.page.startsWith('DC20 Magazine 24')) {
-    return { sourceDocument: MAGICAL_CONSUMABLES_SOURCE, sourceStatus: 'Supplemental source verified' };
-  }
-  if (entry.page.startsWith('DC20 Magazine 15')) {
-    return { sourceDocument: POISONS_SOURCE, sourceStatus: 'Supplemental source verified' };
-  }
-  return { sourceDocument: BETA_SOURCE, sourceStatus: 'Beta source verified' };
+  return {
+    sourceDocument: inferredSourceDocument(entry),
+    sourceStatus: entry.sourceStatus ?? 'Condensed source reference',
+  };
 }
 
 function canonicalAncestryText(name: string, reference: CharacterReferenceData): string | undefined {
@@ -404,6 +391,12 @@ function canonicalSubclassText(entry: RuleReferenceEntry, reference: CharacterRe
     const level = feature.level ? `LEVEL ${feature.level}\n` : '';
     return `${level}${feature.name}\n${feature.description}`;
   }).join('\n\n');
+}
+
+function subclassProgression(characterClass?: string): string {
+  if (characterClass === 'Artificer') return 'Levels 3, 6, and 9';
+  if (characterClass === 'Psion') return 'Level 3 published; later subclass levels are not yet published';
+  return 'Levels 3, 7, and 10';
 }
 
 function canonicalClassText(name: string, reference: CharacterReferenceData): string | undefined {
@@ -531,14 +524,26 @@ function supplementalRuleEntries(reference: CharacterReferenceData): RuleReferen
   return entries;
 }
 
-function equipmentText(title: string, equipment: EquipmentCatalogItem[]): string | undefined {
-  if (title === 'Equipment Rules') return undefined;
-  const records = equipment.filter(({ category }) => category === title);
-  if (records.length === 0) return undefined;
-  return records.map((item) => {
-    const properties = item.properties.length ? `\nProperties: ${item.properties.join(', ')}` : '';
-    return `${item.name}\n${item.summary}${properties}\n\n${item.mechanics}`;
-  }).join('\n\n');
+function equipmentRuleEntries(equipment: EquipmentCatalogItem[]): RuleReferenceEntry[] {
+  return equipment.map((item) => ({
+    id: `General Rules|Equipment Catalog|${item.id}`,
+    title: item.name,
+    section: 'General Rules',
+    subsection: `Equipment Catalog — ${item.category}`,
+    summary: item.summary,
+    text: item.mechanics,
+    page: normalizeCitation(item.sourcePage),
+    kind: 'Equipment',
+    keywords: [item.name, item.category, item.subtype, item.collection, ...item.properties].filter(Boolean).join(' '),
+    sourceDocument: item.sourceDocument,
+    sourceStatus: 'Catalog source reference',
+    details: [
+      { label: 'Category', value: item.category },
+      { label: 'Type', value: item.subtype || 'General' },
+      { label: 'Collection', value: item.collection ?? 'Standard' },
+      { label: 'Properties', value: item.properties.join(', ') || 'None listed' },
+    ],
+  }));
 }
 
 function canonicalMasteryEntry(entry: RuleReferenceEntry, reference: CharacterReferenceData): RuleReferenceEntry {
@@ -565,9 +570,10 @@ function auditEntry(
   spells: Map<string, AuditedSpellRecord>,
   maneuvers: Map<string, AuditedManeuverRecord>,
   characterReference: CharacterReferenceData,
-  equipment: EquipmentCatalogItem[],
 ): RuleReferenceEntry {
   let entry = auditedTalentRuleEntry(original);
+  let sourceStatus: NonNullable<RuleReferenceEntry['sourceStatus']> = entry.sourceStatus
+    ?? (entry.page.startsWith('DC20 Magazine') ? 'Supplemental source verified' : 'Condensed source reference');
   const spell = entry.kind === 'Spell' ? spells.get(entry.title) : undefined;
   const maneuver = entry.kind === 'Maneuver' ? maneuvers.get(entry.title) : undefined;
 
@@ -586,6 +592,7 @@ function auditEntry(
         { label: 'Resolution', value: spell.resolution }, { label: 'Timing', value: spell.reaction ? 'Reaction' : 'Action or as described' },
       ],
     };
+    sourceStatus = 'Beta source verified';
   } else if (maneuver) {
     entry = {
       ...entry,
@@ -600,8 +607,10 @@ function auditEntry(
         { label: 'Resolution', value: maneuver.resolution }, { label: 'Timing', value: maneuver.reaction ? 'Reaction' : 'Action or as described' },
       ],
     };
+    sourceStatus = 'Beta source verified';
   } else if (entry.kind === 'Skill' || entry.kind === 'Trade' || entry.kind === 'Language') {
     entry = canonicalMasteryEntry(entry, characterReference);
+    sourceStatus = 'Beta source verified';
   } else if (entry.kind === 'Ancestry' && ANCESTRY_PAGE[entry.title]) {
     entry = {
       ...entry,
@@ -609,6 +618,7 @@ function auditEntry(
       text: canonicalAncestryText(entry.title, characterReference) ?? entry.text,
       details: [{ label: 'Published Traits', value: String([...characterReference.ancestryTraits, ...characterReference.generalAncestryTraits].filter(({ ancestry }) => ancestry === entry.title).length) }],
     };
+    sourceStatus = verifiedStatusFor(entry);
   } else if (entry.kind === 'Subclass') {
     const canonical = canonicalSubclassText(entry, characterReference);
     const classRecord = characterReference.classes.find(({ name }) => name === entry.characterClass);
@@ -617,8 +627,9 @@ function auditEntry(
       ...entry,
       summary: firstFeature ? `${firstFeature.name}: ${sourceSummary(firstFeature.description, entry.summary)}` : entry.summary,
       text: canonical ?? entry.text,
-      details: [{ label: 'Class', value: entry.characterClass ?? 'Universal' }, { label: 'Progression', value: 'Levels 3, 7, and 10' }],
+      details: [{ label: 'Class', value: entry.characterClass ?? 'Universal' }, { label: 'Progression', value: subclassProgression(entry.characterClass) }],
     };
+    sourceStatus = canonical ? verifiedStatusFor(entry) : sourceStatus;
   } else if (entry.kind === 'Class') {
     const classRecord = characterReference.classes.find(({ name }) => name === entry.title);
     if (classRecord) entry = {
@@ -630,6 +641,7 @@ function auditEntry(
         { label: 'Published Levels', value: String(classRecord.tableRows.length) },
       ],
     };
+    if (classRecord) sourceStatus = verifiedStatusFor(entry);
   } else if (entry.kind === 'Talent' && entry.title !== 'Talents & Requirements') {
     const talent = talentDefinitions(characterReference).find(({ name }) => name === entry.title);
     if (talent) entry = {
@@ -643,13 +655,11 @@ function auditEntry(
         { label: 'Requirements', value: talent.requirements.join(', ') || 'None' },
       ],
     };
+    if (talent) sourceStatus = verifiedStatusFor(entry);
   } else if (entry.kind === 'Equipment') {
-    const canonical = equipmentText(entry.title, equipment);
     entry = {
       ...entry,
       summary: EQUIPMENT_SUMMARIES[entry.title] ?? entry.summary,
-      text: canonical ?? entry.text,
-      details: canonical ? [{ label: 'Catalog Records', value: String(equipment.filter(({ category }) => category === entry.title).length) }] : entry.details,
     };
   }
 
@@ -663,12 +673,17 @@ function auditEntry(
       page: 'Beta 0.10.5 pp.35, 173',
       sourceNote: 'The Death’s Door sidebar on p.35 supplies the expanded Medicine outcome used here: Success ends 1 stack, plus 1 additional stack for each 5.',
     };
+    sourceStatus = 'Beta source verified';
   }
   if (TEXT_OVERRIDES[entry.title]) entry = { ...entry, text: TEXT_OVERRIDES[entry.title] };
+  if (VERIFIED_RULE_TEXT_OVERRIDES[entry.title]) {
+    entry = { ...entry, text: VERIFIED_RULE_TEXT_OVERRIDES[entry.title] };
+    sourceStatus = FULLY_VERIFIED_RULE_TEXT_TITLES.has(entry.title) ? 'Beta source verified' : 'Verified source excerpt';
+  }
   if (entry.kind === 'Condition' && entry.title !== 'Condition Rules') {
     entry = { ...entry, summary: sourceSummary(entry.text, entry.summary) };
   }
-  entry = { ...entry, page: normalizeCitation(entry.page) };
+  entry = { ...entry, page: normalizeCitation(entry.page), sourceStatus };
 
   const source = sourceFor(entry);
   const pages = sourcePages(entry.page);
@@ -732,11 +747,12 @@ export function auditRulesReference(
   const sourceEntries = [
     ...document.entries,
     ...supplementalRuleEntries(augmentedReference).filter(({ id }) => !existingIDs.has(id)),
+    ...equipmentRuleEntries(equipment).filter(({ id }) => !existingIDs.has(id)),
   ];
-  const entries = sourceEntries.map((entry) => auditEntry(entry, spells, maneuvers, augmentedReference, equipment));
+  const entries = sourceEntries.map((entry) => auditEntry(entry, spells, maneuvers, augmentedReference));
   return {
     ...document,
-    source: `${BETA_SOURCE}; ${PSION_SOURCE}; ${PSION_SUBCLASS_SOURCE}; ${SUMMONER_SOURCE}; ${ARTIFICER_SOURCE}; ${ADVENTURE_REWARDS_SOURCE}; ${MAGICAL_CONSUMABLES_SOURCE}; ${POISONS_SOURCE}`,
+    source: `${BETA_SOURCE}; ${PSION_SOURCE}; ${PSION_SUBCLASS_SOURCE}; ${SUMMONER_SOURCE}; ${ARTIFICER_SOURCE}; ${ADVENTURE_REWARDS_SOURCE}; ${MAGICAL_CONSUMABLES_SOURCE}; ${POISONS_SOURCE}; ${MUNDANE_OBJECTS_SOURCE}`,
     sections: AUDITED_SECTION_RANGES,
     entries: addRelationships(entries),
   };
