@@ -86,6 +86,14 @@ export interface PartyInventoryItem {
   quantity: number;
   addedBy: string;
   updatedAt: string;
+  /** Catalog identity and snapshot make shared equipment usable across accounts and future catalog revisions. */
+  equipmentID?: string;
+  itemSnapshot?: EquipmentCatalogItem;
+  ownerCharacterID?: string;
+  ownerName?: string;
+  goldCost?: number;
+  remainingUses?: number;
+  distributedByGM?: boolean;
 }
 
 export const VaultContentKindValues = {
@@ -93,6 +101,7 @@ export const VaultContentKindValues = {
   TALENT: 'Talent',
   FEATURE: 'Feature',
   SPELL: 'Spell',
+  MANEUVER: 'Maneuver',
   COMPANION: 'Pet / Summon / Familiar',
   OTHER: 'Other',
 } as const;
@@ -100,6 +109,26 @@ export const VaultContentKindValues = {
 export type VaultContentKind = (typeof VaultContentKindValues)[keyof typeof VaultContentKindValues];
 
 export type VaultRecharge = 'Manual' | 'Quick Rest' | 'Short Rest' | 'Long Rest';
+
+export type VaultEntryStatus = 'Draft' | 'Ready' | 'Archived';
+export type VaultEffectActivation = 'Passive' | 'Equipped' | 'Attuned' | 'Manual Toggle' | 'Conditional';
+export type VaultDistributionMode = 'Player Choice' | 'Assigned Characters';
+
+export interface VaultDistribution {
+  mode: VaultDistributionMode;
+  /** Empty means every character in the campaign can claim the entry. */
+  characterIDs: string[];
+  quantityLimit?: number;
+  notes?: string;
+}
+
+/** A compact JSON snapshot avoids recursive history while keeping every saved version recoverable. */
+export interface VaultEntryRevision {
+  id: string;
+  version: number;
+  savedAt: string;
+  snapshot: string;
+}
 
 /** Numeric and reference effects that custom Vault content can route into a character sheet. */
 export interface VaultMechanicalEffects {
@@ -120,6 +149,17 @@ export interface VaultMechanicalEffects {
   physicalDefenseBonus?: number;
   areaDefenseBonus?: number;
   speedBonus?: number;
+  skillMasteryIncreases?: Record<string, number>;
+  skillBonusesAtCap?: Record<string, number>;
+  conditionSaveAdvantages?: string[];
+  advantageRules?: string[];
+  disadvantageRules?: string[];
+  movementModes?: string[];
+  vulnerabilities?: string[];
+  damageReductions?: string[];
+  conditionsGranted?: string[];
+  weaponSpecificBonuses?: Record<string, number>;
+  spellSpecificBonuses?: Record<string, number>;
   resistances?: string[];
   immunities?: string[];
   senses?: string[];
@@ -141,6 +181,18 @@ export interface GmVaultEntry {
   summary: string;
   description: string;
   tags: string[];
+  folder?: string;
+  favorite?: boolean;
+  status?: VaultEntryStatus;
+  version?: number;
+  revisions?: VaultEntryRevision[];
+  /** Other private entries packaged with this one. Shared copies also carry portable snapshots. */
+  linkedEntryIDs?: string[];
+  bundledEntries?: GmVaultEntry[];
+  activation?: VaultEffectActivation;
+  duration?: string;
+  stacking?: string;
+  distribution?: VaultDistribution;
   requirements: VaultRequirements;
   effects: VaultMechanicalEffects;
   /** Limited uses for accepted Talents and Features. The remaining value is character-owned state. */

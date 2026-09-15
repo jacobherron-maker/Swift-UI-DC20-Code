@@ -1620,9 +1620,15 @@ export function equippedCombatModifiers(
     immunities: Array.from(new Set([...magicEffects.immunities, ...(vaultEffects.immunities ?? [])])),
     senses: Array.from(new Set([...magicEffects.senses, ...(vaultEffects.senses ?? [])])),
     conditionalRules: Array.from(new Set([...magicEffects.conditionalRules, ...(vaultEffects.conditionalRules ?? [])])),
-    conditionSaveAdvantages: magicEffects.conditionSaveAdvantages,
-    skillMasteryIncreases: magicEffects.skillMasteryIncreases,
-    skillBonusesAtCap: magicEffects.skillBonusesAtCap,
+    conditionSaveAdvantages: Array.from(new Set([...magicEffects.conditionSaveAdvantages, ...(vaultEffects.conditionSaveAdvantages ?? [])])),
+    skillMasteryIncreases: Object.fromEntries(Array.from(new Set([
+      ...Object.keys(magicEffects.skillMasteryIncreases),
+      ...Object.keys(vaultEffects.skillMasteryIncreases ?? {}),
+    ])).map((name) => [name, Math.max(magicEffects.skillMasteryIncreases[name] ?? 0, vaultEffects.skillMasteryIncreases?.[name] ?? 0)])),
+    skillBonusesAtCap: Object.fromEntries(Array.from(new Set([
+      ...Object.keys(magicEffects.skillBonusesAtCap),
+      ...Object.keys(vaultEffects.skillBonusesAtCap ?? {}),
+    ])).map((name) => [name, Math.max(magicEffects.skillBonusesAtCap[name] ?? 0, vaultEffects.skillBonusesAtCap?.[name] ?? 0)])),
     skillBonuses: Object.fromEntries(Array.from(new Set([...Object.keys(magicEffects.skillBonuses), ...Object.keys(vaultEffects.skillBonuses ?? {})])).map((name) => [name, (magicEffects.skillBonuses[name] ?? 0) + (vaultEffects.skillBonuses?.[name] ?? 0)])),
     tradeBonuses: Object.fromEntries(Array.from(new Set([...Object.keys(magicEffects.tradeBonuses), ...Object.keys(vaultEffects.tradeBonuses ?? {})])).map((name) => [name, (magicEffects.tradeBonuses[name] ?? 0) + (vaultEffects.tradeBonuses?.[name] ?? 0)])),
     saveBonuses: Object.fromEntries(Array.from(new Set([...Object.keys(magicEffects.saveBonuses), ...Object.keys(vaultEffects.saveBonuses ?? {})])).map((name) => [name, (magicEffects.saveBonuses[name] ?? 0) + ((vaultEffects.saveBonuses as Record<string, number> | undefined)?.[name] ?? 0)])),

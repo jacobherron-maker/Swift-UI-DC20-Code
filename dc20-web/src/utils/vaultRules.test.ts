@@ -8,9 +8,12 @@ import {
   activeCharacterVaultEffects,
   addVaultEntryToCharacter,
   createVaultEntry,
+  duplicateVaultEntry,
   normalizeVaultEntry,
   prepareVaultEntry,
+  prepareVaultEntryForSave,
   removeVaultEntryFromCharacter,
+  restoreVaultRevision,
   vaultEntryEligibility,
 } from './vaultRules';
 
@@ -60,6 +63,31 @@ describe('GM Vault entries', () => {
       school: 'Astromancy',
       description: 'Make a Spell Attack against a creature in range.',
     });
+  });
+
+  it('creates and normalizes custom maneuvers without turning their metadata into passive bonuses', () => {
+    const draft = createVaultEntry(VaultContentKindValues.MANEUVER);
+    draft.name = 'Shield Hook';
+    draft.description = 'Hook the target with your shield and pull it 1 Space.';
+    draft.maneuver = {
+      ...draft.maneuver!,
+      category: 'Grapple',
+      cost: '1 AP + 1 SP',
+      requirements: 'Shield',
+    };
+
+    const prepared = prepareVaultEntry(draft);
+    const normalized = normalizeVaultEntry(JSON.parse(JSON.stringify(prepared)))!;
+    expect(normalized.maneuver).toMatchObject({
+      name: 'Shield Hook',
+      description: 'Hook the target with your shield and pull it 1 Space.',
+      category: 'Grapple',
+      cost: '1 AP + 1 SP',
+      requirements: 'Shield',
+    });
+
+    const accepted = addVaultEntryToCharacter(character(), normalized);
+    expect(activeCharacterVaultEffects(accepted)).toEqual(activeCharacterVaultEffects(character()));
   });
 
   it('routes item effects through attunement and adds the item unequipped', () => {
@@ -248,5 +276,65 @@ describe('GM Vault entries', () => {
     const addedItem = addVaultEntryToCharacter(character(), item);
     const removedItem = removeVaultEntryFromCharacter(addedItem, item.id);
     expect(removedItem.inventoryItems).toHaveLength(0);
+  });
+
+  it('preserves advanced organization, distribution, and effect metadata through cloud-safe normalization', () => {
+    const entry = createVaultEntry(VaultContentKindValues.FEATURE);
+    entry.folder = 'Boss Rewards';
+    entry.favorite = true;
+    entry.status = 'Ready';
+    entry.activation = 'Conditional';
+    entry.duration = 'Until the end of your next turn';
+    entry.effects.skillMasteryIncreases = { Awareness: 1 };
+    entry.effects.advantageRules = ['Might Saves'];
+    entry.effects.movementModes = ['Fly 5'];
+    entry.distribution = { mode: 'Assigned Characters', characterIDs: ['vault-hero'], quantityLimit: 1 };
+
+    expect(normalizeVaultEntry(JSON.parse(JSON.stringify(entry)))).toMatchObject({
+      folder: 'Boss Rewards',
+      favorite: true,
+      status: 'Ready',
+      activation: 'Conditional',
+      duration: 'Until the end of your next turn',
+      effects: { skillMasteryIncreases: { Awareness: 1 }, advantageRules: ['Might Saves'], movementModes: ['Fly 5'] },
+      distribution: { mode: 'Assigned Characters', characterIDs: ['vault-hero'], quantityLimit: 1 },
+    });
+  });
+
+  it('creates recoverable revisions and restores an earlier version without replacing the entry identity', () => {
+    const original = prepareVaultEntry(createVaultEntry(VaultContentKindValues.TALENT));
+    const renamed = prepareVaultEntryForSave({ ...original, name: 'Second Name' }, original);
+    expect(renamed.version).toBe(2);
+    expect(renamed.revisions).toHaveLength(1);
+
+    const restored = restoreVaultRevision(renamed, renamed.revisions![0].snapshot);
+    expect(restored).toMatchObject({ id: original.id, name: original.name, version: 3 });
+    expect(restored?.revisions).toHaveLength(2);
+  });
+
+  it('duplicates entries with independent entry and specialized record identities', () => {
+    const original = prepareVaultEntry(createVaultEntry(VaultContentKindValues.ITEM));
+    const copy = duplicateVaultEntry(original);
+    expect(copy.id).not.toBe(original.id);
+    expect(copy.item?.id).not.toBe(original.item?.id);
+    expect(copy.name).toBe(`${original.name} (Copy)`);
+    expect(copy.status).toBe('Draft');
+    expect(copy.revisions).toEqual([]);
+  });
+
+  it('accepts every portable entry in a linked bundle and enforces character assignment', () => {
+    const spell = prepareVaultEntry(createVaultEntry(VaultContentKindValues.SPELL));
+    const item = prepareVaultEntry(createVaultEntry(VaultContentKindValues.ITEM));
+    const bundle = prepareVaultEntry({
+      ...createVaultEntry(VaultContentKindValues.FEATURE),
+      bundledEntries: [spell, item],
+      distribution: { mode: 'Assigned Characters', characterIDs: ['vault-hero'] },
+    });
+    expect(vaultEntryEligibility(character(), bundle).eligible).toBe(true);
+    expect(vaultEntryEligibility(character({ id: 'different-hero' }), bundle).eligible).toBe(false);
+
+    const accepted = addVaultEntryToCharacter(character(), bundle);
+    expect(accepted.vaultEntries?.map(({ id }) => id)).toEqual([bundle.id, spell.id, item.id]);
+    expect(accepted.inventoryItems?.some(({ equipmentID }) => equipmentID === item.item?.id)).toBe(true);
   });
 });

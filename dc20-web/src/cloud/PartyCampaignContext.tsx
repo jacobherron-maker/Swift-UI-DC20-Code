@@ -214,6 +214,13 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
             quantity: Math.max(0, Number(data.quantity ?? 1)),
             addedBy: String(data.added_by ?? ''),
             updatedAt: String(data.updated_at ?? ''),
+            ...(typeof data.equipment_id === 'string' ? { equipmentID: data.equipment_id } : {}),
+            ...(data.item_snapshot && typeof data.item_snapshot === 'object' ? { itemSnapshot: data.item_snapshot as PartyInventoryItem['itemSnapshot'] } : {}),
+            ...(typeof data.owner_character_id === 'string' ? { ownerCharacterID: data.owner_character_id } : {}),
+            ...(typeof data.owner_name === 'string' ? { ownerName: data.owner_name } : {}),
+            ...(Number.isFinite(Number(data.gold_cost)) ? { goldCost: Math.max(0, Number(data.gold_cost)) } : {}),
+            ...(Number.isFinite(Number(data.remaining_uses)) ? { remainingUses: Math.max(0, Number(data.remaining_uses)) } : {}),
+            ...(data.distributed_by_gm === true ? { distributedByGM: true } : {}),
           } satisfies PartyInventoryItem;
         }).sort((left, right) => left.name.localeCompare(right.name));
         patchParty(link.partyId, link.role, { inventory, gold });
@@ -432,6 +439,13 @@ export function PartyCampaignProvider({ children, links }: { children: ReactNode
       quantity: Math.max(0, Math.trunc(item.quantity)),
       added_by: item.addedBy || currentUser.uid,
       updated_at: new Date().toISOString(),
+      ...(item.equipmentID ? { equipment_id: item.equipmentID } : {}),
+      ...(item.itemSnapshot ? { item_snapshot: JSON.parse(JSON.stringify(item.itemSnapshot)) as PartyInventoryItem['itemSnapshot'] } : {}),
+      ...(item.ownerCharacterID ? { owner_character_id: item.ownerCharacterID } : {}),
+      ...(item.ownerName ? { owner_name: item.ownerName } : {}),
+      ...(item.goldCost !== undefined ? { gold_cost: Math.max(0, Number(item.goldCost) || 0) } : {}),
+      ...(item.remainingUses !== undefined ? { remaining_uses: Math.max(0, Number(item.remainingUses) || 0) } : {}),
+      ...(item.distributedByGM ? { distributed_by_gm: true } : {}),
     });
   }, [requireCloud]);
 

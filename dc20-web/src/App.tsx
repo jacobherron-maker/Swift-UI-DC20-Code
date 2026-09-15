@@ -17,6 +17,7 @@ import EncountersView from './components/views/EncountersView';
 import CombatView from './components/views/CombatView';
 import CampaignView from './components/views/CampaignView';
 import HomebrewView from './components/views/HomebrewView';
+import CharacterOptionsView from './components/views/CharacterOptionsView';
 import RulesVersionComingSoon from './components/views/RulesVersionComingSoon';
 import type { ContentFocusRequest, CreateTarget, PrimaryDestination } from './navigation/appNavigation';
 import { activeEncounterSection, activeLibrarySection, ENCOUNTER_SECTIONS, LIBRARY_SECTIONS, primaryDestinationForSection } from './navigation/appNavigation';
@@ -145,7 +146,7 @@ function App() {
               <div className={activeLibrary === HubSectionValues.RULES ? 'h-full overflow-auto overscroll-contain' : 'hidden'}><RulesView focusRequest={focusRequest?.kind === 'rule' ? focusRequest : null} onFocusHandled={clearFocus} returnContextLabel={ruleReturnSection ? `Return to ${ruleReturnSection}` : undefined} onReturnToContext={ruleReturnSection ? () => { setCurrentSection(ruleReturnSection); setRuleReturnSection(null); } : undefined} /></div>
               <div className={activeLibrary === HubSectionValues.POWERS ? 'h-full overflow-auto overscroll-contain' : 'hidden'}><PowersView focusRequest={focusRequest?.kind === 'power' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
               <div className={activeLibrary === HubSectionValues.EQUIPMENT ? 'h-full overflow-y-auto overscroll-contain lg:overflow-hidden' : 'hidden'}><EquipmentView focusRequest={focusRequest?.kind === 'equipment' ? focusRequest : null} onFocusHandled={clearFocus} /></div>
-              <div className={activeLibrary === HubSectionValues.CHARACTER_OPTIONS ? 'h-full overflow-auto overscroll-contain' : 'hidden'}><RulesView preset="character-options" /></div>
+              <div className={activeLibrary === HubSectionValues.CHARACTER_OPTIONS ? 'h-full overflow-auto overscroll-contain' : 'hidden'}><CharacterOptionsView /></div>
               <div className={activeLibrary === HubSectionValues.HOMEBREW ? 'h-full overflow-auto' : 'hidden'}><HomebrewView onCreateMonster={() => navigateToContent({ kind: 'monster' })} onCreateItem={() => navigateToContent({ kind: 'equipment' })} onOpenMonster={(id) => navigateToContent({ kind: 'monster', id })} onOpenItem={(id) => navigateToContent({ kind: 'equipment', id })} /></div>
             </div>
           </div>

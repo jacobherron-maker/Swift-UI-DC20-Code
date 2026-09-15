@@ -8,6 +8,7 @@ import type {
   Maneuver,
   Spell,
   VaultContentKind,
+  VaultDistribution,
   VaultMechanicalEffects,
   VaultRecharge,
 } from '../types/models';
@@ -44,6 +45,17 @@ export function emptyVaultEffects(): VaultMechanicalEffects {
     skillBonuses: {},
     tradeBonuses: {},
     saveBonuses: {},
+    skillMasteryIncreases: {},
+    skillBonusesAtCap: {},
+    weaponSpecificBonuses: {},
+    spellSpecificBonuses: {},
+    conditionSaveAdvantages: [],
+    advantageRules: [],
+    disadvantageRules: [],
+    movementModes: [],
+    vulnerabilities: [],
+    damageReductions: [],
+    conditionsGranted: [],
     resistances: [],
     immunities: [],
     senses: [],
@@ -82,6 +94,7 @@ export function createVaultEntry(kind: VaultContentKind = VaultContentKindValues
   const id = `vault-${generateUUID()}`;
   const name = kind === VaultContentKindValues.ITEM ? 'New Magic Item'
     : kind === VaultContentKindValues.SPELL ? 'New Spell'
+      : kind === VaultContentKindValues.MANEUVER ? 'New Maneuver'
       : kind === VaultContentKindValues.COMPANION ? 'New Companion'
         : `New ${kind}`;
   const entry: GmVaultEntry = {
@@ -91,6 +104,17 @@ export function createVaultEntry(kind: VaultContentKind = VaultContentKindValues
     summary: '',
     description: '',
     tags: [],
+    folder: '',
+    favorite: false,
+    status: 'Draft',
+    version: 1,
+    revisions: [],
+    linkedEntryIDs: [],
+    bundledEntries: [],
+    activation: kind === VaultContentKindValues.ITEM ? 'Equipped' : 'Passive',
+    duration: '',
+    stacking: 'Does not stack',
+    distribution: { mode: 'Player Choice', characterIDs: [] },
     requirements: {},
     effects: emptyVaultEffects(),
     createdAt: now,
@@ -124,6 +148,19 @@ export function createVaultEntry(kind: VaultContentKind = VaultContentKindValues
     description: '',
     enhancements: '',
   };
+  if (kind === VaultContentKindValues.MANEUVER) entry.maneuver = {
+    id: `vault-maneuver-${generateUUID()}`,
+    name,
+    type: 'Custom',
+    category: 'Utility',
+    cost: '1 AP',
+    range: 'Self',
+    requirements: '',
+    resolution: 'Martial Check',
+    sourceNote: 'Custom maneuver shared from the GM Vault.',
+    description: '',
+    enhancements: '',
+  };
   if (kind === VaultContentKindValues.COMPANION) entry.companion = emptyCompanion(name);
   return entry;
 }
@@ -136,6 +173,17 @@ function normalizeEffects(value: unknown): VaultMechanicalEffects {
     skillBonuses: numberRecord(raw.skillBonuses),
     tradeBonuses: numberRecord(raw.tradeBonuses),
     saveBonuses: numberRecord(raw.saveBonuses),
+    skillMasteryIncreases: numberRecord(raw.skillMasteryIncreases),
+    skillBonusesAtCap: numberRecord(raw.skillBonusesAtCap),
+    weaponSpecificBonuses: numberRecord(raw.weaponSpecificBonuses),
+    spellSpecificBonuses: numberRecord(raw.spellSpecificBonuses),
+    conditionSaveAdvantages: cleanStrings(raw.conditionSaveAdvantages),
+    advantageRules: cleanStrings(raw.advantageRules),
+    disadvantageRules: cleanStrings(raw.disadvantageRules),
+    movementModes: cleanStrings(raw.movementModes),
+    vulnerabilities: cleanStrings(raw.vulnerabilities),
+    damageReductions: cleanStrings(raw.damageReductions),
+    conditionsGranted: cleanStrings(raw.conditionsGranted),
     resistances: cleanStrings(raw.resistances),
     immunities: cleanStrings(raw.immunities),
     senses: cleanStrings(raw.senses),
@@ -312,6 +360,14 @@ export function normalizeVaultEntry(value: unknown): GmVaultEntry | null {
   if (!name) return null;
   const rechargeOptions: VaultRecharge[] = ['Manual', 'Quick Rest', 'Short Rest', 'Long Rest'];
   const charges = raw.charges === undefined ? undefined : Math.max(0, Math.trunc(numberValue(raw.charges)));
+  const rawDistribution = raw.distribution && typeof raw.distribution === 'object' ? raw.distribution as Record<string, unknown> : {};
+  const distribution: VaultDistribution = {
+    mode: rawDistribution.mode === 'Assigned Characters' ? 'Assigned Characters' : 'Player Choice',
+    characterIDs: cleanStrings(rawDistribution.characterIDs),
+    ...(numberValue(rawDistribution.quantityLimit) > 0 ? { quantityLimit: Math.max(1, Math.trunc(numberValue(rawDistribution.quantityLimit))) } : {}),
+    notes: typeof rawDistribution.notes === 'string' ? rawDistribution.notes : '',
+  };
+  const revisionValues = Array.isArray(raw.revisions) ? raw.revisions : [];
   const entry: GmVaultEntry = {
     id: typeof raw.id === 'string' ? raw.id : `vault-${generateUUID()}`,
     kind,
@@ -319,6 +375,27 @@ export function normalizeVaultEntry(value: unknown): GmVaultEntry | null {
     summary: typeof raw.summary === 'string' ? raw.summary : '',
     description: typeof raw.description === 'string' ? raw.description : '',
     tags: cleanStrings(raw.tags),
+    folder: typeof raw.folder === 'string' ? raw.folder : '',
+    favorite: Boolean(raw.favorite),
+    status: raw.status === 'Ready' || raw.status === 'Archived' ? raw.status : 'Draft',
+    version: Math.max(1, Math.trunc(numberValue(raw.version, 1))),
+    revisions: revisionValues.flatMap((value) => {
+      if (!value || typeof value !== 'object') return [];
+      const revision = value as Record<string, unknown>;
+      if (typeof revision.snapshot !== 'string') return [];
+      return [{
+        id: typeof revision.id === 'string' ? revision.id : `vault-revision-${generateUUID()}`,
+        version: Math.max(1, Math.trunc(numberValue(revision.version, 1))),
+        savedAt: typeof revision.savedAt === 'string' ? revision.savedAt : new Date().toISOString(),
+        snapshot: revision.snapshot,
+      }];
+    }).slice(-20),
+    linkedEntryIDs: cleanStrings(raw.linkedEntryIDs),
+    activation: ['Passive', 'Equipped', 'Attuned', 'Manual Toggle', 'Conditional'].includes(String(raw.activation))
+      ? raw.activation as GmVaultEntry['activation'] : kind === VaultContentKindValues.ITEM ? 'Equipped' : 'Passive',
+    duration: typeof raw.duration === 'string' ? raw.duration : '',
+    stacking: typeof raw.stacking === 'string' ? raw.stacking : 'Does not stack',
+    distribution,
     requirements: {
       minimumLevel: Math.max(0, Math.trunc(numberValue((raw.requirements as Record<string, unknown> | undefined)?.minimumLevel))),
       classes: cleanStrings((raw.requirements as Record<string, unknown> | undefined)?.classes),
@@ -341,6 +418,13 @@ export function normalizeVaultEntry(value: unknown): GmVaultEntry | null {
   entry.spell = normalizeSpell(raw.spell, entry);
   entry.maneuver = normalizeManeuver(raw.maneuver, entry);
   entry.companion = normalizeCompanion(raw.companion, entry);
+  entry.bundledEntries = Array.isArray(raw.bundledEntries)
+    ? raw.bundledEntries.flatMap((bundled) => {
+      const normalized = normalizeVaultEntry(bundled);
+      if (!normalized || normalized.id === entry.id) return [];
+      return [{ ...normalized, bundledEntries: [] }];
+    })
+    : [];
   return entry;
 }
 
@@ -351,6 +435,7 @@ export function equipmentEffectsFromVault(effects: VaultMechanicalEffects): Equi
     immunities: [...(effects.immunities ?? [])],
     senses: [...(effects.senses ?? [])],
     conditionalRules: [...(effects.conditionalRules ?? [])],
+    conditionSaveAdvantages: [...(effects.conditionSaveAdvantages ?? [])],
   };
 }
 
@@ -362,6 +447,17 @@ export function prepareVaultEntry(entry: GmVaultEntry): GmVaultEntry {
     ...entry,
     name: entry.name.trim(),
     tags: cleanStrings(entry.tags),
+    folder: entry.folder?.trim() ?? '',
+    status: entry.status ?? 'Draft',
+    version: Math.max(1, entry.version ?? 1),
+    linkedEntryIDs: cleanStrings(entry.linkedEntryIDs),
+    bundledEntries: (entry.bundledEntries ?? []).map((bundled) => ({ ...bundled, bundledEntries: [] })),
+    distribution: {
+      mode: entry.distribution?.mode ?? 'Player Choice',
+      characterIDs: cleanStrings(entry.distribution?.characterIDs),
+      ...(entry.distribution?.quantityLimit ? { quantityLimit: Math.max(1, Math.trunc(entry.distribution.quantityLimit)) } : {}),
+      notes: entry.distribution?.notes?.trim() ?? '',
+    },
     grantedSpells: (entry.grantedSpells ?? []).map((spell) => ({ ...spell })),
     ...(charges ? { charges, remainingCharges: charges, recharge: entry.recharge ?? 'Long Rest' } : {
       charges: undefined, remainingCharges: undefined, recharge: undefined,
@@ -394,13 +490,18 @@ export function prepareVaultEntry(entry: GmVaultEntry): GmVaultEntry {
 function addEffects(target: VaultMechanicalEffects, effect: VaultMechanicalEffects) {
   const numeric = ['allCheckBonus', 'martialCheckBonus', 'spellCheckBonus', 'spellAttackBonus', 'saveDCBonus', 'weaponDamageBonus', 'spellDamageBonus', 'maxHPBonus', 'maxStaminaBonus', 'maxManaBonus', 'physicalDefenseBonus', 'areaDefenseBonus', 'speedBonus'] as const;
   for (const key of numeric) target[key] = (target[key] ?? 0) + (effect[key] ?? 0);
-  for (const key of ['attributeBonuses', 'skillBonuses', 'tradeBonuses', 'saveBonuses'] as const) {
+  for (const key of ['attributeBonuses', 'skillBonuses', 'tradeBonuses', 'saveBonuses', 'weaponSpecificBonuses', 'spellSpecificBonuses'] as const) {
     const current = { ...(target[key] ?? {}) } as Record<string, number>;
     for (const [name, amount] of Object.entries(effect[key] ?? {})) current[name] = (current[name] ?? 0) + amount;
     target[key] = current as never;
   }
-  for (const key of ['resistances', 'immunities', 'senses', 'conditionalRules'] as const) {
+  for (const key of ['resistances', 'immunities', 'senses', 'conditionalRules', 'conditionSaveAdvantages', 'advantageRules', 'disadvantageRules', 'movementModes', 'vulnerabilities', 'damageReductions', 'conditionsGranted'] as const) {
     target[key] = Array.from(new Set([...(target[key] ?? []), ...(effect[key] ?? [])]));
+  }
+  for (const key of ['skillMasteryIncreases', 'skillBonusesAtCap'] as const) {
+    const current = { ...(target[key] ?? {}) };
+    for (const [name, amount] of Object.entries(effect[key] ?? {})) current[name] = Math.max(current[name] ?? 0, amount);
+    target[key] = current;
   }
 }
 
@@ -408,7 +509,15 @@ function addEffects(target: VaultMechanicalEffects, effect: VaultMechanicalEffec
 export function activeCharacterVaultEffects(character: Character): VaultMechanicalEffects {
   const result = emptyVaultEffects();
   for (const entry of character.vaultEntries ?? []) {
-    if ([VaultContentKindValues.ITEM, VaultContentKindValues.SPELL, VaultContentKindValues.COMPANION].includes(entry.kind as never)) continue;
+    if ([VaultContentKindValues.ITEM, VaultContentKindValues.SPELL, VaultContentKindValues.MANEUVER, VaultContentKindValues.COMPANION].includes(entry.kind as never)) continue;
+    if (entry.activation === 'Manual Toggle' || entry.activation === 'Conditional' || entry.activation === 'Equipped' || entry.activation === 'Attuned') {
+      result.conditionalRules = Array.from(new Set([
+        ...(result.conditionalRules ?? []),
+        `${entry.name}: ${entry.activation}${entry.duration ? ` • ${entry.duration}` : ''}${entry.stacking ? ` • ${entry.stacking}` : ''}`,
+        ...(entry.effects.conditionalRules ?? []),
+      ]));
+      continue;
+    }
     addEffects(result, entry.effects);
   }
   return result;
@@ -419,6 +528,13 @@ export function vaultEntryEligibility(character: Character, entry: GmVaultEntry)
   if ((requirements.minimumLevel ?? 0) > character.level) return { eligible: false, reason: `Requires level ${requirements.minimumLevel}.` };
   if ((requirements.classes?.length ?? 0) > 0 && !requirements.classes?.includes(character.class)) return { eligible: false, reason: `Requires ${requirements.classes?.join(' or ')}.` };
   if ((requirements.ancestries?.length ?? 0) > 0 && !requirements.ancestries?.includes(character.ancestry)) return { eligible: false, reason: `Requires ${requirements.ancestries?.join(' or ')} ancestry.` };
+  if (entry.distribution?.mode === 'Assigned Characters' && entry.distribution.characterIDs.length > 0 && !entry.distribution.characterIDs.includes(character.id)) {
+    return { eligible: false, reason: 'Assigned to other campaign characters.' };
+  }
+  for (const bundled of entry.bundledEntries ?? []) {
+    const bundledEligibility = vaultEntryEligibility(character, bundled);
+    if (!bundledEligibility.eligible) return { eligible: false, reason: `${bundled.name}: ${bundledEligibility.reason}` };
+  }
   return { eligible: true, reason: '' };
 }
 
@@ -488,6 +604,7 @@ export function addVaultEntryToCharacter(character: Character, supplied: GmVault
       speed: Math.max(0, character.speed + (entry.effects.speedBonus ?? 0)),
     };
   }
+  for (const bundled of entry.bundledEntries ?? []) next = addVaultEntryToCharacter(next, bundled);
   return next;
 }
 
@@ -523,5 +640,112 @@ export const vaultEffectSummary = (effects: VaultMechanicalEffects): string[] =>
   for (const [name, amount] of Object.entries(effects.tradeBonuses ?? {})) summary.push(`${amount > 0 ? '+' : ''}${amount} ${name}`);
   if (effects.resistances?.length) summary.push(`Resistance: ${effects.resistances.join(', ')}`);
   if (effects.immunities?.length) summary.push(`Immunity: ${effects.immunities.join(', ')}`);
+  if (Object.keys(effects.skillMasteryIncreases ?? {}).length) summary.push(`Skill mastery: ${Object.entries(effects.skillMasteryIncreases ?? {}).map(([name, amount]) => `${name} +${amount}`).join(', ')}`);
+  if (effects.advantageRules?.length) summary.push(`Advantage: ${effects.advantageRules.join(', ')}`);
+  if (effects.disadvantageRules?.length) summary.push(`Disadvantage: ${effects.disadvantageRules.join(', ')}`);
+  if (effects.movementModes?.length) summary.push(`Movement: ${effects.movementModes.join(', ')}`);
+  if (effects.vulnerabilities?.length) summary.push(`Vulnerability: ${effects.vulnerabilities.join(', ')}`);
+  if (effects.damageReductions?.length) summary.push(`Damage reduction: ${effects.damageReductions.join(', ')}`);
   return summary;
 };
+
+const revisionSnapshot = (entry: GmVaultEntry): string => JSON.stringify({
+  ...entry,
+  revisions: [],
+  bundledEntries: (entry.bundledEntries ?? []).map((bundled) => ({ ...bundled, revisions: [], bundledEntries: [] })),
+});
+
+const comparableSnapshot = (entry: GmVaultEntry): string => JSON.stringify({
+  ...entry,
+  updatedAt: '',
+  version: 0,
+  revisions: [],
+});
+
+/** Saves a new recoverable version only when editable content actually changed. */
+export function prepareVaultEntryForSave(next: GmVaultEntry, previous?: GmVaultEntry): GmVaultEntry {
+  const prepared = prepareVaultEntry(next);
+  if (!previous || comparableSnapshot(prepared) === comparableSnapshot(previous)) return prepared;
+  return {
+    ...prepared,
+    version: Math.max(1, previous.version ?? 1) + 1,
+    revisions: [...(previous.revisions ?? []), {
+      id: `vault-revision-${generateUUID()}`,
+      version: Math.max(1, previous.version ?? 1),
+      savedAt: previous.updatedAt,
+      snapshot: revisionSnapshot(previous),
+    }].slice(-20),
+  };
+}
+
+export function restoreVaultRevision(current: GmVaultEntry, snapshot: string): GmVaultEntry | null {
+  try {
+    const restored = normalizeVaultEntry(JSON.parse(snapshot));
+    if (!restored) return null;
+    return prepareVaultEntryForSave({ ...restored, id: current.id, createdAt: current.createdAt, revisions: current.revisions }, current);
+  } catch {
+    return null;
+  }
+}
+
+export function duplicateVaultEntry(source: GmVaultEntry): GmVaultEntry {
+  const copy = normalizeVaultEntry(JSON.parse(revisionSnapshot(source)));
+  const created = copy ?? createVaultEntry(source.kind);
+  const now = new Date().toISOString();
+  const id = `vault-${generateUUID()}`;
+  return prepareVaultEntry({
+    ...created,
+    id,
+    name: `${source.name} (Copy)`,
+    status: 'Draft',
+    favorite: false,
+    version: 1,
+    revisions: [],
+    createdAt: now,
+    updatedAt: now,
+    ...(created.item ? { item: { ...created.item, id: `vault-item-${generateUUID()}` } } : {}),
+    ...(created.spell ? { spell: { ...created.spell, id: `vault-spell-${generateUUID()}` } } : {}),
+    ...(created.maneuver ? { maneuver: { ...created.maneuver, id: `vault-maneuver-${generateUUID()}` } } : {}),
+    ...(created.companion ? { companion: { ...created.companion, id: `vault-companion-${generateUUID()}` } } : {}),
+  });
+}
+
+export function vaultEntryFromEquipment(item: EquipmentCatalogItem): GmVaultEntry {
+  const entry = createVaultEntry(VaultContentKindValues.ITEM);
+  return prepareVaultEntry({
+    ...entry,
+    name: `${item.name} Variant`,
+    summary: item.summary,
+    description: item.mechanics,
+    tags: [...item.properties],
+    item: { ...item, id: `vault-item-${generateUUID()}`, name: `${item.name} Variant`, sourceDocument: 'GM Vault', sourcePage: 'GM Vault', collection: 'Magic' },
+    effects: {
+      ...emptyVaultEffects(),
+      ...(item.equippedEffects ?? {}),
+      ...(item.attunedEffects ?? {}),
+    },
+  });
+}
+
+export function vaultEntryFromSpell(spell: Spell): GmVaultEntry {
+  const entry = createVaultEntry(VaultContentKindValues.SPELL);
+  return prepareVaultEntry({ ...entry, name: `${spell.name} Variant`, description: spell.description, tags: cleanStrings(spell.tags?.split(',')), spell: { ...spell, id: `vault-spell-${generateUUID()}`, name: `${spell.name} Variant`, source: 'GM Vault' } });
+}
+
+export function vaultEntryFromManeuver(maneuver: Maneuver): GmVaultEntry {
+  const entry = createVaultEntry(VaultContentKindValues.MANEUVER);
+  return prepareVaultEntry({ ...entry, name: `${maneuver.name} Variant`, description: maneuver.description, tags: [maneuver.category ?? maneuver.type ?? 'Maneuver'], maneuver: { ...maneuver, id: `vault-maneuver-${generateUUID()}`, name: `${maneuver.name} Variant` } });
+}
+
+/** Lightweight publishing preflight; drafts may still be saved with these issues. */
+export function vaultValidationIssues(entry: GmVaultEntry): string[] {
+  const issues: string[] = [];
+  if (!entry.name.trim()) issues.push('Add a name.');
+  if (!entry.summary.trim()) issues.push('Add a short summary.');
+  if (!entry.description.trim()) issues.push('Add complete rules text.');
+  if (entry.kind === VaultContentKindValues.SPELL && !entry.spell) issues.push('Complete the spell configuration.');
+  if (entry.kind === VaultContentKindValues.MANEUVER && !entry.maneuver) issues.push('Complete the maneuver configuration.');
+  if (entry.kind === VaultContentKindValues.ITEM && !entry.item) issues.push('Complete the item configuration.');
+  if (entry.kind === VaultContentKindValues.COMPANION && !entry.companion) issues.push('Complete the companion stat block.');
+  return issues;
+}

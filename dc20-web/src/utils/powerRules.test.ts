@@ -3,6 +3,14 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { ManeuverReference, SpellReference } from '../hooks/usePowerCatalog';
 import { basePowerCost, powerRuleBlocks, type PowerResolution } from './powerRules';
+import {
+  detectedPowerConditions,
+  parsePowerResourceCost,
+  powerDurationBucket,
+  powerEnhancementOptions,
+  powerRangeBucket,
+  powerResourceKinds,
+} from './powerLibraryRules';
 
 const spellPath = fileURLToPath(new URL('../../public/data/BetaSpells.json', import.meta.url));
 const maneuverPath = fileURLToPath(new URL('../../public/data/BetaManeuvers.json', import.meta.url));
@@ -158,5 +166,23 @@ describe('power rules presentation and costs', () => {
     expect(basePowerCost('1 AP + 2 MP')).toEqual({ actionPoints: 1, manaPoints: 2, staminaPoints: 0 });
     expect(basePowerCost('1 AP + X MP (minimum of 1)')).toEqual({ actionPoints: 1, manaPoints: 0, staminaPoints: 0 });
     expect(basePowerCost('Taunt Action (1 AP)')).toEqual({ actionPoints: 1, manaPoints: 0, staminaPoints: 0 });
+  });
+
+  it('builds selectable enhancement cards and totals fixed, variable, repeatable, and alternate costs', () => {
+    const arcaneBolt = spellDocument.spells.find(({ name }) => name === 'Arcane Bolt')!;
+    expect(powerEnhancementOptions(arcaneBolt.enhancements).map(({ name }) => name))
+      .toEqual(['Range', 'Damage', 'Arcane Missiles', 'Autonomous']);
+    expect(parsePowerResourceCost('1 AP + X MP', 4)).toEqual({ actionPoints: 1, manaPoints: 4, staminaPoints: 0 });
+    expect(parsePowerResourceCost('1 AP or 1 SP', 1, 1)).toEqual({ actionPoints: 0, manaPoints: 0, staminaPoints: 1 });
+  });
+
+  it('classifies filter metadata and detects only named conditions in source text', () => {
+    expect(powerResourceKinds('1 AP + X MP')).toEqual(['AP', 'MP', 'Variable']);
+    expect(powerResourceKinds('Base Action')).toEqual(['Free']);
+    expect(powerRangeBucket('10 Spaces')).toBe('2–10 Spaces');
+    expect(powerRangeBucket('Self (20 Space Aura)')).toBe('Self');
+    expect(powerDurationBucket('Sustained, up to 1 minute')).toBe('Sustained');
+    expect(detectedPowerConditions('The target begins Burning and becomes Slowed 2. It takes fire damage.'))
+      .toEqual(['Burning', 'Slowed']);
   });
 });

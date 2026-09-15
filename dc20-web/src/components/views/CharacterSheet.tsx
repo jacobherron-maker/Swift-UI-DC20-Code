@@ -2442,13 +2442,16 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({ character: storedCharac
       const current = maneuverCatalog.find(({ name }) => name === saved.name);
       return current ? { ...saved, ...current, id: saved.id, type: current.category } : saved;
     });
+    for (const vaultManeuver of (character.vaultEntries ?? []).flatMap(({ maneuver }) => maneuver ? [maneuver] : [])) {
+      if (!result.some(({ id }) => id === vaultManeuver.id)) result.push(vaultManeuver);
+    }
     for (const name of [...(character.build?.selectedManeuvers ?? []), ...grantedManeuvers]) {
       if (result.some((maneuver) => maneuver.name === name)) continue;
       const maneuver = maneuverCatalog.find((entry) => entry.name === name);
       if (maneuver) result.push({ id: `maneuver|${maneuver.name}`, type: maneuver.category, ...maneuver });
     }
     return sortByName(result);
-  }, [character.build?.selectedManeuvers, character.maneuvers, grantedManeuvers, maneuverCatalog]);
+  }, [character.build?.selectedManeuvers, character.maneuvers, character.vaultEntries, grantedManeuvers, maneuverCatalog]);
 
   const update = (values: Partial<Character>) => {
     if (readOnly) return;
