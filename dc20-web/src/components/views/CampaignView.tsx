@@ -19,6 +19,7 @@ import { GoldBalanceControl } from '../GoldBalanceControl';
 import CharacterSheet from './CharacterSheet';
 import type { ContentFocusRequest } from '../../navigation/appNavigation';
 import { addVaultEntryToCharacter, vaultEffectSummary, vaultEntryEligibility } from '../../utils/vaultRules';
+import CampaignWorkspace from '../campaign/CampaignWorkspace';
 
 /* Navigation requests and live party records intentionally synchronize local campaign state. */
 /* oxlint-disable react/set-state-in-effect, react-hooks/exhaustive-deps */
@@ -55,10 +56,19 @@ export default function CampaignView({ focusRequest, onFocusHandled }: { focusRe
   const effectiveJoinCharacterId = joinCharacterId || characters[0]?.id || '';
 
   useEffect(() => {
-    if (campaign?.party?.role === 'player' && party?.name && campaign.name !== party.name) {
-      updateCampaign({ ...campaign, name: party.name });
+    if (!campaign?.party || !party) return;
+    const playerAppearance = party.appearance?.shareWithPlayers ? party.appearance : undefined;
+    const appearanceChanged = campaign.party.role === 'player'
+      && JSON.stringify(campaign.appearance) !== JSON.stringify(playerAppearance);
+    if (campaign.name !== party.name || campaign.party.role !== party.role || appearanceChanged) {
+      updateCampaign({
+        ...campaign,
+        name: party.name,
+        party: { ...campaign.party, role: party.role },
+        ...(campaign.party.role === 'player' ? { appearance: playerAppearance } : {}),
+      });
     }
-  }, [campaign, party?.name, updateCampaign]);
+  }, [campaign, party, updateCampaign]);
 
   const performPartyAction = (action: Promise<unknown>) => {
     void action.catch((caught) => setNotice(caught instanceof Error ? caught.message : 'The shared campaign could not be updated.'));
@@ -245,7 +255,7 @@ export default function CampaignView({ focusRequest, onFocusHandled }: { focusRe
             >
               <div className="font-bold text-slate-100">{entry.name}</div>
               <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] font-black uppercase tracking-wider">
-                {entry.party ? <><span className="text-emerald-300">Group</span><span className="text-violet-300">{entry.party.role === 'gm' ? 'GM' : 'Player'}</span></> : <span className="text-slate-500">Solo</span>}
+                {entry.party ? <><span className="text-emerald-300">Group</span><span className="text-violet-300">{entry.party.role === 'gm' ? 'GM' : entry.party.role === 'co-gm' ? 'Co-GM' : 'Player'}</span></> : <span className="text-slate-500">Solo</span>}
               </div>
             </button>
           ))}
@@ -272,7 +282,7 @@ export default function CampaignView({ focusRequest, onFocusHandled }: { focusRe
         {(notice || partyHub.error) && <p role="status" className="m-4 rounded-xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm font-bold text-violet-100 sm:m-6 lg:mx-8">{notice || partyHub.error}</p>}
         {!campaign && <div className="grid min-h-full place-items-center p-8 text-center text-slate-500">Select a campaign, create a solo workspace, or start a connected group campaign.</div>}
         {campaign && (
-          <CampaignEditor
+          <CampaignWorkspace
             key={campaign.id}
             campaign={campaign}
             party={party}
@@ -302,6 +312,18 @@ export default function CampaignView({ focusRequest, onFocusHandled }: { focusRe
             onUpdateInventory={(item) => campaign.party && performPartyAction(partyHub.updateSharedInventoryItem(campaign.party.partyId, item))}
             onDeleteInventory={(id) => campaign.party && performPartyAction(partyHub.removeSharedInventoryItem(campaign.party.partyId, id))}
             onAdjustGold={(delta) => campaign.party && performPartyAction(partyHub.adjustSharedGold(campaign.party.partyId, delta))}
+            onRequestInventory={(item, character) => campaign.party && performPartyAction(partyHub.requestSharedInventoryItem(campaign.party.partyId, item, character))}
+            onResolveInventoryRequest={(request, approved) => campaign.party && performPartyAction(partyHub.resolveSharedInventoryRequest(campaign.party.partyId, request, approved))}
+            onUpdatePermissions={(permissions) => campaign.party && performPartyAction(partyHub.updatePartyPermissions(campaign.party.partyId, permissions))}
+            onUpdateMemberRole={(memberId, role) => campaign.party && performPartyAction(partyHub.updatePartyMemberRole(campaign.party.partyId, memberId, role))}
+            onUpdateMemberCharacter={(member, character, message) => {
+              if (!campaign.party) return;
+              const synchronized = character.build ? { ...character, build: { ...character.build, currentStamina: character.stamina, currentMana: character.manaPoints } } : character;
+              if (characters.some(({ id }) => id === synchronized.id)) updateCharacter(synchronized);
+              void partyHub.updatePartyMemberCharacter(campaign.party.partyId, member.userId, synchronized)
+                .then(() => setNotice(message))
+                .catch((caught) => setNotice(caught instanceof Error ? caught.message : 'The party character could not be updated.'));
+            }}
             onAddVaultEntry={(entry) => void addSharedVaultEntry(entry)}
             onLinkCharacter={(id) => void linkCharacter(id)}
             onViewMember={(memberId) => campaign.party && setViewedMember({ partyId: campaign.party.partyId, memberId })}
@@ -334,7 +356,7 @@ function PartyInvitation({ campaignName, gmDisplayName, characters, selectedChar
 
 type CampaignTab = 'party' | 'notes' | 'inventory' | 'vault';
 
-function CampaignEditor({ campaign, party, currentUserId, characters, combats, localNote, selectedNoteId, onSelectNote, onUpdateCampaign, onRenameParty, onCreateLocalNote, onUpdateLocalNote, onDeleteLocalNote, onCreateSharedNote, onUpdateSharedNote, onDeleteSharedNote, onAddInventory, onUpdateInventory, onDeleteInventory, onAdjustGold, onAddVaultEntry, onLinkCharacter, onViewMember, onRemoveMember, onAddMemberToCombat, onDeleteCampaign, inviteURL }: {
+export function CampaignEditor({ campaign, party, currentUserId, characters, combats, localNote, selectedNoteId, onSelectNote, onUpdateCampaign, onRenameParty, onCreateLocalNote, onUpdateLocalNote, onDeleteLocalNote, onCreateSharedNote, onUpdateSharedNote, onDeleteSharedNote, onAddInventory, onUpdateInventory, onDeleteInventory, onAdjustGold, onAddVaultEntry, onLinkCharacter, onViewMember, onRemoveMember, onAddMemberToCombat, onDeleteCampaign, inviteURL }: {
   campaign: CampaignRecord;
   party: PartyCampaignSnapshot | null;
   currentUserId: string;

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 
-export function GoldBalanceControl({ currentGold, onAdjust, title = 'Current Gold', description }: {
+export function GoldBalanceControl({ currentGold, onAdjust, title = 'Current Gold', description, disabled = false }: {
   currentGold?: number;
   onAdjust: (delta: number) => void;
   title?: string;
   description?: string;
+  disabled?: boolean;
 }) {
   const [amountText, setAmountText] = useState('1');
   const balance = Math.max(0, Math.trunc(Number(currentGold) || 0));
@@ -28,8 +29,8 @@ export function GoldBalanceControl({ currentGold, onAdjust, title = 'Current Gol
       <label className="text-xs font-bold text-slate-400">Amount
         <input type="number" min={1} step={1} inputMode="numeric" value={amountText} onChange={(event) => setAmountText(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-950/70 px-3 py-2 text-slate-100 outline-none focus:border-amber-400" aria-label={`${title} adjustment amount`} />
       </label>
-      <button type="button" disabled={!canSubtract} onClick={() => onAdjust(-amount)} className="min-h-11 self-end rounded-lg bg-slate-800 px-4 py-2 text-sm font-black text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-35">− Subtract</button>
-      <button type="button" disabled={!canAdd} onClick={() => onAdjust(amount)} className="min-h-11 self-end rounded-lg bg-amber-700 px-4 py-2 text-sm font-black text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-35">+ Add</button>
+      <button type="button" disabled={disabled || !canSubtract} onClick={() => onAdjust(-amount)} className="min-h-11 self-end rounded-lg bg-slate-800 px-4 py-2 text-sm font-black text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-35">− Subtract</button>
+      <button type="button" disabled={disabled || !canAdd} onClick={() => onAdjust(amount)} className="min-h-11 self-end rounded-lg bg-amber-700 px-4 py-2 text-sm font-black text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-35">+ Add</button>
     </div>
     {amount > balance && amount > 0 && <p className="mt-2 text-xs font-bold text-amber-300">You can’t subtract {amount.toLocaleString()} gold from a balance of {balance.toLocaleString()}.</p>}
   </section>;

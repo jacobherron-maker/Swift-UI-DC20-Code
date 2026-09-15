@@ -30,9 +30,35 @@ service cloud.firestore {
       return signedIn() && partyDocument(campaignId).data.gm_user_id == request.auth.uid;
     }
 
+    function memberDocument(campaignId) {
+      return get(/databases/$(database)/documents/party_campaigns/$(campaignId)/members/$(request.auth.uid));
+    }
+
+    function isPartyManager(campaignId) {
+      return isPartyGM(campaignId) || (isPartyMember(campaignId) && memberDocument(campaignId).data.role == 'co-gm');
+    }
+
     function isPartyMember(campaignId) {
       return signedIn()
         && exists(/databases/$(database)/documents/party_campaigns/$(campaignId)/members/$(request.auth.uid));
+    }
+
+    function playersCanCreateNotes(campaignId) {
+      return !partyDocument(campaignId).data.keys().hasAny(['permissions'])
+        || !partyDocument(campaignId).data.permissions.keys().hasAny(['players_can_create_shared_notes'])
+        || partyDocument(campaignId).data.permissions.players_can_create_shared_notes == true;
+    }
+
+    function playersCanEditNotes(campaignId) {
+      return !partyDocument(campaignId).data.keys().hasAny(['permissions'])
+        || !partyDocument(campaignId).data.permissions.keys().hasAny(['players_can_edit_shared_notes'])
+        || partyDocument(campaignId).data.permissions.players_can_edit_shared_notes == true;
+    }
+
+    function playersCanManageInventory(campaignId) {
+      return !partyDocument(campaignId).data.keys().hasAny(['permissions'])
+        || !partyDocument(campaignId).data.permissions.keys().hasAny(['players_can_manage_inventory'])
+        || partyDocument(campaignId).data.permissions.players_can_manage_inventory == true;
     }
 
     match /party_invites/{inviteCode} {
@@ -46,19 +72,23 @@ service cloud.firestore {
     }
 
     match /party_campaigns/{campaignId} {
-      allow read: if isPartyGM(campaignId) || isPartyMember(campaignId);
+      allow read: if isPartyManager(campaignId) || isPartyMember(campaignId);
       allow create: if signedIn()
         && request.resource.data.gm_user_id == request.auth.uid
         && request.resource.data.id == campaignId;
-      allow update, delete: if isPartyGM(campaignId);
+      allow update: if isPartyGM(campaignId)
+        || (isPartyManager(campaignId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'permissions', 'appearance', 'updated_at']));
+      allow delete: if isPartyGM(campaignId);
 
       match /members/{memberId} {
-        allow read: if memberId == request.auth.uid || isPartyGM(campaignId) || isPartyMember(campaignId);
+        allow read: if memberId == request.auth.uid || isPartyManager(campaignId) || isPartyMember(campaignId);
         allow create: if signedIn()
           && request.resource.data.user_id == request.auth.uid
           && memberId == request.auth.uid
-          && (isPartyGM(campaignId)
-            || (request.resource.data.invite_code is string
+          && ((isPartyGM(campaignId) && request.resource.data.role == 'gm')
+            || (request.resource.data.role == 'player'
+              && request.resource.data.invite_code is string
               && get(/databases/$(database)/documents/party_invites/$(request.resource.data.invite_code)).data.campaign_id == campaignId
               && get(/databases/$(database)/documents/party_invites/$(request.resource.data.invite_code)).data.active == true));
         allow update: if signedIn() && (
@@ -66,26 +96,85 @@ service cloud.firestore {
             && resource.data.user_id == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'display_name', 'character_id', 'character', 'updated_at'
+              , 'gm_applied_update_id'
+            ]))
+          || (isPartyManager(campaignId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'character', 'gm_update_id', 'updated_at'
             ]))
           || (isPartyGM(campaignId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'character', 'updated_at'
-            ]))
+            && resource.data.role != 'gm'
+            && request.resource.data.role in ['player', 'co-gm']
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'updated_at']))
         );
         allow delete: if signedIn() && (memberId == request.auth.uid || isPartyGM(campaignId));
       }
 
       match /notes/{noteId} {
-        allow read, create, update, delete: if isPartyGM(campaignId) || isPartyMember(campaignId);
+        allow read: if isPartyManager(campaignId) || isPartyMember(campaignId);
+        allow create: if isPartyManager(campaignId)
+          || (isPartyMember(campaignId) && playersCanCreateNotes(campaignId));
+        allow update: if isPartyManager(campaignId)
+          || (isPartyMember(campaignId)
+            && playersCanEditNotes(campaignId)
+            && resource.data.player_can_edit != false
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'title', 'body', 'updated_by', 'updated_by_name', 'updated_at'
+            ]));
+        allow delete: if isPartyManager(campaignId)
+          || (isPartyMember(campaignId) && playersCanEditNotes(campaignId) && resource.data.player_can_edit != false);
+      }
+
+      match /gm_notes/{noteId} {
+        allow read, create, update, delete: if isPartyManager(campaignId);
+      }
+
+      match /member_notes/{noteId} {
+        allow read: if isPartyManager(campaignId)
+          || (isPartyMember(campaignId) && request.auth.uid in resource.data.visible_to_user_ids);
+        allow create: if isPartyManager(campaignId);
+        allow update: if isPartyManager(campaignId)
+          || (isPartyMember(campaignId)
+            && request.auth.uid in resource.data.visible_to_user_ids
+            && resource.data.player_can_edit != false
+            && playersCanEditNotes(campaignId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'title', 'body', 'updated_by', 'updated_by_name', 'updated_at'
+            ]));
+        allow delete: if isPartyManager(campaignId)
+          || (isPartyMember(campaignId)
+            && request.auth.uid in resource.data.visible_to_user_ids
+            && resource.data.player_can_edit != false
+            && playersCanEditNotes(campaignId));
       }
 
       match /inventory/{itemId} {
-        allow read, create, update, delete: if isPartyGM(campaignId) || isPartyMember(campaignId);
+        allow read: if isPartyManager(campaignId) || isPartyMember(campaignId);
+        allow create, update, delete: if isPartyManager(campaignId)
+          || (isPartyMember(campaignId) && playersCanManageInventory(campaignId));
+      }
+
+      match /inventory_requests/{requestId} {
+        allow read: if isPartyManager(campaignId)
+          || (isPartyMember(campaignId) && resource.data.requester_user_id == request.auth.uid);
+        allow create: if isPartyMember(campaignId)
+          && request.resource.data.requester_user_id == request.auth.uid
+          && request.resource.data.status == 'Pending';
+        allow update: if isPartyManager(campaignId);
+        allow delete: if isPartyManager(campaignId)
+          || (isPartyMember(campaignId) && resource.data.requester_user_id == request.auth.uid);
+      }
+
+      match /inventory_activity/{activityId} {
+        allow read: if isPartyManager(campaignId) || isPartyMember(campaignId);
+        allow create: if isPartyManager(campaignId)
+          || (isPartyMember(campaignId) && playersCanManageInventory(campaignId));
+        allow update, delete: if false;
       }
 
       match /vault/{entryId} {
-        allow read: if isPartyGM(campaignId) || isPartyMember(campaignId);
-        allow create, update, delete: if isPartyGM(campaignId);
+        allow read: if isPartyManager(campaignId) || isPartyMember(campaignId);
+        allow create, update, delete: if isPartyManager(campaignId);
       }
     }
   }

@@ -51,9 +51,62 @@ export interface CampaignNote {
   id: string;
   title: string;
   body: string;
+  visibility?: CampaignNoteVisibility;
+  visibleToUserIDs?: string[];
+  playerCanEdit?: boolean;
+  /** Cloud storage scope used to safely move a note when its visibility changes. */
+  storageScope?: 'shared' | 'gm' | 'selected';
+  updatedAt?: string;
+  updatedByName?: string;
 }
 
-export type PartyCampaignRole = 'gm' | 'player';
+export type CampaignNoteVisibility = 'Shared' | 'GM Only' | 'Selected Players';
+export type PartyCampaignRole = 'gm' | 'co-gm' | 'player';
+
+export interface ThemePalette {
+  id: string;
+  name: string;
+  associatedClass: string;
+  symbol: string;
+  accent: string;
+  highlight: string;
+  background: string;
+  backgroundSecondary: string;
+  custom?: boolean;
+}
+
+export type AppearanceMode = 'System' | 'Light' | 'Dark';
+export type InterfaceScale = 'Small' | 'Standard' | 'Large' | 'Extra Large';
+export type BackgroundTexture = 'None' | 'Arcane Mist' | 'Parchment' | 'Starfield';
+export type AnimationLevel = 'None' | 'Reduced' | 'Full';
+export type AppearanceSyncScope = 'Cloud' | 'Device';
+
+export interface AppearanceSettings {
+  mode: AppearanceMode;
+  interfaceScale: InterfaceScale;
+  automaticClassThemes: boolean;
+  campaignThemes: boolean;
+  backgroundTexture: BackgroundTexture;
+  glowIntensity: number;
+  panelTransparency: number;
+  shadowIntensity: number;
+  animationLevel: AnimationLevel;
+  syncScope: AppearanceSyncScope;
+}
+
+export interface CampaignAppearance {
+  paletteID: string;
+  paletteSnapshot?: ThemePalette;
+  icon?: string;
+  bannerDataURL?: string;
+  shareWithPlayers: boolean;
+}
+
+export interface PartyCampaignPermissions {
+  playersCanCreateSharedNotes: boolean;
+  playersCanEditSharedNotes: boolean;
+  playersCanManageInventory: boolean;
+}
 
 export interface CampaignPartyLink {
   partyId: string;
@@ -67,6 +120,7 @@ export interface CampaignRecord {
   name: string;
   notes: CampaignNote[];
   party?: CampaignPartyLink;
+  appearance?: CampaignAppearance;
 }
 
 export interface PartyCampaignMember {
@@ -94,6 +148,36 @@ export interface PartyInventoryItem {
   goldCost?: number;
   remainingUses?: number;
   distributedByGM?: boolean;
+  container?: string;
+  isEquipped?: boolean;
+  requestable?: boolean;
+}
+
+export type PartyInventoryRequestStatus = 'Pending' | 'Approved' | 'Denied';
+
+export interface PartyInventoryRequest {
+  id: string;
+  itemId: string;
+  itemName: string;
+  requesterUserId: string;
+  requesterName: string;
+  characterId?: string;
+  characterName?: string;
+  status: PartyInventoryRequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  resolvedBy?: string;
+}
+
+export interface PartyInventoryLedgerEntry {
+  id: string;
+  action: string;
+  itemId?: string;
+  itemName?: string;
+  actorUserId: string;
+  actorName: string;
+  details: string;
+  createdAt: string;
 }
 
 export const VaultContentKindValues = {
@@ -219,11 +303,15 @@ export interface PartyCampaignSnapshot {
   createdAt: string;
   updatedAt: string;
   role: PartyCampaignRole;
+  permissions: PartyCampaignPermissions;
   members: PartyCampaignMember[];
   notes: CampaignNote[];
   inventory: PartyInventoryItem[];
+  inventoryRequests: PartyInventoryRequest[];
+  inventoryLedger: PartyInventoryLedgerEntry[];
   vaultEntries: GmVaultEntry[];
   gold: number;
+  appearance?: CampaignAppearance;
 }
 
 export const CombatantTeamValues = {
@@ -1162,4 +1250,6 @@ export interface HubState {
   selectedCampaignId: string | null;
   isDarkMode: boolean;
   selectedPaletteID: string;
+  customPalettes: ThemePalette[];
+  appearanceSettings: AppearanceSettings;
 }

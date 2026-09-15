@@ -27,7 +27,7 @@ const LAST_CLOUD_USER_KEY = 'dc20hub-last-cloud-user';
 const SYNC_DELAY_MS = 1200;
 
 function backupPayload(): Record<string, unknown> {
-  return JSON.parse(useCampaignStore.getState().exportData()) as Record<string, unknown>;
+  return JSON.parse(useCampaignStore.getState().exportCloudData()) as Record<string, unknown>;
 }
 
 export function CloudSyncProvider({ children }: { children: ReactNode }) {
@@ -83,7 +83,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
 
         if (stateSnapshot.exists()) {
           const data = stateSnapshot.data() as HubStateDocument;
-          useCampaignStore.getState().importData(data.payload);
+          useCampaignStore.getState().importCloudData(data.payload);
           setLastSyncedAt(data.updated_at ?? null);
         } else {
           const updatedAt = new Date().toISOString();

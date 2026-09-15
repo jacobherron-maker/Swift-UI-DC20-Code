@@ -24,31 +24,58 @@ import { activeEncounterSection, activeLibrarySection, ENCOUNTER_SECTIONS, LIBRA
 import { HubSectionValues } from './types/models';
 import type { HubSection } from './types/models';
 import './App.css';
-import { themePalette } from './data/themePalettes';
+import { paletteForClass, themePalette } from './data/themePalettes';
 import { RulesCrossLinkProvider } from './rules/RulesCrossLinkContext';
 import { DEFAULT_RULES_VERSION, RulesVersionValues } from './data/rulesVersions';
 import type { RulesVersion } from './data/rulesVersions';
 
 type GlobalOverlay = 'create' | 'search' | 'tools' | null;
+const INTERFACE_SCALE_PIXELS = { Small: 14, Standard: 16, Large: 18, 'Extra Large': 20 } as const;
 
 function App() {
-  const { currentSection, isDarkMode, selectedPaletteID, loadCampaign, saveCampaign, setCurrentSection, selectCharacter, selectMonster, selectEncounter, selectCampaign } = useCampaignStore();
+  const { currentSection, selectedPaletteID, customPalettes, appearanceSettings, campaignData, characters, selectedCharacterId, selectedCampaignId, loadCampaign, saveCampaign, setCurrentSection, selectCharacter, selectMonster, selectEncounter, selectCampaign } = useCampaignStore();
   const characterPanelRef = useRef<HTMLDivElement>(null);
   const [overlay, setOverlay] = useState<GlobalOverlay>(null);
   const [focusRequest, setFocusRequest] = useState<ContentFocusRequest | null>(null);
   const [ruleReturnSection, setRuleReturnSection] = useState<HubSection | null>(null);
   const [rulesVersion, setRulesVersion] = useState<RulesVersion>(DEFAULT_RULES_VERSION);
+  const [systemDark, setSystemDark] = useState(() => typeof window === 'undefined' || window.matchMedia('(prefers-color-scheme: dark)').matches);
   const focusKey = useRef(0);
-  const palette = themePalette(selectedPaletteID);
   const currentDestination = primaryDestinationForSection(currentSection);
+  const selectedCharacter = characters.find(({ id }) => id === selectedCharacterId);
+  const selectedCampaign = campaignData.campaigns.find(({ id }) => id === selectedCampaignId) ?? campaignData.campaigns[0];
+  const globalPalette = themePalette(selectedPaletteID, customPalettes);
+  const classPalette = appearanceSettings.automaticClassThemes && currentDestination === 'Characters'
+    ? paletteForClass(selectedCharacter?.class) : undefined;
+  const campaignPalette = appearanceSettings.campaignThemes && currentDestination === 'Campaigns' && selectedCampaign?.appearance
+    ? selectedCampaign.appearance.paletteSnapshot ?? themePalette(selectedCampaign.appearance.paletteID, customPalettes)
+    : undefined;
+  const palette = campaignPalette ?? classPalette ?? globalPalette;
+  const isDarkMode = appearanceSettings.mode === 'System' ? systemDark : appearanceSettings.mode === 'Dark';
   const themeStyle = {
     '--theme-accent': palette.accent,
     '--theme-palette-highlight': palette.highlight,
     '--theme-palette-bg': palette.background,
     '--theme-palette-bg-secondary': palette.backgroundSecondary,
+    '--theme-glow-percent': `${Math.round(appearanceSettings.glowIntensity * 0.4)}%`,
+    '--theme-panel-percent': `${100 - appearanceSettings.panelTransparency}%`,
+    '--theme-shadow-percent': `${Math.round(appearanceSettings.shadowIntensity * 0.45)}%`,
   } as CSSProperties;
 
   useEffect(() => { loadCampaign(); }, [loadCampaign]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const update = () => setSystemDark(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${INTERFACE_SCALE_PIXELS[appearanceSettings.interfaceScale]}px`;
+    return () => { document.documentElement.style.fontSize = ''; };
+  }, [appearanceSettings.interfaceScale]);
 
   useEffect(() => {
     if (new URL(window.location.href).searchParams.has('partyInvite')) setCurrentSection(HubSectionValues.CAMPAIGN);
@@ -118,7 +145,7 @@ function App() {
 
   return (
     <RulesCrossLinkProvider onOpenFullRule={openFullRule}>
-    <div data-palette={palette.id} style={themeStyle} className={`dc20-theme flex h-[100dvh] min-h-[100dvh] overflow-hidden ${isDarkMode ? 'dark' : ''}`}>
+    <div data-palette={palette.id} data-texture={appearanceSettings.backgroundTexture} data-animation={appearanceSettings.animationLevel} style={themeStyle} className={`dc20-theme flex h-[100dvh] min-h-[100dvh] overflow-hidden ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar onOpenCreate={() => setOverlay('create')} onOpenSearch={() => setOverlay('search')} onOpenTools={() => setOverlay('tools')} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header

@@ -5,6 +5,7 @@ import { useSourceMonsters } from '../../hooks/useSourceMonsters';
 import { useCampaignStore } from '../../store/campaignStore';
 import type { Character, Encounter, Monster } from '../../types/models';
 import { generateUUID } from '../../utils/gameUtils';
+import { isPartyManager } from '../../utils/campaignRules';
 import { RuleAwareText } from '../rules/RuleAwareText';
 import {
   combatFromEncounter,
@@ -59,7 +60,7 @@ export default function EncountersView({ focusRequest, onFocusHandled }: { focus
   const selected = encounters.find(({ id }) => id === selectedEncounterId) ?? null;
   const [partyCharacterToAdd, setPartyCharacterToAdd] = useState('');
   const allMonsters = useMemo(() => [...sourceMonsters, ...customMonsters], [sourceMonsters, customMonsters]);
-  const gmPartyIDs = useMemo(() => new Set(parties.filter(({ role }) => role === 'gm').map(({ id }) => id)), [parties]);
+  const gmPartyIDs = useMemo(() => new Set(parties.filter(({ role }) => isPartyManager(role)).map(({ id }) => id)), [parties]);
   const availablePartyCharacters = useMemo(() => partyCharacters.filter(({ partyId }) => gmPartyIDs.has(partyId)), [gmPartyIDs, partyCharacters]);
   const liveSelected = useMemo(() => selected ? synchronizeEncounterPartyCharacters(selected, availablePartyCharacters) : null, [availablePartyCharacters, selected]);
 

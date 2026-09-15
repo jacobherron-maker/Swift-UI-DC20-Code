@@ -23,6 +23,7 @@ import { useEquipmentCatalog } from '../../hooks/useEquipmentCatalog';
 import { useSourceMonsters } from '../../hooks/useSourceMonsters';
 import { companionDefaultsForKind, COMPANION_KIND_META } from '../../utils/companionRules';
 import { generateUUID, sortByName } from '../../utils/gameUtils';
+import { isPartyManager } from '../../utils/campaignRules';
 import type { PowerResolution } from '../../utils/powerRules';
 import {
   createVaultEntry,
@@ -190,7 +191,7 @@ export default function HomebrewView({ onCreateMonster, onCreateItem, onOpenMons
     return sortByName([...byName.values()]);
   }, [campaignData.vaultEntries, publishedSpellReferences]);
   const maneuverTemplates = useMemo<Maneuver[]>(() => publishedManeuverReferences.map((maneuver) => ({ id: `published-maneuver-${maneuver.name}`, ...maneuver })), [publishedManeuverReferences]);
-  const gmParties = partyHub.parties.filter(({ role }) => role === 'gm');
+  const gmParties = partyHub.parties.filter(({ role }) => isPartyManager(role));
   const validationIssues = useMemo(() => draft ? vaultValidationIssues(draft) : [], [draft]);
 
   useEffect(() => {

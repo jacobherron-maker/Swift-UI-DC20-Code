@@ -15,7 +15,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onOpenCreate, onOpenSearch, onOpenTools, rulesVersion, onRulesVersionChange }) => {
-  const { campaignData, currentSection, isDarkMode, toggleDarkMode } = useCampaignStore();
+  const { campaignData, currentSection } = useCampaignStore();
   const { isConfigured, user, signOut } = useAuth();
   const { status, error, lastSyncedAt, syncNow } = useCloudSync();
   const syncLabel = status === 'saving' ? 'Saving…'
@@ -56,18 +56,6 @@ const Header: React.FC<HeaderProps> = ({ onOpenCreate, onOpenSearch, onOpenTools
         <button type="button" onClick={onOpenCreate} className="btn-primary min-h-11 min-w-11 font-black" aria-label="Create something"><span aria-hidden="true">＋</span> <span className="hidden md:inline">Create</span></button>
         <button type="button" onClick={onOpenTools} className="min-h-11 min-w-11 rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm font-bold text-slate-200 hover:bg-slate-800" aria-label="Open GM Tools" title="GM Tools">⚙ <span className="hidden xl:inline">Tools</span></button>
         {user && <button type="button" onClick={() => void logOut()} aria-label="Sign out" className="hidden min-h-11 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-800 lg:block">Sign Out</button>}
-
-        <button
-          type="button"
-          onClick={toggleDarkMode}
-          aria-label={isDarkMode ? 'Use light appearance' : 'Use dark appearance'}
-          aria-pressed={!isDarkMode}
-          title={isDarkMode ? 'Switch to light appearance' : 'Switch to dark appearance'}
-          className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-white/10 bg-gray-800 px-3 py-2 text-gray-200 transition-colors hover:bg-gray-700"
-        >
-          <span aria-hidden="true">{isDarkMode ? '☀️' : '🌙'}</span>
-          <span className="hidden xl:inline">{isDarkMode ? 'Light' : 'Dark'}</span>
-        </button>
       </div>
     </header>
   );

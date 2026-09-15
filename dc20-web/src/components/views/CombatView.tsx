@@ -7,6 +7,7 @@ import type { CampaignNote, Character, CombatConditionEffect, Combatant, Combata
 import { CombatantTeamValues } from '../../types/models';
 import { advanceCombatTurn, combatTacticalMetrics, createCombatSummary, moveInitiative, normalizedInitiativeOrder, recordCombatChange, resolveDamage, retreatCombatTurn, startCombatTurns, undoLastCombatChange, type DamageResolutionInput, type HitSeverity } from '../../utils/combatRules';
 import { generateUUID } from '../../utils/gameUtils';
+import { isPartyManager } from '../../utils/campaignRules';
 import { combatantFromCharacter, combatantFromMonster, combatFromEncounter, monsterAbilityMechanicsSummary, monsterDisplayRole, synchronizeEncounterPartyCharacters } from '../../utils/monsterRules';
 import { MonsterToken } from '../monster/MonsterArtwork';
 import { ExplicitRuleLink, RuleAwareText } from '../rules/RuleAwareText';
@@ -53,7 +54,7 @@ export default function CombatView() {
   const [syncMessage, setSyncMessage] = useState('');
   const combats = campaignData.combats;
   const selected = combats.find(({ id }) => id === selectedCombatId) ?? null;
-  const gmPartyIDs = useMemo(() => new Set(parties.filter(({ role }) => role === 'gm').map(({ id }) => id)), [parties]);
+  const gmPartyIDs = useMemo(() => new Set(parties.filter(({ role }) => isPartyManager(role)).map(({ id }) => id)), [parties]);
   const availablePartyCharacters = partyCharacters.filter(({ partyId }) => gmPartyIDs.has(partyId));
   const conditions = useMemo(() => (reference?.entries ?? []).filter((entry) => entry.kind === 'Condition' && entry.subsection === 'Conditions - List').sort((left, right) => left.title.localeCompare(right.title)), [reference]);
 

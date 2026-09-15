@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
+  AppearanceSettings,
+  CampaignAppearance,
   CampaignData,
   CampaignPartyLink,
   CampaignRecord,
@@ -23,6 +25,7 @@ import type {
   MonsterRole,
   MonsterType,
   SavedCombat,
+  ThemePalette,
 } from '../types/models';
 import {
   CombatantTeamValues,
@@ -42,10 +45,10 @@ import {
   synchronizeCombatant,
 } from '../utils/monsterRules';
 import { generateUUID } from '../utils/gameUtils';
-import { DEFAULT_PALETTE_ID, themePalette } from '../data/themePalettes';
+import { DEFAULT_PALETTE_ID, defaultAppearanceSettings, themePalette } from '../data/themePalettes';
 import { normalizeVaultEntry } from '../utils/vaultRules';
 
-const STORE_VERSION = 12;
+const STORE_VERSION = 13;
 
 export const defaultMonsterLibrary: MonsterLibraryOrganization = {
   favoriteIDs: [],
@@ -81,8 +84,15 @@ interface CampaignStore extends HubState {
   selectCampaign: (id: string | null) => void;
   toggleDarkMode: () => void;
   setSelectedPalette: (id: string) => void;
+  updateAppearanceSettings: (changes: Partial<AppearanceSettings>) => void;
+  saveCustomPalette: (palette: ThemePalette) => void;
+  removeCustomPalette: (id: string) => void;
+  resetAppearance: () => void;
+  resetCustomPalettes: () => void;
   exportData: () => string;
+  exportCloudData: () => string;
   importData: (value: unknown) => void;
+  importCloudData: (value: unknown) => void;
   saveCampaign: () => void;
   loadCampaign: () => void;
   addCampaign: (campaign: CampaignRecord) => void;
@@ -118,6 +128,8 @@ type PersistedCampaignState = Pick<
   | 'selectedCampaignId'
   | 'isDarkMode'
   | 'selectedPaletteID'
+  | 'customPalettes'
+  | 'appearanceSettings'
   | 'lastSavedAt'
 >;
 
@@ -133,6 +145,8 @@ function persistedSlice(state: CampaignStore): PersistedCampaignState {
     selectedCampaignId: state.selectedCampaignId,
     isDarkMode: state.isDarkMode,
     selectedPaletteID: state.selectedPaletteID,
+    customPalettes: state.customPalettes,
+    appearanceSettings: state.appearanceSettings,
     lastSavedAt: state.lastSavedAt,
   };
 }
@@ -140,6 +154,60 @@ function persistedSlice(state: CampaignStore): PersistedCampaignState {
 function asNumber(value: unknown, fallback: number): number {
   const converted = Number(value);
   return Number.isFinite(converted) ? converted : fallback;
+}
+
+function normalizeHex(value: unknown, fallback: string): string {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toUpperCase() : fallback;
+}
+
+function normalizeThemePalette(value: unknown): ThemePalette | null {
+  if (!value || typeof value !== 'object') return null;
+  const item = value as Record<string, unknown>;
+  const name = typeof item.name === 'string' ? item.name.trim() : '';
+  if (!name) return null;
+  const id = typeof item.id === 'string' && item.id.trim() ? item.id : `custom-theme-${generateUUID()}`;
+  return {
+    id,
+    name,
+    associatedClass: typeof item.associatedClass === 'string' && item.associatedClass.trim() ? item.associatedClass : 'Custom Theme',
+    symbol: typeof item.symbol === 'string' && item.symbol.trim() ? item.symbol.slice(0, 4) : '✦',
+    accent: normalizeHex(item.accent, '#8C4CF2'),
+    highlight: normalizeHex(item.highlight, '#C8A5FF'),
+    background: normalizeHex(item.background, '#0E0917'),
+    backgroundSecondary: normalizeHex(item.backgroundSecondary, '#241036'),
+    custom: true,
+  };
+}
+
+function normalizeAppearanceSettings(value: unknown, legacyDarkMode?: boolean): AppearanceSettings {
+  const item = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  return {
+    mode: item.mode === 'System' || item.mode === 'Light' || item.mode === 'Dark' ? item.mode : legacyDarkMode === undefined ? defaultAppearanceSettings.mode : legacyDarkMode ? 'Dark' : 'Light',
+    interfaceScale: item.interfaceScale === 'Small' || item.interfaceScale === 'Standard' || item.interfaceScale === 'Large' || item.interfaceScale === 'Extra Large' ? item.interfaceScale : defaultAppearanceSettings.interfaceScale,
+    automaticClassThemes: typeof item.automaticClassThemes === 'boolean' ? item.automaticClassThemes : defaultAppearanceSettings.automaticClassThemes,
+    campaignThemes: typeof item.campaignThemes === 'boolean' ? item.campaignThemes : defaultAppearanceSettings.campaignThemes,
+    backgroundTexture: item.backgroundTexture === 'None' || item.backgroundTexture === 'Arcane Mist' || item.backgroundTexture === 'Parchment' || item.backgroundTexture === 'Starfield' ? item.backgroundTexture : defaultAppearanceSettings.backgroundTexture,
+    glowIntensity: Math.min(100, Math.max(0, asNumber(item.glowIntensity, defaultAppearanceSettings.glowIntensity))),
+    panelTransparency: Math.min(40, Math.max(0, asNumber(item.panelTransparency, defaultAppearanceSettings.panelTransparency))),
+    shadowIntensity: Math.min(100, Math.max(0, asNumber(item.shadowIntensity, defaultAppearanceSettings.shadowIntensity))),
+    animationLevel: item.animationLevel === 'None' || item.animationLevel === 'Reduced' || item.animationLevel === 'Full' ? item.animationLevel : defaultAppearanceSettings.animationLevel,
+    syncScope: item.syncScope === 'Device' ? 'Device' : 'Cloud',
+  };
+}
+
+function normalizeCampaignAppearance(value: unknown): CampaignAppearance | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const item = value as Record<string, unknown>;
+  const paletteSnapshot = normalizeThemePalette(item.paletteSnapshot);
+  const bannerDataURL = typeof item.bannerDataURL === 'string' && item.bannerDataURL.length <= 240_000 && /^data:image\/(?:jpeg|png|webp);base64,/.test(item.bannerDataURL)
+    ? item.bannerDataURL : undefined;
+  return {
+    paletteID: typeof item.paletteID === 'string' ? item.paletteID : DEFAULT_PALETTE_ID,
+    ...(paletteSnapshot ? { paletteSnapshot } : {}),
+    ...(typeof item.icon === 'string' && item.icon.trim() ? { icon: item.icon.slice(0, 4) } : {}),
+    ...(bannerDataURL ? { bannerDataURL } : {}),
+    shareWithPlayers: Boolean(item.shareWithPlayers),
+  };
 }
 
 function normalizeMonsterType(value: unknown): MonsterType {
@@ -457,7 +525,7 @@ function normalizeCampaignRecord(value: unknown): CampaignRecord | null {
   const rawParty = item.party && typeof item.party === 'object'
     ? item.party as Record<string, unknown>
     : null;
-  const role: CampaignPartyLink['role'] | null = rawParty?.role === 'gm' || rawParty?.role === 'player' ? rawParty.role : null;
+  const role: CampaignPartyLink['role'] | null = rawParty?.role === 'gm' || rawParty?.role === 'co-gm' || rawParty?.role === 'player' ? rawParty.role : null;
   const party = rawParty && typeof rawParty.partyId === 'string' && role
     ? {
         partyId: rawParty.partyId,
@@ -479,6 +547,7 @@ function normalizeCampaignRecord(value: unknown): CampaignRecord | null {
       }];
     }) : [],
     party,
+    appearance: normalizeCampaignAppearance(item.appearance),
   };
 }
 
@@ -703,6 +772,9 @@ export function migratePersistedState(value: unknown): PersistedCampaignState {
     ? rawCampaignData.customEquipment.map(normalizeCustomEquipment).filter((item): item is EquipmentCatalogItem => item !== null)
     : [];
   const customEquipmentByID = new Map(customEquipment.map((item) => [item.id, item]));
+  const customPalettes = Array.isArray(state.customPalettes)
+    ? state.customPalettes.map(normalizeThemePalette).filter((palette): palette is ThemePalette => palette !== null)
+    : [];
   const characters = Array.isArray(state.characters) ? state.characters.map(normalizeCharacter).map((character) => ({
     ...character,
     inventoryItems: (character.inventoryItems ?? []).map((inventory) => inventory.itemSnapshot
@@ -747,8 +819,10 @@ export function migratePersistedState(value: unknown): PersistedCampaignState {
     selectedCampaignId: typeof state.selectedCampaignId === 'string' ? state.selectedCampaignId : null,
     isDarkMode: typeof state.isDarkMode === 'boolean' ? state.isDarkMode : true,
     selectedPaletteID: typeof state.selectedPaletteID === 'string'
-      ? themePalette(state.selectedPaletteID).id
+      ? themePalette(state.selectedPaletteID, customPalettes).id
       : DEFAULT_PALETTE_ID,
+    customPalettes,
+    appearanceSettings: normalizeAppearanceSettings(state.appearanceSettings, typeof state.isDarkMode === 'boolean' ? state.isDarkMode : undefined),
     lastSavedAt: typeof state.lastSavedAt === 'string' ? state.lastSavedAt : null,
   };
 }
@@ -774,6 +848,8 @@ export const useCampaignStore = create<CampaignStore>()(
       selectedCampaignId: null,
       isDarkMode: true,
       selectedPaletteID: DEFAULT_PALETTE_ID,
+      customPalettes: [],
+      appearanceSettings: { ...defaultAppearanceSettings },
       lastSavedAt: null,
 
       setCurrentSection: (section) => set({ currentSection: section }),
@@ -837,15 +913,58 @@ export const useCampaignStore = create<CampaignStore>()(
       selectEncounter: (id) => set({ selectedEncounterId: id }),
       selectCombat: (id) => set({ selectedCombatId: id }),
       selectCampaign: (id) => set({ selectedCampaignId: id }),
-      toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
-      setSelectedPalette: (id) => set({ selectedPaletteID: themePalette(id).id }),
+      toggleDarkMode: () => set((state) => ({
+        isDarkMode: !state.isDarkMode,
+        appearanceSettings: { ...state.appearanceSettings, mode: state.isDarkMode ? 'Light' : 'Dark' },
+      })),
+      setSelectedPalette: (id) => set((state) => ({ selectedPaletteID: themePalette(id, state.customPalettes).id })),
+      updateAppearanceSettings: (changes) => set((state) => {
+        const appearanceSettings = normalizeAppearanceSettings({ ...state.appearanceSettings, ...changes }, state.isDarkMode);
+        return {
+          appearanceSettings,
+          isDarkMode: appearanceSettings.mode === 'Dark' ? true : appearanceSettings.mode === 'Light' ? false : state.isDarkMode,
+        };
+      }),
+      saveCustomPalette: (palette) => set((state) => {
+        const normalized = normalizeThemePalette({ ...palette, custom: true });
+        if (!normalized) return state;
+        const exists = state.customPalettes.some(({ id }) => id === normalized.id);
+        return { customPalettes: exists ? state.customPalettes.map((entry) => entry.id === normalized.id ? normalized : entry) : [...state.customPalettes, normalized] };
+      }),
+      removeCustomPalette: (id) => set((state) => ({
+        customPalettes: state.customPalettes.filter((palette) => palette.id !== id),
+        selectedPaletteID: state.selectedPaletteID === id ? DEFAULT_PALETTE_ID : state.selectedPaletteID,
+      })),
+      resetAppearance: () => set({ isDarkMode: true, selectedPaletteID: DEFAULT_PALETTE_ID, appearanceSettings: { ...defaultAppearanceSettings } }),
+      resetCustomPalettes: () => set((state) => ({ customPalettes: [], selectedPaletteID: state.customPalettes.some(({ id }) => id === state.selectedPaletteID) ? DEFAULT_PALETTE_ID : state.selectedPaletteID })),
       exportData: () => JSON.stringify({
         format: 'dc20hub-web-backup',
         version: STORE_VERSION,
         exportedAt: new Date().toISOString(),
         state: persistedSlice(get()),
       }, null, 2),
+      exportCloudData: () => {
+        const state = persistedSlice(get());
+        if (state.appearanceSettings.syncScope === 'Device') {
+          const deviceIndependent = { ...state } as Partial<PersistedCampaignState>;
+          delete deviceIndependent.isDarkMode;
+          delete deviceIndependent.selectedPaletteID;
+          delete deviceIndependent.customPalettes;
+          delete deviceIndependent.appearanceSettings;
+          return JSON.stringify({ format: 'dc20hub-web-backup', version: STORE_VERSION, exportedAt: new Date().toISOString(), state: deviceIndependent });
+        }
+        return JSON.stringify({ format: 'dc20hub-web-backup', version: STORE_VERSION, exportedAt: new Date().toISOString(), state });
+      },
       importData: (value) => set(parseCampaignBackup(value)),
+      importCloudData: (value) => set((current) => {
+        const document = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+        const raw = document.format === 'dc20hub-web-backup' && document.state && typeof document.state === 'object' ? document.state as Record<string, unknown> : document;
+        const migrated = migratePersistedState(raw);
+        if (current.appearanceSettings.syncScope === 'Device' || !raw.appearanceSettings) {
+          return { ...migrated, isDarkMode: current.isDarkMode, selectedPaletteID: current.selectedPaletteID, customPalettes: current.customPalettes, appearanceSettings: current.appearanceSettings };
+        }
+        return migrated;
+      }),
       saveCampaign: () => set({ lastSavedAt: new Date().toISOString() }),
       loadCampaign: () => undefined,
       addCampaign: (campaign) => set((state) => ({

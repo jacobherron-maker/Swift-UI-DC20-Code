@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useCampaignStore } from '../../store/campaignStore';
 import { PRIMARY_DESTINATIONS, primaryDestinationForSection } from '../../navigation/appNavigation';
 import CustomizeDialog from './CustomizeDialog';
-import { downloadHubBackup } from '../../utils/dataBackup';
+import DataBackupsDialog from './DataBackupsDialog';
 
 interface SidebarProps {
   onOpenCreate: () => void;
@@ -11,8 +11,9 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ onOpenCreate, onOpenSearch, onOpenTools }) => {
-  const { currentSection, setCurrentSection, exportData } = useCampaignStore();
+  const { currentSection, setCurrentSection } = useCampaignStore();
   const [showCustomize, setShowCustomize] = useState(false);
+  const [showBackups, setShowBackups] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const currentDestination = primaryDestinationForSection(currentSection);
 
@@ -47,7 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenCreate, onOpenSearch, onOpenToo
   const utilityButtons = () => (
     <div className="mt-4 space-y-2 border-t border-white/5 pt-4">
       <button type="button" onClick={() => runAndClose(() => setShowCustomize(true))} className="min-h-11 w-full rounded-lg bg-gray-800 py-2 text-sm text-gray-200 hover:bg-gray-700" title="Customize">🎨 Customize</button>
-      <button type="button" onClick={() => downloadHubBackup(exportData())} className="min-h-11 w-full rounded-lg bg-gray-800 py-2 text-sm text-gray-200 hover:bg-gray-700" title="Export Data">💾 Export Data</button>
+      <button type="button" onClick={() => runAndClose(() => setShowBackups(true))} className="min-h-11 w-full rounded-lg bg-gray-800 py-2 text-sm text-gray-200 hover:bg-gray-700" title="Data and Backups">💾 Data & Backups</button>
     </div>
   );
 
@@ -68,6 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenCreate, onOpenSearch, onOpenToo
         {contents()}
       </aside>
       {showCustomize && <CustomizeDialog onClose={() => setShowCustomize(false)} />}
+      {showBackups && <DataBackupsDialog onClose={() => setShowBackups(false)} />}
     </>
   );
 };

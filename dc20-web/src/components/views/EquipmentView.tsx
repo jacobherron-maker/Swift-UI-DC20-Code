@@ -45,6 +45,7 @@ import {
   type EquipmentRangeBucket,
 } from '../../utils/equipmentLibraryRules';
 import { generateUUID, rollD20WithAdjustment, sortByName } from '../../utils/gameUtils';
+import { isPartyManager } from '../../utils/campaignRules';
 import { PillMultiSelect, toggleValue } from '../equipment/PillMultiSelect';
 import { ExplicitRuleLink, RuleAwareText } from '../rules/RuleAwareText';
 import RuleLinkInspector from '../rules/RuleLinkInspector';
@@ -273,7 +274,7 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
 
   const addToParty = async (partyID: string, ownerCharacterID: string, quantity: number, unitPrice: number, spendSharedGold: boolean) => {
     if (!selected) return;
-    const party = partyHub.parties.find(({ id, role }) => id === partyID && role === 'gm');
+    const party = partyHub.parties.find(({ id, role }) => id === partyID && isPartyManager(role));
     if (!party) { setNotice('Choose a campaign you manage.'); return; }
     const safeQuantity = Math.max(1, Math.trunc(quantity));
     const price = Math.max(0, Math.trunc(unitPrice));
@@ -313,8 +314,10 @@ export default function EquipmentView({ focusRequest, onFocusHandled }: { focusR
 
   const moveFromParty = async (party: PartyCampaignSnapshot, sharedItem: PartyInventoryItem) => {
     if (!selected || !character) return;
-    const canClaim = party.role === 'gm' || party.members.some((member) => member.userId === user?.uid && (member.characterId === character.id || member.character?.id === character.id));
-    if (!canClaim || sharedItem.ownerCharacterID && sharedItem.ownerCharacterID !== character.id && party.role !== 'gm') return;
+    const manager = isPartyManager(party.role);
+    const canManageInventory = manager || party.permissions.playersCanManageInventory;
+    const canClaim = canManageInventory && (manager || party.members.some((member) => member.userId === user?.uid && (member.characterId === character.id || member.character?.id === character.id)));
+    if (!canClaim || sharedItem.ownerCharacterID && sharedItem.ownerCharacterID !== character.id && !manager) return;
     try {
       if (sharedItem.quantity <= 1) await partyHub.removeSharedInventoryItem(party.id, sharedItem.id);
       else await partyHub.updateSharedInventoryItem(party.id, {
@@ -420,7 +423,7 @@ function EquipmentDetail({ item, characters, character, classReference, ancestry
 }) {
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
-  const gmParties = parties.filter(({ role }) => role === 'gm');
+  const gmParties = parties.filter(({ role }) => isPartyManager(role));
   const [partyID, setPartyID] = useState(gmParties[0]?.id ?? '');
   const [ownerCharacterID, setOwnerCharacterID] = useState('');
   const [spendSharedGold, setSpendSharedGold] = useState(false);
@@ -430,8 +433,8 @@ function EquipmentDetail({ item, characters, character, classReference, ancestry
   const access = equipmentAccessForCharacter(character, item, classReference, ancestryTraits);
   const provenance = equipmentProvenance(item, isCustom);
   const selectedParty = gmParties.find(({ id }) => id === partyID) ?? null;
-  const claimableParties = parties.filter((party) => party.role === 'gm' || party.members.some((member) => member.userId === currentUserID && (member.characterId === character?.id || member.character?.id === character?.id)));
-  const partyCopies = claimableParties.flatMap((party) => party.inventory.filter(({ equipmentID, ownerCharacterID }) => equipmentID === item.id && (party.role === 'gm' || !ownerCharacterID || ownerCharacterID === character?.id)).map((entry) => ({ party, entry })));
+  const claimableParties = parties.filter((party) => (isPartyManager(party.role) || party.permissions.playersCanManageInventory) && (isPartyManager(party.role) || party.members.some((member) => member.userId === currentUserID && (member.characterId === character?.id || member.character?.id === character?.id))));
+  const partyCopies = claimableParties.flatMap((party) => party.inventory.filter(({ equipmentID, ownerCharacterID }) => equipmentID === item.id && (isPartyManager(party.role) || !ownerCharacterID || ownerCharacterID === character?.id)).map((entry) => ({ party, entry })));
   const displayProperties = item.properties.filter((tag) => !(tag in ROUTED_SHEET_EFFECTS));
   const routedEffects = [
     weapon && `${weapon.baseDamage} ${weapon.damageTypes.join('/')} damage`, weapon && `Range ${weapon.range}`, weapon?.heavyHitDamageBonus ? '+1 damage on Heavy Hits' : '', defense.physicalDefense ? `+${defense.physicalDefense} PD` : '', defense.areaDefense ? `+${defense.areaDefense} AD` : '', defense.physicalDamageReduction ? 'PDR' : '', defense.elementalDamageReduction ? 'EDR' : '', defense.mysticalDamageReduction ? 'MDR' : '', defense.speedPenalty ? `Speed −${defense.speedPenalty}` : '', defense.agilityCheckDisadvantage ? 'DisADV on Agility Checks' : '', item.category === 'Spell Focuses' || item.actsAsSpellFocus ? displayProperties.filter((property) => property !== 'Two-Handed' && !['Guard', 'Heavy'].includes(property)).join(' • ') : '', ...(item.equippedEffects?.conditionalRules ?? []), ...(item.attunedEffects?.resistances?.map((value) => `${value} Resistance while Attuned`) ?? []), ...(item.attunedEffects?.senses?.map((value) => `${value} while Attuned`) ?? []), potionHealing ? `Restores ${potionHealing} HP when consumed` : '', item.name === 'Medicine Kit' ? '5 tracked uses per kit' : '', item.category === 'Trade Tools' ? `Enables ${item.properties[0]} activities` : '',

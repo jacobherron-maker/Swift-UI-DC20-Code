@@ -102,6 +102,21 @@ describe('campaign persistence migration', () => {
   it('falls back to the default palette when an imported id is unknown', () => {
     const migrated = parseCampaignBackup({ selectedPaletteID: 'not-a-real-palette' });
     expect(migrated.selectedPaletteID).toBe('amethyst-archive');
+    expect(migrated.appearanceSettings.mode).toBe('System');
+  });
+
+  it('preserves custom appearance themes and campaign presentation settings', () => {
+    const migrated = migratePersistedState({
+      selectedPaletteID: 'custom-theme-moon',
+      customPalettes: [{ id: 'custom-theme-moon', name: 'Moon Archive', associatedClass: 'Custom Theme', symbol: '☾', accent: '#334455', highlight: '#DDEEFF', background: '#05080D', backgroundSecondary: '#121927' }],
+      appearanceSettings: { mode: 'System', interfaceScale: 'Large', automaticClassThemes: true, campaignThemes: true, backgroundTexture: 'Starfield', glowIntensity: 77, panelTransparency: 12, shadowIntensity: 64, animationLevel: 'Reduced', syncScope: 'Device' },
+      campaignData: { campaigns: [{ id: 'campaign', name: 'Moon March', notes: [], appearance: { paletteID: 'custom-theme-moon', icon: '☾', shareWithPlayers: true } }] },
+    });
+
+    expect(migrated.selectedPaletteID).toBe('custom-theme-moon');
+    expect(migrated.customPalettes[0]).toMatchObject({ name: 'Moon Archive', custom: true, accent: '#334455' });
+    expect(migrated.appearanceSettings).toMatchObject({ mode: 'System', interfaceScale: 'Large', backgroundTexture: 'Starfield', syncScope: 'Device' });
+    expect(migrated.campaignData.campaigns[0].appearance).toMatchObject({ icon: '☾', shareWithPlayers: true });
   });
 
   it('preserves private and character-accepted GM Vault entries across migration', () => {

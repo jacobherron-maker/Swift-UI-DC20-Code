@@ -1,15 +1,21 @@
-export interface ThemePalette {
-  id: string;
-  name: string;
-  associatedClass: string;
-  symbol: string;
-  accent: string;
-  highlight: string;
-  background: string;
-  backgroundSecondary: string;
-}
+import type { AppearanceSettings, ThemePalette } from '../types/models';
+
+export type { ThemePalette } from '../types/models';
 
 export const DEFAULT_PALETTE_ID = 'amethyst-archive';
+
+export const defaultAppearanceSettings: AppearanceSettings = {
+  mode: 'System',
+  interfaceScale: 'Standard',
+  automaticClassThemes: false,
+  campaignThemes: true,
+  backgroundTexture: 'Arcane Mist',
+  glowIntensity: 55,
+  panelTransparency: 8,
+  shadowIntensity: 55,
+  animationLevel: 'Full',
+  syncScope: 'Cloud',
+};
 
 export const themePalettes: ThemePalette[] = [
   { id: 'amethyst-archive', name: 'Amethyst Archive', associatedClass: 'DC20 Hub', symbol: '✦', accent: '#8C4CF2', highlight: '#C8A5FF', background: '#0E0917', backgroundSecondary: '#241036' },
@@ -31,6 +37,24 @@ export const themePalettes: ThemePalette[] = [
   { id: 'wizard-azure', name: 'Arcane Azure', associatedClass: 'Wizard', symbol: '▣', accent: '#4D7FE8', highlight: '#8FD7FF', background: '#080D1A', backgroundSecondary: '#111F3D' },
 ];
 
-export function themePalette(id: string): ThemePalette {
-  return themePalettes.find((palette) => palette.id === id) ?? themePalettes[0];
+export function themePalette(id: string, customPalettes: ThemePalette[] = []): ThemePalette {
+  return [...customPalettes, ...themePalettes].find((palette) => palette.id === id) ?? themePalettes[0];
+}
+
+export function paletteForClass(className: string | undefined): ThemePalette | undefined {
+  if (!className) return undefined;
+  return themePalettes.find(({ associatedClass }) => associatedClass.toLowerCase() === className.toLowerCase());
+}
+
+export function paletteContrastRatio(foreground: string, background: string): number {
+  const luminance = (hex: string) => {
+    const normalized = hex.replace('#', '');
+    if (!/^[0-9a-f]{6}$/i.test(normalized)) return 0;
+    const channels = [0, 2, 4].map((offset) => Number.parseInt(normalized.slice(offset, offset + 2), 16) / 255)
+      .map((value) => value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+  };
+  const first = luminance(foreground);
+  const second = luminance(background);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
 }
